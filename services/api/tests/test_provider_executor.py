@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: Apache-2.0
-import asyncio
 from dataclasses import replace
 from uuid import uuid4
 
@@ -19,16 +18,14 @@ from app.providers import (
     AuthMode,
     ExecutionRequest,
     ProviderAuthError,
-    ProviderDescriptor,
     ProviderExecutor,
     ProviderObservationData,
     ProviderRateBudgetExceeded,
     ProviderResponseTooLarge,
     ProviderResult,
-    ProviderStatus,
     ProviderTransientError,
+    ProviderValidationError,
     QueryOrigin,
-    SourceCategory,
     SyntheticEchoProvider,
 )
 from app.uploads import (
@@ -100,7 +97,7 @@ async def test_confirmed_document_candidate_must_match_stored_identifier(store: 
     )
     executor = ProviderExecutor(store=store, adapters=[SyntheticEchoProvider()])
 
-    with pytest.raises(Exception, match="does not match"):
+    with pytest.raises(ProviderValidationError, match="does not match"):
         await executor.execute(
             _request(
                 subject,
@@ -202,7 +199,9 @@ async def test_response_size_limit_is_enforced_before_persistence(store: Evidenc
 
 
 @pytest.mark.asyncio
-async def test_local_rate_budget_is_deterministic(store: EvidenceStore) -> None:
+async def test_local_rate_budget_counts_each_call_and_recovers_after_window(
+    store: EvidenceStore,
+) -> None:
     subject, identifier = _case(store)
     provider = SyntheticEchoProvider()
     provider.descriptor = replace(provider.descriptor, rate_limit=1, rate_window_seconds=60)
@@ -219,3 +218,35 @@ async def test_local_rate_budget_is_deterministic(store: EvidenceStore) -> None:
 
     now[0] += 61
     assert await executor.execute(_request(subject, identifier))
+
+
+class TransientUnderTightBudget:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.descriptor = replace(
+            SyntheticEchoProvider.descriptor,
+            name="tight-budget",
+            max_attempts=3,
+            rate_limit=1,
+        )
+
+    async def execute(self, query, secret):
+        self.calls += 1
+        raise ProviderTransientError("temporary")
+
+
+@pytest.mark.asyncio
+async def test_retries_also_consume_local_rate_budget(store: EvidenceStore) -> None:
+    subject, identifier = _case(store)
+    provider = TransientUnderTightBudget()
+
+    async def no_wait(_delay: float) -> None:
+        return None
+
+    executor = ProviderExecutor(store=store, adapters=[provider], sleep=no_wait)
+
+    with pytest.raises(ProviderRateBudgetExceeded):
+        await executor.execute(
+            replace(_request(subject, identifier), provider_name="tight-budget")
+        )
+    assert provider.calls == 1

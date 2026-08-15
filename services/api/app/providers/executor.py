@@ -38,7 +38,11 @@ def _serialized_size(result: ProviderResult) -> int:
             for item in result.observations
         ]
     }
-    return len(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8"))
+    try:
+        serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise ProviderValidationError("Provider result is not JSON serializable.") from exc
+    return len(serialized)
 
 
 class ProviderExecutor:
@@ -51,6 +55,10 @@ class ProviderExecutor:
         sleep: Sleep = asyncio.sleep,
         rate_clock=None,
     ) -> None:
+        names = [adapter.descriptor.name for adapter in adapters]
+        if len(names) != len(set(names)):
+            raise ValueError("Provider adapter names must be unique.")
+
         self.store = store
         self.adapters = {adapter.descriptor.name: adapter for adapter in adapters}
         self.secret_resolver = secret_resolver
@@ -91,13 +99,11 @@ class ProviderExecutor:
 
         secret: str | None = None
         if descriptor.auth_mode is AuthMode.API_KEY:
-            if not descriptor.secret_env:
-                raise ProviderAuthError("Provider secret configuration is incomplete.")
+            assert descriptor.secret_env is not None
             secret = self.secret_resolver(descriptor.secret_env)
             if not secret:
                 raise ProviderAuthError("Provider credential is not configured server-side.")
 
-        self._rate_budgets[descriptor.name].consume()
         query = ProviderQuery(
             subject_id=subject.id,
             identifier_id=identifier.id,
@@ -110,17 +116,23 @@ class ProviderExecutor:
 
         for attempt in range(1, descriptor.max_attempts + 1):
             try:
+                # Every actual adapter attempt consumes the local budget, including retries.
+                self._rate_budgets[descriptor.name].consume()
                 async with self._semaphores[descriptor.name]:
                     result = await asyncio.wait_for(
                         adapter.execute(query, secret),
                         timeout=descriptor.timeout_seconds,
                     )
+                if not isinstance(result, ProviderResult):
+                    raise ProviderValidationError("Provider returned an invalid result contract.")
                 break
             except asyncio.TimeoutError as exc:
                 last_error = ProviderTimeoutError("Provider call timed out.")
                 last_error.__cause__ = exc
             except ProviderExecutionError as exc:
                 last_error = exc
+            except Exception as exc:
+                raise ProviderExecutionError("Provider adapter failed unexpectedly.") from exc
 
             if last_error is None or not last_error.retryable or attempt >= descriptor.max_attempts:
                 assert last_error is not None

@@ -59,6 +59,22 @@ class ProviderDescriptor:
     rate_limit: int = 30
     rate_window_seconds: float = 60.0
 
+    def __post_init__(self) -> None:
+        if not self.name.strip() or not self.version.strip():
+            raise ValueError("Provider name and version are required.")
+        if self.max_attempts < 1:
+            raise ValueError("Provider max_attempts must be at least 1.")
+        if self.timeout_seconds <= 0:
+            raise ValueError("Provider timeout_seconds must be positive.")
+        if self.max_response_bytes < 1:
+            raise ValueError("Provider max_response_bytes must be positive.")
+        if self.max_concurrency < 1:
+            raise ValueError("Provider max_concurrency must be at least 1.")
+        if self.rate_limit < 1 or self.rate_window_seconds <= 0:
+            raise ValueError("Provider rate budget must be positive.")
+        if self.auth_mode is AuthMode.API_KEY and not self.secret_env:
+            raise ValueError("API-key providers require a server-side secret environment name.")
+
 
 @dataclass(frozen=True, slots=True)
 class ProviderQuery:
