@@ -34,9 +34,13 @@ def test_identifier_deduplication_and_conflicts(store: EvidenceStore) -> None:
 
     first = store.add_identifier(
         subject.id,
-        normalize_identifier(IdentifierKind.EMAIL, "A@example.com"),
+        normalize_identifier(IdentifierKind.EMAIL, "A@Example.com"),
     )
     duplicate = store.add_identifier(
+        subject.id,
+        normalize_identifier(IdentifierKind.EMAIL, "A@example.com"),
+    )
+    case_distinct = store.add_identifier(
         subject.id,
         normalize_identifier(IdentifierKind.EMAIL, "a@example.com"),
     )
@@ -46,6 +50,7 @@ def test_identifier_deduplication_and_conflicts(store: EvidenceStore) -> None:
     )
 
     assert duplicate.id == first.id
+    assert case_distinct.id != first.id
     assert conflicting.id != first.id
 
 
