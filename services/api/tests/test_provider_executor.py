@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
+import asyncio
 from dataclasses import replace
 from uuid import uuid4
 
@@ -23,6 +24,7 @@ from app.providers import (
     ProviderRateBudgetExceeded,
     ProviderResponseTooLarge,
     ProviderResult,
+    ProviderTimeoutError,
     ProviderTransientError,
     ProviderValidationError,
     QueryOrigin,
@@ -250,3 +252,84 @@ async def test_retries_also_consume_local_rate_budget(store: EvidenceStore) -> N
             replace(_request(subject, identifier), provider_name="tight-budget")
         )
     assert provider.calls == 1
+
+
+class SlowProvider:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.descriptor = replace(
+            SyntheticEchoProvider.descriptor,
+            name="slow",
+            max_attempts=1,
+            timeout_seconds=0.01,
+        )
+
+    async def execute(self, query, secret):
+        self.calls += 1
+        await asyncio.sleep(1)
+        return ProviderResult(observations=())
+
+
+@pytest.mark.asyncio
+async def test_provider_timeout_is_enforced_without_hidden_retry(store: EvidenceStore) -> None:
+    subject, identifier = _case(store)
+    provider = SlowProvider()
+    executor = ProviderExecutor(store=store, adapters=[provider])
+
+    with pytest.raises(ProviderTimeoutError):
+        await executor.execute(replace(_request(subject, identifier), provider_name="slow"))
+
+    assert provider.calls == 1
+
+
+class SerializedProvider:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.active = 0
+        self.max_active = 0
+        self.first_entered = asyncio.Event()
+        self.release = asyncio.Event()
+        self.descriptor = replace(
+            SyntheticEchoProvider.descriptor,
+            name="serialized",
+            max_concurrency=1,
+            rate_limit=10,
+        )
+
+    async def execute(self, query, secret):
+        self.calls += 1
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        self.first_entered.set()
+        try:
+            await self.release.wait()
+            return ProviderResult(
+                observations=(ProviderObservationData("synthetic://serialized", {"ok": True}),)
+            )
+        finally:
+            self.active -= 1
+
+
+@pytest.mark.asyncio
+async def test_provider_concurrency_ceiling_serializes_calls(store: EvidenceStore) -> None:
+    subject, identifier = _case(store)
+    provider = SerializedProvider()
+    executor = ProviderExecutor(store=store, adapters=[provider])
+    request = replace(_request(subject, identifier), provider_name="serialized")
+
+    first = asyncio.create_task(executor.execute(request))
+    await provider.first_entered.wait()
+    second = asyncio.create_task(executor.execute(request))
+
+    await asyncio.sleep(0)
+    assert provider.calls == 1
+    assert provider.active == 1
+    assert provider.max_active == 1
+
+    provider.release.set()
+    first_result, second_result = await asyncio.gather(first, second)
+
+    assert first_result
+    assert second_result
+    assert provider.calls == 2
+    assert provider.max_active == 1
