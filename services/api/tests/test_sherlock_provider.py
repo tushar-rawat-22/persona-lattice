@@ -137,7 +137,7 @@ async def test_sherlock_rejects_wrong_identifier_kind_and_duplicate_results() ->
             ),
         ]
 
-    provider = SherlockProvider(site_names=("GitHub",), worker=worker)
+    provider = SherlockProvider(site_names=("GitHub", "Keybase"), worker=worker)
     with pytest.raises(ProviderValidationError, match="username"):
         await provider.execute(
             ProviderQuery(uuid4(), uuid4(), "email", "person@example.test"),
