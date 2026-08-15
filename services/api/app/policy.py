@@ -23,7 +23,7 @@ BLOCKED = {
 def enforce_purpose(purpose: Purpose, consent_acknowledged: bool) -> None:
     if purpose in BLOCKED:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=BLOCKED[purpose],
         )
 
@@ -33,6 +33,6 @@ def enforce_purpose(purpose: Purpose, consent_acknowledged: bool) -> None:
         Purpose.PROFESSIONAL_VERIFICATION,
     } and not consent_acknowledged:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="This purpose requires the consent/authorization acknowledgement.",
         )

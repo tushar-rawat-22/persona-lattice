@@ -102,3 +102,19 @@ Recovery decision:
 
 No provider calls, real subject data, AI inference, or persistent case storage
 were introduced by the recovery.
+
+
+## Backend warning cleanup
+
+After the governed intake API was published, local verification exposed two
+upstream deprecations rather than functional failures:
+
+- Starlette's TestClient now prefers `httpx2` over `httpx`;
+- the old 422 status constant was renamed to `HTTP_422_UNPROCESSABLE_CONTENT`.
+
+The bootstrap baseline now uses HTTPX2 2.9.0 for TestClient, the current 422
+constant, and treats Starlette deprecation warnings as test failures.
+
+Verification for this cleanup requires Ruff, Python compilation, the API test
+suite, and an explicit API smoke test to pass without Starlette deprecation
+warnings.
