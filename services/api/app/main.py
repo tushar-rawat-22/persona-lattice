@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 from uuid import uuid4
 
-import phonenumbers
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .evidence import IdentifierKind, InvalidIdentifier, normalize_collection, normalize_identifier
 from .models import CaseIntake, IntakePreview, ProviderPlan
 from .policy import enforce_purpose
 from .providers.registry import PROVIDERS
@@ -29,18 +29,21 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "personalattice-api"}
 
 
-def normalize_phone(raw: str) -> tuple[str, str | None]:
+def _normalize_scalar(kind: IdentifierKind, raw: str | None) -> tuple[str | None, list[str]]:
+    if raw is None:
+        return None, []
+
     try:
-        parsed = phonenumbers.parse(raw, None)
-        if not phonenumbers.is_possible_number(parsed):
-            return raw.strip(), "Phone is not recognized as a possible number."
-        normalized = phonenumbers.format_number(
-            parsed,
-            phonenumbers.PhoneNumberFormat.E164,
-        )
-        return normalized, None
-    except phonenumbers.NumberParseException:
-        return raw.strip(), "Phone could not be normalized."
+        normalized = normalize_identifier(kind, raw)
+    except InvalidIdentifier as exc:
+        return None, [f"{raw}: {exc}"]
+
+    return normalized.normalized_value, []
+
+
+def _normalize_values(kind: IdentifierKind, values: list[str]) -> tuple[list[str], list[str]]:
+    normalized, warnings = normalize_collection(kind, values)
+    return [item.normalized_value for item in normalized], warnings
 
 
 @app.post("/v1/intake/preview", response_model=IntakePreview)
@@ -48,23 +51,41 @@ def preview_intake(payload: CaseIntake) -> IntakePreview:
     enforce_purpose(payload.purpose, payload.consent_acknowledged)
 
     warnings: list[str] = []
-    phones: list[str] = []
 
-    for raw in payload.phones:
-        normalized, warning = normalize_phone(raw)
-        phones.append(normalized)
-        if warning:
-            warnings.append(f"{raw}: {warning}")
+    full_name, scalar_warnings = _normalize_scalar(
+        IdentifierKind.NAME,
+        payload.full_name,
+    )
+    warnings.extend(scalar_warnings)
+
+    phones, phone_warnings = _normalize_values(IdentifierKind.PHONE, payload.phones)
+    warnings.extend(phone_warnings)
+
+    emails, email_warnings = _normalize_values(IdentifierKind.EMAIL, payload.emails)
+    warnings.extend(email_warnings)
+
+    usernames, username_warnings = _normalize_values(
+        IdentifierKind.USERNAME,
+        payload.usernames,
+    )
+    warnings.extend(username_warnings)
+
+    urls, url_warnings = _normalize_values(IdentifierKind.URL, payload.urls)
+    warnings.extend(url_warnings)
+
+    organizations, organization_warnings = _normalize_values(
+        IdentifierKind.ORGANIZATION,
+        payload.organizations,
+    )
+    warnings.extend(organization_warnings)
 
     normalized = {
-        "full_name": payload.full_name.strip() if payload.full_name else None,
-        "phones": sorted(set(phones)),
-        "emails": sorted({value.strip().lower() for value in payload.emails if value.strip()}),
-        "usernames": sorted({value.strip().lstrip("@") for value in payload.usernames if value.strip()}),
-        "urls": sorted({value.strip() for value in payload.urls if value.strip()}),
-        "organizations": sorted(
-            {value.strip() for value in payload.organizations if value.strip()}
-        ),
+        "full_name": full_name,
+        "phones": phones,
+        "emails": emails,
+        "usernames": usernames,
+        "urls": urls,
+        "organizations": organizations,
         "file_count": len(payload.files),
         "note_present": bool(payload.notes),
     }
