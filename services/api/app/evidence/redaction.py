@@ -8,6 +8,7 @@ from .types import IdentifierKind
 
 REDACTED_PHONE = "[REDACTED_PHONE]"
 REDACTED_EMAIL = "[REDACTED_EMAIL]"
+REDACTED_USERNAME = "[REDACTED_USERNAME]"
 
 
 def _phone_variants(value: str) -> set[str]:
@@ -61,5 +62,19 @@ def redact_text(text: str, identifiers: list[NormalizedIdentifier]) -> str:
                 reverse=True,
             ):
                 redacted = redacted.replace(variant, REDACTED_PHONE)
+
+        elif identifier.kind is IdentifierKind.USERNAME:
+            variants = {
+                identifier.raw_value.strip(),
+                identifier.normalized_value,
+            }
+            for variant in sorted(variants, key=len, reverse=True):
+                if not variant:
+                    continue
+                redacted = re.sub(
+                    rf"(?<![A-Za-z0-9_.-]){re.escape(variant)}(?![A-Za-z0-9_.-])",
+                    REDACTED_USERNAME,
+                    redacted,
+                )
 
     return redacted

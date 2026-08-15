@@ -24,6 +24,8 @@ CONSENTED_PURPOSES = frozenset(
         Purpose.PROFESSIONAL_VERIFICATION,
     }
 )
+PHONE_ONLY = frozenset({"phone"})
+USERNAME_ONLY = frozenset({"username"})
 
 
 PROVIDERS: tuple[ProviderDescriptor, ...] = (
@@ -51,6 +53,7 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         reason="Development adapter only after exact provider-terms/privacy review.",
         source_category=SourceCategory.PHONE_METADATA,
         allowed_purposes=CONSENTED_PURPOSES,
+        supported_identifier_kinds=PHONE_ONLY,
         auth_mode=AuthMode.API_KEY,
         secret_env="NUMVERIFY_API_KEY",
     ),
@@ -62,6 +65,7 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         reason="Development adapter only after exact provider-terms/privacy review.",
         source_category=SourceCategory.PHONE_METADATA,
         allowed_purposes=CONSENTED_PURPOSES,
+        supported_identifier_kinds=PHONE_ONLY,
         auth_mode=AuthMode.API_KEY,
         secret_env="ABSTRACT_PHONE_API_KEY",
     ),
@@ -73,6 +77,7 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         reason="Development adapter only after exact provider-terms/privacy review.",
         source_category=SourceCategory.PHONE_METADATA,
         allowed_purposes=CONSENTED_PURPOSES,
+        supported_identifier_kinds=PHONE_ONLY,
         auth_mode=AuthMode.API_KEY,
         secret_env="IPQS_API_KEY",
     ),
@@ -81,18 +86,28 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         capability="username_discovery",
         status=ProviderStatus.PLANNED.value,
         contact_risk=ContactRisk.NONE_KNOWN,
-        reason="M4 candidate adapter; not executable in M3.",
+        reason="Reviewed M4 enrichment candidate; recursion/AI/autoupdate/proxies stay disabled.",
+        version="0.6.3",
         source_category=SourceCategory.USERNAME_DISCOVERY,
         allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=USERNAME_ONLY,
     ),
     ProviderDescriptor(
         name="sherlock",
         capability="username_discovery",
-        status=ProviderStatus.PLANNED.value,
+        status=ProviderStatus.DEVELOPMENT.value,
         contact_risk=ContactRisk.NONE_KNOWN,
-        reason="M4 candidate verifier; not executable in M3.",
+        reason="Pinned bounded public-account verifier using only a reviewed packaged site subset.",
+        version="0.16.0",
         source_category=SourceCategory.USERNAME_DISCOVERY,
         allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=USERNAME_ONLY,
+        max_attempts=1,
+        timeout_seconds=8.0,
+        max_response_bytes=64 * 1024,
+        max_concurrency=1,
+        rate_limit=6,
+        rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
         name="whatsmyname",
@@ -102,6 +117,7 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         reason="CC BY-SA dataset boundary must be reviewed before any executable use.",
         source_category=SourceCategory.USERNAME_DISCOVERY,
         allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=USERNAME_ONLY,
     ),
     ProviderDescriptor(
         name="truecaller_manual",
@@ -111,6 +127,7 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         reason="Excluded from silent automation because lookup visibility/contact risk may exist.",
         source_category=SourceCategory.CALLER_ID,
         allowed_purposes=CONSENTED_PURPOSES,
+        supported_identifier_kinds=PHONE_ONLY,
     ),
     ProviderDescriptor(
         name="phoneinfoga",
@@ -120,6 +137,7 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         reason="GPL code is reference-only and not executable through the Apache core.",
         source_category=SourceCategory.REFERENCE,
         allowed_purposes=CONSENTED_PURPOSES,
+        supported_identifier_kinds=PHONE_ONLY,
     ),
 )
 

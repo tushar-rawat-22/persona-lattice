@@ -87,6 +87,13 @@ class ProviderExecutor:
         identifier = self.store.get_identifier(request.identifier_id)
         if identifier.subject_id != subject.id:
             raise ProviderValidationError("Identifier does not belong to the requested subject.")
+        if (
+            descriptor.supported_identifier_kinds
+            and identifier.kind.value not in descriptor.supported_identifier_kinds
+        ):
+            raise ProviderValidationError(
+                "Identifier kind is not supported by the requested provider."
+            )
 
         if request.query_origin is QueryOrigin.CONFIRMED_DOCUMENT_CANDIDATE:
             candidate = request.document_candidate
@@ -116,7 +123,6 @@ class ProviderExecutor:
 
         for attempt in range(1, descriptor.max_attempts + 1):
             try:
-                # Every actual adapter attempt consumes the local budget, including retries.
                 self._rate_budgets[descriptor.name].consume()
                 async with self._semaphores[descriptor.name]:
                     result = await asyncio.wait_for(
