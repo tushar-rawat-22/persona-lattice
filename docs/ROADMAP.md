@@ -5,6 +5,8 @@ data model and policy gates, not before them.
 
 ## M0 — public foundation
 
+**Status: complete**
+
 - repository, license and source policy
 - product architecture
 - intake API
@@ -14,13 +16,19 @@ data model and policy gates, not before them.
 
 ## M1 — evidence core
 
-- persistent case/identifier/observation/claim schemas
-- deterministic normalization
+**Status: complete**
+
+- persistent subject/identifier/observation/claim/evidence-link schemas
+- deterministic normalization outside the HTTP layer
 - provenance and freshness model
+- support/contradict/unresolved evidence relationships
+- AI-claim/source-observation separation
 - redaction utilities
 - synthetic fixtures only
 
 ## M2 — file intake + AI extraction
+
+**Status: next**
 
 - safe multi-file upload
 - text extraction for supported documents

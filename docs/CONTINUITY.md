@@ -38,54 +38,86 @@ unredacted screenshots in this file.
 
 - Next.js web dashboard under `apps/web`
 - FastAPI service under `services/api`
-- evidence/correlation model grows in the API first
+- SQLAlchemy evidence core under `services/api/app/evidence`
 - provider adapters are isolated behind a protocol
 - public docs live under `docs`
 - `THIRD_PARTY.md` tracks license/integration boundaries
 
-## Current milestone
+## Completed milestones
 
-**M0 — public foundation: COMPLETE.**
+### M0 — public foundation: COMPLETE
 
-Implemented and published:
+Published:
 
 - repository, Apache-2.0 license and source policy;
 - architecture/product/roadmap documentation;
 - governed case-intake API;
-- phone/email/username intake normalization;
 - consent and purpose enforcement;
 - provider/contact-risk planning with no live provider execution;
 - Next.js case-intake dashboard shell;
 - CI for API on Python 3.11 and 3.13;
 - CI for web lint, typecheck and production build.
 
-### M0 verification
+Key M0 verification:
 
 - governed API commit: `2dd8d12ab96819b182a9bf563d1a9d946b0b366c`
 - backend warning-cleanup commit: `6fb1d305b4d198cff8a35d3a1f9daffc93a95e47`
-- dashboard/CI implementation commit on `main`: `8cc62091865d71ff1177877c4e5337a463436628`
-- dashboard/CI PR: `#2`, merged after its CI run passed
-- post-merge `main` CI run: `31901840132`, conclusion `success`
-- API matrix: Python 3.11 PASS, Python 3.13 PASS
-- web: install PASS, lint PASS, typecheck PASS, production build PASS
+- dashboard/CI implementation commit: `8cc62091865d71ff1177877c4e5337a463436628`
+- post-merge M0 CI run: `31901840132`, conclusion `success`
 
-No live OSINT provider calls, real subject data, AI inference, persistent case
-storage, production authentication or report export were introduced in M0.
+### M1 — evidence core: COMPLETE
+
+Published through PR `#4`:
+
+- persistent `Subject`, `Identifier`, `Observation`, `Claim` and `EvidenceLink`
+  SQLAlchemy models;
+- database-agnostic UUIDs and SQLite development/test persistence;
+- explicit SQLite foreign-key enforcement;
+- deterministic phone, email, username, URL, name and organization
+  normalization outside the HTTP layer;
+- source provenance, retrieval timestamps and optional expiry/freshness;
+- support/contradict/unresolved evidence relationships;
+- AI may originate a `Claim` but `ai` is not an allowed observation source;
+- public-safe phone/email redaction helpers;
+- ADR `0003-evidence-core-persistence.md`;
+- synthetic-only tests; no live subject or provider data.
+
+M1 verification:
+
+- initial evidence commit: `ac241696792553ea767677606efefc4275be5a8d`
+- conservative-normalization correction: `21651e2c1ce56d57a08e569af6652ca912096778`
+- final test-alignment commit: `35a6be3ba3609b1324158c62f02240b38db91f26`
+- merge commit on `main`: `22d8b4c100db4861ad1890bcb224f890cd652210`
+- final PR CI run: `31902885290`, API 3.11 PASS, API 3.13 PASS, web PASS
+- post-merge `main` CI run: `31902946010`, API 3.11 PASS, API 3.13 PASS, web PASS
+
+During review we rejected generic case-folding for email local-parts and
+usernames, and rejected stripping URL fragments. Those equivalence rules can be
+platform-specific, so the core now preserves them and leaves provider-specific
+canonicalization to later adapters. One intermediate PR run failed because an
+older deduplication test still expected the discarded behavior; the test was
+corrected and the final PR/main runs are green.
+
+No live OSINT provider calls, real subject data, provider credentials, AI
+execution, production authentication or report export have been introduced.
 
 ## Next work
 
-**M1 — evidence core.**
+**M2 — safe file intake and AI-assisted extraction.**
 
-Build and test the data model before any live provider integration:
+Before any model sees uploaded content:
 
-- persistent `Subject`, `Identifier`, `Observation`, `Claim` and `EvidenceLink` models;
-- deterministic normalization separate from transport/API code;
-- provenance and freshness rules;
-- redaction utilities;
-- synthetic fixtures only;
-- invariants that prevent AI output from being stored as source observations.
-
-Do not start live provider adapters until these invariants are covered by tests.
+- enforce file-count and byte-size ceilings;
+- use an allowlist of supported document types;
+- keep uploads outside Git and outside public logs;
+- treat filenames and document content as untrusted input;
+- extract text in a bounded worker boundary;
+- store extraction results as source observations with provenance;
+- isolate uploaded instructions from system/developer instructions;
+- require human confirmation of extracted identifiers/claims before they can
+  trigger external research;
+- keep live AI/provider execution disabled until these controls are covered by
+  synthetic tests.
 
 ## Bootstrap recovery record
 

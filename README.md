@@ -38,7 +38,7 @@ suggest the next research step, but it cannot create evidence.
 
 ## Current status
 
-**M0 — public foundation is complete.**
+**M0 — public foundation and M1 — evidence core are complete.**
 
 The repository now has:
 
@@ -47,12 +47,19 @@ The repository now has:
 - a governed FastAPI intake API with purpose and consent checks;
 - a responsive Next.js case-intake dashboard shell;
 - provider/contact-risk planning without live provider execution;
+- persistent SQLAlchemy models for subjects, identifiers, observations, claims
+  and evidence links;
+- deterministic identifier normalization outside the HTTP layer;
+- provenance, retrieval time, expiry/freshness and evidence-relation semantics;
+- an explicit rule that AI-derived analysis can be a claim, never a source
+  observation;
+- public-safe phone/email redaction helpers;
 - GitHub CI for the API on Python 3.11 and 3.13;
 - GitHub CI for web lint, TypeScript checking and production build.
 
-The next milestone is **M1 — evidence core**. Live OSINT provider calls,
-username/social discovery, document-content ingestion, AI inference, persistent
-case storage, production authentication and report export are not implemented
+The next milestone is **M2 — safe file intake and AI-assisted extraction**.
+Live OSINT provider calls, username/social discovery, AI execution against real
+case material, production authentication and report export are not implemented
 yet.
 
 ## Intended modes
