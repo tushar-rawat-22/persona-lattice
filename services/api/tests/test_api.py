@@ -28,7 +28,7 @@ def test_preview_normalizes_intake() -> None:
     body = response.json()
     assert body["status"] == "planned_only"
     assert body["normalized"]["phones"] == ["+919876543210"]
-    assert body["normalized"]["emails"] == ["test@example.com"]
+    assert body["normalized"]["emails"] == ["Test@example.com"]
     assert body["normalized"]["usernames"] == ["demo_user"]
 
 
@@ -39,13 +39,13 @@ def test_preview_deduplicates_and_warns_on_malformed_identifiers() -> None:
             "purpose": "self_audit",
             "consent_acknowledged": True,
             "phones": ["+91 98765 43210", "+919876543210", "not-a-phone"],
-            "emails": ["TEST@example.com", "test@example.com", "broken email"],
+            "emails": ["TEST@Example.com", "TEST@example.com", "broken email"],
         },
     )
     assert response.status_code == 200
     body = response.json()
     assert body["normalized"]["phones"] == ["+919876543210"]
-    assert body["normalized"]["emails"] == ["test@example.com"]
+    assert body["normalized"]["emails"] == ["TEST@example.com"]
     assert len(body["warnings"]) == 2
 
 

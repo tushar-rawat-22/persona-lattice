@@ -30,6 +30,11 @@ Identifiers keep the raw input, a normalized display value and a comparison
 key. Deduplication uses the comparison key; the raw value is retained for
 auditability.
 
+Generic normalization is deliberately conservative. Email local-part case,
+username case, and URL path/query/fragment semantics are preserved because their
+equivalence can be provider-specific. Provider adapters may add stricter
+canonicalization later when a platform's rules justify it.
+
 Observations carry `retrieved_at` and optional `expires_at` timestamps. Missing
 expiry means freshness is unknown rather than permanent.
 

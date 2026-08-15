@@ -45,15 +45,15 @@ def _normalize_email(raw: str) -> tuple[str, str]:
     if not local or not domain or "." not in domain:
         raise InvalidIdentifier("Email is malformed.")
 
-    normalized = f"{local.lower()}@{domain.lower()}"
-    return normalized, normalized.casefold()
+    normalized = f"{local}@{domain.lower()}"
+    return normalized, normalized
 
 
 def _normalize_username(raw: str) -> tuple[str, str]:
     value = raw.strip().lstrip("@").strip()
     if not value or any(character.isspace() for character in value):
         raise InvalidIdentifier("Username is malformed.")
-    return value, value.casefold()
+    return value, value
 
 
 def _normalize_url(raw: str) -> tuple[str, str]:
@@ -90,7 +90,7 @@ def _normalize_url(raw: str) -> tuple[str, str]:
         netloc=netloc,
         path=parsed.path or "",
         query=parsed.query,
-        fragment="",
+        fragment=parsed.fragment,
     )
     normalized = urlunsplit(normalized_parts)
     return normalized, normalized
