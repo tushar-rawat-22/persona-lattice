@@ -45,6 +45,12 @@ class EvidenceStore:
             raise EntityNotFound(f"Subject {subject_id} does not exist.")
         return subject
 
+    def get_identifier(self, identifier_id: UUID) -> Identifier:
+        identifier = self.session.get(Identifier, identifier_id)
+        if identifier is None:
+            raise EntityNotFound(f"Identifier {identifier_id} does not exist.")
+        return identifier
+
     def add_identifier(
         self,
         subject_id: UUID,
@@ -101,9 +107,7 @@ class EvidenceStore:
             raise EvidenceInvariantError("Observation source_locator is required.")
 
         if identifier_id is not None:
-            identifier = self.session.get(Identifier, identifier_id)
-            if identifier is None:
-                raise EntityNotFound(f"Identifier {identifier_id} does not exist.")
+            identifier = self.get_identifier(identifier_id)
             if identifier.subject_id != subject.id:
                 raise EvidenceInvariantError(
                     "Observation identifier must belong to the same subject."
