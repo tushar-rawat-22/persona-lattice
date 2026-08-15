@@ -38,7 +38,7 @@ untrusted source material, not as instructions to the application.
 
 ## Current status
 
-**M0 through M3 are complete.**
+**M0 through M4 are complete.**
 
 The repository now has:
 
@@ -61,17 +61,22 @@ The repository now has:
   automatically;
 - a synthetic provider used to verify the execution contract without network
   access;
+- a governed Sherlock 0.16.0 development adapter for username-to-public-account
+  existence checks over a fixed eight-site allowlist;
+- explicit account states where a positive same-handle hit remains an account
+  candidate and never becomes an identity claim automatically;
 - GitHub CI for the API on Python 3.11 and 3.13 plus web lint, TypeScript and
   production build checks.
 
-The next milestone is **M4 — governed username and public-account discovery**
-(Issue `#9`). Sherlock is the first planned existence-check adapter. Maigret is
-a later enrichment candidate under a deliberately restricted mode. Same-handle
-reuse is evidence, not identity proof.
+The next milestone is **M5 — explainable evidence correlation** (Issue `#11`).
+The initial correlation engine will be deterministic and auditable. It will not
+present a heuristic evidence score as an identity probability without a
+separate calibration study.
 
-No real external OSINT provider is executable yet. Live AI model calls,
-production authentication, private-account access and report export are also
-not implemented.
+Sherlock is currently an internal development adapter; there is no public
+unauthenticated provider-execution endpoint. Live AI model calls, production
+authentication, private-account access and report export are also not
+implemented.
 
 ## Intended modes
 

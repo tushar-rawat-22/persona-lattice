@@ -64,7 +64,7 @@ and concurrency tests rather than accepting indirect coverage.
 
 ## M4 — governed username and public-account discovery
 
-**Status: in implementation/review — Issue #9**
+**Status: complete**
 
 - published Sherlock 0.16.0 pinned as the first username verifier
 - Sherlock's packaged data is filtered to an eight-site reviewed allowlist;
@@ -81,13 +81,31 @@ and concurrency tests rather than accepting indirect coverage.
 - Maigret 0.6.3 remains a non-executable enrichment candidate with recursion,
   AI, auto-update and broad scanning disabled by design
 
-## M5 — correlation engine
+Review corrected three assumptions before closure: the repository-declared
+Sherlock 0.16.1 was not published on the package index, caller-supplied site
+metadata would have made the worker boundary too broad, and one duplicate-result
+test fixture triggered the site-count guard before the duplicate guard. The
+final implementation pins published 0.16.0, passes only approved site names to
+the worker, and tests duplicate rejection inside the configured result budget.
 
-- candidate entity graph
-- weighted evidence factors
-- contradiction penalties
-- calibrated confidence bands
-- explainable "why this match" output
+## M5 — explainable evidence correlation engine
+
+**Status: next — Issue #11**
+
+- deterministic candidate graph and factor records
+- versioned weights/thresholds and explicit contradiction/veto rules
+- source-independence groups so mirrors/restatements cannot inflate evidence
+- stale-evidence handling as an explicit policy
+- same-handle reuse alone remains non-decisive
+- explainable triage outcomes rather than automatic identity claims
+- no external provider calls in the correlation engine
+- no AI/ML/biometric matching in the decision path
+
+The earlier phrase "calibrated confidence bands" is intentionally tightened.
+M5 must not label a heuristic score as an identity probability until a separate,
+reviewed labeled evaluation can actually demonstrate calibration. Initial M5
+output is an evidence-strength/triage result with an explicit uncalibrated
+status.
 
 ## M6 — dashboard intelligence
 

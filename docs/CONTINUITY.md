@@ -144,9 +144,8 @@ Published through PR `#8`:
 - provider results become M1 `PROVIDER` observations with provider/version/source
   provenance, never automatic claims;
 - public-safe provider log redaction helper;
-- `synthetic_echo` is the only executable adapter and performs no network call;
-- Numverify, Abstract and IPQS remain review-required; Maigret/Sherlock remain
-  non-executable planned integrations;
+- `synthetic_echo` is the only executable adapter through M3 and performs no
+  network call;
 - ADR `0005-provider-execution-boundary.md`.
 
 M3 verification:
@@ -158,6 +157,8 @@ M3 verification:
 - final PR CI run: `31904533035`, API 3.11 PASS, API 3.13 PASS (`55 passed`), web PASS
 - merge commit: `01b955637a25fda9e2efb12ffa6799e179923d6a`
 - post-merge CI run: `31904600206`, API 3.11 PASS, API 3.13 PASS, web PASS
+- closure commit: `c9332016494d5794cb02c4d7fd3a927f5c5872e1`
+- closure CI run: `31904785271`, API 3.11 PASS, API 3.13 PASS, web PASS
 
 M3 review deliberately caught two gaps before merge. Retries initially consumed
 the local rate budget only once per high-level execution; the fix moved budget
@@ -165,34 +166,77 @@ consumption inside the actual-attempt loop. The first green implementation also
 lacked direct timeout/concurrency acceptance tests; both were added and the
 final PR/main runs are green.
 
-No live external provider, real subject data, provider credential, live AI,
-production authentication or report export has been introduced through M3.
+### M4 — governed username and public-account discovery: COMPLETE
+
+Published through PR `#10`:
+
+- `sherlock-project==0.16.0` is the pinned published development dependency;
+- the adapter reads Sherlock's packaged site data without using its live
+  manifest/exclusions loader and permits only eight reviewed sites;
+- parent-to-worker IPC carries only username, approved site names and timeout;
+  arbitrary URL/site metadata cannot be supplied across the worker boundary;
+- synchronous upstream execution runs in a child process that M3 timeout
+  cancellation kills and reaps;
+- M3 centrally enforces Sherlock's username-only identifier contract;
+- claimed, available, unknown, illegal and WAF outcomes remain explicit;
+- a claimed hit must have a valid public HTTP(S) profile URL;
+- positive hits are provider observations with `account_candidate=true` and
+  `identity_claim=false`;
+- provider-log redaction now covers usernames;
+- full page bodies are not returned from the worker or persisted;
+- no provider-execution HTTP endpoint was added; Sherlock remains an internal
+  development adapter rather than an unauthenticated public research surface;
+- no browser opening, login/cookies, private-profile access, proxies, Tor/I2P,
+  CAPTCHA/WAF bypass, follower-graph collection, account contact/recovery or
+  automatic identity correlation was added;
+- Maigret 0.6.3 remains non-executable.
+
+M4 verification:
+
+- initial implementation: `0ebe8e8e995e927c69664d617c097718a9f37a88`
+- worker allowlist hardening: `7fe7b19c89c69ad0cf41a0f8ac23c1996003e466`
+- published-version correction: `4a3538fc17f4b701d7d8615872bd308f34d09f07`
+- duplicate-result test correction: `b42bb4dbd08bdd67a9729fbce81c4689c0f13da2`
+- PR: `#10`
+- final PR CI run: `31905880652`, API 3.11 PASS, API 3.13 PASS (`64 passed`), web PASS
+- merge commit: `7cf43b4769da3e144e799163b4719e5cef0bf2b8`
+- post-merge CI run: `31906017367`, API 3.11 PASS, API 3.13 PASS, web PASS
+
+M4 review caught three real assumptions before closure. First, the initial
+worker shape accepted caller-supplied site metadata, which was too close to an
+arbitrary-URL transport; it now accepts approved site names only and reloads the
+pinned package data independently. Second, the repository declared Sherlock
+0.16.1 but CI proved that version was not published on the package index, so the
+runtime was corrected to reviewed/published 0.16.0 rather than bypassing
+reproducible installation. Third, one test expected the duplicate-result guard
+while returning two rows against a one-site budget; the budget guard correctly
+fired first, so the fixture was corrected without changing production behavior.
+
+Through M4, the only real external network-capable adapter is the bounded
+Sherlock development adapter, and it is not exposed through a public provider
+execution endpoint. No real case data, provider credential, live AI, production
+authentication or report export has been introduced.
 
 ## Next work
 
-**M4 — governed username and public-account discovery (Issue `#9`).**
+**M5 — explainable evidence correlation engine (Issue `#11`).**
 
-Upstream review on 2026-08-16 found:
+M5 is deliberately deterministic before it is probabilistic:
 
-- Maigret `soxoj/maigret`: MIT, current project metadata 0.6.3, Python 3.10+,
-  3,000+ site support with optional recursion, auto-update and AI features;
-- Sherlock `sherlock-project/sherlock`: MIT, current project metadata 0.16.1,
-  direct Python `sherlock(...)` account-existence function and 400+ documented
-  sites.
+- correlate existing identifiers/observations only; no new provider calls;
+- keep correlation results separate from factual Claims;
+- use versioned factor weights, contradiction/veto rules and source-independence
+  groups;
+- make same-handle-only evidence non-decisive;
+- expose every contributing observation and reason;
+- test stale evidence, duplicated mirrors, collisions and contradictions with
+  synthetic/adversarial fixtures;
+- do not describe a heuristic score as a calibrated identity probability.
 
-M4 decision:
-
-- integrate Sherlock first as the narrower existence-check adapter;
-- evaluate Maigret second as constrained enrichment;
-- do not vendor upstream source/site datasets into the Apache tree;
-- only user-supplied or human-confirmed usernames can trigger discovery;
-- every run goes through the M3 policy/resource boundary;
-- account hits remain observations/candidates, not identity claims;
-- Maigret recursion, AI, auto-update, Tor/I2P/proxies, bypass tooling and
-  unrestricted all-site scanning remain disabled in our adapter design.
-
-Identity/entity correlation belongs in M5 rather than being smuggled into the
-username scanner.
+The older roadmap wording around "calibrated confidence bands" was too strong.
+Calibration requires a lawful, reviewed labeled benchmark and empirical
+validation; until that exists, M5 will expose evidence-strength/triage outcomes
+with an explicit uncalibrated status.
 
 ## Bootstrap recovery record
 
