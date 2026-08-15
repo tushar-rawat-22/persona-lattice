@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from uuid import uuid4
 
 import pytest
@@ -31,10 +32,6 @@ from app.providers import (
 from app.providers.sherlock import _decode_worker_payload, run_sherlock_worker
 
 
-def _site(url: str) -> dict[str, str]:
-    return {"url": url, "urlMain": url, "errorType": "status_code"}
-
-
 @pytest.fixture
 def store() -> EvidenceStore:
     engine = create_database_engine("sqlite+pysqlite:///:memory:")
@@ -54,19 +51,20 @@ def test_pinned_sherlock_package_and_reviewed_site_budget() -> None:
     assert all(not entry.get("isNSFW") for entry in sites.values())
 
 
-def test_unreviewed_or_incomplete_site_catalog_is_rejected() -> None:
+def test_unreviewed_empty_or_duplicate_site_selection_is_rejected() -> None:
     with pytest.raises(ProviderValidationError, match="unreviewed"):
-        SherlockProvider(site_data={"Example": _site("https://example.test/{}")})
-
-    with pytest.raises(ProviderValidationError, match="incomplete"):
-        SherlockProvider(site_data={"GitHub": {"url": "https://github.com/{}"}})
+        SherlockProvider(site_names=("Example",))
+    with pytest.raises(ProviderValidationError, match="budget"):
+        SherlockProvider(site_names=())
+    with pytest.raises(ProviderValidationError, match="duplicates"):
+        SherlockProvider(site_names=("GitHub", "GitHub"))
 
 
 @pytest.mark.asyncio
 async def test_sherlock_maps_account_states_without_creating_identity_claims() -> None:
-    async def worker(username, site_data, timeout):
+    async def worker(username, site_names, timeout):
         assert username == "example-user"
-        assert set(site_data) == {"GitHub", "Keybase"}
+        assert site_names == ("GitHub", "Keybase")
         assert timeout <= 5
         return [
             SherlockResult(
@@ -88,10 +86,7 @@ async def test_sherlock_maps_account_states_without_creating_identity_claims() -
         ]
 
     provider = SherlockProvider(
-        site_data={
-            "GitHub": _site("https://github.com/{}"),
-            "Keybase": _site("https://keybase.io/{}"),
-        },
+        site_names=("GitHub", "Keybase"),
         worker=worker,
     )
     result = await provider.execute(
@@ -120,7 +115,7 @@ async def test_sherlock_maps_account_states_without_creating_identity_claims() -
 async def test_sherlock_rejects_wrong_identifier_kind_and_duplicate_results() -> None:
     calls = 0
 
-    async def worker(username, site_data, timeout):
+    async def worker(username, site_names, timeout):
         nonlocal calls
         calls += 1
         return [
@@ -142,10 +137,7 @@ async def test_sherlock_rejects_wrong_identifier_kind_and_duplicate_results() ->
             ),
         ]
 
-    provider = SherlockProvider(
-        site_data={"GitHub": _site("https://github.com/{}")},
-        worker=worker,
-    )
+    provider = SherlockProvider(site_names=("GitHub",), worker=worker)
     with pytest.raises(ProviderValidationError, match="username"):
         await provider.execute(
             ProviderQuery(uuid4(), uuid4(), "email", "person@example.test"),
@@ -160,7 +152,7 @@ async def test_sherlock_rejects_wrong_identifier_kind_and_duplicate_results() ->
         )
 
 
-def test_worker_contract_rejects_unreviewed_and_malformed_results() -> None:
+def test_worker_contract_rejects_unreviewed_malformed_and_claimed_without_url() -> None:
     with pytest.raises(ProviderValidationError, match="unreviewed"):
         _decode_worker_payload(
             {
@@ -193,9 +185,27 @@ def test_worker_contract_rejects_unreviewed_and_malformed_results() -> None:
             }
         )
 
+    with pytest.raises(ProviderValidationError, match="valid public profile URL"):
+        _decode_worker_payload(
+            {
+                "version": 1,
+                "results": [
+                    {
+                        "site_name": "GitHub",
+                        "state": "claimed",
+                        "profile_url": None,
+                        "http_status": 200,
+                        "detection_method": "status_code",
+                    }
+                ],
+            }
+        )
+
 
 @pytest.mark.asyncio
-async def test_worker_process_is_killed_when_execution_is_cancelled(monkeypatch) -> None:
+async def test_worker_ipc_contains_only_approved_names_and_is_killed_when_cancelled(
+    monkeypatch,
+) -> None:
     started = asyncio.Event()
 
     class FakeProcess:
@@ -206,7 +216,10 @@ async def test_worker_process_is_killed_when_execution_is_cancelled(monkeypatch)
             self.waited = False
 
         async def communicate(self, request):
-            assert request
+            payload = json.loads(request.decode("utf-8"))
+            assert payload["site_names"] == ["GitHub"]
+            assert "site_data" not in payload
+            assert "url" not in payload
             started.set()
             await asyncio.Event().wait()
 
@@ -225,13 +238,7 @@ async def test_worker_process_is_killed_when_execution_is_cancelled(monkeypatch)
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
 
-    task = asyncio.create_task(
-        run_sherlock_worker(
-            "example-user",
-            {"GitHub": _site("https://github.com/{}")},
-            1.0,
-        )
-    )
+    task = asyncio.create_task(run_sherlock_worker("example-user", ("GitHub",), 1.0))
     await started.wait()
     task.cancel()
 
@@ -252,7 +259,7 @@ async def test_sherlock_runs_through_m3_and_persists_provider_observation(
         normalize_identifier(IdentifierKind.USERNAME, "example-user"),
     )
 
-    async def worker(_username, _site_data, _timeout):
+    async def worker(_username, _site_names, _timeout):
         return [
             SherlockResult(
                 "GitHub",
@@ -264,10 +271,7 @@ async def test_sherlock_runs_through_m3_and_persists_provider_observation(
             )
         ]
 
-    provider = SherlockProvider(
-        site_data={"GitHub": _site("https://github.com/{}")},
-        worker=worker,
-    )
+    provider = SherlockProvider(site_names=("GitHub",), worker=worker)
     executor = ProviderExecutor(store=store, adapters=[provider])
     observations = await executor.execute(
         ExecutionRequest(
@@ -297,15 +301,12 @@ async def test_m3_rejects_non_username_before_sherlock_worker(store: EvidenceSto
     )
     calls = 0
 
-    async def worker(_username, _site_data, _timeout):
+    async def worker(_username, _site_names, _timeout):
         nonlocal calls
         calls += 1
         return []
 
-    provider = SherlockProvider(
-        site_data={"GitHub": _site("https://github.com/{}")},
-        worker=worker,
-    )
+    provider = SherlockProvider(site_names=("GitHub",), worker=worker)
     executor = ProviderExecutor(store=store, adapters=[provider])
 
     with pytest.raises(ProviderValidationError, match="Identifier kind"):

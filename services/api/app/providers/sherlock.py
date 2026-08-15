@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from importlib import resources
@@ -27,7 +27,7 @@ SHERLOCK_SITE_ALLOWLIST = (
     "Keybase",
     "Replit.com",
 )
-MAX_SHERLOCK_SITES = 8
+MAX_SHERLOCK_SITES = len(SHERLOCK_SITE_ALLOWLIST)
 MAX_DIAGNOSTIC_CHARS = 256
 MAX_WORKER_OUTPUT_BYTES = 128 * 1024
 
@@ -50,16 +50,31 @@ class SherlockResult:
     detection_method: str
 
 
-Worker = Callable[[str, dict[str, dict[str, Any]], float], Awaitable[list[SherlockResult]]]
+Worker = Callable[[str, tuple[str, ...], float], Awaitable[list[SherlockResult]]]
 
 
 def _canonical_public_url(value: str | None) -> str | None:
     if not value:
         return None
-    parts = urlsplit(value.strip())
-    if parts.scheme not in {"http", "https"} or not parts.netloc:
+    try:
+        parts = urlsplit(value.strip())
+        if parts.scheme not in {"http", "https"} or not parts.hostname:
+            return None
+        if parts.username or parts.password:
+            return None
+        port = parts.port
+    except ValueError:
         return None
-    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path, parts.query, ""))
+
+    hostname = parts.hostname.lower()
+    if port is not None and not (
+        (parts.scheme.lower() == "https" and port == 443)
+        or (parts.scheme.lower() == "http" and port == 80)
+    ):
+        netloc = f"{hostname}:{port}"
+    else:
+        netloc = hostname
+    return urlunsplit((parts.scheme.lower(), netloc, parts.path, parts.query, ""))
 
 
 def _bounded_diagnostic(value: object) -> str | None:
@@ -72,7 +87,7 @@ def _bounded_diagnostic(value: object) -> str | None:
 
 
 def load_reviewed_sherlock_sites() -> dict[str, dict[str, Any]]:
-    """Load only the reviewed allowlist from Sherlock's pinned packaged dataset."""
+    """Validate and load the reviewed allowlist from Sherlock's pinned package data."""
     try:
         from sherlock_project import __version__ as installed_version
 
@@ -80,7 +95,11 @@ def load_reviewed_sherlock_sites() -> dict[str, dict[str, Any]]:
             raise ProviderValidationError(
                 "Installed Sherlock version does not match the reviewed version."
             )
-        resource = resources.files("sherlock_project").joinpath("resources", "data.json")
+        resource = (
+            resources.files("sherlock_project")
+            .joinpath("resources")
+            .joinpath("data.json")
+        )
         raw = json.loads(resource.read_text(encoding="utf-8"))
     except ProviderValidationError:
         raise
@@ -103,8 +122,20 @@ def load_reviewed_sherlock_sites() -> dict[str, dict[str, Any]]:
             raise ProviderValidationError("Reviewed Sherlock site metadata is incomplete.")
         selected[site_name] = dict(entry)
 
-    if len(selected) > MAX_SHERLOCK_SITES:
-        raise ProviderValidationError("Sherlock site budget exceeds the configured maximum.")
+    if len(selected) != MAX_SHERLOCK_SITES:
+        raise ProviderValidationError("Sherlock site budget does not match the reviewed allowlist.")
+    return selected
+
+
+def _normalize_site_names(site_names: Sequence[str]) -> tuple[str, ...]:
+    selected = tuple(site_names)
+    if not selected or len(selected) > MAX_SHERLOCK_SITES:
+        raise ProviderValidationError("Sherlock site selection exceeds the configured budget.")
+    if len(set(selected)) != len(selected):
+        raise ProviderValidationError("Sherlock site selection contains duplicates.")
+    unknown = set(selected).difference(SHERLOCK_SITE_ALLOWLIST)
+    if unknown:
+        raise ProviderValidationError("Sherlock site selection contains an unreviewed site.")
     return selected
 
 
@@ -140,6 +171,8 @@ def _decode_worker_payload(payload: object) -> list[SherlockResult]:
             raise ProviderValidationError("Sherlock worker returned an invalid HTTP status.")
 
         profile_url = _canonical_public_url(row.get("profile_url"))
+        if state is AccountDiscoveryState.CLAIMED and profile_url is None:
+            raise ProviderValidationError("Claimed Sherlock result requires a valid public profile URL.")
         decoded.append(
             SherlockResult(
                 site_name=site_name,
@@ -155,15 +188,16 @@ def _decode_worker_payload(payload: object) -> list[SherlockResult]:
 
 async def run_sherlock_worker(
     username: str,
-    site_data: dict[str, dict[str, Any]],
+    site_names: tuple[str, ...],
     per_site_timeout: float,
 ) -> list[SherlockResult]:
     """Run pinned Sherlock in a killable child process with a bounded machine contract."""
+    selected = _normalize_site_names(site_names)
     request = json.dumps(
         {
             "version": 1,
             "username": username,
-            "site_data": site_data,
+            "site_names": selected,
             "per_site_timeout": per_site_timeout,
         },
         ensure_ascii=False,
@@ -181,7 +215,8 @@ async def run_sherlock_worker(
     try:
         stdout, _stderr = await process.communicate(request)
     except asyncio.CancelledError:
-        process.kill()
+        if process.returncode is None:
+            process.kill()
         await process.wait()
         raise
 
@@ -193,7 +228,11 @@ async def run_sherlock_worker(
         payload = json.loads(stdout.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ProviderValidationError("Sherlock worker returned invalid JSON.") from exc
-    return _decode_worker_payload(payload)
+
+    results = _decode_worker_payload(payload)
+    if any(result.site_name not in selected for result in results):
+        raise ProviderValidationError("Sherlock worker returned a site outside the requested subset.")
+    return results
 
 
 class SherlockProvider:
@@ -202,25 +241,13 @@ class SherlockProvider:
     def __init__(
         self,
         *,
-        site_data: Mapping[str, Mapping[str, Any]] | None = None,
+        site_names: Sequence[str] = SHERLOCK_SITE_ALLOWLIST,
         worker: Worker = run_sherlock_worker,
     ) -> None:
-        selected = (
-            load_reviewed_sherlock_sites()
-            if site_data is None
-            else {name: dict(value) for name, value in site_data.items()}
-        )
-        unknown = set(selected).difference(SHERLOCK_SITE_ALLOWLIST)
-        if unknown:
-            raise ProviderValidationError("Sherlock site catalog contains an unreviewed site.")
-        if not selected or len(selected) > MAX_SHERLOCK_SITES:
-            raise ProviderValidationError("Sherlock site catalog exceeds the configured budget.")
-        for entry in selected.values():
-            if entry.get("isNSFW"):
-                raise ProviderValidationError("NSFW Sherlock sites are not allowed.")
-            if not isinstance(entry.get("url"), str) or not isinstance(entry.get("errorType"), str):
-                raise ProviderValidationError("Sherlock site metadata is incomplete.")
-        self.site_data = selected
+        # Validate the exact installed package and packaged data up front. The
+        # child process independently reloads the same package data before use.
+        load_reviewed_sherlock_sites()
+        self.site_names = _normalize_site_names(site_names)
         self.worker = worker
 
     async def execute(self, query: ProviderQuery, secret: str | None) -> ProviderResult:
@@ -231,24 +258,27 @@ class SherlockProvider:
 
         results = await self.worker(
             query.identifier_value,
-            self.site_data,
+            self.site_names,
             min(self.descriptor.timeout_seconds, 5.0),
         )
-        if len(results) > len(self.site_data):
+        if len(results) > len(self.site_names):
             raise ProviderValidationError("Sherlock returned more results than the site budget allows.")
 
         observations: list[ProviderObservationData] = []
         seen_sites: set[str] = set()
         for result in results:
-            if result.site_name not in self.site_data or result.site_name in seen_sites:
+            if result.site_name not in self.site_names or result.site_name in seen_sites:
                 raise ProviderValidationError("Sherlock returned an invalid or duplicate site result.")
             seen_sites.add(result.site_name)
             profile_url = _canonical_public_url(result.profile_url)
+            if result.state is AccountDiscoveryState.CLAIMED and profile_url is None:
+                raise ProviderValidationError("Claimed Sherlock result has no valid public profile URL.")
             locator = (
                 profile_url
-                if result.state is AccountDiscoveryState.CLAIMED and profile_url
+                if result.state is AccountDiscoveryState.CLAIMED
                 else f"sherlock://site/{quote(result.site_name, safe='')}"
             )
+            assert locator is not None
             observations.append(
                 ProviderObservationData(
                     source_locator=locator,
@@ -256,7 +286,9 @@ class SherlockProvider:
                         "site": result.site_name,
                         "account_state": result.state.value,
                         "account_candidate": result.state is AccountDiscoveryState.CLAIMED,
-                        "profile_url": profile_url if result.state is AccountDiscoveryState.CLAIMED else None,
+                        "profile_url": (
+                            profile_url if result.state is AccountDiscoveryState.CLAIMED else None
+                        ),
                         "http_status": result.http_status,
                         "detection_method": result.detection_method,
                         "diagnostic": result.diagnostic,

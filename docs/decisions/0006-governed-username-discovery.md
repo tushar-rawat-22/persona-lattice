@@ -28,25 +28,27 @@ PersonaLattice integrates Sherlock first with these constraints:
 1. `sherlock-project==0.16.1` is pinned.
 2. Upstream source and site data are not copied into the Apache-2.0 tree.
 3. The adapter reads Sherlock's packaged `resources/data.json` directly and
-   selects exactly eight reviewed public sites:
-   `BitBucket`, `Codeberg`, `Codeforces`, `GitHub`, `GitLab`, `Kaggle`,
-   `Keybase`, and `Replit.com`.
+   selects exactly eight reviewed public sites: `BitBucket`, `Codeberg`,
+   `Codeforces`, `GitHub`, `GitLab`, `Kaggle`, `Keybase`, and `Replit.com`.
 4. `SitesInformation` is not used, so the remote manifest and remote exclusions
    are never fetched by PersonaLattice.
-5. The upstream engine runs in a child process. The parent exposes only a small
-   JSON machine contract and kills the child when M3 timeout cancellation
-   occurs. This avoids leaving a synchronous network scan running after the
-   governed execution deadline.
-6. No proxy, browser-open, cookie/login, private-account, CAPTCHA/WAF-bypass or
+5. The upstream engine runs in a child process. Parent-to-worker IPC carries
+   only the username, approved site names and timeout; it never carries site
+   URLs or request metadata. The worker independently reloads the exact pinned
+   package data and refuses any site outside the same hard-coded allowlist.
+6. M3 timeout cancellation kills and reaps the child process. A timed-out
+   synchronous scan therefore cannot continue issuing requests in a background
+   thread after the governed execution has ended.
+7. No proxy, browser-open, cookie/login, private-account, CAPTCHA/WAF-bypass or
    account-contact option exists in the adapter contract.
-7. Positive, negative, illegal, WAF and unknown outcomes are retained
+8. Positive, negative, illegal, WAF and unknown outcomes are retained
    explicitly. Full response bodies are not returned or persisted.
-8. A positive hit becomes a provider Observation with
-   `account_candidate=true` and `identity_claim=false`. Correlation belongs in
-   M5.
-9. M3 centrally rejects non-username identifiers before the Sherlock adapter is
-   called.
-10. User-supplied usernames and human-confirmed M2 username candidates remain
+9. A positive hit must include a valid public HTTP(S) profile URL and becomes a
+   provider Observation with `account_candidate=true` and
+   `identity_claim=false`. Correlation belongs in M5.
+10. M3 centrally rejects non-username identifiers before the Sherlock adapter
+    is called.
+11. User-supplied usernames and human-confirmed M2 username candidates remain
     the only permitted query origins.
 
 ## Why not use Sherlock's live default dataset?
@@ -61,6 +63,10 @@ Sherlock's core function is synchronous. Running it with `asyncio.to_thread`
 would allow M3's coroutine timeout to return while the underlying thread kept
 issuing requests. A killable worker process gives the timeout boundary actual
 control over the network activity.
+
+Passing only approved site names across IPC is deliberate defense in depth. It
+prevents the internal worker boundary from becoming an arbitrary-URL transport
+if a future caller is wired incorrectly.
 
 ## Maigret
 
