@@ -21,6 +21,7 @@ dependencies = [
 dev = [
   "httpx2==2.9.0",
   "pytest>=8.4,<9",
+  "pytest-asyncio==1.4.0",
   "ruff==0.15.15",
 ]
 
@@ -30,6 +31,7 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "strict"
 filterwarnings = [
   "error::starlette.exceptions.StarletteDeprecationWarning",
 ]
