@@ -80,3 +80,25 @@ For every milestone update:
 - next authorized work.
 
 The point is continuity, not marketing copy.
+
+
+## Bootstrap recovery record
+
+The initial M0 bootstrap was interrupted twice before any backend code was
+published:
+
+1. macOS resolved `python3` to Python 3.9.6 while the API requires Python 3.11+;
+2. after moving the local environment to Python 3.13, the broad Ruff dependency
+   range installed Ruff 0.16, whose expanded default rule set changed the lint
+   contract and raised import-format diagnostics.
+
+Recovery decision:
+
+- keep Python >=3.11;
+- use Homebrew Python 3.13 locally;
+- pin Ruff 0.15.15 for the bootstrap instead of relying on moving defaults;
+- define the bootstrap lint rule set explicitly;
+- publish backend code only after lint, compile, tests and an API smoke test pass.
+
+No provider calls, real subject data, AI inference, or persistent case storage
+were introduced by the recovery.

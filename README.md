@@ -84,13 +84,21 @@ SECURITY.md                handling rules for sensitive data
 
 ## Local development
 
-Backend:
+Backend requires Python 3.11 or newer.
 
 ```bash
+python3 --version
 python3 -m venv .venv
 .venv/bin/pip install -e "./services/api[dev]"
 .venv/bin/pytest services/api/tests
 .venv/bin/uvicorn app.main:app --app-dir services/api --reload --host 127.0.0.1 --port 8000
+```
+
+On macOS, if the system `python3` is older than 3.11:
+
+```bash
+brew install python@3.13
+"$(brew --prefix python@3.13)/bin/python3.13" -m venv .venv
 ```
 
 Frontend:
