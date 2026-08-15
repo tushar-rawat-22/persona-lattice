@@ -32,6 +32,8 @@ unredacted screenshots in this file.
 - Provider credentials never enter Git.
 - Source/license/purpose gates exist before provider execution.
 - Silent/public mode excludes sources with subject-contact risk.
+- Uploaded document instructions are data, not execution authority.
+- Document-derived candidates require human review before external research.
 - Regulated employment/housing/credit/insurance decisions are blocked in the bootstrap.
 
 ## Architecture baseline
@@ -39,6 +41,7 @@ unredacted screenshots in this file.
 - Next.js web dashboard under `apps/web`
 - FastAPI service under `services/api`
 - SQLAlchemy evidence core under `services/api/app/evidence`
+- bounded file intake/extraction under `services/api/app/uploads`
 - provider adapters are isolated behind a protocol
 - public docs live under `docs`
 - `THIRD_PARTY.md` tracks license/integration boundaries
@@ -93,31 +96,77 @@ M1 verification:
 
 During review we rejected generic case-folding for email local-parts and
 usernames, and rejected stripping URL fragments. Those equivalence rules can be
-platform-specific, so the core now preserves them and leaves provider-specific
+platform-specific, so the core preserves them and leaves provider-specific
 canonicalization to later adapters. One intermediate PR run failed because an
 older deduplication test still expected the discarded behavior; the test was
 corrected and the final PR/main runs are green.
 
-No live OSINT provider calls, real subject data, provider credentials, AI
-execution, production authentication or report export have been introduced.
+### M2 — safe file intake and extraction boundary: COMPLETE
+
+Published through PR `#6`:
+
+- PDF and UTF-8 text are the only enabled file formats;
+- maximum five files, 2 MiB per file and 6 MiB combined extracted-input batch;
+- multipart parser/request limits plus independent streaming byte ceilings;
+- filenames are treated as untrusted and unsafe/path-like/ambiguous extensions
+  are rejected;
+- temporary raw storage uses server-generated UUID names outside the webroot,
+  restrictive permissions and SHA-256 provenance;
+- claimed MIME type is only a secondary signal; bytes are independently checked;
+- pypdf/text extraction runs in a spawned worker with timeout, output, PDF page
+  and content-stream ceilings plus best-effort memory/CPU limits;
+- raw staged bytes are deleted before the request completes;
+- extracted content is explicitly `untrusted_document_content`;
+- deterministic email/URL/username/phone candidates start in
+  `pending_human_review` and cannot authorize external research until a human
+  confirms them;
+- future AI claim candidates use the same review contract and still cannot be
+  observations;
+- an upload-evidence helper records extracted text as an `UPLOAD` observation
+  using an `artifact://<uuid>` provenance locator when a persistent Subject is
+  available;
+- the dashboard uploads real selected PDF/TXT files and shows review state and
+  candidate summaries without enabling provider execution;
+- ADR `0004-safe-file-intake.md`, security rules and third-party dependency
+  boundaries were updated.
+
+M2 verification:
+
+- implementation commit: `4e9368ae4e7b7b66b5bca81825753a9c9d58d4c2`
+- PR: `#6`
+- PR CI run: `31903890954`, API 3.11 PASS, API 3.13 PASS, web PASS
+- API suite on PR: 42 passed on Python 3.13; the same API job passed on Python 3.11
+- merge commit on `main`: `f90b06279917cf5ddbd6bb81642e74deb3c8d5ca`
+- post-merge `main` CI run: `31904034376`, API 3.11 PASS, API 3.13 PASS, web PASS
+
+Pre-merge review checked the upload service, extraction worker and HTTP boundary
+rather than treating CI as sufficient. No merge-blocking flaw remained. Current
+limitations are deliberate: scanned/image-only PDFs need later OCR, raw uploads
+are not retained without an authenticated retention/object-storage design, and
+no live AI or external provider is called.
+
+No live OSINT provider calls, real subject data, provider credentials,
+production authentication or report export have been introduced through M2.
 
 ## Next work
 
-**M2 — safe file intake and AI-assisted extraction.**
+**M3 — provider framework and governed execution (Issue `#7`).**
 
-Before any model sees uploaded content:
+M3 builds the execution boundary before broad provider integration:
 
-- enforce file-count and byte-size ceilings;
-- use an allowlist of supported document types;
-- keep uploads outside Git and outside public logs;
-- treat filenames and document content as untrusted input;
-- extract text in a bounded worker boundary;
-- store extraction results as source observations with provenance;
-- isolate uploaded instructions from system/developer instructions;
-- require human confirmation of extracted identifiers/claims before they can
-  trigger external research;
-- keep live AI/provider execution disabled until these controls are covered by
-  synthetic tests.
+- typed/versioned provider request, result and error contracts;
+- central purpose, consent, source-policy and contact-risk enforcement immediately
+  before every call;
+- provider license/terms/authentication/retention metadata;
+- bounded retry, timeout, concurrency, response-size and rate-limit controls;
+- server-side-only secrets and redacted structured execution logs;
+- provenance-bearing provider observations in the M1 evidence store;
+- synthetic/mock provider first.
+
+The older roadmap assumption that M3 should immediately add broad phone and web
+queries has been tightened. A narrowly scoped development provider may be added
+only after its exact terms/privacy/contact behavior is reviewed. Username/social
+discovery remains M4 and must reuse the M3 policy/execution boundary.
 
 ## Bootstrap recovery record
 

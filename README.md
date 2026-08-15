@@ -32,20 +32,20 @@ AI-assisted gap analysis
 human-readable report with confidence and sources
 ```
 
-The dashboard will eventually accept multiple identifiers and files in one
-case. AI can help extract candidate identifiers, find contradictions and
-suggest the next research step, but it cannot create evidence.
+AI can help extract candidate identifiers, find contradictions and suggest the
+next research step, but it cannot create evidence. Document text is treated as
+untrusted source material, not as instructions to the application.
 
 ## Current status
 
-**M0 — public foundation and M1 — evidence core are complete.**
+**M0 — public foundation, M1 — evidence core and M2 — safe file intake are complete.**
 
 The repository now has:
 
 - a public Apache-2.0 project with explicit third-party/source boundaries;
 - product, architecture, roadmap and continuity documents;
 - a governed FastAPI intake API with purpose and consent checks;
-- a responsive Next.js case-intake dashboard shell;
+- a responsive Next.js case-intake dashboard;
 - provider/contact-risk planning without live provider execution;
 - persistent SQLAlchemy models for subjects, identifiers, observations, claims
   and evidence links;
@@ -54,13 +54,20 @@ The repository now has:
 - an explicit rule that AI-derived analysis can be a claim, never a source
   observation;
 - public-safe phone/email redaction helpers;
+- bounded PDF and UTF-8 text upload validation and extraction;
+- server-generated temporary upload names, SHA-256 provenance and ephemeral raw
+  file storage;
+- review-only document-derived identifier candidates that cannot authorize an
+  external query until a human confirms them;
 - GitHub CI for the API on Python 3.11 and 3.13;
 - GitHub CI for web lint, TypeScript checking and production build.
 
-The next milestone is **M2 — safe file intake and AI-assisted extraction**.
-Live OSINT provider calls, username/social discovery, AI execution against real
-case material, production authentication and report export are not implemented
-yet.
+The next milestone is **M3 — provider framework and governed execution** (Issue
+`#7`). It starts with a typed adapter/execution boundary and synthetic provider,
+not broad live social or phone querying.
+
+Live OSINT provider calls, username/social discovery, live AI model calls,
+production authentication and report export are not implemented yet.
 
 ## Intended modes
 
@@ -77,7 +84,7 @@ require a separate legal/compliance workstream rather than a UI toggle.
 
 ```text
 apps/web/                  Next.js dashboard
-services/api/              FastAPI API + policy/evidence core
+services/api/              FastAPI API + policy/evidence/upload core
 docs/                      architecture, roadmap and decisions
 docs/CONTINUITY.md         chat-to-chat project handover
 THIRD_PARTY.md             license/integration boundary

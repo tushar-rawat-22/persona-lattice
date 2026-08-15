@@ -1,7 +1,7 @@
 # Roadmap
 
 The roadmap is intentionally evidence-first. Social discovery comes after the
-data model and policy gates, not before them.
+data model, upload boundary and provider policy gates, not before them.
 
 ## M0 — public foundation
 
@@ -26,24 +26,35 @@ data model and policy gates, not before them.
 - redaction utilities
 - synthetic fixtures only
 
-## M2 — file intake + AI extraction
+## M2 — safe file intake + extraction boundary
 
-**Status: next**
+**Status: complete**
 
-- safe multi-file upload
-- text extraction for supported documents
-- AI-assisted identifier extraction
-- human confirmation before external queries
-- prompt-injection isolation for uploaded content
+- bounded multi-file PDF/TXT upload
+- filename, MIME and byte-level validation
+- private UUID-named temporary staging and SHA-256 provenance
+- isolated text extraction with resource/output ceilings
+- upload observations linked by artifact provenance
+- deterministic review-only identifier candidates
+- explicit human-confirmation gate before any later external query
+- prompt-like uploaded content kept inert as untrusted data
+- no live AI/provider execution
 
-## M3 — provider framework
+## M3 — provider framework and governed execution
 
-- adapter protocol
-- retry/rate-limit controls
-- source-policy metadata
-- phone-provider adapters for development
-- public web-search adapter
-- no provider secrets in browser or Git
+**Status: next — Issue #7**
+
+- versioned adapter/request/result/error contracts
+- central purpose/consent/source-policy enforcement before execution
+- source/license/contact-risk metadata
+- retry classification, rate budgets, concurrency and timeout controls
+- server-side secret boundary and public-safe structured logs
+- synthetic provider first, with provenance-bearing observations
+- narrowly scoped development provider only after exact terms/privacy review
+
+The earlier idea of jumping directly to live phone and web adapters is
+intentionally tightened: framework and policy behavior must first pass with
+synthetic providers. Public web access must not become an arbitrary URL fetcher.
 
 ## M4 — username and public-account discovery
 
@@ -51,6 +62,7 @@ data model and policy gates, not before them.
 - Sherlock adapter
 - independent account verification
 - license-review gate for additional datasets/tools
+- reuse the M3 execution and policy boundary rather than bypassing it
 
 ## M5 — correlation engine
 
