@@ -66,11 +66,12 @@ and concurrency tests rather than accepting indirect coverage.
 
 **Status: in implementation/review — Issue #9**
 
-- Sherlock 0.16.1 pinned as the first username verifier
+- published Sherlock 0.16.0 pinned as the first username verifier
 - Sherlock's packaged data is filtered to an eight-site reviewed allowlist;
   no upstream data is copied into this repository
 - live manifest/exclusions loading is bypassed
 - synchronous Sherlock execution is isolated in a killable child process
+- parent/worker IPC carries only approved site names, never arbitrary URLs
 - only username identifiers are accepted, enforced centrally by M3
 - positive/negative/unknown/illegal/WAF states remain explicit observations
 - account hits are candidates, never identity claims

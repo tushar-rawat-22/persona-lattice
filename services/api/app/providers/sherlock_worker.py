@@ -12,7 +12,7 @@ from sherlock_project.notify import QueryNotify
 from sherlock_project.result import QueryStatus
 from sherlock_project.sherlock import sherlock
 
-SHERLOCK_UPSTREAM_VERSION = "0.16.1"
+SHERLOCK_UPSTREAM_VERSION = "0.16.0"
 SHERLOCK_SITE_ALLOWLIST = frozenset(
     {
         "BitBucket",

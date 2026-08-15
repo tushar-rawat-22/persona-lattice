@@ -15,7 +15,7 @@ dependencies = [
   "sqlalchemy==2.0.51",
   "python-multipart==0.0.32",
   "pypdf==6.14.2",
-  "sherlock-project==0.16.1",
+  "sherlock-project==0.16.0",
 ]
 
 [project.optional-dependencies]

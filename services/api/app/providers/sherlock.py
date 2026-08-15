@@ -16,7 +16,7 @@ from .base import ProviderObservationData, ProviderQuery, ProviderResult
 from .errors import ProviderExecutionError, ProviderValidationError
 from .registry import PROVIDER_BY_NAME
 
-SHERLOCK_UPSTREAM_VERSION = "0.16.1"
+SHERLOCK_UPSTREAM_VERSION = "0.16.0"
 SHERLOCK_SITE_ALLOWLIST = (
     "BitBucket",
     "Codeberg",
@@ -244,8 +244,6 @@ class SherlockProvider:
         site_names: Sequence[str] = SHERLOCK_SITE_ALLOWLIST,
         worker: Worker = run_sherlock_worker,
     ) -> None:
-        # Validate the exact installed package and packaged data up front. The
-        # child process independently reloads the same package data before use.
         load_reviewed_sherlock_sites()
         self.site_names = _normalize_site_names(site_names)
         self.worker = worker

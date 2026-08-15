@@ -44,7 +44,7 @@ def store() -> EvidenceStore:
 def test_pinned_sherlock_package_and_reviewed_site_budget() -> None:
     from sherlock_project import __version__
 
-    assert __version__ == SHERLOCK_UPSTREAM_VERSION == "0.16.1"
+    assert __version__ == SHERLOCK_UPSTREAM_VERSION == "0.16.0"
     sites = load_reviewed_sherlock_sites()
     assert tuple(sites) == SHERLOCK_SITE_ALLOWLIST
     assert len(sites) == 8
@@ -287,7 +287,7 @@ async def test_sherlock_runs_through_m3_and_persists_provider_observation(
     observation = observations[0]
     assert observation.source_kind is ObservationSourceKind.PROVIDER
     assert observation.source_name == "sherlock"
-    assert observation.payload["provider_version"] == "0.16.1"
+    assert observation.payload["provider_version"] == "0.16.0"
     assert observation.payload["account_candidate"] is True
     assert observation.payload["identity_claim"] is False
 

@@ -11,10 +11,13 @@ username/social discovery non-executable. M4 needs to turn a confirmed username
 into public-account evidence without making the common and dangerous leap from
 "same handle exists" to "same person."
 
-Sherlock 0.16.1 is MIT-licensed and exposes a Python username-existence engine.
-Its default site loader is unsuitable for our deterministic boundary because it
-can fetch a live site manifest and live exclusions. Its CLI also exposes
-features PersonaLattice does not need.
+The Sherlock repository currently declares 0.16.1, but CI verified that the
+package index exposes releases only through 0.16.0. M4 therefore pins and
+reviews the published Sherlock 0.16.0 release rather than depending on an
+unpublished repository version. Sherlock is MIT-licensed and exposes a Python
+username-existence engine. Its default site loader is unsuitable for our
+deterministic boundary because it can fetch a live site manifest and live
+exclusions. Its CLI also exposes features PersonaLattice does not need.
 
 Maigret 0.6.3 is also MIT-licensed and materially broader: recursive discovery,
 page extraction, database auto-update, proxy/Tor/I2P paths and optional AI
@@ -25,7 +28,7 @@ candidate rather than the first verifier.
 
 PersonaLattice integrates Sherlock first with these constraints:
 
-1. `sherlock-project==0.16.1` is pinned.
+1. `sherlock-project==0.16.0` is pinned.
 2. Upstream source and site data are not copied into the Apache-2.0 tree.
 3. The adapter reads Sherlock's packaged `resources/data.json` directly and
    selects exactly eight reviewed public sites: `BitBucket`, `Codeberg`,
