@@ -12,6 +12,7 @@ dependencies = [
   "uvicorn[standard]>=0.35,<1",
   "pydantic>=2.11,<3",
   "phonenumbers>=9,<10",
+  "sqlalchemy==2.0.51",
 ]
 
 [project.optional-dependencies]
