@@ -27,11 +27,22 @@ from .logging import REDACTED_SECRET, sanitize_provider_log
 from .mock import SyntheticEchoProvider
 from .policy import authorize_execution
 from .registry import PROVIDERS, PROVIDER_BY_NAME
+from .sherlock import (
+    AccountDiscoveryState,
+    MAX_SHERLOCK_SITES,
+    SHERLOCK_SITE_ALLOWLIST,
+    SHERLOCK_UPSTREAM_VERSION,
+    SherlockProvider,
+    SherlockResult,
+    load_reviewed_sherlock_sites,
+)
 
 __all__ = [
+    "AccountDiscoveryState",
     "AuthMode",
     "ContactRisk",
     "ExecutionRequest",
+    "MAX_SHERLOCK_SITES",
     "PROVIDERS",
     "PROVIDER_BY_NAME",
     "Provider",
@@ -52,8 +63,13 @@ __all__ = [
     "ProviderValidationError",
     "QueryOrigin",
     "REDACTED_SECRET",
+    "SHERLOCK_SITE_ALLOWLIST",
+    "SHERLOCK_UPSTREAM_VERSION",
+    "SherlockProvider",
+    "SherlockResult",
     "SourceCategory",
     "SyntheticEchoProvider",
     "authorize_execution",
+    "load_reviewed_sherlock_sites",
     "sanitize_provider_log",
 ]

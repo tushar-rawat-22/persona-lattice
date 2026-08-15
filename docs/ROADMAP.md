@@ -54,7 +54,7 @@ data model, upload boundary and provider policy gates, not before them.
 - server-side secret resolution with no credential field in execution requests
 - public-safe provider-log redaction helper
 - provenance-bearing provider observations in the M1 evidence store
-- synthetic no-network adapter as the only executable provider
+- synthetic no-network adapter as the first executable provider
 - explicit deterministic tests for timeout and concurrency controls
 
 During review, a rate-budget flaw was caught before merge: retries initially
@@ -64,19 +64,21 @@ and concurrency tests rather than accepting indirect coverage.
 
 ## M4 — governed username and public-account discovery
 
-**Status: next — Issue #9**
+**Status: in implementation/review — Issue #9**
 
-- integrate Sherlock first as a bounded username-existence verifier
-- evaluate Maigret second as constrained enrichment
-- pin reviewed upstream versions and preserve MIT attribution boundaries
-- require user-supplied or human-confirmed username identifiers
-- reuse the M3 execution/policy/resource controls
-- persist public account hits as observations/candidates, never identity proof
-- retain positive, negative, unknown and contradictory outcomes explicitly
-- no proxies, Tor/I2P, CAPTCHA bypass, browser opening, login/cookies or private
-  account access
-- disable Maigret recursion, AI mode, auto-update and unrestricted all-site scans
-  if a Maigret adapter is added
+- Sherlock 0.16.1 pinned as the first username verifier
+- Sherlock's packaged data is filtered to an eight-site reviewed allowlist;
+  no upstream data is copied into this repository
+- live manifest/exclusions loading is bypassed
+- synchronous Sherlock execution is isolated in a killable child process
+- only username identifiers are accepted, enforced centrally by M3
+- positive/negative/unknown/illegal/WAF states remain explicit observations
+- account hits are candidates, never identity claims
+- username log redaction added
+- no proxies, Tor/I2P, CAPTCHA/WAF bypass, browser opening, login/cookies or
+  private-account access
+- Maigret 0.6.3 remains a non-executable enrichment candidate with recursion,
+  AI, auto-update and broad scanning disabled by design
 
 ## M5 — correlation engine
 

@@ -50,6 +50,7 @@ class ProviderDescriptor:
     version: str = "unversioned"
     source_category: SourceCategory = SourceCategory.REFERENCE
     allowed_purposes: frozenset[Purpose] = field(default_factory=frozenset)
+    supported_identifier_kinds: frozenset[str] = field(default_factory=frozenset)
     auth_mode: AuthMode = AuthMode.NONE
     secret_env: str | None = None
     max_attempts: int = 1
@@ -62,6 +63,8 @@ class ProviderDescriptor:
     def __post_init__(self) -> None:
         if not self.name.strip() or not self.version.strip():
             raise ValueError("Provider name and version are required.")
+        if any(not value.strip() for value in self.supported_identifier_kinds):
+            raise ValueError("Supported identifier kinds cannot contain blank values.")
         if self.max_attempts < 1:
             raise ValueError("Provider max_attempts must be at least 1.")
         if self.timeout_seconds <= 0:
