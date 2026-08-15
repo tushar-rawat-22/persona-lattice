@@ -34,7 +34,7 @@ unredacted screenshots in this file.
 - Silent/public mode excludes sources with subject-contact risk.
 - Regulated employment/housing/credit/insurance decisions are blocked in the bootstrap.
 
-## Bootstrap architecture
+## Architecture baseline
 
 - Next.js web dashboard under `apps/web`
 - FastAPI service under `services/api`
@@ -45,42 +45,47 @@ unredacted screenshots in this file.
 
 ## Current milestone
 
-M0 — public foundation.
+**M0 — public foundation: COMPLETE.**
 
-Expected after bootstrap:
+Implemented and published:
 
-- repository exists publicly;
-- policy/license docs committed;
-- architecture/roadmap committed;
-- intake API passes tests;
-- dashboard builds;
-- GitHub CI exists;
-- initial roadmap issues exist.
+- repository, Apache-2.0 license and source policy;
+- architecture/product/roadmap documentation;
+- governed case-intake API;
+- phone/email/username intake normalization;
+- consent and purpose enforcement;
+- provider/contact-risk planning with no live provider execution;
+- Next.js case-intake dashboard shell;
+- CI for API on Python 3.11 and 3.13;
+- CI for web lint, typecheck and production build.
+
+### M0 verification
+
+- governed API commit: `2dd8d12ab96819b182a9bf563d1a9d946b0b366c`
+- backend warning-cleanup commit: `6fb1d305b4d198cff8a35d3a1f9daffc93a95e47`
+- dashboard/CI implementation commit on `main`: `8cc62091865d71ff1177877c4e5337a463436628`
+- dashboard/CI PR: `#2`, merged after its CI run passed
+- post-merge `main` CI run: `31901840132`, conclusion `success`
+- API matrix: Python 3.11 PASS, Python 3.13 PASS
+- web: install PASS, lint PASS, typecheck PASS, production build PASS
+
+No live OSINT provider calls, real subject data, AI inference, persistent case
+storage, production authentication or report export were introduced in M0.
 
 ## Next work
 
-M1 — evidence core:
+**M1 — evidence core.**
 
-- persistent Subject / Identifier / Observation / Claim / EvidenceLink models;
-- deterministic normalization;
-- provenance/freshness rules;
-- synthetic test fixtures;
-- no live provider integration until these invariants are tested.
+Build and test the data model before any live provider integration:
 
-## Update discipline
+- persistent `Subject`, `Identifier`, `Observation`, `Claim` and `EvidenceLink` models;
+- deterministic normalization separate from transport/API code;
+- provenance and freshness rules;
+- redaction utilities;
+- synthetic fixtures only;
+- invariants that prevent AI output from being stored as source observations.
 
-For every milestone update:
-
-- current repository/branch;
-- latest meaningful commits;
-- tests and verification run;
-- what changed;
-- what did not change;
-- unresolved risks;
-- next authorized work.
-
-The point is continuity, not marketing copy.
-
+Do not start live provider adapters until these invariants are covered by tests.
 
 ## Bootstrap recovery record
 
@@ -100,10 +105,6 @@ Recovery decision:
 - define the bootstrap lint rule set explicitly;
 - publish backend code only after lint, compile, tests and an API smoke test pass.
 
-No provider calls, real subject data, AI inference, or persistent case storage
-were introduced by the recovery.
-
-
 ## Backend warning cleanup
 
 After the governed intake API was published, local verification exposed two
@@ -112,9 +113,19 @@ upstream deprecations rather than functional failures:
 - Starlette's TestClient now prefers `httpx2` over `httpx`;
 - the old 422 status constant was renamed to `HTTP_422_UNPROCESSABLE_CONTENT`.
 
-The bootstrap baseline now uses HTTPX2 2.9.0 for TestClient, the current 422
-constant, and treats Starlette deprecation warnings as test failures.
+The baseline now uses HTTPX2 2.9.0 for TestClient, the current 422 constant,
+and treats Starlette deprecation warnings as test failures.
 
-Verification for this cleanup requires Ruff, Python compilation, the API test
-suite, and an explicit API smoke test to pass without Starlette deprecation
-warnings.
+## Update discipline
+
+For every milestone update:
+
+- current repository/branch;
+- latest meaningful commits;
+- tests and verification run;
+- what changed;
+- what did not change;
+- unresolved risks;
+- next authorized work.
+
+The point is continuity, not marketing copy.

@@ -38,27 +38,22 @@ suggest the next research step, but it cannot create evidence.
 
 ## Current status
 
-Mission 0 is a public architecture/bootstrap milestone.
+**M0 — public foundation is complete.**
 
-Implemented in the bootstrap:
+The repository now has:
 
-- public Apache-2.0 repository
-- product and architecture documents
-- source/license boundary
-- continuity handover
-- FastAPI intake/policy skeleton
-- Next.js dashboard shell
-- CI checks
+- a public Apache-2.0 project with explicit third-party/source boundaries;
+- product, architecture, roadmap and continuity documents;
+- a governed FastAPI intake API with purpose and consent checks;
+- a responsive Next.js case-intake dashboard shell;
+- provider/contact-risk planning without live provider execution;
+- GitHub CI for the API on Python 3.11 and 3.13;
+- GitHub CI for web lint, TypeScript checking and production build.
 
-Not implemented yet:
-
-- live OSINT provider calls
-- username/social discovery
-- document content ingestion
-- AI inference
-- persistent case storage
-- production authentication
-- report export
+The next milestone is **M1 — evidence core**. Live OSINT provider calls,
+username/social discovery, document-content ingestion, AI inference, persistent
+case storage, production authentication and report export are not implemented
+yet.
 
 ## Intended modes
 
