@@ -42,27 +42,41 @@ data model, upload boundary and provider policy gates, not before them.
 
 ## M3 — provider framework and governed execution
 
-**Status: next — Issue #7**
+**Status: complete**
 
-- versioned adapter/request/result/error contracts
-- central purpose/consent/source-policy enforcement before execution
-- source/license/contact-risk metadata
-- retry classification, rate budgets, concurrency and timeout controls
-- server-side secret boundary and public-safe structured logs
-- synthetic provider first, with provenance-bearing observations
-- narrowly scoped development provider only after exact terms/privacy review
+- versioned provider request/result/error contracts
+- central purpose/consent/provider-status/contact-risk enforcement immediately
+  before execution
+- document-derived candidate confirmation and stored-identifier matching
+- source/auth/resource metadata in the provider registry
+- bounded retry classification, per-attempt local rate budgets, semaphore
+  concurrency, timeouts and response-size ceilings
+- server-side secret resolution with no credential field in execution requests
+- public-safe provider-log redaction helper
+- provenance-bearing provider observations in the M1 evidence store
+- synthetic no-network adapter as the only executable provider
+- explicit deterministic tests for timeout and concurrency controls
 
-The earlier idea of jumping directly to live phone and web adapters is
-intentionally tightened: framework and policy behavior must first pass with
-synthetic providers. Public web access must not become an arbitrary URL fetcher.
+During review, a rate-budget flaw was caught before merge: retries initially
+consumed the local budget only once per high-level execution. The final design
+counts every actual adapter attempt. A second review pass added explicit timeout
+and concurrency tests rather than accepting indirect coverage.
 
-## M4 — username and public-account discovery
+## M4 — governed username and public-account discovery
 
-- Maigret adapter
-- Sherlock adapter
-- independent account verification
-- license-review gate for additional datasets/tools
-- reuse the M3 execution and policy boundary rather than bypassing it
+**Status: next — Issue #9**
+
+- integrate Sherlock first as a bounded username-existence verifier
+- evaluate Maigret second as constrained enrichment
+- pin reviewed upstream versions and preserve MIT attribution boundaries
+- require user-supplied or human-confirmed username identifiers
+- reuse the M3 execution/policy/resource controls
+- persist public account hits as observations/candidates, never identity proof
+- retain positive, negative, unknown and contradictory outcomes explicitly
+- no proxies, Tor/I2P, CAPTCHA bypass, browser opening, login/cookies or private
+  account access
+- disable Maigret recursion, AI mode, auto-update and unrestricted all-site scans
+  if a Maigret adapter is added
 
 ## M5 — correlation engine
 

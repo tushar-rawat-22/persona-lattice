@@ -29,12 +29,13 @@ unredacted screenshots in this file.
 - AI is not evidence.
 - Every factual claim must trace to source observations.
 - Raw personal-data case files never enter Git.
-- Provider credentials never enter Git.
+- Provider credentials never enter Git or browser-facing contracts.
 - Source/license/purpose gates exist before provider execution.
-- Silent/public mode excludes sources with subject-contact risk.
+- Silent mode excludes sources with subject-contact risk.
 - Uploaded document instructions are data, not execution authority.
 - Document-derived candidates require human review before external research.
-- Regulated employment/housing/credit/insurance decisions are blocked in the bootstrap.
+- Same-handle reuse across sites is not identity proof.
+- Regulated employment/housing/credit/insurance decisions remain blocked.
 
 ## Architecture baseline
 
@@ -42,7 +43,7 @@ unredacted screenshots in this file.
 - FastAPI service under `services/api`
 - SQLAlchemy evidence core under `services/api/app/evidence`
 - bounded file intake/extraction under `services/api/app/uploads`
-- provider adapters are isolated behind a protocol
+- governed provider framework under `services/api/app/providers`
 - public docs live under `docs`
 - `THIRD_PARTY.md` tracks license/integration boundaries
 
@@ -75,7 +76,6 @@ Published through PR `#4`:
 - persistent `Subject`, `Identifier`, `Observation`, `Claim` and `EvidenceLink`
   SQLAlchemy models;
 - database-agnostic UUIDs and SQLite development/test persistence;
-- explicit SQLite foreign-key enforcement;
 - deterministic phone, email, username, URL, name and organization
   normalization outside the HTTP layer;
 - source provenance, retrieval timestamps and optional expiry/freshness;
@@ -83,119 +83,134 @@ Published through PR `#4`:
 - AI may originate a `Claim` but `ai` is not an allowed observation source;
 - public-safe phone/email redaction helpers;
 - ADR `0003-evidence-core-persistence.md`;
-- synthetic-only tests; no live subject or provider data.
+- synthetic-only tests.
 
 M1 verification:
 
 - initial evidence commit: `ac241696792553ea767677606efefc4275be5a8d`
 - conservative-normalization correction: `21651e2c1ce56d57a08e569af6652ca912096778`
 - final test-alignment commit: `35a6be3ba3609b1324158c62f02240b38db91f26`
-- merge commit on `main`: `22d8b4c100db4861ad1890bcb224f890cd652210`
-- final PR CI run: `31902885290`, API 3.11 PASS, API 3.13 PASS, web PASS
-- post-merge `main` CI run: `31902946010`, API 3.11 PASS, API 3.13 PASS, web PASS
+- merge commit: `22d8b4c100db4861ad1890bcb224f890cd652210`
+- final PR CI: `31902885290`, API 3.11 PASS, API 3.13 PASS, web PASS
+- post-merge CI: `31902946010`, API 3.11 PASS, API 3.13 PASS, web PASS
 
 During review we rejected generic case-folding for email local-parts and
-usernames, and rejected stripping URL fragments. Those equivalence rules can be
-platform-specific, so the core preserves them and leaves provider-specific
-canonicalization to later adapters. One intermediate PR run failed because an
-older deduplication test still expected the discarded behavior; the test was
-corrected and the final PR/main runs are green.
+usernames and rejected stripping URL fragments. Provider-specific equivalence
+rules remain outside the generic core.
 
 ### M2 — safe file intake and extraction boundary: COMPLETE
 
 Published through PR `#6`:
 
 - PDF and UTF-8 text are the only enabled file formats;
-- maximum five files, 2 MiB per file and 6 MiB combined extracted-input batch;
+- maximum five files, 2 MiB per file and 6 MiB combined batch;
 - multipart parser/request limits plus independent streaming byte ceilings;
-- filenames are treated as untrusted and unsafe/path-like/ambiguous extensions
-  are rejected;
-- temporary raw storage uses server-generated UUID names outside the webroot,
-  restrictive permissions and SHA-256 provenance;
-- claimed MIME type is only a secondary signal; bytes are independently checked;
-- pypdf/text extraction runs in a spawned worker with timeout, output, PDF page
-  and content-stream ceilings plus best-effort memory/CPU limits;
-- raw staged bytes are deleted before the request completes;
-- extracted content is explicitly `untrusted_document_content`;
-- deterministic email/URL/username/phone candidates start in
-  `pending_human_review` and cannot authorize external research until a human
-  confirms them;
-- future AI claim candidates use the same review contract and still cannot be
-  observations;
-- an upload-evidence helper records extracted text as an `UPLOAD` observation
-  using an `artifact://<uuid>` provenance locator when a persistent Subject is
-  available;
-- the dashboard uploads real selected PDF/TXT files and shows review state and
-  candidate summaries without enabling provider execution;
-- ADR `0004-safe-file-intake.md`, security rules and third-party dependency
-  boundaries were updated.
+- untrusted filename, MIME and byte-level checks;
+- private UUID-named temporary storage with restrictive permissions and SHA-256
+  provenance;
+- spawned extraction worker with timeout/output/PDF resource ceilings;
+- raw staged bytes deleted before request completion;
+- extracted content marked `untrusted_document_content`;
+- deterministic identifier candidates start in `pending_human_review`;
+- upload-evidence helper records extraction as an `UPLOAD` observation;
+- dashboard uploads real PDF/TXT files without provider execution;
+- ADR `0004-safe-file-intake.md`.
 
 M2 verification:
 
 - implementation commit: `4e9368ae4e7b7b66b5bca81825753a9c9d58d4c2`
 - PR: `#6`
-- PR CI run: `31903890954`, API 3.11 PASS, API 3.13 PASS, web PASS
-- API suite on PR: 42 passed on Python 3.13; the same API job passed on Python 3.11
-- merge commit on `main`: `f90b06279917cf5ddbd6bb81642e74deb3c8d5ca`
-- post-merge `main` CI run: `31904034376`, API 3.11 PASS, API 3.13 PASS, web PASS
+- PR CI: `31903890954`, API 3.11 PASS, API 3.13 PASS, web PASS
+- merge commit: `f90b06279917cf5ddbd6bb81642e74deb3c8d5ca`
+- post-merge CI: `31904034376`, API 3.11 PASS, API 3.13 PASS, web PASS
+- closure commit: `1130ec3cb69c308cb281c6edf3790a7ac2ee86d9`
+- closure CI: `31904139862`, API 3.11 PASS, API 3.13 PASS, web PASS
 
-Pre-merge review checked the upload service, extraction worker and HTTP boundary
-rather than treating CI as sufficient. No merge-blocking flaw remained. Current
-limitations are deliberate: scanned/image-only PDFs need later OCR, raw uploads
-are not retained without an authenticated retention/object-storage design, and
-no live AI or external provider is called.
+### M3 — governed provider execution framework: COMPLETE
 
-No live OSINT provider calls, real subject data, provider credentials,
-production authentication or report export have been introduced through M2.
+Published through PR `#8`:
+
+- typed/versioned provider descriptors, queries, results and error classes;
+- source category, execution/review state, contact risk, allowed purposes,
+  authentication mode and resource budgets in the registry;
+- central authorization immediately before adapter execution;
+- M2 document-derived candidates must already be human-confirmed, authorized
+  and match the stored identifier kind/value;
+- credentials resolve only from server-side configuration and never appear in
+  the execution request contract;
+- bounded retry classification with exponential delay;
+- every actual adapter attempt consumes the local rate budget;
+- per-provider semaphore concurrency, timeout and response-size ceilings;
+- provider results become M1 `PROVIDER` observations with provider/version/source
+  provenance, never automatic claims;
+- public-safe provider log redaction helper;
+- `synthetic_echo` is the only executable adapter and performs no network call;
+- Numverify, Abstract and IPQS remain review-required; Maigret/Sherlock remain
+  non-executable planned integrations;
+- ADR `0005-provider-execution-boundary.md`.
+
+M3 verification:
+
+- initial framework commit: `3b19fde27fabdd8cdc4d366596014c528f874ec2`
+- retry-budget correction: `24fd93416d22a62f87f5e8f0c267bdda38714c3e`
+- explicit timeout/concurrency tests: `6fe43aaac59d14cd9b9e5a307d8aadae1350d78e`
+- PR: `#8`
+- final PR CI run: `31904533035`, API 3.11 PASS, API 3.13 PASS (`55 passed`), web PASS
+- merge commit: `01b955637a25fda9e2efb12ffa6799e179923d6a`
+- post-merge CI run: `31904600206`, API 3.11 PASS, API 3.13 PASS, web PASS
+
+M3 review deliberately caught two gaps before merge. Retries initially consumed
+the local rate budget only once per high-level execution; the fix moved budget
+consumption inside the actual-attempt loop. The first green implementation also
+lacked direct timeout/concurrency acceptance tests; both were added and the
+final PR/main runs are green.
+
+No live external provider, real subject data, provider credential, live AI,
+production authentication or report export has been introduced through M3.
 
 ## Next work
 
-**M3 — provider framework and governed execution (Issue `#7`).**
+**M4 — governed username and public-account discovery (Issue `#9`).**
 
-M3 builds the execution boundary before broad provider integration:
+Upstream review on 2026-08-16 found:
 
-- typed/versioned provider request, result and error contracts;
-- central purpose, consent, source-policy and contact-risk enforcement immediately
-  before every call;
-- provider license/terms/authentication/retention metadata;
-- bounded retry, timeout, concurrency, response-size and rate-limit controls;
-- server-side-only secrets and redacted structured execution logs;
-- provenance-bearing provider observations in the M1 evidence store;
-- synthetic/mock provider first.
+- Maigret `soxoj/maigret`: MIT, current project metadata 0.6.3, Python 3.10+,
+  3,000+ site support with optional recursion, auto-update and AI features;
+- Sherlock `sherlock-project/sherlock`: MIT, current project metadata 0.16.1,
+  direct Python `sherlock(...)` account-existence function and 400+ documented
+  sites.
 
-The older roadmap assumption that M3 should immediately add broad phone and web
-queries has been tightened. A narrowly scoped development provider may be added
-only after its exact terms/privacy/contact behavior is reviewed. Username/social
-discovery remains M4 and must reuse the M3 policy/execution boundary.
+M4 decision:
+
+- integrate Sherlock first as the narrower existence-check adapter;
+- evaluate Maigret second as constrained enrichment;
+- do not vendor upstream source/site datasets into the Apache tree;
+- only user-supplied or human-confirmed usernames can trigger discovery;
+- every run goes through the M3 policy/resource boundary;
+- account hits remain observations/candidates, not identity claims;
+- Maigret recursion, AI, auto-update, Tor/I2P/proxies, bypass tooling and
+  unrestricted all-site scanning remain disabled in our adapter design.
+
+Identity/entity correlation belongs in M5 rather than being smuggled into the
+username scanner.
 
 ## Bootstrap recovery record
 
-The initial M0 bootstrap was interrupted twice before any backend code was
-published:
+The initial M0 bootstrap was interrupted twice before backend publication:
 
-1. macOS resolved `python3` to Python 3.9.6 while the API requires Python 3.11+;
-2. after moving the local environment to Python 3.13, the broad Ruff dependency
-   range installed Ruff 0.16, whose expanded default rule set changed the lint
-   contract and raised import-format diagnostics.
+1. macOS resolved `python3` to Python 3.9.6 while the API requires 3.11+;
+2. a broad Ruff range installed Ruff 0.16 and changed the lint contract.
 
 Recovery decision:
 
-- keep Python >=3.11;
-- use Homebrew Python 3.13 locally;
-- pin Ruff 0.15.15 for the bootstrap instead of relying on moving defaults;
-- define the bootstrap lint rule set explicitly;
-- publish backend code only after lint, compile, tests and an API smoke test pass.
+- keep Python >=3.11 and Homebrew Python 3.13 locally;
+- pin Ruff 0.15.15 and define the lint rule set explicitly;
+- publish backend code only after lint, compile, tests and smoke verification.
 
 ## Backend warning cleanup
 
-After the governed intake API was published, local verification exposed two
-upstream deprecations rather than functional failures:
-
-- Starlette's TestClient now prefers `httpx2` over `httpx`;
-- the old 422 status constant was renamed to `HTTP_422_UNPROCESSABLE_CONTENT`.
-
-The baseline now uses HTTPX2 2.9.0 for TestClient, the current 422 constant,
-and treats Starlette deprecation warnings as test failures.
+The baseline uses HTTPX2 2.9.0 for Starlette TestClient, the current 422 status
+constant and treats Starlette deprecation warnings as test failures.
 
 ## Update discipline
 
