@@ -10,6 +10,7 @@ from app.models import Purpose
 from app.providers import (
     AuthMode,
     ExecutionRequest,
+    PreparedProviderExecution,
     ProviderAuthError,
     ProviderObservationData,
     ProviderPolicyError,
@@ -200,3 +201,18 @@ async def test_prepared_execution_cannot_cross_runtime_instance() -> None:
 
     with pytest.raises(ProviderValidationError, match="not owned"):
         await second.execute_prepared(prepared=prepared, query=_query(request))
+
+
+@pytest.mark.asyncio
+async def test_forged_prepared_execution_cannot_bypass_policy() -> None:
+    adapter = SyntheticEchoProvider()
+    runtime = ProviderRuntime(adapters=[adapter])
+    request = _request(consent_acknowledged=False)
+    forged = PreparedProviderExecution(
+        request=request,
+        adapter=adapter,
+        descriptor=adapter.descriptor,
+    )
+
+    with pytest.raises(ProviderPolicyError, match="requires consent"):
+        await runtime.execute_prepared(prepared=forged, query=_query(request))
