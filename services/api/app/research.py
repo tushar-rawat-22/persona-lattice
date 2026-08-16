@@ -5,10 +5,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import StrEnum
-import json
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
-from urllib.request import Request, urlopen
 from uuid import uuid4
 
 from phonenumbers import carrier, geocoder, timezone
@@ -18,7 +15,7 @@ from .models import Purpose
 from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.contracts import ExecutionRequest
-from .providers.rate_limit import RateBudget
+from .providers.github_public import GitHubPublicProfileProvider, fetch_github_public_profile
 from .providers.runtime import ProviderRuntime
 from .providers.sherlock import SherlockProvider
 from .public_profiles import (
@@ -60,17 +57,27 @@ NetworkLookup = Callable[[str], Awaitable[tuple[str, ...]]]
 
 _DEFAULT_SHERLOCK_PROVIDER = SherlockProvider()
 _SHERLOCK_RUNTIME = ProviderRuntime(adapters=[_DEFAULT_SHERLOCK_PROVIDER])
-_GITHUB_BUDGET = RateBudget(limit=20, window_seconds=60.0)
-_GITHUB_MAX_RESPONSE_BYTES = 64 * 1024
+_DEFAULT_GITHUB_PROVIDER = GitHubPublicProfileProvider()
+_GITHUB_RUNTIME = ProviderRuntime(adapters=[_DEFAULT_GITHUB_PROVIDER])
 
 
-def _observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+def _sherlock_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
     state = str(item.payload.get("account_state", "unknown"))
     site = str(item.payload.get("site", "public account"))
     return QuickObservation(
         source="sherlock",
         source_locator=item.source_locator,
         summary=f"{site}: {state}",
+        details=dict(item.payload),
+    )
+
+
+def _github_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    login = str(item.payload.get("login", "public account"))
+    return QuickObservation(
+        source="github_public_api",
+        source_locator=item.source_locator,
+        summary=f"GitHub public profile for @{login}; same-handle account candidate only.",
         details=dict(item.payload),
     )
 
@@ -104,52 +111,43 @@ async def _public_search(
     return _public_search_observations(results), None
 
 
-def _fetch_github_public_profile_sync(username: str) -> dict[str, object] | None:
-    request = Request(
-        f"https://api.github.com/users/{quote(username, safe='')}",
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "PersonaLattice/0.0.1 public-profile-research",
-            "X-GitHub-Api-Version": "2026-03-10",
-        },
-        method="GET",
-    )
-    try:
-        with urlopen(request, timeout=4.0) as response:
-            raw = response.read(_GITHUB_MAX_RESPONSE_BYTES + 1)
-    except HTTPError as exc:
-        if exc.code == 404:
-            return None
-        raise RuntimeError("GitHub public profile lookup failed.") from exc
-    except (URLError, TimeoutError) as exc:
-        raise RuntimeError("GitHub public profile lookup failed.") from exc
-
-    if len(raw) > _GITHUB_MAX_RESPONSE_BYTES:
-        raise RuntimeError("GitHub public profile response exceeded the configured limit.")
-    try:
-        payload = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise RuntimeError("GitHub public profile returned invalid JSON.") from exc
-    if not isinstance(payload, dict):
-        raise RuntimeError("GitHub public profile returned an invalid response shape.")
-    return payload
-
-
 async def lookup_github_public_profile(username: str) -> dict[str, object] | None:
-    _GITHUB_BUDGET.consume()
-    return await asyncio.to_thread(_fetch_github_public_profile_sync, username)
+    """Compatibility helper for callers needing the raw public GitHub payload.
+
+    Production quick research does not call this helper; it uses the governed
+    GitHub provider/runtime path below.
+    """
+
+    return await fetch_github_public_profile(username)
 
 
-def _github_observation(payload: dict[str, object]) -> QuickObservation | None:
+def _legacy_github_observation(payload: dict[str, object]) -> QuickObservation | None:
+    """Convert an explicitly injected legacy test lookup without widening fields."""
+
     login = payload.get("login")
     html_url = payload.get("html_url")
     if not isinstance(login, str) or not isinstance(html_url, str):
         return None
 
     allowed_fields = (
-        "login", "id", "avatar_url", "html_url", "name", "company", "blog", "location",
-        "email", "hireable", "bio", "twitter_username", "public_repos", "public_gists",
-        "followers", "following", "created_at", "updated_at",
+        "login",
+        "id",
+        "avatar_url",
+        "html_url",
+        "name",
+        "company",
+        "blog",
+        "location",
+        "email",
+        "hireable",
+        "bio",
+        "twitter_username",
+        "public_repos",
+        "public_gists",
+        "followers",
+        "following",
+        "created_at",
+        "updated_at",
     )
     details = {field: payload.get(field) for field in allowed_fields}
     details.update(
@@ -165,6 +163,41 @@ def _github_observation(payload: dict[str, object]) -> QuickObservation | None:
         summary=f"GitHub public profile for @{login}; same-handle account candidate only.",
         details=details,
     )
+
+
+async def _github_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+    injected_lookup: PublicLookup | None,
+) -> list[QuickObservation]:
+    if injected_lookup is not None:
+        payload = await injected_lookup(normalized_value)
+        if payload is None:
+            return []
+        observation = _legacy_github_observation(payload)
+        return [] if observation is None else [observation]
+
+    request = ExecutionRequest(
+        provider_name=_DEFAULT_GITHUB_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await _GITHUB_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.USERNAME.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_github_observation_from_provider(item) for item in result.observations]
 
 
 def _gitlab_observation(payload: dict[str, object], *, matched_by: str) -> QuickObservation | None:
@@ -215,7 +248,7 @@ async def _research_username(
     purpose: Purpose,
     consent_acknowledged: bool,
     provider: SherlockProvider | None = None,
-    github_lookup: PublicLookup = lookup_github_public_profile,
+    github_lookup: PublicLookup | None = None,
     gitlab_lookup: PublicLookup = lookup_gitlab_username,
     codeforces_lookup: PublicLookup = lookup_codeforces_handle,
     public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
@@ -241,22 +274,27 @@ async def _research_username(
         ),
     )
 
-    observations = [_observation_from_provider(item) for item in result.observations]
+    observations = [_sherlock_observation_from_provider(item) for item in result.observations]
     warnings: list[str] = []
     enrichments = await asyncio.gather(
-        github_lookup(normalized_value),
+        _github_observations(
+            normalized_value,
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
+            injected_lookup=github_lookup,
+        ),
         gitlab_lookup(normalized_value),
         codeforces_lookup(normalized_value),
         return_exceptions=True,
     )
-    github_payload, gitlab_payload, codeforces_payload = enrichments
+    github_observations, gitlab_payload, codeforces_payload = enrichments
 
-    if isinstance(github_payload, Exception):
+    if isinstance(github_observations, Exception):
         warnings.append("GitHub public profile enrichment was temporarily unavailable.")
-    elif github_payload is not None:
-        enriched = _github_observation(github_payload)
-        if enriched is not None:
-            observations.append(enriched)
+    else:
+        observations.extend(github_observations)
 
     if isinstance(gitlab_payload, Exception):
         warnings.append("GitLab public profile enrichment was temporarily unavailable.")
@@ -410,7 +448,10 @@ async def _research_url(
                 QuickObservation(
                     source="public_dns_infrastructure",
                     source_locator=f"dns://{hostname}",
-                    summary="Globally reachable addresses for the public hostname; website infrastructure only.",
+                    summary=(
+                        "Globally reachable addresses for the public hostname; "
+                        "website infrastructure only."
+                    ),
                     details={
                         "hostname": hostname,
                         "public_infrastructure_ips": list(public_ips),
@@ -440,7 +481,7 @@ async def run_quick_research(
     purpose: Purpose,
     consent_acknowledged: bool,
     sherlock_provider: SherlockProvider | None = None,
-    github_lookup: PublicLookup = lookup_github_public_profile,
+    github_lookup: PublicLookup | None = None,
     gitlab_lookup: PublicLookup = lookup_gitlab_username,
     codeforces_lookup: PublicLookup = lookup_codeforces_handle,
     gitlab_email_lookup: PublicLookup = lookup_gitlab_public_email,
