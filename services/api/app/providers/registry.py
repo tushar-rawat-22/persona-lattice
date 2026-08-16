@@ -110,6 +110,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="github_public_api",
+        capability="public_profile_enrichment",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official unauthenticated GitHub user-profile endpoint; only explicitly public "
+            "profile fields are admitted and the result remains an account candidate."
+        ),
+        version="rest-2026-03-10",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=USERNAME_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=64 * 1024,
+        max_concurrency=2,
+        rate_limit=20,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="whatsmyname",
         capability="username_dataset",
         status=ProviderStatus.REVIEW_REQUIRED.value,
