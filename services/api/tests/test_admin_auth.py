@@ -2,7 +2,6 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from fastapi import HTTPException
 
 from app.admin_auth import (
     LOGIN_THROTTLE,
@@ -93,26 +92,53 @@ def test_revoked_session_fails_closed(monkeypatch) -> None:
     assert SESSION_STORE.resolve(login.token, now=NOW + timedelta(minutes=2)) is None
 
 
-def test_login_throttle_blocks_repeated_failures(monkeypatch) -> None:
+def test_repeated_failures_are_delayed_but_cannot_lock_out_correct_password(monkeypatch) -> None:
     _configure(monkeypatch)
+    delays: list[float] = []
 
     for index in range(8):
         assert (
             authenticate_admin(
                 "admin",
                 f"wrong-password-{index}",
-                source_key="198.51.100.10",
+                source_key="shared-private-proxy",
                 now=NOW,
+                delay_fn=delays.append,
             )
             is None
         )
 
-    with pytest.raises(HTTPException) as caught:
+    assert delays == [0.25, 0.5, 1.0, 2.0, 2.0]
+
+    login = authenticate_admin(
+        "admin",
+        PASSWORD,
+        source_key="shared-private-proxy",
+        now=NOW,
+        delay_fn=delays.append,
+    )
+    assert login is not None
+
+
+def test_failure_delay_resets_after_window(monkeypatch) -> None:
+    _configure(monkeypatch)
+    delays: list[float] = []
+
+    for index in range(4):
         authenticate_admin(
             "admin",
-            PASSWORD,
-            source_key="198.51.100.10",
+            f"wrong-password-{index}",
+            source_key="shared-private-proxy",
             now=NOW,
+            delay_fn=delays.append,
         )
+    assert delays == [0.25]
 
-    assert caught.value.status_code == 429
+    authenticate_admin(
+        "admin",
+        "wrong-password-after-window",
+        source_key="shared-private-proxy",
+        now=NOW + timedelta(minutes=16),
+        delay_fn=delays.append,
+    )
+    assert delays == [0.25]
