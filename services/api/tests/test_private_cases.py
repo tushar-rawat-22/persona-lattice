@@ -72,6 +72,24 @@ def test_case_store_round_trip_and_delete(monkeypatch, tmp_path) -> None:
     assert CASE_STORE.get(created.id, now=now) is None
 
 
+def test_case_store_accepts_converged_payload_and_delete_all(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    first = CASE_STORE.create_payload(
+        seed_kind=ResearchKind.USERNAME,
+        seed_value="seed",
+        report_payload={"converged_report": {"identity_claim": False}},
+    )
+    CASE_STORE.create_payload(
+        seed_kind=ResearchKind.EMAIL,
+        seed_value="public@example.test",
+        report_payload={"converged_report": {"identity_claim": False}},
+    )
+
+    assert CASE_STORE.get(first.id) is not None
+    assert CASE_STORE.delete_all() == 2
+    assert CASE_STORE.list_recent() == []
+
+
 def test_case_store_expires_and_purges(monkeypatch, tmp_path) -> None:
     _configure(monkeypatch, tmp_path)
     now = datetime(2026, 1, 1, tzinfo=UTC)
@@ -91,6 +109,9 @@ def test_case_endpoints_require_admin_even_when_uuid_is_known(monkeypatch, tmp_p
     assert client.get(f"/v1/cases/{known_id}").status_code == 401
     assert client.get("/v1/cases").status_code == 401
     assert client.delete(f"/v1/cases/{known_id}").status_code == 401
+    assert client.delete("/v1/cases").status_code == 401
+    assert client.post("/v1/cases/purge-expired").status_code == 401
+    assert client.get("/v1/audit").status_code == 401
 
 
 def test_authenticated_case_mutations_require_matching_csrf(monkeypatch, tmp_path) -> None:
@@ -106,6 +127,8 @@ def test_authenticated_case_mutations_require_matching_csrf(monkeypatch, tmp_pat
         },
     )
     assert response.status_code == 403
+    assert client.delete("/v1/cases").status_code == 403
+    assert client.post("/v1/cases/purge-expired").status_code == 403
 
 
 def test_authenticated_phone_case_is_persisted_listed_and_deletable(monkeypatch, tmp_path) -> None:
@@ -139,3 +162,32 @@ def test_authenticated_phone_case_is_persisted_listed_and_deletable(monkeypatch,
     deleted = client.delete(f"/v1/cases/{case_id}", headers=_headers(csrf))
     assert deleted.status_code == 204
     assert client.get(f"/v1/cases/{case_id}").status_code == 404
+
+
+def test_delete_all_and_audit_are_admin_only(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    csrf = _login()
+
+    created = client.post(
+        "/v1/cases/run",
+        headers=_headers(csrf),
+        json={
+            "kind": "phone",
+            "value": "+919876543210",
+            "purpose": "public_source_research",
+            "consent_acknowledged": False,
+        },
+    )
+    assert created.status_code == 200
+
+    deleted = client.delete("/v1/cases", headers=_headers(csrf))
+    assert deleted.status_code == 200
+    assert deleted.json()["count"] == 1
+    assert client.get("/v1/cases").json() == []
+
+    audit = client.get("/v1/audit")
+    assert audit.status_code == 200
+    event_types = {event["event_type"] for event in audit.json()}
+    assert "auth.login_success" in event_types
+    assert "case.create" in event_types
+    assert "case.delete_all" in event_types

@@ -111,12 +111,12 @@ class CaseStore:
             connection.commit()
             return cursor.rowcount
 
-    def create(
+    def create_payload(
         self,
         *,
         seed_kind: ResearchKind,
         seed_value: str,
-        report: QuickResearchReport,
+        report_payload: dict[str, object],
         now: datetime | None = None,
     ) -> StoredCase:
         created_at = now or datetime.now(UTC)
@@ -127,7 +127,7 @@ class CaseStore:
             expires_at=expires_at,
             seed_kind=seed_kind,
             seed_value=seed_value,
-            report=_report_payload(report),
+            report=report_payload,
         )
         serialized = json.dumps(record.report, ensure_ascii=False, separators=(",", ":"))
         with _connect() as connection:
@@ -149,6 +149,21 @@ class CaseStore:
             )
             connection.commit()
         return record
+
+    def create(
+        self,
+        *,
+        seed_kind: ResearchKind,
+        seed_value: str,
+        report: QuickResearchReport,
+        now: datetime | None = None,
+    ) -> StoredCase:
+        return self.create_payload(
+            seed_kind=seed_kind,
+            seed_value=seed_value,
+            report_payload=_report_payload(report),
+            now=now,
+        )
 
     def get(self, case_id: UUID, *, now: datetime | None = None) -> StoredCase | None:
         evaluated_at = now or datetime.now(UTC)
@@ -188,6 +203,13 @@ class CaseStore:
             )
             connection.commit()
             return cursor.rowcount > 0
+
+    def delete_all(self) -> int:
+        with _connect() as connection:
+            _initialize(connection)
+            cursor = connection.execute("DELETE FROM research_cases")
+            connection.commit()
+            return cursor.rowcount
 
 
 CASE_STORE = CaseStore()
