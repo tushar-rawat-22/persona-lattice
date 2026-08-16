@@ -62,3 +62,13 @@ def test_render_blueprint_keeps_research_api_private() -> None:
         "name": "personalattice-api",
         "property": "hostport",
     }
+
+
+def test_private_api_docker_runtime_does_not_trust_forwarded_headers() -> None:
+    dockerfile = (REPO_ROOT / "services/api/Dockerfile").read_text(encoding="utf-8")
+
+    assert "EXPOSE 10001" in dockerfile
+    assert "--port ${PORT:-10001}" in dockerfile
+    assert "--workers 1" in dockerfile
+    assert "--no-proxy-headers" in dockerfile
+    assert "--forwarded-allow-ips" not in dockerfile
