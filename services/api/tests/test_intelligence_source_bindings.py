@@ -44,14 +44,13 @@ def test_only_deterministic_no_network_sources_use_local_backend() -> None:
     assert local == {"local_normalization", "libphonenumber_metadata"}
 
 
-def test_current_legacy_network_debt_is_frozen_to_private_v1_sources() -> None:
+def test_current_legacy_network_debt_shrinks_after_github_migration() -> None:
     legacy = {
         name
         for name, binding in SOURCE_BINDING_BY_NAME.items()
         if binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
     }
     assert legacy == {
-        "github_public_api",
         "gitlab_public_api",
         "codeforces_public_api",
         "public_dns_infrastructure",
@@ -60,12 +59,13 @@ def test_current_legacy_network_debt_is_frozen_to_private_v1_sources() -> None:
     assert all(SOURCE_BINDING_BY_NAME[name].migration_note.strip() for name in legacy)
 
 
-def test_sherlock_binding_matches_governed_provider_descriptor() -> None:
-    binding = source_binding_for("sherlock", kind=LeadKind.USERNAME)
-    descriptor = PROVIDER_BY_NAME["sherlock"]
+@pytest.mark.parametrize("name", ["sherlock", "github_public_api"])
+def test_governed_public_sources_match_provider_descriptors(name: str) -> None:
+    binding = source_binding_for(name, kind=LeadKind.USERNAME)
+    descriptor = PROVIDER_BY_NAME[name]
 
     assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
-    assert binding.provider_name == "sherlock"
+    assert binding.provider_name == name
     assert descriptor.status == ProviderStatus.DEVELOPMENT.value
     assert descriptor.contact_risk is ContactRisk.NONE_KNOWN
     assert descriptor.supported_identifier_kinds == frozenset({"username"})
