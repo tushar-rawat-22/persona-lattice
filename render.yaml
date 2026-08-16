@@ -2,6 +2,7 @@ services:
   - type: pserv
     name: personalattice-api
     runtime: docker
+    plan: starter
     dockerfilePath: ./services/api/Dockerfile
     envVars:
       - key: PORT
@@ -30,6 +31,7 @@ services:
   - type: web
     name: personalattice-web
     runtime: node
+    plan: starter
     rootDir: apps/web
     buildCommand: npm ci --no-audit --no-fund && npm run build
     startCommand: npm start
