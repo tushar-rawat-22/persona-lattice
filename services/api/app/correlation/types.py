@@ -38,7 +38,6 @@ class CalibrationStatus(str, Enum):
 @dataclass(frozen=True, slots=True)
 class CorrelationFactorInput:
     kind: FactorKind
-    independence_group: str
     observation_ids: tuple[UUID, ...] = ()
     identifier_ids: tuple[UUID, ...] = ()
     rationale: str = ""

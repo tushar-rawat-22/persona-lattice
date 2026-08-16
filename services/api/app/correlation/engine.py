@@ -5,13 +5,14 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.evidence.models import Identifier, Observation
-from app.evidence.types import FreshnessState, IdentifierKind
+from app.evidence.types import FreshnessState, IdentifierKind, ObservationSourceKind
 
 from .models import CorrelationFactorRecord, CorrelationRun
 from .policy import (
@@ -71,18 +72,45 @@ def _sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _normalize_group(value: str) -> str:
-    normalized = " ".join(value.split())
-    if not normalized or len(normalized) > MAX_GROUP_CHARS:
-        raise CorrelationValidationError("Factor independence_group is missing or too long.")
-    return normalized
-
-
 def _normalize_rationale(value: str) -> str:
     normalized = " ".join(value.split())
     if len(normalized) > MAX_RATIONALE_CHARS:
         raise CorrelationValidationError("Factor rationale exceeds the configured limit.")
     return normalized
+
+
+def _source_group(observation: Observation) -> str:
+    if observation.source_kind is ObservationSourceKind.PROVIDER:
+        group = f"provider:{observation.source_name.casefold()}"
+    else:
+        try:
+            parts = urlsplit(observation.source_locator)
+            hostname = parts.hostname.casefold() if parts.hostname else None
+        except ValueError:
+            hostname = None
+        if hostname:
+            group = f"host:{hostname}"
+        else:
+            group = (
+                f"source:{observation.source_kind.value}:"
+                f"{observation.source_name.casefold()}"
+            )
+    if len(group) > MAX_GROUP_CHARS:
+        return f"source-sha256:{_sha256(group)}"
+    return group
+
+
+def _derived_group(
+    observations: list[Observation],
+    candidate_observation_id: UUID,
+) -> str:
+    supporting = [observation for observation in observations if observation.id != candidate_observation_id]
+    selected = supporting or observations
+    groups = sorted({_source_group(observation) for observation in selected})
+    if not groups:
+        raise CorrelationValidationError("Cannot derive factor source-independence group.")
+    combined = "+".join(groups)
+    return combined if len(combined) <= MAX_GROUP_CHARS else f"group-sha256:{_sha256(combined)}"
 
 
 def _factor_sort_key(factor: _PreparedFactor) -> tuple[object, ...]:
@@ -106,7 +134,15 @@ class CorrelationEngine:
         candidate = self._load_candidate(request)
         prepared = tuple(
             sorted(
-                (self._prepare_factor(request.subject_id, factor, evaluated_at) for factor in request.factors),
+                (
+                    self._prepare_factor(
+                        request.subject_id,
+                        candidate.id,
+                        factor,
+                        evaluated_at,
+                    )
+                    for factor in request.factors
+                ),
                 key=_factor_sort_key,
             )
         )
@@ -229,6 +265,7 @@ class CorrelationEngine:
     def _prepare_factor(
         self,
         subject_id: UUID,
+        candidate_observation_id: UUID,
         factor: CorrelationFactorInput,
         evaluated_at: datetime,
     ) -> _PreparedFactor:
@@ -237,7 +274,6 @@ class CorrelationEngine:
         except ValueError as exc:
             raise CorrelationValidationError("Unknown correlation factor kind.") from exc
 
-        group = _normalize_group(factor.independence_group)
         rationale = _normalize_rationale(factor.rationale)
         observation_ids = tuple(sorted({str(value) for value in factor.observation_ids}))
         identifier_ids = tuple(sorted({str(value) for value in factor.identifier_ids}))
@@ -258,6 +294,28 @@ class CorrelationEngine:
                 raise CorrelationValidationError("Factor identifier does not belong to the subject.")
             identifiers.append(identifier)
 
+        supporting = [
+            observation for observation in observations if observation.id != candidate_observation_id
+        ]
+        if kind is FactorKind.SAME_USERNAME:
+            if {observation.id for observation in observations} != {candidate_observation_id}:
+                raise CorrelationValidationError(
+                    "Same-username factor must reference only the account candidate observation."
+                )
+        else:
+            if not supporting:
+                raise CorrelationValidationError(
+                    "Non-username correlation factors require a supporting source observation."
+                )
+            if any(
+                observation.payload.get("candidate_observation_id")
+                != str(candidate_observation_id)
+                for observation in supporting
+            ):
+                raise CorrelationValidationError(
+                    "Supporting observation is not explicitly bound to the account candidate."
+                )
+
         if kind is FactorKind.EXACT_CONFIRMED_IDENTIFIER_OVERLAP:
             if not identifiers:
                 raise CorrelationValidationError(
@@ -267,10 +325,21 @@ class CorrelationEngine:
                 raise CorrelationValidationError(
                     "Username reuse cannot be promoted to exact confirmed identifier overlap."
                 )
+            expected_ids = {str(identifier.id) for identifier in identifiers}
+            if not any(
+                expected_ids.issubset(
+                    {
+                        str(value)
+                        for value in observation.payload.get("confirmed_identifier_ids", [])
+                    }
+                )
+                for observation in supporting
+            ):
+                raise CorrelationValidationError(
+                    "Exact overlap lacks source evidence confirming the identifier on the candidate."
+                )
 
-        if kind is FactorKind.SAME_USERNAME and not observations:
-            raise CorrelationValidationError("Same-username evidence requires an observation.")
-        if kind is FactorKind.HARD_CONTRADICTION and not observations:
+        if kind is FactorKind.HARD_CONTRADICTION and not supporting:
             raise CorrelationValidationError("Hard contradiction requires source observation evidence.")
 
         freshness = FactorStatus.NOT_APPLICABLE
@@ -285,7 +354,7 @@ class CorrelationEngine:
 
         return _PreparedFactor(
             kind=kind,
-            independence_group=group,
+            independence_group=_derived_group(observations, candidate_observation_id),
             observation_ids=observation_ids,
             identifier_ids=identifier_ids,
             rationale=rationale,

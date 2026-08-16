@@ -60,15 +60,28 @@ def case():
         yield session, store, subject, username, candidate
 
 
-def _observation(store, subject_id, name, *, stale=False):
+def _observation(
+    store,
+    subject_id,
+    name,
+    *,
+    candidate_id=None,
+    stale=False,
+    confirmed_identifier_ids=(),
+):
     retrieved = EVALUATED_AT - timedelta(days=10)
     expires = EVALUATED_AT - timedelta(days=1) if stale else EVALUATED_AT + timedelta(days=10)
+    payload = {"synthetic": True}
+    if candidate_id is not None:
+        payload["candidate_observation_id"] = str(candidate_id)
+    if confirmed_identifier_ids:
+        payload["confirmed_identifier_ids"] = [str(value) for value in confirmed_identifier_ids]
     return store.add_observation(
         subject_id=subject_id,
         source_kind=ObservationSourceKind.PUBLIC_WEB,
         source_name=name,
         source_locator=f"https://example.test/{name}",
-        payload={"synthetic": True},
+        payload=payload,
         retrieved_at=retrieved,
         expires_at=expires,
     )
@@ -91,7 +104,6 @@ def test_same_username_only_is_insufficient_and_uncalibrated(case) -> None:
             candidate.id,
             CorrelationFactorInput(
                 kind=FactorKind.SAME_USERNAME,
-                independence_group="sherlock:github",
                 observation_ids=(candidate.id,),
                 rationale="The same public handle exists.",
             ),
@@ -103,13 +115,14 @@ def test_same_username_only_is_insufficient_and_uncalibrated(case) -> None:
     assert result.evidence_score == 10
     assert result.calibration_status is CalibrationStatus.UNCALIBRATED
     assert result.is_identity_claim is False
+    assert result.factors[0].independence_group == "provider:sherlock"
     assert json.loads(result.normalized_output)["is_identity_claim"] is False
 
 
-def test_duplicate_independence_group_cannot_inflate_score(case) -> None:
+def test_duplicate_source_group_is_derived_and_cannot_inflate_score(case) -> None:
     session, store, subject, _username, candidate = case
-    source_a = _observation(store, subject.id, "mirror-a")
-    source_b = _observation(store, subject.id, "mirror-b")
+    source_a = _observation(store, subject.id, "mirror-a", candidate_id=candidate.id)
+    source_b = _observation(store, subject.id, "mirror-b", candidate_id=candidate.id)
 
     result = CorrelationEngine(session).correlate(
         _request(
@@ -117,15 +130,13 @@ def test_duplicate_independence_group_cannot_inflate_score(case) -> None:
             candidate.id,
             CorrelationFactorInput(
                 FactorKind.INDEPENDENT_CROSS_LINK,
-                "same-publisher-network",
                 (source_a.id,),
                 rationale="Synthetic direct cross-link.",
             ),
             CorrelationFactorInput(
                 FactorKind.COMPATIBLE_PROFILE_METADATA,
-                "same-publisher-network",
                 (source_b.id,),
-                rationale="Mirrored metadata from the same evidence family.",
+                rationale="Mirrored metadata from the same host family.",
             ),
         )
     )
@@ -133,6 +144,7 @@ def test_duplicate_independence_group_cannot_inflate_score(case) -> None:
     assert result.evidence_score == 35
     assert result.outcome is CorrelationOutcome.POSSIBLE_MATCH
     assert result.positive_independence_groups == 1
+    assert {factor.independence_group for factor in result.factors} == {"host:example.test"}
     assert sorted(factor.applied_weight for factor in result.factors) == [0, 35]
     assert any(
         factor.status is FactorStatus.SUPPRESSED_SAME_INDEPENDENCE_GROUP
@@ -146,8 +158,31 @@ def test_hard_contradiction_vetoes_otherwise_strong_evidence(case) -> None:
         subject.id,
         normalize_identifier(IdentifierKind.EMAIL, "synthetic@example.test"),
     )
-    cross_link = _observation(store, subject.id, "independent-cross-link")
-    contradiction = _observation(store, subject.id, "hard-contradiction")
+    email_source = _observation(
+        store,
+        subject.id,
+        "email-proof",
+        candidate_id=candidate.id,
+        confirmed_identifier_ids=(email.id,),
+    )
+    cross_link = store.add_observation(
+        subject_id=subject.id,
+        source_kind=ObservationSourceKind.PUBLIC_WEB,
+        source_name="independent-cross-link",
+        source_locator="https://independent.test/link",
+        payload={"candidate_observation_id": str(candidate.id), "synthetic": True},
+        retrieved_at=EVALUATED_AT - timedelta(days=1),
+        expires_at=EVALUATED_AT + timedelta(days=10),
+    )
+    contradiction = store.add_observation(
+        subject_id=subject.id,
+        source_kind=ObservationSourceKind.PUBLIC_WEB,
+        source_name="hard-contradiction",
+        source_locator="https://contradiction.test/fact",
+        payload={"candidate_observation_id": str(candidate.id), "synthetic": True},
+        retrieved_at=EVALUATED_AT - timedelta(days=1),
+        expires_at=EVALUATED_AT + timedelta(days=10),
+    )
 
     result = CorrelationEngine(session).correlate(
         _request(
@@ -155,19 +190,17 @@ def test_hard_contradiction_vetoes_otherwise_strong_evidence(case) -> None:
             candidate.id,
             CorrelationFactorInput(
                 FactorKind.EXACT_CONFIRMED_IDENTIFIER_OVERLAP,
-                "confirmed-email",
+                (email_source.id,),
                 identifier_ids=(email.id,),
                 rationale="Synthetic exact non-username identifier overlap.",
             ),
             CorrelationFactorInput(
                 FactorKind.INDEPENDENT_CROSS_LINK,
-                "independent-site",
                 (cross_link.id,),
                 rationale="Independent synthetic cross-link.",
             ),
             CorrelationFactorInput(
                 FactorKind.HARD_CONTRADICTION,
-                "contradiction-source",
                 (contradiction.id,),
                 rationale="Synthetic evidence proves the candidate is incompatible.",
             ),
@@ -181,7 +214,13 @@ def test_hard_contradiction_vetoes_otherwise_strong_evidence(case) -> None:
 
 def test_stale_evidence_is_visible_but_excluded(case) -> None:
     session, store, subject, _username, candidate = case
-    stale = _observation(store, subject.id, "stale-source", stale=True)
+    stale = _observation(
+        store,
+        subject.id,
+        "stale-source",
+        candidate_id=candidate.id,
+        stale=True,
+    )
 
     result = CorrelationEngine(session).correlate(
         _request(
@@ -189,7 +228,6 @@ def test_stale_evidence_is_visible_but_excluded(case) -> None:
             candidate.id,
             CorrelationFactorInput(
                 FactorKind.INDEPENDENT_CROSS_LINK,
-                "stale-independent-source",
                 (stale.id,),
                 rationale="This synthetic source expired before evaluation.",
             ),
@@ -208,16 +246,36 @@ def test_replay_is_byte_stable_order_independent_and_persisted_once(case) -> Non
         subject.id,
         normalize_identifier(IdentifierKind.EMAIL, "stable@example.test"),
     )
-    cross_link = _observation(store, subject.id, "stable-cross-link")
+    email_source = store.add_observation(
+        subject_id=subject.id,
+        source_kind=ObservationSourceKind.PUBLIC_WEB,
+        source_name="stable-email-source",
+        source_locator="https://email-proof.test/profile",
+        payload={
+            "candidate_observation_id": str(candidate.id),
+            "confirmed_identifier_ids": [str(email.id)],
+            "synthetic": True,
+        },
+        retrieved_at=EVALUATED_AT - timedelta(days=1),
+        expires_at=EVALUATED_AT + timedelta(days=10),
+    )
+    cross_link = store.add_observation(
+        subject_id=subject.id,
+        source_kind=ObservationSourceKind.PUBLIC_WEB,
+        source_name="stable-cross-link",
+        source_locator="https://cross-link.test/profile",
+        payload={"candidate_observation_id": str(candidate.id), "synthetic": True},
+        retrieved_at=EVALUATED_AT - timedelta(days=1),
+        expires_at=EVALUATED_AT + timedelta(days=10),
+    )
     factor_a = CorrelationFactorInput(
         FactorKind.EXACT_CONFIRMED_IDENTIFIER_OVERLAP,
-        "confirmed-email",
+        (email_source.id,),
         identifier_ids=(email.id,),
         rationale="Stable exact overlap.",
     )
     factor_b = CorrelationFactorInput(
         FactorKind.INDEPENDENT_CROSS_LINK,
-        "independent-link",
         (cross_link.id,),
         rationale="Stable cross-link.",
     )
@@ -237,7 +295,14 @@ def test_replay_is_byte_stable_order_independent_and_persisted_once(case) -> Non
 
 
 def test_username_cannot_be_upgraded_to_exact_confirmed_overlap(case) -> None:
-    session, _store, subject, username, candidate = case
+    session, store, subject, username, candidate = case
+    source = _observation(
+        store,
+        subject.id,
+        "username-proof",
+        candidate_id=candidate.id,
+        confirmed_identifier_ids=(username.id,),
+    )
     with pytest.raises(CorrelationValidationError, match="Username reuse"):
         CorrelationEngine(session).correlate(
             _request(
@@ -245,8 +310,30 @@ def test_username_cannot_be_upgraded_to_exact_confirmed_overlap(case) -> None:
                 candidate.id,
                 CorrelationFactorInput(
                     FactorKind.EXACT_CONFIRMED_IDENTIFIER_OVERLAP,
-                    "bad-upgrade",
+                    (source.id,),
                     identifier_ids=(username.id,),
+                ),
+            )
+        )
+
+
+def test_exact_overlap_requires_candidate_bound_source_confirmation(case) -> None:
+    session, store, subject, _username, candidate = case
+    email = store.add_identifier(
+        subject.id,
+        normalize_identifier(IdentifierKind.EMAIL, "unbound@example.test"),
+    )
+    unbound = _observation(store, subject.id, "unbound-source")
+
+    with pytest.raises(CorrelationValidationError, match="explicitly bound"):
+        CorrelationEngine(session).correlate(
+            _request(
+                subject.id,
+                candidate.id,
+                CorrelationFactorInput(
+                    FactorKind.EXACT_CONFIRMED_IDENTIFIER_OVERLAP,
+                    (unbound.id,),
+                    identifier_ids=(email.id,),
                 ),
             )
         )
@@ -255,7 +342,7 @@ def test_username_cannot_be_upgraded_to_exact_confirmed_overlap(case) -> None:
 def test_cross_subject_factor_and_non_candidate_are_rejected(case) -> None:
     session, store, subject, _username, candidate = case
     other = store.add_subject("Other Synthetic Subject")
-    foreign = _observation(store, other.id, "foreign-source")
+    foreign = _observation(store, other.id, "foreign-source", candidate_id=candidate.id)
 
     with pytest.raises(CorrelationValidationError, match="does not belong"):
         CorrelationEngine(session).correlate(
@@ -264,7 +351,6 @@ def test_cross_subject_factor_and_non_candidate_are_rejected(case) -> None:
                 candidate.id,
                 CorrelationFactorInput(
                     FactorKind.INDEPENDENT_CROSS_LINK,
-                    "foreign",
                     (foreign.id,),
                 ),
             )
@@ -278,7 +364,6 @@ def test_cross_subject_factor_and_non_candidate_are_rejected(case) -> None:
                 not_candidate.id,
                 CorrelationFactorInput(
                     FactorKind.SAME_USERNAME,
-                    "ordinary",
                     (not_candidate.id,),
                 ),
             )
