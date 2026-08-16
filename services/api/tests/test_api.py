@@ -1,10 +1,29 @@
 # SPDX-License-Identifier: Apache-2.0
 from fastapi.testclient import TestClient
 
+from app.admin_auth import LOGIN_THROTTLE, SESSION_STORE, hash_admin_password
 from app.main import app
 
 
 client = TestClient(app)
+PASSWORD = "synthetic-admin-password-123!"
+
+
+def _login(monkeypatch) -> None:
+    client.cookies.clear()
+    SESSION_STORE.clear()
+    LOGIN_THROTTLE.clear()
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_PASSWORD_HASH", hash_admin_password(PASSWORD))
+    monkeypatch.setenv("PERSONALATTICE_COOKIE_SECURE", "false")
+    monkeypatch.setenv("PERSONALATTICE_SESSION_COOKIE", "personalattice_test_session")
+
+    response = client.post(
+        "/v1/auth/login",
+        json={"username": "admin", "password": PASSWORD},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["authenticated"] is True
 
 
 def test_health() -> None:
@@ -13,7 +32,43 @@ def test_health() -> None:
     assert response.json()["status"] == "ok"
 
 
-def test_preview_normalizes_intake() -> None:
+def test_anonymous_intake_is_denied(monkeypatch) -> None:
+    client.cookies.clear()
+    SESSION_STORE.clear()
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_PASSWORD_HASH", hash_admin_password(PASSWORD))
+    monkeypatch.setenv("PERSONALATTICE_COOKIE_SECURE", "false")
+    monkeypatch.setenv("PERSONALATTICE_SESSION_COOKIE", "personalattice_test_session")
+
+    response = client.post(
+        "/v1/intake/preview",
+        json={"purpose": "self_audit", "consent_acknowledged": True},
+    )
+
+    assert response.status_code == 401
+    assert "admin authentication" in response.json()["detail"].lower()
+
+
+def test_wrong_admin_password_is_denied(monkeypatch) -> None:
+    client.cookies.clear()
+    SESSION_STORE.clear()
+    LOGIN_THROTTLE.clear()
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_PASSWORD_HASH", hash_admin_password(PASSWORD))
+    monkeypatch.setenv("PERSONALATTICE_COOKIE_SECURE", "false")
+    monkeypatch.setenv("PERSONALATTICE_SESSION_COOKIE", "personalattice_test_session")
+
+    response = client.post(
+        "/v1/auth/login",
+        json={"username": "admin", "password": "wrong-password-value"},
+    )
+
+    assert response.status_code == 401
+    assert not client.cookies
+
+
+def test_preview_normalizes_intake(monkeypatch) -> None:
+    _login(monkeypatch)
     response = client.post(
         "/v1/intake/preview",
         json={
@@ -32,7 +87,8 @@ def test_preview_normalizes_intake() -> None:
     assert body["normalized"]["usernames"] == ["demo_user"]
 
 
-def test_preview_deduplicates_and_warns_on_malformed_identifiers() -> None:
+def test_preview_deduplicates_and_warns_on_malformed_identifiers(monkeypatch) -> None:
+    _login(monkeypatch)
     response = client.post(
         "/v1/intake/preview",
         json={
@@ -49,7 +105,8 @@ def test_preview_deduplicates_and_warns_on_malformed_identifiers() -> None:
     assert len(body["warnings"]) == 2
 
 
-def test_regulated_decision_is_blocked() -> None:
+def test_regulated_decision_is_blocked(monkeypatch) -> None:
+    _login(monkeypatch)
     response = client.post(
         "/v1/intake/preview",
         json={
@@ -61,7 +118,8 @@ def test_regulated_decision_is_blocked() -> None:
     assert response.status_code == 422
 
 
-def test_consent_is_required_for_self_audit() -> None:
+def test_consent_is_required_for_self_audit(monkeypatch) -> None:
+    _login(monkeypatch)
     response = client.post(
         "/v1/intake/preview",
         json={
@@ -71,3 +129,12 @@ def test_consent_is_required_for_self_audit() -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_logout_revokes_current_admin_session(monkeypatch) -> None:
+    _login(monkeypatch)
+    assert client.get("/v1/auth/session").status_code == 200
+
+    logout = client.post("/v1/auth/logout")
+    assert logout.status_code == 204
+    assert client.get("/v1/auth/session").status_code == 401
