@@ -9,7 +9,7 @@ client = TestClient(app)
 PASSWORD = "synthetic-admin-password-123!"
 
 
-def _login(monkeypatch) -> None:
+def _login(monkeypatch) -> str:
     client.cookies.clear()
     SESSION_STORE.clear()
     LOGIN_THROTTLE.clear()
@@ -23,7 +23,13 @@ def _login(monkeypatch) -> None:
         json={"username": "admin", "password": PASSWORD},
     )
     assert response.status_code == 200, response.text
-    assert response.json()["authenticated"] is True
+    body = response.json()
+    assert body["authenticated"] is True
+    return body["csrf_token"]
+
+
+def _csrf(token: str) -> dict[str, str]:
+    return {"X-PersonaLattice-CSRF": token}
 
 
 def test_health() -> None:
@@ -49,6 +55,16 @@ def test_anonymous_intake_is_denied(monkeypatch) -> None:
     assert "admin authentication" in response.json()["detail"].lower()
 
 
+def test_authenticated_write_without_csrf_is_denied(monkeypatch) -> None:
+    _login(monkeypatch)
+    response = client.post(
+        "/v1/intake/preview",
+        json={"purpose": "self_audit", "consent_acknowledged": True},
+    )
+    assert response.status_code == 403
+    assert "csrf" in response.json()["detail"].lower()
+
+
 def test_wrong_admin_password_is_denied(monkeypatch) -> None:
     client.cookies.clear()
     SESSION_STORE.clear()
@@ -68,9 +84,10 @@ def test_wrong_admin_password_is_denied(monkeypatch) -> None:
 
 
 def test_preview_normalizes_intake(monkeypatch) -> None:
-    _login(monkeypatch)
+    csrf = _login(monkeypatch)
     response = client.post(
         "/v1/intake/preview",
+        headers=_csrf(csrf),
         json={
             "purpose": "self_audit",
             "consent_acknowledged": True,
@@ -88,9 +105,10 @@ def test_preview_normalizes_intake(monkeypatch) -> None:
 
 
 def test_preview_deduplicates_and_warns_on_malformed_identifiers(monkeypatch) -> None:
-    _login(monkeypatch)
+    csrf = _login(monkeypatch)
     response = client.post(
         "/v1/intake/preview",
+        headers=_csrf(csrf),
         json={
             "purpose": "self_audit",
             "consent_acknowledged": True,
@@ -106,9 +124,10 @@ def test_preview_deduplicates_and_warns_on_malformed_identifiers(monkeypatch) ->
 
 
 def test_regulated_decision_is_blocked(monkeypatch) -> None:
-    _login(monkeypatch)
+    csrf = _login(monkeypatch)
     response = client.post(
         "/v1/intake/preview",
+        headers=_csrf(csrf),
         json={
             "purpose": "employment_decision",
             "consent_acknowledged": True,
@@ -119,9 +138,10 @@ def test_regulated_decision_is_blocked(monkeypatch) -> None:
 
 
 def test_consent_is_required_for_self_audit(monkeypatch) -> None:
-    _login(monkeypatch)
+    csrf = _login(monkeypatch)
     response = client.post(
         "/v1/intake/preview",
+        headers=_csrf(csrf),
         json={
             "purpose": "self_audit",
             "consent_acknowledged": False,
@@ -132,9 +152,9 @@ def test_consent_is_required_for_self_audit(monkeypatch) -> None:
 
 
 def test_logout_revokes_current_admin_session(monkeypatch) -> None:
-    _login(monkeypatch)
+    csrf = _login(monkeypatch)
     assert client.get("/v1/auth/session").status_code == 200
 
-    logout = client.post("/v1/auth/logout")
+    logout = client.post("/v1/auth/logout", headers=_csrf(csrf))
     assert logout.status_code == 204
     assert client.get("/v1/auth/session").status_code == 401
