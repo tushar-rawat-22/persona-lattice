@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import { QuickResearch } from "./quick-research";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 type AuthState = "checking" | "anonymous" | "authenticated";
@@ -335,8 +337,10 @@ export default function AdminConsole() {
         </form>
 
         <aside className="sideStack">
+          <QuickResearch />
+
           <section className="panel">
-            <div className="panelHeader"><div><span className="index">02</span><h2>Research plan</h2></div></div>
+            <div className="panelHeader"><div><span className="index">03</span><h2>Research plan</h2></div></div>
             {!result ? (
               <p className="muted">Submit an authenticated intake to see normalization and provider policy decisions.</p>
             ) : (
