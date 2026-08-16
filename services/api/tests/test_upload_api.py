@@ -102,7 +102,7 @@ def test_file_preview_extracts_text_and_returns_review_only_candidates(
     assert len(body["artifacts"]) == 2
     first = body["artifacts"][0]
     assert first["detected_media_type"] == "text/plain"
-    assert first["trust_boundary"] == "untrusted_document_content"
+    assert first["trust_boundary"] == "untrusted_uploaded_content"
     assert first["storage_retained"] is False
     assert all(
         candidate["review_status"] == "pending_human_review"
@@ -130,6 +130,7 @@ def test_file_preview_extracts_bounded_jpeg_metadata(monkeypatch, tmp_path: Path
     artifact = response.json()["artifacts"][0]
     assert artifact["detected_media_type"] == "image/jpeg"
     assert artifact["extraction_method"] == "pillow_metadata"
+    assert artifact["trust_boundary"] == "untrusted_uploaded_content"
     assert '"width":32' in artifact["extracted_text"]
     assert '"height":24' in artifact["extracted_text"]
     assert '"identity_claim":false' in artifact["extracted_text"]
