@@ -25,3 +25,20 @@ services:
       name: personalattice-data
       mountPath: /var/data/personalattice
       sizeGB: 1
+
+  - type: web
+    name: personalattice-web
+    runtime: node
+    rootDir: apps/web
+    buildCommand: npm ci --no-audit --no-fund && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "24.14.1"
+      - key: NEXT_PUBLIC_API_URL
+        value: "/api"
+      - key: PERSONALATTICE_API_HOSTPORT
+        fromService:
+          type: web
+          name: personalattice-api
+          property: hostport
