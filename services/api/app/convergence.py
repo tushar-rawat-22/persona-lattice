@@ -198,6 +198,7 @@ async def run_converged_research(
     edges: list[ResearchEdge] = []
     warnings: list[str] = list(seed_report.warnings)
     visited = {seed_node.key}
+    attempted_raw = {(kind.value, value.strip().casefold())}
     queue: deque[ResearchNode] = deque([seed_node])
     truncated = False
 
@@ -213,6 +214,11 @@ async def run_converged_research(
                 truncated = True
                 queue.clear()
                 break
+
+            raw_key = (pivot_kind.value, pivot_value.strip().casefold())
+            if raw_key in attempted_raw:
+                continue
+            attempted_raw.add(raw_key)
 
             try:
                 pivot_report = await runner(
