@@ -20,6 +20,13 @@ from .providers.contracts import ExecutionRequest
 from .providers.policy import authorize_execution
 from .providers.rate_limit import RateBudget
 from .providers.sherlock import SherlockProvider
+from .public_profiles import (
+    codeforces_public_observation_fields,
+    gitlab_public_observation_fields,
+    lookup_codeforces_handle,
+    lookup_gitlab_public_email,
+    lookup_gitlab_username,
+)
 
 
 class ResearchKind(StrEnum):
@@ -45,7 +52,7 @@ class QuickResearchReport:
     warnings: tuple[str, ...] = ()
 
 
-GithubLookup = Callable[[str], Awaitable[dict[str, object] | None]]
+PublicLookup = Callable[[str], Awaitable[dict[str, object] | None]]
 
 _SHERLOCK_BUDGET = RateBudget(limit=6, window_seconds=60.0)
 _GITHUB_BUDGET = RateBudget(limit=20, window_seconds=60.0)
@@ -141,13 +148,57 @@ def _github_observation(payload: dict[str, object]) -> QuickObservation | None:
     )
 
 
+def _gitlab_observation(payload: dict[str, object], *, matched_by: str) -> QuickObservation | None:
+    username = payload.get("username")
+    web_url = payload.get("web_url")
+    if not isinstance(username, str) or not isinstance(web_url, str):
+        return None
+    details = gitlab_public_observation_fields(payload)
+    details.update(
+        {
+            "account_candidate": True,
+            "identity_claim": False,
+            "field_visibility": "public_profile_api",
+            "matched_by": matched_by,
+        }
+    )
+    return QuickObservation(
+        source="gitlab_public_api",
+        source_locator=web_url,
+        summary=f"GitLab public profile matched by {matched_by}; account candidate only.",
+        details=details,
+    )
+
+
+def _codeforces_observation(payload: dict[str, object]) -> QuickObservation | None:
+    handle = payload.get("handle")
+    if not isinstance(handle, str):
+        return None
+    details = codeforces_public_observation_fields(payload)
+    details.update(
+        {
+            "account_candidate": True,
+            "identity_claim": False,
+            "field_visibility": "public_profile_api",
+        }
+    )
+    return QuickObservation(
+        source="codeforces_public_api",
+        source_locator=f"https://codeforces.com/profile/{quote(handle, safe='')}",
+        summary=f"Codeforces public profile for @{handle}; same-handle account candidate only.",
+        details=details,
+    )
+
+
 async def _research_username(
     normalized_value: str,
     *,
     purpose: Purpose,
     consent_acknowledged: bool,
     provider: SherlockProvider | None = None,
-    github_lookup: GithubLookup = lookup_github_public_profile,
+    github_lookup: PublicLookup = lookup_github_public_profile,
+    gitlab_lookup: PublicLookup = lookup_gitlab_username,
+    codeforces_lookup: PublicLookup = lookup_codeforces_handle,
 ) -> QuickResearchReport:
     adapter = provider or SherlockProvider()
     subject_id = uuid4()
@@ -175,13 +226,32 @@ async def _research_username(
 
     observations = [_observation_from_provider(item) for item in result.observations]
     warnings: list[str] = []
-    try:
-        github_payload = await github_lookup(normalized_value)
-    except RuntimeError:
-        github_payload = None
+    enrichments = await asyncio.gather(
+        github_lookup(normalized_value),
+        gitlab_lookup(normalized_value),
+        codeforces_lookup(normalized_value),
+        return_exceptions=True,
+    )
+    github_payload, gitlab_payload, codeforces_payload = enrichments
+
+    if isinstance(github_payload, Exception):
         warnings.append("GitHub public profile enrichment was temporarily unavailable.")
-    if github_payload is not None:
+    elif github_payload is not None:
         enriched = _github_observation(github_payload)
+        if enriched is not None:
+            observations.append(enriched)
+
+    if isinstance(gitlab_payload, Exception):
+        warnings.append("GitLab public profile enrichment was temporarily unavailable.")
+    elif gitlab_payload is not None:
+        enriched = _gitlab_observation(gitlab_payload, matched_by="username")
+        if enriched is not None:
+            observations.append(enriched)
+
+    if isinstance(codeforces_payload, Exception):
+        warnings.append("Codeforces public profile enrichment was temporarily unavailable.")
+    elif codeforces_payload is not None:
+        enriched = _codeforces_observation(codeforces_payload)
         if enriched is not None:
             observations.append(enriched)
 
@@ -224,26 +294,45 @@ def _research_phone(normalized_value: str) -> QuickResearchReport:
     )
 
 
-def _research_email(normalized_value: str) -> QuickResearchReport:
+async def _research_email(
+    normalized_value: str,
+    *,
+    gitlab_email_lookup: PublicLookup = lookup_gitlab_public_email,
+) -> QuickResearchReport:
     local_part, domain = normalized_value.rsplit("@", 1)
+    observations = [
+        QuickObservation(
+            source="local_normalization",
+            source_locator=f"domain://{domain.lower()}",
+            summary="Normalized email and domain extracted locally.",
+            details={
+                "domain": domain.lower(),
+                "local_part_length": len(local_part),
+                "personal_identity_claim": False,
+            },
+        )
+    ]
+    warnings: list[str] = []
+    try:
+        gitlab_payload = await gitlab_email_lookup(normalized_value)
+    except RuntimeError:
+        gitlab_payload = None
+        warnings.append("GitLab public-email lookup was temporarily unavailable.")
+    if gitlab_payload is not None:
+        enriched = _gitlab_observation(gitlab_payload, matched_by="exact_public_email")
+        if enriched is not None:
+            observations.append(enriched)
+
+    if len(observations) == 1:
+        warnings.append(
+            "No approved external source established a public profile for this email; PersonaLattice does not infer an owner."
+        )
+
     return QuickResearchReport(
         kind=ResearchKind.EMAIL,
         normalized_value=normalized_value,
-        observations=(
-            QuickObservation(
-                source="local_normalization",
-                source_locator=f"domain://{domain.lower()}",
-                summary="Normalized email and domain extracted locally.",
-                details={
-                    "domain": domain.lower(),
-                    "local_part_length": len(local_part),
-                    "personal_identity_claim": False,
-                },
-            ),
-        ),
-        warnings=(
-            "No external email-enrichment provider is approved yet; this report does not infer an owner.",
-        ),
+        observations=tuple(observations),
+        warnings=tuple(warnings),
     )
 
 
@@ -275,7 +364,10 @@ async def run_quick_research(
     purpose: Purpose,
     consent_acknowledged: bool,
     sherlock_provider: SherlockProvider | None = None,
-    github_lookup: GithubLookup = lookup_github_public_profile,
+    github_lookup: PublicLookup = lookup_github_public_profile,
+    gitlab_lookup: PublicLookup = lookup_gitlab_username,
+    codeforces_lookup: PublicLookup = lookup_codeforces_handle,
+    gitlab_email_lookup: PublicLookup = lookup_gitlab_public_email,
 ) -> QuickResearchReport:
     identifier_kind = IdentifierKind(kind.value)
     normalized = normalize_identifier(identifier_kind, value)
@@ -287,11 +379,16 @@ async def run_quick_research(
             consent_acknowledged=consent_acknowledged,
             provider=sherlock_provider,
             github_lookup=github_lookup,
+            gitlab_lookup=gitlab_lookup,
+            codeforces_lookup=codeforces_lookup,
         )
     if kind is ResearchKind.PHONE:
         return _research_phone(normalized.normalized_value)
     if kind is ResearchKind.EMAIL:
-        return _research_email(normalized.normalized_value)
+        return await _research_email(
+            normalized.normalized_value,
+            gitlab_email_lookup=gitlab_email_lookup,
+        )
     if kind is ResearchKind.URL:
         return _research_url(normalized.normalized_value)
     raise ValueError("Unsupported research kind.")
