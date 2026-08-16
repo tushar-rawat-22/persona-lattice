@@ -9,6 +9,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 type AuthState = "checking" | "anonymous" | "authenticated";
 
+type AuthSession = {
+  authenticated: true;
+  session_record_id: string;
+  expires_at: string;
+  csrf_token: string;
+};
+
 type ProviderPlan = {
   provider: string;
   capability: string;
@@ -55,18 +62,22 @@ function splitValues(value: string) {
     .filter(Boolean);
 }
 
-async function api(path: string, init?: RequestInit) {
+async function api(path: string, init?: RequestInit, csrfToken?: string) {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const unsafe = !["GET", "HEAD", "OPTIONS"].includes(method);
   return fetch(`${API_URL}${path}`, {
     ...init,
     credentials: "include",
     headers: {
       ...(init?.headers ?? {}),
+      ...(unsafe && csrfToken ? { "X-PersonaLattice-CSRF": csrfToken } : {}),
     },
   });
 }
 
 export default function AdminConsole() {
   const [authState, setAuthState] = useState<AuthState>("checking");
+  const [csrfToken, setCsrfToken] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -90,12 +101,22 @@ export default function AdminConsole() {
   useEffect(() => {
     let active = true;
     api("/v1/auth/session")
-      .then((response) => {
+      .then(async (response) => {
         if (!active) return;
-        setAuthState(response.ok ? "authenticated" : "anonymous");
+        if (!response.ok) {
+          setCsrfToken("");
+          setAuthState("anonymous");
+          return;
+        }
+        const session = (await response.json()) as AuthSession;
+        setCsrfToken(session.csrf_token);
+        setAuthState("authenticated");
       })
       .catch(() => {
-        if (active) setAuthState("anonymous");
+        if (active) {
+          setCsrfToken("");
+          setAuthState("anonymous");
+        }
       });
     return () => {
       active = false;
@@ -120,10 +141,12 @@ export default function AdminConsole() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
+      const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
         throw new Error(typeof body.detail === "string" ? body.detail : "Login failed.");
       }
+      const session = body as AuthSession;
+      setCsrfToken(session.csrf_token);
       setPassword("");
       setAuthState("authenticated");
     } catch (caught) {
@@ -134,9 +157,10 @@ export default function AdminConsole() {
   }
 
   async function logout() {
-    await api("/v1/auth/logout", { method: "POST" }).catch(() => undefined);
+    await api("/v1/auth/logout", { method: "POST" }, csrfToken).catch(() => undefined);
     setResult(null);
     setFileResult(null);
+    setCsrfToken("");
     setAuthState("anonymous");
   }
 
@@ -153,28 +177,33 @@ export default function AdminConsole() {
 
     setLoading(true);
     try {
-      const response = await api("/v1/intake/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          purpose,
-          consent_acknowledged: consent,
-          full_name: fullName || null,
-          phones: splitValues(phones),
-          emails: splitValues(emails),
-          usernames: splitValues(usernames),
-          urls: splitValues(urls),
-          organizations: splitValues(organizations),
-          notes: notes || null,
-          files: files.map((file) => ({
-            name: file.name,
-            media_type: file.type || null,
-            size_bytes: file.size,
-          })),
-        }),
-      });
+      const response = await api(
+        "/v1/intake/preview",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            purpose,
+            consent_acknowledged: consent,
+            full_name: fullName || null,
+            phones: splitValues(phones),
+            emails: splitValues(emails),
+            usernames: splitValues(usernames),
+            urls: splitValues(urls),
+            organizations: splitValues(organizations),
+            notes: notes || null,
+            files: files.map((file) => ({
+              name: file.name,
+              media_type: file.type || null,
+              size_bytes: file.size,
+            })),
+          }),
+        },
+        csrfToken,
+      );
 
       if (response.status === 401) {
+        setCsrfToken("");
         setAuthState("anonymous");
         throw new Error("Admin session expired. Sign in again.");
       }
@@ -193,11 +222,13 @@ export default function AdminConsole() {
         formData.append("consent_acknowledged", String(consent));
         for (const file of files) formData.append("files", file);
 
-        const fileResponse = await api("/v1/files/preview", {
-          method: "POST",
-          body: formData,
-        });
+        const fileResponse = await api(
+          "/v1/files/preview",
+          { method: "POST", body: formData },
+          csrfToken,
+        );
         if (fileResponse.status === 401) {
+          setCsrfToken("");
           setAuthState("anonymous");
           throw new Error("Admin session expired. Sign in again.");
         }
@@ -337,7 +368,7 @@ export default function AdminConsole() {
         </form>
 
         <aside className="sideStack">
-          <QuickResearch />
+          <QuickResearch csrfToken={csrfToken} />
 
           <section className="panel">
             <div className="panelHeader"><div><span className="index">03</span><h2>Research plan</h2></div></div>
