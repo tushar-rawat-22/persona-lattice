@@ -79,6 +79,23 @@ execution.
 
 The intended migration is to shrink this legacy set to zero.
 
+## Capability is broader than current wiring
+
+A source capability describes what the source family can support under reviewed
+semantics. A binding describes what PersonaLattice has actually wired today.
+
+Therefore the binding's accepted lead kinds must be a **non-empty subset** of the
+capability declaration, not necessarily equal to it.
+
+This distinction caught a real overclaim during review: the DNS capability can
+work from a domain, but the current private-V1 research runner has no `DOMAIN`
+research seed and only invokes DNS after a URL seed. The binding therefore admits
+`URL` today and leaves `DOMAIN` visibly deferred. The source planner must not call
+that current coverage until the domain runtime path actually exists.
+
+This is the desired failure mode: broad source potential never masquerades as
+implemented product coverage.
+
 ## M3 binding invariants
 
 An M3-bound source must:
@@ -87,7 +104,7 @@ An M3-bound source must:
 - be in the reviewed development/executable status used by the current runtime;
 - have `ContactRisk.NONE_KNOWN` for silent recursive research;
 - declare at least one allowed purpose;
-- declare identifier kinds that exactly match the V2 source binding/capability.
+- declare identifier kinds that exactly match the **current binding**.
 
 Currently Sherlock is the only source in this class. Its quick-research path
 already uses the M3 descriptor, `authorize_execution()` and adapter contract, but
@@ -102,23 +119,28 @@ A current binding must point to a source capability that is:
 - source-policy reviewed;
 - recursive-eligible.
 
-The binding's accepted lead kinds must exactly match the capability declaration.
+Every bound lead kind must be declared by that source capability. Conversely,
+every current recursive source must have one runtime owner. Import/test-time
+validation compares source-name sets exactly, while per-kind planning checks
+whether the current binding actually wires the requested kind.
 
-Conversely, every current recursive source must have a binding. Import/test-time
-validation compares the sets exactly. Adding an `active` source to the catalog
-without runtime ownership therefore fails rather than silently becoming coverage.
+Adding an `active` source without runtime ownership therefore fails. Adding a
+broader capability kind without runtime wiring appears as deferred coverage rather
+than becoming executable by implication.
 
 Planned, review-required, manual-only and reference-only sources have no
 executable binding.
 
 ## Source planner consequence
 
-`build_source_plan()` now validates a runtime binding before reporting an active
-or optional source as current coverage.
+`build_source_plan()` validates both runtime ownership and the requested lead kind
+before reporting an active or optional source as current coverage. A capability
+that exists but is not wired for that lead kind is placed in `deferred`.
 
 This is still non-executing. It means only:
 
-> policy-reviewed capability metadata and an explicit runtime owner both exist.
+> policy-reviewed capability metadata and an explicit runtime path both exist for
+> this lead kind.
 
 Purpose/consent/credentials/rate/resource gates still run at execution time.
 
@@ -145,9 +167,11 @@ WebFinger/ActivityPub or RDAP.
 Positive:
 
 - new APIs cannot expand the old hard-coded research branch by accident;
-- source catalog drift becomes a startup/CI failure;
+- source catalog/runtime drift becomes a startup/CI-visible failure or deferred
+  coverage state;
 - the project reuses M3 security/reliability controls instead of duplicating them;
 - network-vs-local execution is represented honestly;
+- source capability breadth cannot overstate current product coverage;
 - migration debt is a finite explicit set that can only shrink.
 
 Costs:
