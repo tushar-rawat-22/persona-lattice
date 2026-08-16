@@ -27,6 +27,7 @@ from .public_profiles import (
     lookup_gitlab_public_email,
     lookup_gitlab_username,
 )
+from .public_search import PublicSearchResult, search_exact_public_mentions
 
 
 class ResearchKind(StrEnum):
@@ -53,6 +54,7 @@ class QuickResearchReport:
 
 
 PublicLookup = Callable[[str], Awaitable[dict[str, object] | None]]
+PublicSearchLookup = Callable[[str], Awaitable[tuple[PublicSearchResult, ...]]]
 
 _SHERLOCK_BUDGET = RateBudget(limit=6, window_seconds=60.0)
 _GITHUB_BUDGET = RateBudget(limit=20, window_seconds=60.0)
@@ -68,6 +70,35 @@ def _observation_from_provider(item: ProviderObservationData) -> QuickObservatio
         summary=f"{site}: {state}",
         details=dict(item.payload),
     )
+
+
+def _public_search_observations(results: tuple[PublicSearchResult, ...]) -> list[QuickObservation]:
+    return [
+        QuickObservation(
+            source="brave_public_web_index",
+            source_locator=result.url,
+            summary=result.title or "Exact identifier mention in the public web index.",
+            details={
+                "title": result.title,
+                "description": result.description,
+                "exact_identifier_query": True,
+                "content_fetched": False,
+                "identity_claim": False,
+            },
+        )
+        for result in results
+    ]
+
+
+async def _public_search(
+    identifier: str,
+    lookup: PublicSearchLookup,
+) -> tuple[list[QuickObservation], str | None]:
+    try:
+        results = await lookup(identifier)
+    except RuntimeError:
+        return [], "Licensed public-web exact-match search was temporarily unavailable."
+    return _public_search_observations(results), None
 
 
 def _fetch_github_public_profile_sync(username: str) -> dict[str, object] | None:
@@ -199,6 +230,7 @@ async def _research_username(
     github_lookup: PublicLookup = lookup_github_public_profile,
     gitlab_lookup: PublicLookup = lookup_gitlab_username,
     codeforces_lookup: PublicLookup = lookup_codeforces_handle,
+    public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
 ) -> QuickResearchReport:
     adapter = provider or SherlockProvider()
     subject_id = uuid4()
@@ -255,6 +287,11 @@ async def _research_username(
         if enriched is not None:
             observations.append(enriched)
 
+    search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
+    observations.extend(search_observations)
+    if search_warning:
+        warnings.append(search_warning)
+
     return QuickResearchReport(
         kind=ResearchKind.USERNAME,
         normalized_value=normalized_value,
@@ -263,7 +300,11 @@ async def _research_username(
     )
 
 
-def _research_phone(normalized_value: str) -> QuickResearchReport:
+async def _research_phone(
+    normalized_value: str,
+    *,
+    public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
+) -> QuickResearchReport:
     import phonenumbers
 
     parsed = phonenumbers.parse(normalized_value, None)
@@ -280,17 +321,24 @@ def _research_phone(normalized_value: str) -> QuickResearchReport:
         "timezones": timezones,
         "personal_identity_claim": False,
     }
+    observations = [
+        QuickObservation(
+            source="libphonenumber_metadata",
+            source_locator="local://libphonenumber",
+            summary="Numbering-plan metadata; not subscriber identity.",
+            details=details,
+        )
+    ]
+    warnings: list[str] = []
+    search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
+    observations.extend(search_observations)
+    if search_warning:
+        warnings.append(search_warning)
     return QuickResearchReport(
         kind=ResearchKind.PHONE,
         normalized_value=normalized_value,
-        observations=(
-            QuickObservation(
-                source="libphonenumber_metadata",
-                source_locator="local://libphonenumber",
-                summary="Numbering-plan metadata; not subscriber identity.",
-                details=details,
-            ),
-        ),
+        observations=tuple(observations),
+        warnings=tuple(warnings),
     )
 
 
@@ -298,6 +346,7 @@ async def _research_email(
     normalized_value: str,
     *,
     gitlab_email_lookup: PublicLookup = lookup_gitlab_public_email,
+    public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
 ) -> QuickResearchReport:
     local_part, domain = normalized_value.rsplit("@", 1)
     observations = [
@@ -322,6 +371,11 @@ async def _research_email(
         enriched = _gitlab_observation(gitlab_payload, matched_by="exact_public_email")
         if enriched is not None:
             observations.append(enriched)
+
+    search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
+    observations.extend(search_observations)
+    if search_warning:
+        warnings.append(search_warning)
 
     if len(observations) == 1:
         warnings.append(
@@ -368,6 +422,7 @@ async def run_quick_research(
     gitlab_lookup: PublicLookup = lookup_gitlab_username,
     codeforces_lookup: PublicLookup = lookup_codeforces_handle,
     gitlab_email_lookup: PublicLookup = lookup_gitlab_public_email,
+    public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
 ) -> QuickResearchReport:
     identifier_kind = IdentifierKind(kind.value)
     normalized = normalize_identifier(identifier_kind, value)
@@ -381,13 +436,18 @@ async def run_quick_research(
             github_lookup=github_lookup,
             gitlab_lookup=gitlab_lookup,
             codeforces_lookup=codeforces_lookup,
+            public_search_lookup=public_search_lookup,
         )
     if kind is ResearchKind.PHONE:
-        return _research_phone(normalized.normalized_value)
+        return await _research_phone(
+            normalized.normalized_value,
+            public_search_lookup=public_search_lookup,
+        )
     if kind is ResearchKind.EMAIL:
         return await _research_email(
             normalized.normalized_value,
             gitlab_email_lookup=gitlab_email_lookup,
+            public_search_lookup=public_search_lookup,
         )
     if kind is ResearchKind.URL:
         return _research_url(normalized.normalized_value)
