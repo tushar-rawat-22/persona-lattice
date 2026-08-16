@@ -26,12 +26,17 @@ def _configure(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("PERSONALATTICE_CASE_RETENTION_DAYS", "30")
 
 
-def _login() -> None:
+def _login() -> str:
     response = client.post(
         "/v1/auth/login",
         json={"username": "admin", "password": PASSWORD},
     )
     assert response.status_code == 200, response.text
+    return response.json()["csrf_token"]
+
+
+def _headers(csrf: str) -> dict[str, str]:
+    return {"X-PersonaLattice-CSRF": csrf}
 
 
 def _synthetic_report() -> QuickResearchReport:
@@ -88,12 +93,28 @@ def test_case_endpoints_require_admin_even_when_uuid_is_known(monkeypatch, tmp_p
     assert client.delete(f"/v1/cases/{known_id}").status_code == 401
 
 
-def test_authenticated_phone_case_is_persisted_listed_and_deletable(monkeypatch, tmp_path) -> None:
+def test_authenticated_case_mutations_require_matching_csrf(monkeypatch, tmp_path) -> None:
     _configure(monkeypatch, tmp_path)
     _login()
+    response = client.post(
+        "/v1/cases/run",
+        json={
+            "kind": "phone",
+            "value": "+919876543210",
+            "purpose": "public_source_research",
+            "consent_acknowledged": False,
+        },
+    )
+    assert response.status_code == 403
+
+
+def test_authenticated_phone_case_is_persisted_listed_and_deletable(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    csrf = _login()
 
     created = client.post(
         "/v1/cases/run",
+        headers=_headers(csrf),
         json={
             "kind": "phone",
             "value": "+919876543210",
@@ -115,6 +136,6 @@ def test_authenticated_phone_case_is_persisted_listed_and_deletable(monkeypatch,
     assert loaded.status_code == 200
     assert loaded.json()["id"] == case_id
 
-    deleted = client.delete(f"/v1/cases/{case_id}")
+    deleted = client.delete(f"/v1/cases/{case_id}", headers=_headers(csrf))
     assert deleted.status_code == 204
     assert client.get(f"/v1/cases/{case_id}").status_code == 404
