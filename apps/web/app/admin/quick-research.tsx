@@ -35,6 +35,29 @@ type StructuredReport = {
   provenance_rule: string;
 };
 
+type M5Evaluation = {
+  candidate_source: string;
+  candidate_source_locator: string;
+  candidate_node: string;
+  outcome: string;
+  evidence_score: number;
+  calibration_status: "uncalibrated";
+  positive_independence_groups: number;
+  is_identity_claim: false;
+  policy_version: string;
+  input_digest: string;
+  output_digest: string;
+  factors: Array<{
+    kind: string;
+    independence_group: string;
+    base_weight: number;
+    applied_weight: number;
+    status: string;
+    rationale: string;
+    veto: boolean;
+  }>;
+};
+
 type ConvergedReport = {
   report_version: string;
   seed: { kind: ResearchKind; normalized_value: string };
@@ -67,6 +90,17 @@ type ConvergedReport = {
   }>;
   warnings: string[];
   provenance_rule: string;
+  m5: {
+    engine: string;
+    evaluated_at: string;
+    identifier_count: number;
+    observation_count: number;
+    candidate_count: number;
+    evaluations: M5Evaluation[];
+    calibration_status: "uncalibrated";
+    is_identity_claim: false;
+    interpretation: string;
+  };
 };
 
 type QuickReport = {
@@ -260,6 +294,29 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                 <div><strong>{converged.executive_summary.truncated ? "yes" : "no"}</strong><span>budget truncated</span></div>
               </div>
               <p className="reportBoundary">{converged.executive_summary.interpretation}</p>
+
+              <div className="reportSection">
+                <h3>M5 evidence-strength triage</h3>
+                <p className="muted">{converged.m5.interpretation}</p>
+                {converged.m5.evaluations.length === 0 ? (
+                  <p className="muted">No username-based account candidate reached the M5 candidate gate.</p>
+                ) : (
+                  <div className="connectedGrid">
+                    {converged.m5.evaluations.map((evaluation) => (
+                      <div className="connectedField" key={`${evaluation.candidate_node}-${evaluation.candidate_source_locator}`}>
+                        <span>{evaluation.outcome}</span>
+                        <strong>{evaluation.evidence_score} / 100</strong>
+                        <small>{evaluation.candidate_source} · {evaluation.calibration_status} · not an identity probability</small>
+                        {evaluation.factors.map((factor) => (
+                          <small key={`${factor.kind}-${factor.independence_group}`}>
+                            {factor.kind}: {factor.applied_weight >= 0 ? "+" : ""}{factor.applied_weight} · {factor.status}
+                          </small>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {converged.edges.length > 0 && (
                 <div className="reportSection">
