@@ -10,6 +10,8 @@ from .contracts import LeadCandidate, LeadDisposition, LeadKind
 
 class FrontierDecision(StrEnum):
     ENQUEUE = "enqueue"
+    ADMITTED = "admitted"
+    PROVIDER_FAILED = "provider_failed"
     DUPLICATE = "duplicate"
     REVIEW_REQUIRED = "review_required"
     DISPLAY_ONLY = "display_only"
@@ -146,10 +148,13 @@ class LeadFrontier:
         if candidate.disposition is not LeadDisposition.AUTO_PIVOT:
             raise ValueError(f"Unknown lead disposition: {candidate.disposition!r}")
 
-        if parent_depth >= self.limits.max_depth:
-            return FrontierEvaluation(candidate, FrontierDecision.DEPTH_LIMIT)
+        # Duplicate knowledge is more specific than a budget stop. Check it first
+        # so a known lead discovered at the depth boundary is reported as duplicate
+        # instead of making the run look artificially truncated.
         if candidate.key in self._attempted or candidate.key in self._visited:
             return FrontierEvaluation(candidate, FrontierDecision.DUPLICATE)
+        if parent_depth >= self.limits.max_depth:
+            return FrontierEvaluation(candidate, FrontierDecision.DEPTH_LIMIT)
         if self.node_count + self.reserved_count >= self.limits.max_nodes:
             return FrontierEvaluation(candidate, FrontierDecision.NODE_LIMIT)
         if self.edge_count + self.reserved_count >= self.limits.max_edges:
@@ -176,10 +181,11 @@ class LeadFrontier:
         self._reserved_child_counts[parent_key] += 1
         return FrontierEvaluation(candidate, FrontierDecision.ENQUEUE)
 
-    def fail(self, candidate: LeadCandidate) -> None:
+    def fail(self, candidate: LeadCandidate) -> FrontierDecision:
         """Release budget reserved for a failed lookup without making it retryable."""
 
         self._release_reservation(candidate.key)
+        return FrontierDecision.PROVIDER_FAILED
 
     def admit(
         self,
@@ -207,4 +213,4 @@ class LeadFrontier:
         self._kind_counts[candidate.kind] += 1
         self._child_counts[parent_key] += 1
         self._edge_count += 1
-        return FrontierDecision.ENQUEUE
+        return FrontierDecision.ADMITTED

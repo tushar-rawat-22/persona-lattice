@@ -1,12 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .intelligence import LeadDisposition, LeadKind, extract_observation_leads
+from .intelligence import (
+    FrontierDecision,
+    FrontierLimits,
+    LeadFrontier,
+    LeadKind,
+    extract_observation_leads,
+)
 from .intelligence.contracts import LeadCandidate, canonicalize_lead
 from .models import Purpose
 from .research import QuickResearchReport, ResearchKind, run_quick_research
@@ -14,6 +20,16 @@ from .research import QuickResearchReport, ResearchKind, run_quick_research
 
 MAX_CONVERGENCE_DEPTH = 2
 MAX_CONVERGENCE_NODES = 12
+_LEAD_POLICY_VERSION = "v2-evidence-lead-policy-v1"
+_BUDGET_STOP_DECISIONS = frozenset(
+    {
+        FrontierDecision.DEPTH_LIMIT,
+        FrontierDecision.NODE_LIMIT,
+        FrontierDecision.EDGE_LIMIT,
+        FrontierDecision.KIND_LIMIT,
+        FrontierDecision.PARENT_FANOUT_LIMIT,
+    }
+)
 
 
 class PivotReason(StrEnum):
@@ -52,6 +68,15 @@ class ResearchEdge:
 
 
 @dataclass(frozen=True, slots=True)
+class LeadTraversalRecord:
+    parent_key: str
+    parent_depth: int
+    candidate: LeadCandidate
+    decision: FrontierDecision
+    child_key: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class ConvergedResearchReport:
     seed_kind: ResearchKind
     seed_value: str
@@ -59,22 +84,19 @@ class ConvergedResearchReport:
     edges: tuple[ResearchEdge, ...]
     warnings: tuple[str, ...]
     truncated: bool
+    lead_decisions: tuple[LeadTraversalRecord, ...] = ()
+    blocked_field_names: tuple[str, ...] = ()
 
 
 ResearchRunner = Callable[..., Awaitable[QuickResearchReport]]
 
 
-def _pivot_candidates(
+def _lead_candidates(
     report: QuickResearchReport,
 ) -> tuple[tuple[LeadCandidate, ...], tuple[str, ...]]:
-    """Extract only policy-approved automatic pivots from reviewed observations.
+    """Extract reviewed lead candidates while preserving distinct provenance origins."""
 
-    The intelligence extractor also models review-only/display-only leads. Those
-    remain available to future UI/report layers but are deliberately not executed
-    by the current convergence loop.
-    """
-
-    candidates: dict[str, LeadCandidate] = {}
+    candidates: dict[tuple[str, str, str, str], LeadCandidate] = {}
     blocked_fields: set[str] = set()
 
     for observation in report.observations:
@@ -85,14 +107,24 @@ def _pivot_candidates(
         )
         blocked_fields.update(extraction.blocked_field_names)
         for candidate in extraction.candidates:
-            if candidate.disposition is not LeadDisposition.AUTO_PIVOT:
-                continue
-            candidates.setdefault(candidate.key, candidate)
+            origin_key = (
+                candidate.key,
+                candidate.source,
+                candidate.source_locator,
+                candidate.field_name,
+            )
+            candidates.setdefault(origin_key, candidate)
 
     ordered = tuple(
         sorted(
             candidates.values(),
-            key=lambda item: (item.kind.value, item.comparison_key, item.source, item.field_name),
+            key=lambda item: (
+                item.kind.value,
+                item.comparison_key,
+                item.source,
+                item.source_locator,
+                item.field_name,
+            ),
         )
     )
     return ordered, tuple(sorted(blocked_fields))
@@ -128,6 +160,39 @@ def _node_payload(node: ResearchNode) -> dict[str, object]:
     }
 
 
+def _lead_decision_payload(record: LeadTraversalRecord) -> dict[str, object]:
+    candidate = record.candidate
+    return {
+        "parent_key": record.parent_key,
+        "parent_depth": record.parent_depth,
+        "lead_key": candidate.key,
+        "kind": candidate.kind.value,
+        "normalized_value": candidate.value,
+        "reason": candidate.reason.value,
+        "disposition": candidate.disposition.value,
+        "decision": record.decision.value,
+        "source": candidate.source,
+        "source_locator": candidate.source_locator,
+        "source_field": candidate.field_name,
+        "child_key": record.child_key,
+    }
+
+
+def _compatibility_frontier_limits(*, max_depth: int, max_nodes: int) -> FrontierLimits:
+    """Use the new scheduler without silently tightening private-V1 behavior yet."""
+
+    return FrontierLimits(
+        max_depth=max_depth,
+        max_nodes=max_nodes,
+        max_edges=max(0, max_nodes - 1),
+        max_auto_children_per_parent=max_nodes,
+        max_username_nodes=max_nodes,
+        max_email_nodes=max_nodes,
+        max_phone_nodes=max_nodes,
+        max_url_nodes=max_nodes,
+    )
+
+
 def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object]:
     source_names = sorted(
         {
@@ -136,6 +201,7 @@ def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object
             for observation in node.report.observations
         }
     )
+    decision_counts = Counter(record.decision.value for record in report.lead_decisions)
     payload: dict[str, object] = {
         "report_version": "private-converged-evidence-report-v1",
         "seed": {
@@ -145,13 +211,14 @@ def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object
         "executive_summary": {
             "research_node_count": len(report.nodes),
             "pivot_edge_count": len(report.edges),
+            "lead_decision_count": len(report.lead_decisions),
             "source_count": len(source_names),
             "sources": source_names,
             "identity_probability": None,
             "identity_claim": False,
             "truncated": report.truncated,
             "interpretation": (
-                "Public-evidence convergence only. Discovered identifiers are research pivots, "
+                "Public-evidence convergence only. Discovered identifiers are research leads, "
                 "not proof that they belong to the same person."
             ),
         },
@@ -166,6 +233,12 @@ def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object
             }
             for edge in report.edges
         ],
+        "lead_graph": {
+            "policy_version": _LEAD_POLICY_VERSION,
+            "decision_counts": dict(sorted(decision_counts.items())),
+            "decisions": [_lead_decision_payload(record) for record in report.lead_decisions],
+            "blocked_field_names": list(report.blocked_field_names),
+        },
         "warnings": list(report.warnings),
         "safety_boundary": {
             "max_depth": MAX_CONVERGENCE_DEPTH,
@@ -175,7 +248,8 @@ def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object
             "identity_claim": False,
         },
         "provenance_rule": (
-            "Every pivot must originate from an allowlisted public field and retain its source locator."
+            "Every admitted pivot originates from an allowlisted public field and retains its "
+            "source locator; non-executed lead origins remain visible in lead_graph.decisions."
         ),
     }
 
@@ -218,34 +292,46 @@ async def run_converged_research(
         report=seed_report,
     )
 
+    frontier = LeadFrontier(
+        seed_key=seed_node.key,
+        seed_kind=LeadKind(kind.value),
+        limits=_compatibility_frontier_limits(max_depth=max_depth, max_nodes=max_nodes),
+    )
     nodes: list[ResearchNode] = [seed_node]
     edges: list[ResearchEdge] = []
+    lead_decisions: list[LeadTraversalRecord] = []
+    blocked_fields: set[str] = set()
     warnings: list[str] = list(seed_report.warnings)
-    visited = {seed_node.key}
-    attempted = {seed_node.key}
     queue: deque[ResearchNode] = deque([seed_node])
     truncated = False
 
     while queue:
         parent = queue.popleft()
-        if parent.depth >= max_depth:
-            continue
-
-        pivot_candidates, blocked_fields = _pivot_candidates(parent.report)
-        for field_name in blocked_fields:
+        candidates, parent_blocked_fields = _lead_candidates(parent.report)
+        blocked_fields.update(parent_blocked_fields)
+        for field_name in parent_blocked_fields:
             warnings.append(
                 f"Blocked lead field {field_name!r} was not admitted to recursive research."
             )
 
-        for lead in pivot_candidates:
-            if len(nodes) >= max_nodes:
-                truncated = True
-                queue.clear()
-                break
-
-            if lead.key in attempted:
+        for lead in candidates:
+            evaluation = frontier.consider(
+                lead,
+                parent_key=parent.key,
+                parent_depth=parent.depth,
+            )
+            if evaluation.decision is not FrontierDecision.ENQUEUE:
+                lead_decisions.append(
+                    LeadTraversalRecord(
+                        parent_key=parent.key,
+                        parent_depth=parent.depth,
+                        candidate=lead,
+                        decision=evaluation.decision,
+                    )
+                )
+                if evaluation.decision in _BUDGET_STOP_DECISIONS:
+                    truncated = True
                 continue
-            attempted.add(lead.key)
 
             pivot_kind = ResearchKind(lead.kind.value)
             try:
@@ -256,6 +342,15 @@ async def run_converged_research(
                     consent_acknowledged=consent_acknowledged,
                 )
             except Exception as exc:  # provider failures are isolated per public pivot
+                failure_decision = frontier.fail(lead)
+                lead_decisions.append(
+                    LeadTraversalRecord(
+                        parent_key=parent.key,
+                        parent_depth=parent.depth,
+                        candidate=lead,
+                        decision=failure_decision,
+                    )
+                )
                 warnings.append(
                     f"Pivot {pivot_kind.value} from {lead.source} could not be researched: "
                     f"{type(exc).__name__}."
@@ -270,10 +365,25 @@ async def run_converged_research(
                 pivot_reason=_pivot_reason(lead),
                 report=pivot_report,
             )
-            if candidate.key in visited:
+            admission = frontier.admit(
+                lead,
+                actual_key=candidate.key,
+                parent_key=parent.key,
+            )
+            lead_decisions.append(
+                LeadTraversalRecord(
+                    parent_key=parent.key,
+                    parent_depth=parent.depth,
+                    candidate=lead,
+                    decision=admission,
+                    child_key=candidate.key,
+                )
+            )
+            if admission is not FrontierDecision.ADMITTED:
+                if admission in _BUDGET_STOP_DECISIONS:
+                    truncated = True
                 continue
 
-            visited.add(candidate.key)
             nodes.append(candidate)
             edges.append(
                 ResearchEdge(
@@ -294,4 +404,6 @@ async def run_converged_research(
         edges=tuple(edges),
         warnings=tuple(dict.fromkeys(warnings)),
         truncated=truncated,
+        lead_decisions=tuple(lead_decisions),
+        blocked_field_names=tuple(sorted(blocked_fields)),
     )

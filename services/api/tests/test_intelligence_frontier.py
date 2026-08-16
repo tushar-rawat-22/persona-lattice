@@ -143,7 +143,7 @@ def test_frontier_fail_releases_capacity_but_does_not_retry_same_lead() -> None:
         frontier.consider(first, parent_key="username:seed", parent_depth=0).decision
         is FrontierDecision.ENQUEUE
     )
-    frontier.fail(first)
+    assert frontier.fail(first) is FrontierDecision.PROVIDER_FAILED
     assert frontier.reserved_count == 0
     assert (
         frontier.consider(first, parent_key="username:seed", parent_depth=0).decision
@@ -228,7 +228,7 @@ def test_frontier_enforces_depth_node_edge_kind_and_parent_limits() -> None:
             actual_key=first.key,
             parent_key="username:seed",
         )
-        is FrontierDecision.ENQUEUE
+        is FrontierDecision.ADMITTED
     )
     second = _candidate(LeadKind.URL, "https://example.test")
     assert (
@@ -269,7 +269,7 @@ def test_frontier_admit_suppresses_provider_normalized_duplicates() -> None:
             actual_key="url:https://example.test/profile",
             parent_key="username:seed",
         )
-        is FrontierDecision.ENQUEUE
+        is FrontierDecision.ADMITTED
     )
 
     assert (
