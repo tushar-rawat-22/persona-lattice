@@ -16,7 +16,7 @@ from app.providers.base import ContactRisk, ProviderStatus
 from app.providers.registry import PROVIDER_BY_NAME
 
 
-def test_every_current_recursive_source_has_exactly_one_runtime_binding() -> None:
+def test_every_current_recursive_source_has_exactly_one_runtime_owner() -> None:
     validate_source_bindings()
 
     required = {
@@ -27,6 +27,12 @@ def test_every_current_recursive_source_has_exactly_one_runtime_binding() -> Non
         and source.recursive_eligible
     }
     assert set(SOURCE_BINDING_BY_NAME) == required
+
+
+def test_every_binding_kind_is_declared_by_its_source_capability() -> None:
+    for name, binding in SOURCE_BINDING_BY_NAME.items():
+        assert binding.accepts
+        assert binding.accepts.issubset(SOURCE_BY_NAME[name].accepts)
 
 
 def test_only_deterministic_no_network_sources_use_local_backend() -> None:
@@ -85,14 +91,21 @@ def test_planned_and_deferred_sources_have_no_executable_binding() -> None:
 
 
 def test_binding_lookup_rejects_wrong_lead_kind() -> None:
-    with pytest.raises(SourceBindingError, match="not bound"):
+    with pytest.raises(SourceBindingError, match="not currently bound"):
         source_binding_for("github_public_api", kind=LeadKind.EMAIL)
 
 
-def test_public_dns_is_explicitly_network_migration_debt_not_local_code() -> None:
+def test_public_dns_is_network_migration_debt_and_only_url_is_wired_today() -> None:
+    capability = SOURCE_BY_NAME["public_dns_infrastructure"]
     binding = source_binding_for("public_dns_infrastructure", kind=LeadKind.URL)
+
+    assert capability.accepts == frozenset({LeadKind.URL, LeadKind.DOMAIN})
+    assert binding.accepts == frozenset({LeadKind.URL})
     assert binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
     assert "network" in binding.migration_note.casefold()
+
+    with pytest.raises(SourceBindingError, match="not currently bound"):
+        source_binding_for("public_dns_infrastructure", kind=LeadKind.DOMAIN)
 
 
 def test_optional_metered_search_has_binding_but_stays_optional_in_catalog() -> None:
