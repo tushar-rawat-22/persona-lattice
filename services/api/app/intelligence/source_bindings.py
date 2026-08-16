@@ -11,20 +11,20 @@ from .source_catalog import SOURCE_BY_NAME, SourceStatus
 
 
 class SourceExecutionBackend(StrEnum):
-    """Execution boundary behind one catalogued logical source."""
+    """Existing execution boundary behind one current logical source."""
 
-    LOCAL = "local"
-    M3_PROVIDER = "m3_provider"
+    LOCAL_DETERMINISTIC = "local_deterministic"
+    M3_GOVERNED_ADAPTER = "m3_governed_adapter"
     LEGACY_RESEARCH = "legacy_research"
 
 
 @dataclass(frozen=True, slots=True)
 class SourceBinding:
-    """Bridge from V2 source capability metadata to existing runtime code.
+    """Bridge from V2 capability metadata to existing runtime code.
 
     A binding is not permission to execute. It states which existing execution
-    boundary owns a current catalogued source so policy can reject drift before
-    the source is invoked.
+    boundary currently owns a catalogued source so policy can reject drift before
+    a source is invoked.
     """
 
     source_name: str
@@ -38,29 +38,32 @@ class SourceBinding:
             raise ValueError("Source binding name must be non-empty and trimmed.")
         if not self.accepts:
             raise ValueError("Source binding must declare at least one accepted lead kind.")
-        if self.backend is SourceExecutionBackend.M3_PROVIDER and not self.provider_name:
-            raise ValueError("M3 provider bindings require provider_name.")
-        if self.backend is not SourceExecutionBackend.M3_PROVIDER and self.provider_name is not None:
-            raise ValueError("Only M3 provider bindings may declare provider_name.")
+        if self.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER and not self.provider_name:
+            raise ValueError("M3 governed-adapter bindings require provider_name.")
+        if (
+            self.backend is not SourceExecutionBackend.M3_GOVERNED_ADAPTER
+            and self.provider_name is not None
+        ):
+            raise ValueError("Only M3 governed-adapter bindings may declare provider_name.")
 
 
-# These are migration bridges for current private-V1 behavior. New V2 sources are
-# forbidden from entering this set. They must use the governed M3 provider path
-# (or a reviewed local deterministic path) before activation.
+# These are migration bridges for private-V1 network behavior that still lives in
+# research.py or its helpers. New V2 sources are forbidden from joining this set.
+# They must use the governed provider boundary before activation.
 _LEGACY_RESEARCH_ALLOWLIST = frozenset(
     {
         "github_public_api",
         "gitlab_public_api",
         "codeforces_public_api",
+        "public_dns_infrastructure",
         "brave_public_web_index",
     }
 )
 
-_LOCAL_BINDING_ALLOWLIST = frozenset(
+_LOCAL_DETERMINISTIC_ALLOWLIST = frozenset(
     {
         "local_normalization",
         "libphonenumber_metadata",
-        "public_dns_infrastructure",
     }
 )
 
@@ -68,42 +71,52 @@ _LOCAL_BINDING_ALLOWLIST = frozenset(
 SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
     SourceBinding(
         source_name="local_normalization",
-        backend=SourceExecutionBackend.LOCAL,
+        backend=SourceExecutionBackend.LOCAL_DETERMINISTIC,
         accepts=frozenset({LeadKind.EMAIL, LeadKind.URL}),
     ),
     SourceBinding(
         source_name="libphonenumber_metadata",
-        backend=SourceExecutionBackend.LOCAL,
+        backend=SourceExecutionBackend.LOCAL_DETERMINISTIC,
         accepts=frozenset({LeadKind.PHONE}),
     ),
     SourceBinding(
         source_name="sherlock",
-        backend=SourceExecutionBackend.M3_PROVIDER,
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="sherlock",
         accepts=frozenset({LeadKind.USERNAME}),
+        migration_note=(
+            "Sherlock already uses the M3 descriptor/policy/adapter contract in quick research; "
+            "move final execution through ProviderExecutor during source-runtime unification."
+        ),
     ),
     SourceBinding(
         source_name="github_public_api",
         backend=SourceExecutionBackend.LEGACY_RESEARCH,
         accepts=frozenset({LeadKind.USERNAME}),
-        migration_note="Migrate the existing public-profile lookup into the governed provider runtime.",
+        migration_note="Migrate the public-profile lookup into the governed provider runtime.",
     ),
     SourceBinding(
         source_name="gitlab_public_api",
         backend=SourceExecutionBackend.LEGACY_RESEARCH,
         accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL}),
-        migration_note="Migrate username and exact-public-email paths into the governed provider runtime.",
+        migration_note=(
+            "Migrate username and exact-public-email paths into the governed provider runtime."
+        ),
     ),
     SourceBinding(
         source_name="codeforces_public_api",
         backend=SourceExecutionBackend.LEGACY_RESEARCH,
         accepts=frozenset({LeadKind.USERNAME}),
-        migration_note="Migrate the existing public-profile lookup into the governed provider runtime.",
+        migration_note="Migrate the public-profile lookup into the governed provider runtime.",
     ),
     SourceBinding(
         source_name="public_dns_infrastructure",
-        backend=SourceExecutionBackend.LOCAL,
+        backend=SourceExecutionBackend.LEGACY_RESEARCH,
         accepts=frozenset({LeadKind.URL, LeadKind.DOMAIN}),
+        migration_note=(
+            "Public DNS performs bounded network I/O and must be brought behind the same runtime "
+            "admission model before new network metadata sources are added."
+        ),
     ),
     SourceBinding(
         source_name="brave_public_web_index",
@@ -111,7 +124,9 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         accepts=frozenset(
             {LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.PHONE, LeadKind.URL}
         ),
-        migration_note="Keep optional/metred search behind one governed runtime before adding more search sources.",
+        migration_note=(
+            "Keep optional metered search behind one governed runtime before adding more search sources."
+        ),
     ),
 )
 
@@ -144,10 +159,10 @@ def _validate_binding(binding: SourceBinding) -> None:
             f"Binding {binding.source_name!r} identifier kinds drift from the source catalog."
         )
 
-    if binding.backend is SourceExecutionBackend.LOCAL:
-        if binding.source_name not in _LOCAL_BINDING_ALLOWLIST:
+    if binding.backend is SourceExecutionBackend.LOCAL_DETERMINISTIC:
+        if binding.source_name not in _LOCAL_DETERMINISTIC_ALLOWLIST:
             raise SourceBindingError(
-                f"Source {binding.source_name!r} is not approved for the local execution boundary."
+                f"Source {binding.source_name!r} is not approved for local deterministic execution."
             )
         return
 
@@ -160,18 +175,16 @@ def _validate_binding(binding: SourceBinding) -> None:
             raise SourceBindingError("Legacy research bindings require an explicit migration note.")
         return
 
-    assert binding.backend is SourceExecutionBackend.M3_PROVIDER
+    assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
     assert binding.provider_name is not None
     descriptor = PROVIDER_BY_NAME.get(binding.provider_name)
     if descriptor is None:
         raise SourceBindingError(
             f"M3 provider {binding.provider_name!r} is missing from the provider registry."
         )
-    if descriptor.status not in {
-        ProviderStatus.DEVELOPMENT.value,
-    }:
+    if descriptor.status != ProviderStatus.DEVELOPMENT.value:
         raise SourceBindingError(
-            f"M3 provider {binding.provider_name!r} is not in an executable reviewed status."
+            f"M3 provider {binding.provider_name!r} is not in the reviewed development status."
         )
     if descriptor.contact_risk is not ContactRisk.NONE_KNOWN:
         raise SourceBindingError(
@@ -181,7 +194,14 @@ def _validate_binding(binding: SourceBinding) -> None:
         raise SourceBindingError(
             f"M3 provider {binding.provider_name!r} has no allowed purposes."
         )
-    descriptor_kinds = frozenset(LeadKind(kind) for kind in descriptor.supported_identifier_kinds)
+    try:
+        descriptor_kinds = frozenset(
+            LeadKind(kind) for kind in descriptor.supported_identifier_kinds
+        )
+    except ValueError as exc:
+        raise SourceBindingError(
+            f"M3 provider {binding.provider_name!r} declares an unknown lead kind."
+        ) from exc
     if descriptor_kinds != binding.accepts:
         raise SourceBindingError(
             f"M3 provider {binding.provider_name!r} identifier kinds drift from the V2 binding."
@@ -216,7 +236,7 @@ def source_binding_for(
     *,
     kind: LeadKind | None = None,
 ) -> SourceBinding:
-    """Return a validated current binding; never upgrades a planned/deferred source."""
+    """Return a validated current binding; never upgrades planned/deferred sources."""
 
     validate_source_bindings()
     binding = SOURCE_BINDING_BY_NAME.get(source_name)
@@ -229,6 +249,6 @@ def source_binding_for(
     return binding
 
 
-# Import-time validation turns an accidental catalog/provider/binding mismatch into
-# a deterministic startup/test failure rather than a surprise during research.
+# Import-time validation turns accidental catalog/provider/binding drift into a
+# deterministic startup/test failure rather than a surprise during research.
 validate_source_bindings()
