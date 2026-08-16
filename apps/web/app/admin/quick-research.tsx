@@ -49,8 +49,20 @@ export function QuickResearch() {
   }, []);
 
   useEffect(() => {
-    refreshCases().catch(() => undefined);
-  }, [refreshCases]);
+    let active = true;
+    request("/v1/cases?limit=8")
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as StoredCase[];
+      })
+      .then((items) => {
+        if (active && items) setRecentCases(items);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
