@@ -246,21 +246,24 @@ def authenticate_admin(
     evaluated_at = now or datetime.now(UTC)
 
     # Bound simultaneous Argon2 work so unauthenticated traffic cannot fan out
-    # password verification across an unbounded number of worker threads.
+    # password verification across an unbounded number of worker threads. The
+    # failure delay is applied only after the slot is released so throttling
+    # cannot occupy the scarce password-verification capacity itself.
     with _LOGIN_VERIFY_SEMAPHORE:
         username_matches = secrets.compare_digest(username, config.username)
         password_matches = verify_admin_password(config.password_hash, password)
-        if not username_matches or not password_matches:
-            delay = LOGIN_THROTTLE.failure(source_key, now=evaluated_at)
-            if delay > 0:
-                delay_fn(delay)
-            return None
 
-        LOGIN_THROTTLE.success(source_key)
-        token, record = SESSION_STORE.create(
-            lifetime_seconds=config.session_seconds,
-            now=evaluated_at,
-        )
+    if not username_matches or not password_matches:
+        delay = LOGIN_THROTTLE.failure(source_key, now=evaluated_at)
+        if delay > 0:
+            delay_fn(delay)
+        return None
+
+    LOGIN_THROTTLE.success(source_key)
+    token, record = SESSION_STORE.create(
+        lifetime_seconds=config.session_seconds,
+        now=evaluated_at,
+    )
 
     return LoginResult(
         token=token,
