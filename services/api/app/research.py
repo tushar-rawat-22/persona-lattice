@@ -18,8 +18,8 @@ from .models import Purpose
 from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.contracts import ExecutionRequest
-from .providers.policy import authorize_execution
 from .providers.rate_limit import RateBudget
+from .providers.runtime import ProviderRuntime
 from .providers.sherlock import SherlockProvider
 from .public_profiles import (
     codeforces_public_observation_fields,
@@ -58,7 +58,8 @@ PublicLookup = Callable[[str], Awaitable[dict[str, object] | None]]
 PublicSearchLookup = Callable[[str], Awaitable[tuple[PublicSearchResult, ...]]]
 NetworkLookup = Callable[[str], Awaitable[tuple[str, ...]]]
 
-_SHERLOCK_BUDGET = RateBudget(limit=6, window_seconds=60.0)
+_DEFAULT_SHERLOCK_PROVIDER = SherlockProvider()
+_SHERLOCK_RUNTIME = ProviderRuntime(adapters=[_DEFAULT_SHERLOCK_PROVIDER])
 _GITHUB_BUDGET = RateBudget(limit=20, window_seconds=60.0)
 _GITHUB_MAX_RESPONSE_BYTES = 64 * 1024
 
@@ -219,28 +220,25 @@ async def _research_username(
     codeforces_lookup: PublicLookup = lookup_codeforces_handle,
     public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
 ) -> QuickResearchReport:
-    adapter = provider or SherlockProvider()
+    adapter = provider or _DEFAULT_SHERLOCK_PROVIDER
+    runtime = _SHERLOCK_RUNTIME if provider is None else ProviderRuntime(adapters=[adapter])
     subject_id = uuid4()
     identifier_id = uuid4()
-    authorize_execution(
-        adapter.descriptor,
-        ExecutionRequest(
-            provider_name=adapter.descriptor.name,
-            subject_id=subject_id,
-            identifier_id=identifier_id,
-            purpose=purpose,
-            consent_acknowledged=consent_acknowledged,
-        ),
+    request = ExecutionRequest(
+        provider_name=adapter.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
     )
-    _SHERLOCK_BUDGET.consume()
-    result = await adapter.execute(
-        ProviderQuery(
+    result = await runtime.execute(
+        request=request,
+        query=ProviderQuery(
             subject_id=subject_id,
             identifier_id=identifier_id,
             identifier_kind=IdentifierKind.USERNAME.value,
             identifier_value=normalized_value,
         ),
-        None,
     )
 
     observations = [_observation_from_provider(item) for item in result.observations]
