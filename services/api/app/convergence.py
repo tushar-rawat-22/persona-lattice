@@ -126,7 +126,7 @@ def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object
             for observation in node.report.observations
         }
     )
-    return {
+    payload: dict[str, object] = {
         "report_version": "private-converged-evidence-report-v1",
         "seed": {
             "kind": report.seed_kind.value,
@@ -168,6 +168,14 @@ def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object
             "Every pivot must originate from an allowlisted public field and retain its source locator."
         ),
     }
+
+    # Local import intentionally avoids coupling the research graph construction to
+    # the correlation module at import time. M5 receives an ephemeral canonical
+    # evidence graph, so case deletion remains the only retained-data deletion path.
+    from .live_m5 import evaluate_live_m5
+
+    payload["m5"] = evaluate_live_m5(report)
+    return payload
 
 
 async def run_converged_research(
