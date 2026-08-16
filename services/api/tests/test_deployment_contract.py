@@ -54,6 +54,7 @@ def test_render_blueprint_keeps_research_api_private() -> None:
     assert web["type"] == "web"
     assert web["plan"] == "starter"
     assert web["rootDir"] == "apps/web"
+    assert web["healthCheckPath"] == "/"
     assert _env_by_key(web, "NEXT_PUBLIC_API_URL")["value"] == "/api"
 
     hostport = _env_by_key(web, "PERSONALATTICE_API_HOSTPORT")
