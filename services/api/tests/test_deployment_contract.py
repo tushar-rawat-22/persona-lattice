@@ -32,6 +32,7 @@ def test_render_blueprint_keeps_research_api_private() -> None:
 
     assert api["type"] == "pserv"
     assert api["runtime"] == "docker"
+    assert api["plan"] == "starter"
     assert "healthCheckPath" not in api
     assert _env_by_key(api, "PORT")["value"] == "10001"
     assert _env_by_key(api, "PERSONALATTICE_COOKIE_SECURE")["value"] == "true"
@@ -51,6 +52,7 @@ def test_render_blueprint_keeps_research_api_private() -> None:
     assert disk["mountPath"] == "/var/data/personalattice"
 
     assert web["type"] == "web"
+    assert web["plan"] == "starter"
     assert web["rootDir"] == "apps/web"
     assert _env_by_key(web, "NEXT_PUBLIC_API_URL")["value"] == "/api"
 
