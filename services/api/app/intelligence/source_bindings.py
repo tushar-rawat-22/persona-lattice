@@ -85,10 +85,7 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="sherlock",
         accepts=frozenset({LeadKind.USERNAME}),
-        migration_note=(
-            "Sherlock already uses the M3 descriptor/policy/adapter contract in quick research; "
-            "move final execution through ProviderExecutor during source-runtime unification."
-        ),
+        migration_note="Quick research now executes Sherlock through the shared M3 ProviderRuntime.",
     ),
     SourceBinding(
         source_name="github_public_api",
