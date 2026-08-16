@@ -1,9 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import StrEnum
-from urllib.parse import urlsplit
+import json
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlsplit
+from urllib.request import Request, urlopen
 from uuid import uuid4
 
 from phonenumbers import carrier, geocoder, timezone
@@ -40,7 +45,11 @@ class QuickResearchReport:
     warnings: tuple[str, ...] = ()
 
 
+GithubLookup = Callable[[str], Awaitable[dict[str, object] | None]]
+
 _SHERLOCK_BUDGET = RateBudget(limit=6, window_seconds=60.0)
+_GITHUB_BUDGET = RateBudget(limit=20, window_seconds=60.0)
+_GITHUB_MAX_RESPONSE_BYTES = 64 * 1024
 
 
 def _observation_from_provider(item: ProviderObservationData) -> QuickObservation:
@@ -54,12 +63,91 @@ def _observation_from_provider(item: ProviderObservationData) -> QuickObservatio
     )
 
 
+def _fetch_github_public_profile_sync(username: str) -> dict[str, object] | None:
+    request = Request(
+        f"https://api.github.com/users/{quote(username, safe='')}",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "PersonaLattice/0.0.1 public-profile-research",
+            "X-GitHub-Api-Version": "2026-03-10",
+        },
+        method="GET",
+    )
+    try:
+        with urlopen(request, timeout=4.0) as response:
+            raw = response.read(_GITHUB_MAX_RESPONSE_BYTES + 1)
+    except HTTPError as exc:
+        if exc.code == 404:
+            return None
+        raise RuntimeError("GitHub public profile lookup failed.") from exc
+    except (URLError, TimeoutError) as exc:
+        raise RuntimeError("GitHub public profile lookup failed.") from exc
+
+    if len(raw) > _GITHUB_MAX_RESPONSE_BYTES:
+        raise RuntimeError("GitHub public profile response exceeded the configured limit.")
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("GitHub public profile returned invalid JSON.") from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("GitHub public profile returned an invalid response shape.")
+    return payload
+
+
+async def lookup_github_public_profile(username: str) -> dict[str, object] | None:
+    _GITHUB_BUDGET.consume()
+    return await asyncio.to_thread(_fetch_github_public_profile_sync, username)
+
+
+def _github_observation(payload: dict[str, object]) -> QuickObservation | None:
+    login = payload.get("login")
+    html_url = payload.get("html_url")
+    if not isinstance(login, str) or not isinstance(html_url, str):
+        return None
+
+    allowed_fields = (
+        "login",
+        "id",
+        "avatar_url",
+        "html_url",
+        "name",
+        "company",
+        "blog",
+        "location",
+        "email",
+        "hireable",
+        "bio",
+        "twitter_username",
+        "public_repos",
+        "public_gists",
+        "followers",
+        "following",
+        "created_at",
+        "updated_at",
+    )
+    details = {field: payload.get(field) for field in allowed_fields}
+    details.update(
+        {
+            "account_candidate": True,
+            "identity_claim": False,
+            "field_visibility": "public_profile_api",
+        }
+    )
+    return QuickObservation(
+        source="github_public_api",
+        source_locator=html_url,
+        summary=f"GitHub public profile for @{login}; same-handle account candidate only.",
+        details=details,
+    )
+
+
 async def _research_username(
     normalized_value: str,
     *,
     purpose: Purpose,
     consent_acknowledged: bool,
     provider: SherlockProvider | None = None,
+    github_lookup: GithubLookup = lookup_github_public_profile,
 ) -> QuickResearchReport:
     adapter = provider or SherlockProvider()
     subject_id = uuid4()
@@ -84,10 +172,24 @@ async def _research_username(
         ),
         None,
     )
+
+    observations = [_observation_from_provider(item) for item in result.observations]
+    warnings: list[str] = []
+    try:
+        github_payload = await github_lookup(normalized_value)
+    except RuntimeError:
+        github_payload = None
+        warnings.append("GitHub public profile enrichment was temporarily unavailable.")
+    if github_payload is not None:
+        enriched = _github_observation(github_payload)
+        if enriched is not None:
+            observations.append(enriched)
+
     return QuickResearchReport(
         kind=ResearchKind.USERNAME,
         normalized_value=normalized_value,
-        observations=tuple(_observation_from_provider(item) for item in result.observations),
+        observations=tuple(observations),
+        warnings=tuple(warnings),
     )
 
 
@@ -173,6 +275,7 @@ async def run_quick_research(
     purpose: Purpose,
     consent_acknowledged: bool,
     sherlock_provider: SherlockProvider | None = None,
+    github_lookup: GithubLookup = lookup_github_public_profile,
 ) -> QuickResearchReport:
     identifier_kind = IdentifierKind(kind.value)
     normalized = normalize_identifier(identifier_kind, value)
@@ -183,6 +286,7 @@ async def run_quick_research(
             purpose=purpose,
             consent_acknowledged=consent_acknowledged,
             provider=sherlock_provider,
+            github_lookup=github_lookup,
         )
     if kind is ResearchKind.PHONE:
         return _research_phone(normalized.normalized_value)
