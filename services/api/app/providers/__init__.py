@@ -27,6 +27,7 @@ from .logging import REDACTED_SECRET, sanitize_provider_log
 from .mock import SyntheticEchoProvider
 from .policy import authorize_execution
 from .registry import PROVIDERS, PROVIDER_BY_NAME
+from .runtime import PreparedProviderExecution, ProviderRuntime
 from .sherlock import (
     AccountDiscoveryState,
     MAX_SHERLOCK_SITES,
@@ -45,6 +46,7 @@ __all__ = [
     "MAX_SHERLOCK_SITES",
     "PROVIDERS",
     "PROVIDER_BY_NAME",
+    "PreparedProviderExecution",
     "Provider",
     "ProviderAuthError",
     "ProviderDescriptor",
@@ -57,6 +59,7 @@ __all__ = [
     "ProviderRemoteRateLimitError",
     "ProviderResponseTooLarge",
     "ProviderResult",
+    "ProviderRuntime",
     "ProviderStatus",
     "ProviderTimeoutError",
     "ProviderTransientError",
