@@ -7,18 +7,29 @@ from .contracts import LeadKind
 from .source_catalog import SOURCE_CATALOG, SourceCapability, SourceStatus
 
 
+_DEFERRED_STATUSES = frozenset(
+    {
+        SourceStatus.REVIEW_REQUIRED,
+        SourceStatus.MANUAL_ONLY,
+        SourceStatus.REFERENCE_ONLY,
+    }
+)
+
+
 @dataclass(frozen=True, slots=True)
 class SourcePlan:
     """Non-executing capability plan for one lead kind.
 
     The plan is safe to expose to orchestration/UI because membership does not
     authorize a provider call. `active`/`optional` still require the live
-    execution policy; `planned` explicitly has no execution authority.
+    execution policy. `deferred` and `planned` explicitly have no recursive
+    execution authority.
     """
 
     kind: LeadKind
     active: tuple[SourceCapability, ...]
     optional: tuple[SourceCapability, ...]
+    deferred: tuple[SourceCapability, ...]
     planned: tuple[SourceCapability, ...]
     excluded_by_budget: tuple[SourceCapability, ...]
 
@@ -40,10 +51,11 @@ def build_source_plan(
     *,
     zero_spend_only: bool = False,
 ) -> SourcePlan:
-    """Describe current and planned source coverage without executing anything."""
+    """Describe current/deferred/planned source coverage without executing anything."""
 
     active: list[SourceCapability] = []
     optional: list[SourceCapability] = []
+    deferred: list[SourceCapability] = []
     planned: list[SourceCapability] = []
     excluded_by_budget: list[SourceCapability] = []
 
@@ -54,9 +66,15 @@ def build_source_plan(
         if source.status is SourceStatus.PLANNED:
             planned.append(source)
             continue
+        if source.status in _DEFERRED_STATUSES:
+            deferred.append(source)
+            continue
         if source.status not in {SourceStatus.ACTIVE, SourceStatus.OPTIONAL}:
             continue
         if not source.recursive_eligible or not source.source_policy_reviewed:
+            # A current-looking catalog entry that cannot pass these invariants is
+            # intentionally omitted from execution planning rather than upgraded.
+            deferred.append(source)
             continue
         if zero_spend_only and not source.zero_spend_eligible:
             excluded_by_budget.append(source)
@@ -71,6 +89,7 @@ def build_source_plan(
         kind=kind,
         active=_ordered(active),
         optional=_ordered(optional),
+        deferred=_ordered(deferred),
         planned=_ordered(planned),
         excluded_by_budget=_ordered(excluded_by_budget),
     )
