@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
+from io import BytesIO
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from app.admin_auth import LOGIN_THROTTLE, SESSION_STORE, hash_admin_password
 from app.main import app
@@ -37,6 +39,13 @@ def _form(consent: str = "true", purpose: str = "self_audit") -> dict[str, str]:
         "purpose": purpose,
         "consent_acknowledged": consent,
     }
+
+
+def _image_bytes(fmt: str) -> bytes:
+    buffer = BytesIO()
+    with Image.new("RGB", (32, 24), (12, 34, 56)) as image:
+        image.save(buffer, format=fmt)
+    return buffer.getvalue()
 
 
 def test_file_preview_requires_admin_session(monkeypatch) -> None:
@@ -103,6 +112,47 @@ def test_file_preview_extracts_text_and_returns_review_only_candidates(
 
     assert storage.exists()
     assert list(storage.iterdir()) == []
+
+
+def test_file_preview_extracts_bounded_jpeg_metadata(monkeypatch, tmp_path: Path) -> None:
+    csrf = _configure_and_login(monkeypatch)
+    storage = tmp_path / "uploads"
+    monkeypatch.setenv("PERSONALATTICE_UPLOAD_DIR", str(storage))
+
+    response = client.post(
+        "/v1/files/preview",
+        headers=_headers(csrf),
+        data=_form(),
+        files=[("files", ("evidence.jpg", _image_bytes("JPEG"), "image/jpeg"))],
+    )
+
+    assert response.status_code == 200, response.text
+    artifact = response.json()["artifacts"][0]
+    assert artifact["detected_media_type"] == "image/jpeg"
+    assert artifact["extraction_method"] == "pillow_metadata"
+    assert '"width":32' in artifact["extracted_text"]
+    assert '"height":24' in artifact["extracted_text"]
+    assert '"identity_claim":false' in artifact["extracted_text"]
+    assert artifact["storage_retained"] is False
+    assert list(storage.iterdir()) == []
+
+
+def test_file_preview_extracts_bounded_png_metadata(monkeypatch, tmp_path: Path) -> None:
+    csrf = _configure_and_login(monkeypatch)
+    monkeypatch.setenv("PERSONALATTICE_UPLOAD_DIR", str(tmp_path / "uploads"))
+
+    response = client.post(
+        "/v1/files/preview",
+        headers=_headers(csrf),
+        data=_form(),
+        files=[("files", ("evidence.png", _image_bytes("PNG"), "image/png"))],
+    )
+
+    assert response.status_code == 200, response.text
+    artifact = response.json()["artifacts"][0]
+    assert artifact["detected_media_type"] == "image/png"
+    assert artifact["extraction_method"] == "pillow_metadata"
+    assert '"format":"PNG"' in artifact["extracted_text"]
 
 
 def test_file_preview_enforces_consent_before_extraction(monkeypatch, tmp_path: Path) -> None:
