@@ -41,14 +41,30 @@ The command asks for the password twice without echoing it and prints only the
 Argon2 hash. Copy that hash directly into the deployment secret field. Do not
 save it in a tracked file.
 
-## 3. Create the Render Blueprint
+## 3. Cost and service boundary
+
+The production Blueprint explicitly pins both services to Render's `starter`
+instance type and attaches a 1 GB persistent disk to the private API. This is a
+paid deployment topology. Review the current Render price estimate shown in the
+Dashboard before applying the Blueprint.
+
+This is deliberate: Render does not offer Free instances for private services,
+and persistent disks require paid service instances. A cheaper/free preview
+would need a different storage/security topology and is not equivalent to this
+private V1 production design.
+
+Do not silently change the private API into a public Free web service merely to
+reduce cost. That would reopen the network-exposure problem the current
+architecture is designed to remove.
+
+## 4. Create the Render Blueprint
 
 In the Render Dashboard:
 
 1. create a new Blueprint;
 2. connect `tushar-rawat-22/persona-lattice`;
 3. use the `main` branch and the repository-root `render.yaml`;
-4. review the resources before applying them.
+4. review the resources and cost estimate before applying them.
 
 The expected topology is:
 
@@ -69,7 +85,7 @@ persistent case disk
 `personalattice-api` must be shown as a **private service**, not a web service.
 It should not receive a public `onrender.com` URL.
 
-## 4. Enter deployment secrets
+## 5. Enter deployment secrets
 
 Render prompts for Blueprint variables marked `sync: false` during initial
 creation. Enter:
@@ -84,7 +100,7 @@ Do not enter the plaintext admin password as the password-hash value.
 The web service receives the API's private `hostport` from the Blueprint. It
 does not need a browser-visible backend URL or backend credential.
 
-## 5. First public-boundary verification
+## 6. First public-boundary verification
 
 After Render reports the public web service deployed, copy only its public HTTPS
 origin, for example `https://your-site.example`, and run:
@@ -105,7 +121,7 @@ The verifier performs no research and sends no credentials. It checks that:
 
 A failure is a deployment blocker. Do not run real research until this passes.
 
-## 6. Admin acceptance test
+## 7. Admin acceptance test
 
 Use only an operator-controlled identifier for the first live test.
 
@@ -125,7 +141,7 @@ Do not use another person's identifier for the deployment smoke test. The point
 of this run is to validate infrastructure and authorization, not research
 coverage.
 
-## 7. Production invariants
+## 8. Production invariants
 
 The current V1 intentionally has one API worker because authenticated sessions
 are held in process memory. A restart logs the operator out. Do not increase the
@@ -141,7 +157,7 @@ The persistent disk is the retained-case store. Do not scale the current SQLite
 service to multiple instances. Backup/restore policy must be reviewed against
 the actual Render disk and snapshot configuration after the service exists.
 
-## 8. Closure record
+## 9. Closure record
 
 After the hosted acceptance test passes, record only public-safe operational
 facts in the repository, such as:
