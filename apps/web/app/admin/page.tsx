@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
@@ -264,7 +265,7 @@ export default function AdminConsole() {
               {authBusy ? "Authenticating…" : "Unlock operator console"}
             </button>
           </form>
-          <a className="textLink" href="/">Return to public preview</a>
+          <Link className="textLink" href="/">Return to public preview</Link>
         </section>
       </main>
     );
