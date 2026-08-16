@@ -29,7 +29,7 @@ class PublicSearchResult:
 
 
 def _api_key() -> str | None:
-    value = os.environ.get("PERSONALATTICE_BRAVE_SEARCH_API_KEY", "").strip()
+    value = os.environ.get("BRAVE_SEARCH_API_KEY", "").strip()
     return value or None
 
 
