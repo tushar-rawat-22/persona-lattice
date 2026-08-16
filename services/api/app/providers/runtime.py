@@ -140,7 +140,7 @@ class ProviderRuntime:
 
         if self.adapters.get(descriptor.name) is not adapter:
             raise ProviderValidationError("Prepared provider is not owned by this runtime.")
-        if request.provider_name != descriptor.name or adapter.descriptor is not descriptor:
+        if request.provider_name != descriptor.name or adapter.descriptor != descriptor:
             raise ProviderValidationError("Prepared provider execution is inconsistent.")
         if query.subject_id != request.subject_id or query.identifier_id != request.identifier_id:
             raise ProviderValidationError("Provider query does not match the authorized request.")
