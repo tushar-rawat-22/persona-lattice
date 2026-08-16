@@ -19,6 +19,8 @@ services:
         value: "/var/data/personalattice/personalattice.db"
       - key: PERSONALATTICE_CASE_RETENTION_DAYS
         value: "30"
+      - key: BRAVE_SEARCH_API_KEY
+        sync: false
     disk:
       name: personalattice-data
       mountPath: /var/data/personalattice
