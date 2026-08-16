@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .contracts import LeadKind
+from .source_bindings import SourceBindingError, source_binding_for
 from .source_catalog import SOURCE_CATALOG, SourceCapability, SourceStatus
 
 
@@ -21,9 +22,10 @@ class SourcePlan:
     """Non-executing capability plan for one lead kind.
 
     The plan is safe to expose to orchestration/UI because membership does not
-    authorize a provider call. `active`/`optional` still require the live
-    execution policy. `deferred` and `planned` explicitly have no recursive
-    execution authority.
+    authorize a provider call. `active`/`optional` have both reviewed capability
+    metadata and a current runtime binding for this lead kind, but live execution
+    policy still decides whether a call is allowed. `deferred` also includes a
+    current source whose broader capability is not yet wired for this lead kind.
     """
 
     kind: LeadKind
@@ -72,10 +74,18 @@ def build_source_plan(
         if source.status not in {SourceStatus.ACTIVE, SourceStatus.OPTIONAL}:
             continue
         if not source.recursive_eligible or not source.source_policy_reviewed:
-            # A current-looking catalog entry that cannot pass these invariants is
-            # intentionally omitted from execution planning rather than upgraded.
             deferred.append(source)
             continue
+
+        # A capability may be broader than what private V1 actually wires. Treat
+        # that mismatch as visible deferred coverage rather than claiming that an
+        # unavailable runtime path is current.
+        try:
+            source_binding_for(source.name, kind=kind)
+        except SourceBindingError:
+            deferred.append(source)
+            continue
+
         if zero_spend_only and not source.zero_spend_eligible:
             excluded_by_budget.append(source)
             continue

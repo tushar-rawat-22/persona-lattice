@@ -10,6 +10,15 @@ from .contracts import (
 )
 from .extractor import extract_observation_leads
 from .frontier import FrontierDecision, FrontierEvaluation, FrontierLimits, LeadFrontier
+from .source_bindings import (
+    SOURCE_BINDING_BY_NAME,
+    SOURCE_BINDINGS,
+    SourceBinding,
+    SourceBindingError,
+    SourceExecutionBackend,
+    source_binding_for,
+    validate_source_bindings,
+)
 from .source_catalog import (
     SOURCE_BY_NAME,
     SOURCE_CATALOG,
@@ -32,15 +41,22 @@ __all__ = [
     "LeadFrontier",
     "LeadKind",
     "LeadReason",
+    "SOURCE_BINDING_BY_NAME",
+    "SOURCE_BINDINGS",
     "SOURCE_BY_NAME",
     "SOURCE_CATALOG",
+    "SourceBinding",
+    "SourceBindingError",
     "SourceCapability",
     "SourceCostClass",
     "SourceCredentialClass",
+    "SourceExecutionBackend",
     "SourceMode",
     "SourcePlan",
     "SourceStatus",
     "build_source_plan",
     "extract_observation_leads",
+    "source_binding_for",
     "sources_for_lead",
+    "validate_source_bindings",
 ]
