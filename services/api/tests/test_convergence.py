@@ -67,7 +67,7 @@ async def test_convergence_follows_only_allowlisted_public_fields() -> None:
 
 
 @pytest.mark.asyncio
-async def test_convergence_deduplicates_identical_public_pivots() -> None:
+async def test_convergence_deduplicates_identical_public_pivots_before_lookup() -> None:
     counts = defaultdict(int)
 
     async def runner(*, kind, value, purpose, consent_acknowledged):
@@ -101,7 +101,7 @@ async def test_convergence_deduplicates_identical_public_pivots() -> None:
         runner=runner,
     )
 
-    assert counts[(ResearchKind.EMAIL, "same@example.test")] == 2
+    assert counts[(ResearchKind.EMAIL, "same@example.test")] == 1
     assert len([node for node in result.nodes if node.kind is ResearchKind.EMAIL]) == 1
     assert len(result.edges) == 1
 
