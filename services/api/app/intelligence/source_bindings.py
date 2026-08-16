@@ -53,7 +53,6 @@ class SourceBinding:
 # They must use the governed provider boundary before activation.
 _LEGACY_RESEARCH_ALLOWLIST = frozenset(
     {
-        "github_public_api",
         "gitlab_public_api",
         "codeforces_public_api",
         "public_dns_infrastructure",
@@ -85,13 +84,14 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="sherlock",
         accepts=frozenset({LeadKind.USERNAME}),
-        migration_note="Quick research now executes Sherlock through the shared M3 ProviderRuntime.",
+        migration_note="Quick research executes Sherlock through the shared M3 ProviderRuntime.",
     ),
     SourceBinding(
         source_name="github_public_api",
-        backend=SourceExecutionBackend.LEGACY_RESEARCH,
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="github_public_api",
         accepts=frozenset({LeadKind.USERNAME}),
-        migration_note="Migrate the public-profile lookup into the governed provider runtime.",
+        migration_note="Quick research executes GitHub public-profile lookup through ProviderRuntime.",
     ),
     SourceBinding(
         source_name="gitlab_public_api",
