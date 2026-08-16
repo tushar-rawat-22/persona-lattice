@@ -1,0 +1,104 @@
+# SPDX-License-Identifier: Apache-2.0
+from __future__ import annotations
+
+import pytest
+
+from app.intelligence.contracts import LeadKind
+from app.intelligence.source_bindings import (
+    SOURCE_BINDING_BY_NAME,
+    SourceBindingError,
+    SourceExecutionBackend,
+    source_binding_for,
+    validate_source_bindings,
+)
+from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
+from app.providers.base import ContactRisk, ProviderStatus
+from app.providers.registry import PROVIDER_BY_NAME
+
+
+def test_every_current_recursive_source_has_exactly_one_runtime_binding() -> None:
+    validate_source_bindings()
+
+    required = {
+        source.name
+        for source in SOURCE_BY_NAME.values()
+        if source.status in {SourceStatus.ACTIVE, SourceStatus.OPTIONAL}
+        and source.source_policy_reviewed
+        and source.recursive_eligible
+    }
+    assert set(SOURCE_BINDING_BY_NAME) == required
+
+
+def test_only_deterministic_no_network_sources_use_local_backend() -> None:
+    local = {
+        name
+        for name, binding in SOURCE_BINDING_BY_NAME.items()
+        if binding.backend is SourceExecutionBackend.LOCAL_DETERMINISTIC
+    }
+    assert local == {"local_normalization", "libphonenumber_metadata"}
+
+
+def test_current_legacy_network_debt_is_frozen_to_private_v1_sources() -> None:
+    legacy = {
+        name
+        for name, binding in SOURCE_BINDING_BY_NAME.items()
+        if binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
+    }
+    assert legacy == {
+        "github_public_api",
+        "gitlab_public_api",
+        "codeforces_public_api",
+        "public_dns_infrastructure",
+        "brave_public_web_index",
+    }
+    assert all(SOURCE_BINDING_BY_NAME[name].migration_note.strip() for name in legacy)
+
+
+def test_sherlock_binding_matches_governed_provider_descriptor() -> None:
+    binding = source_binding_for("sherlock", kind=LeadKind.USERNAME)
+    descriptor = PROVIDER_BY_NAME["sherlock"]
+
+    assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
+    assert binding.provider_name == "sherlock"
+    assert descriptor.status == ProviderStatus.DEVELOPMENT.value
+    assert descriptor.contact_risk is ContactRisk.NONE_KNOWN
+    assert descriptor.supported_identifier_kinds == frozenset({"username"})
+
+
+def test_planned_and_deferred_sources_have_no_executable_binding() -> None:
+    for name in (
+        "bluesky_public_profile",
+        "gravatar_public_profile",
+        "webfinger_activitypub",
+        "rdap_domain_registry",
+        "google_people_authorized",
+        "numverify",
+        "abstract_phone_intelligence",
+        "ipqualityscore",
+        "maigret",
+        "whatsmyname",
+        "truecaller_manual",
+        "phoneinfoga",
+    ):
+        with pytest.raises(SourceBindingError, match="no executable runtime binding"):
+            source_binding_for(name)
+
+
+def test_binding_lookup_rejects_wrong_lead_kind() -> None:
+    with pytest.raises(SourceBindingError, match="not bound"):
+        source_binding_for("github_public_api", kind=LeadKind.EMAIL)
+
+
+def test_public_dns_is_explicitly_network_migration_debt_not_local_code() -> None:
+    binding = source_binding_for("public_dns_infrastructure", kind=LeadKind.URL)
+    assert binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
+    assert "network" in binding.migration_note.casefold()
+
+
+def test_optional_metered_search_has_binding_but_stays_optional_in_catalog() -> None:
+    binding = source_binding_for("brave_public_web_index", kind=LeadKind.EMAIL)
+    capability = SOURCE_BY_NAME["brave_public_web_index"]
+
+    assert binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
+    assert capability.status is SourceStatus.OPTIONAL
+    assert capability.zero_spend_eligible is False
