@@ -71,7 +71,9 @@ _FIELD_RULES: dict[str, _FieldRule] = {
 
 # Values behind these keys are never copied into the lead graph. The field name
 # may be reported for audit/debugging so a future adapter can be corrected without
-# retaining or autonomously propagating highly sensitive material.
+# retaining or autonomously propagating highly sensitive material. A generic
+# `ip` field is blocked here too; reviewed public-host infrastructure addresses
+# use separate observation fields and are never person/device leads.
 _BLOCKED_FIELD_NAMES = {
     "aadhaar",
     "aadhaar_number",
@@ -86,6 +88,7 @@ _BLOCKED_FIELD_NAMES = {
     "access_token",
     "refresh_token",
     "auth_token",
+    "ip",
     "device_ip",
     "last_ip",
     "personal_ip",
