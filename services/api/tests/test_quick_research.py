@@ -36,6 +36,33 @@ class FakeSherlockProvider:
         )
 
 
+async def _no_github_profile(_username: str):
+    return None
+
+
+async def _github_profile(username: str):
+    return {
+        "login": username,
+        "id": 42,
+        "html_url": f"https://github.com/{username}",
+        "avatar_url": "https://avatars.example.test/42",
+        "name": "Synthetic Person",
+        "company": "Example Org",
+        "blog": "https://example.test",
+        "location": "Example City",
+        "email": "public@example.test",
+        "bio": "Synthetic public bio",
+        "twitter_username": "synthetic_twitter",
+        "public_repos": 7,
+        "public_gists": 1,
+        "followers": 3,
+        "following": 2,
+        "created_at": "2020-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "private_field": "must-not-leak",
+    }
+
+
 def _login(monkeypatch) -> None:
     client.cookies.clear()
     SESSION_STORE.clear()
@@ -59,6 +86,7 @@ async def test_username_research_preserves_candidate_not_identity_semantics() ->
         purpose=Purpose.PUBLIC_SOURCE_RESEARCH,
         consent_acknowledged=False,
         sherlock_provider=FakeSherlockProvider(),
+        github_lookup=_no_github_profile,
     )
 
     assert report.normalized_value == "demo_user"
@@ -67,6 +95,26 @@ async def test_username_research_preserves_candidate_not_identity_semantics() ->
     assert observation.source == "sherlock"
     assert observation.details["account_candidate"] is True
     assert observation.details["identity_claim"] is False
+
+
+@pytest.mark.asyncio
+async def test_username_research_enriches_github_with_allowlisted_public_fields() -> None:
+    report = await run_quick_research(
+        kind=ResearchKind.USERNAME,
+        value="@demo_user",
+        purpose=Purpose.PUBLIC_SOURCE_RESEARCH,
+        consent_acknowledged=False,
+        sherlock_provider=FakeSherlockProvider(),
+        github_lookup=_github_profile,
+    )
+
+    github = next(item for item in report.observations if item.source == "github_public_api")
+    assert github.details["name"] == "Synthetic Person"
+    assert github.details["location"] == "Example City"
+    assert github.details["email"] == "public@example.test"
+    assert github.details["account_candidate"] is True
+    assert github.details["identity_claim"] is False
+    assert "private_field" not in github.details
 
 
 @pytest.mark.asyncio
