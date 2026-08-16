@@ -1,109 +1,53 @@
-# ADR 0009 — identity, tenancy and authorization before production case access
+# ADR 0009 — single-admin authentication and private case access
 
 ## Status
 
-Accepted for M7 implementation.
+Accepted for M7 implementation. The earlier multi-tenant draft of this ADR is superseded by this one-admin product decision.
 
 ## Context
 
-M6 intentionally stopped at a local/synthetic evidence dashboard. PersonaLattice
-still has no production endpoint that lists or reads stored personal cases. M7
-must establish the access-control boundary before that changes.
+PersonaLattice is currently a private personal investigation workbench operated by one administrator. Building tenants, teams, invitations and role hierarchies now would add attack surface and persistence complexity without serving the actual product.
 
-Authentication answers who controls a session. It does not answer whether that
-principal may access a particular case/evidence object or invoke a privileged
-function. PersonaLattice therefore must not treat possession of an object UUID,
-a route name or an authenticated session as authorization.
+The public deployment may expose a product preview and synthetic evidence dashboard, but real-person intake, provider execution and stored case data must remain unavailable until a server-validated admin session exists. A blurred UI is not authorization: the unauthenticated browser must not receive the protected payload at all.
 
-The system contains identity/evidence data with higher abuse and privacy impact
-than an ordinary content application. Cross-user or cross-tenant object access,
-privilege escalation and over-broad serialization would be structural failures,
-not UI bugs.
+The product processes potentially sensitive public-source and operator-authorized evidence. Session theft, cross-site request forgery, accidental public serialization, arbitrary object access and unbounded upload parsing are therefore release-blocking security failures.
 
 ## Decision
 
-M7 separates authentication, session handling and authorization into explicit
-server-side responsibilities and keeps production stored-case access disabled
-until they are proven together.
+M7 uses one configured administrator identity and a narrow server-side session boundary.
 
-1. The server derives an authenticated principal from a validated session. No
-   browser-supplied user ID, tenant ID, role or ownership field is trusted as an
-   authorization fact.
-2. A principal has a stable internal subject identifier plus explicit membership
-   and role bindings. Authentication state and application authorization state
-   remain distinct.
-3. Authorization is centralized, deny-by-default and action-oriented. Access is
-   granted only when a policy explicitly permits a principal to perform an
-   action on a resource in the relevant tenant/ownership context.
-4. Object-level authorization runs whenever client-controlled input selects or
-   acts on a persisted object. Random UUIDs remain useful identifiers but are
-   not an access-control mechanism.
-5. Function-level authorization is explicit for privileged/admin operations;
-   ordinary authenticated principals do not inherit access merely because an
-   endpoint exists.
-6. Future browser/API response models continue to cherry-pick bounded fields.
-   Internal ORM/database objects are not generically serialized.
-7. Session material must not contain cleartext personal case information. The
-   chosen browser session mechanism must use secure transport/cookie settings,
-   explicit expiry/inactivity policy and logout invalidation appropriate to the
-   selected architecture.
-8. Authorization decisions expose structured, public-safe reason codes for
-   deterministic tests and later audit integration without logging secrets or
-   unnecessary personal data.
-9. Deterministic synthetic tests must cover anonymous denial, same-owner allow,
-   cross-user denial, cross-tenant denial, role/function denial, identifier
-   tampering, invalid/expired session handling and explicit privileged grants.
-10. No stored-case production read/list endpoint is enabled merely to test the
-    authentication layer. The object-access surface is introduced only after the
-    authorization core and its negative tests are green.
-11. M7 does not change M5 correlation semantics, make an identity claim, expand
-    providers, add report sharing/export or introduce regulated decision flows.
-12. Retention/deletion, jurisdiction-specific privacy lifecycle and broader
-    abuse governance remain separate M8 work so M7 does not become an
-    unreviewable security catch-all.
+1. There is no public registration, invitation, team, tenant or role model in M7.
+2. The admin username and Argon2id password hash are deployment secrets. Plaintext passwords are never committed or stored.
+3. Successful login creates a high-entropy opaque bearer session token. Only its SHA-256 hash and server-side session record are retained; downstream authorization never receives the browser bearer secret.
+4. The browser session cookie is HttpOnly and SameSite=Strict and is Secure in production. It contains no cleartext personal information.
+5. Every unsafe authenticated request carries an independent per-session CSRF token in `X-PersonaLattice-CSRF`; the server compares it against the session record before performing the operation.
+6. Logout, expiry, revocation, process restart or an invalid/tampered token fail closed.
+7. Login failures are rate-limited per observed request source. This is defense-in-depth, not a substitute for edge/platform rate limiting.
+8. Protected read and write dependencies are centralized. Knowing a case UUID or endpoint path never grants access.
+9. The public web root renders synthetic placeholders only. The private operator route is intentionally absent from public navigation, but route obscurity is not relied upon for security.
+10. Browser-to-API calls use a same-origin Next.js `/api` proxy so the HttpOnly session cookie and CSRF model do not depend on permissive cross-site credential behavior.
+11. Stored research cases are private admin-only objects. They have explicit retention expiry and delete operations. Initial local persistence is SQLite; production deployment requires persistent storage and a single API worker unless sessions are moved to shared durable storage.
+12. Provider results and upload metadata remain bounded and allowlisted. Internal objects are not generically serialized.
+13. JPEG and PNG uploads are parsed only for bounded file and EXIF metadata in M7. Embedded GPS, when present, is labeled as historical embedded metadata rather than current/live location. No face identification is performed.
+14. M5 semantics remain unchanged: correlation is deterministic evidence-strength triage, `calibration_status` remains uncalibrated, `is_identity_claim` remains false, and contradictions/stale evidence stay visible.
 
-## Implementation shape
+## Current research capability boundary
 
-The initial M7 implementation should prefer a small framework-neutral domain
-layer over route-specific permission conditionals:
+The authenticated product can execute the approved public-source path rather than merely preview it:
 
-- authenticated-principal type;
-- tenant/membership/role types;
-- resource/action vocabulary;
-- centralized authorization decision service;
-- explicit allow/deny reason codes;
-- synthetic policy fixtures and negative tests;
-- adapter boundary for whichever authentication/session mechanism is selected.
+- usernames: governed Sherlock discovery on the reviewed site allowlist plus allowlisted public GitHub profile fields;
+- phones: normalization and numbering-plan/carrier/region/time-zone metadata only, not subscriber identity;
+- emails: normalization and domain evidence only until an external enrichment provider passes source/legal/cost review;
+- public URLs: canonical URL metadata only until a hardened SSRF-safe fetcher/provider is approved;
+- PDF/text/JPEG/PNG uploads: bounded extraction/metadata review; extracted candidates never autonomously trigger outside research.
 
-FastAPI routes and Next.js UI should consume this boundary rather than implement
-parallel authorization logic.
-
-## Security basis
-
-The design follows three current principles that are directly relevant to
-PersonaLattice:
-
-- object identifiers must be checked against the authenticated principal's
-  permission for the requested object;
-- privileged functions should deny access by default and require explicit
-  grants;
-- authenticated sessions need bounded lifetime, secure session-secret handling
-  and explicit logout/invalidations.
-
-These correspond to OWASP API1:2023 Broken Object Level Authorization, OWASP
-API5:2023 Broken Function Level Authorization and NIST SP 800-63-4 session
-management guidance.
+A result that is not supported by an attributable source remains unknown. PersonaLattice does not obtain private-account content, bypass credentials, probe account recovery, evade access controls, covertly discover a subject's IP/device location or perform Internet-scale face recognition.
 
 ## Consequences
 
-- M7 may initially add substantial tests and policy code without exposing a new
-  end-user case feature; that is intentional.
-- Authentication-provider choice can change without rewriting application
-  authorization semantics if the principal adapter remains narrow.
-- Future case APIs have one place to ask authorization questions instead of
-  duplicating fragile route-level checks.
-- Negative authorization tests become a release gate before real personal-data
-  access exists.
-- M8 can build retention, deletion, audit and abuse governance on a known
-  principal/resource/action model rather than inventing identity semantics
-  again.
+- The architecture is materially simpler than a premature SaaS tenant model while still failing closed for protected data.
+- In-memory sessions intentionally invalidate on restart and require a single backend worker for the first deployment. Multi-worker scale requires shared session storage first.
+- SQLite is acceptable for the one-operator initial deployment only when mounted on persistent protected storage; it is not a serverless-ephemeral database strategy.
+- Public presentation and protected data transport are cleanly separated.
+- M8 can add privacy lifecycle, stronger audit evidence and deployment-hardening without having to unwind a speculative multi-user model.
+- Future conversion to a multi-user product requires a new ADR rather than silently stretching the one-admin authorization assumption.
