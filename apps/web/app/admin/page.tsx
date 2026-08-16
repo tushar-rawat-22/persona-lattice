@@ -48,6 +48,8 @@ type FilePreview = {
     artifact_id: string;
     original_name: string;
     detected_media_type: string;
+    extraction_method: string;
+    extracted_text: string;
     extracted_chars: number;
     trust_boundary: string;
     candidates: ReviewCandidate[];
@@ -352,9 +354,14 @@ export default function AdminConsole() {
           <label>Notes / claims to cross-check<textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Paste claims or context to verify." rows={4} /></label>
 
           <label className="dropzone">
-            <strong>Attach files</strong>
-            <span>PDF or UTF-8 text only. Raw bytes are validated and temporary storage is removed after bounded extraction.</span>
-            <input type="file" accept=".pdf,.txt,application/pdf,text/plain" multiple onChange={(event) => setFiles(Array.from(event.target.files ?? []))} />
+            <strong>Attach evidence</strong>
+            <span>PDF, UTF-8 text, JPEG or PNG. Images are inspected for bounded file/EXIF metadata only; no face identification is performed.</span>
+            <input
+              type="file"
+              accept=".pdf,.txt,.jpg,.jpeg,.png,application/pdf,text/plain,image/jpeg,image/png"
+              multiple
+              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+            />
             {files.length > 0 && <small>{files.map((file) => file.name).join(" • ")}</small>}
           </label>
 
@@ -392,7 +399,7 @@ export default function AdminConsole() {
                       <div className="provider" key={artifact.artifact_id}>
                         <div>
                           <strong>{artifact.original_name}</strong>
-                          <span>{artifact.detected_media_type} · {artifact.extracted_chars} chars · {artifact.candidates.length} review candidates</span>
+                          <span>{artifact.detected_media_type} · {artifact.extraction_method} · {artifact.extracted_chars} metadata/text chars · {artifact.candidates.length} review candidates</span>
                         </div>
                         <div className="tags"><em>untrusted content</em><em>no automatic external query</em></div>
                       </div>
