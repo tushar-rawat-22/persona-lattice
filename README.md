@@ -1,110 +1,116 @@
 # PersonaLattice
 
-PersonaLattice is an evidence-first identity intelligence project. It is being
-built to take a messy set of identifiers — names, phones, emails, usernames,
-links, organizations and uploaded documents — and turn them into a
-source-linked, explainable research report.
+PersonaLattice is a private-admin, evidence-first public-source research system.
+It takes a phone number, email address, username/handle, public URL or uploaded
+document/image and builds an attributable research record without pretending
+that incomplete public data is certain identity.
 
-The project is deliberately **not** a "type a phone number and magically know
-everything" tool. Identity data is incomplete, duplicated and often wrong.
-PersonaLattice treats every source as evidence that can support, contradict or
-fail to resolve a claim.
+The public web surface is intentionally safe to expose: unauthenticated visitors
+can see the product shell/demo, but real case data is returned only after the
+single configured admin session is authenticated server-side.
 
-## What we are building
+PersonaLattice is deliberately **not** a "type a number and magically know
+everything" product. Sources can be missing, stale, duplicated or wrong. A field
+that cannot be established remains unknown rather than being invented.
 
-The planned workflow is:
+## Private V1 workflow
 
 ```text
-case intake
+admin login
    ↓
-identifier extraction + normalization
+phone / email / username / public URL / file intake
    ↓
-source policy / consent gate
+normalization + purpose/source policy
    ↓
-governed provider execution
+approved public-source research
    ↓
-evidence graph
+bounded public identifier convergence
    ↓
-entity / account correlation
+canonical evidence graph
    ↓
-AI-assisted gap analysis
+deterministic M5 evidence-strength triage
    ↓
-human-readable report with confidence and sources
+private retained case with provenance, gaps and contradictions
 ```
 
-AI can help extract candidate identifiers, find contradictions and suggest the
-next research step, but it cannot create evidence. Document text is treated as
-untrusted source material, not as instructions to the application.
+## Current capabilities
 
-## Current status
+The private V1 implementation includes:
 
-**M0 through M5 are complete.**
+- a single-admin Argon2-backed login boundary with opaque HttpOnly session
+  cookies, expiry/logout, CSRF protection and login throttling;
+- a public-safe Next.js shell that does not receive real case payloads before
+  authentication;
+- phone normalization and numbering-plan metadata without claiming subscriber
+  identity;
+- governed username discovery over a fixed reviewed Sherlock site subset;
+- GitHub, GitLab and Codeforces public-profile enrichment;
+- exact GitLab public-email matching where the email is explicitly exposed by
+  that public profile;
+- optional exact-match discovery through a licensed Brave public web index when
+  `BRAVE_SEARCH_API_KEY` is configured;
+- canonical public URL metadata plus globally reachable DNS infrastructure
+  addresses, explicitly labelled as site/domain infrastructure rather than a
+  person's device IP or physical location;
+- bounded two-hop/twelve-node convergence over attributable public email,
+  username and website fields;
+- source/provenance edges for every automatic research pivot;
+- duplicate-pivot suppression and local provider rate/resource budgets;
+- PDF, UTF-8 text, JPEG and PNG metadata/intake under bounded extraction rules;
+- deterministic M5 evaluation of live public account candidates using the same
+  semantics as the research core;
+- M5 results that remain `calibration_status=uncalibrated` and
+  `is_identity_claim=false`, with the score displayed as evidence-strength
+  triage and never as identity probability;
+- private SQLite case retention with a 30-day default, expiry purge, per-case
+  deletion and delete-all;
+- a privacy-minimized audit ledger that records operations without copying
+  research seeds, provider payloads or session secrets;
+- GitHub CI on Python 3.11 and 3.13 plus Ruff, `npm ci`, lint, strict TypeScript
+  and production Next.js build;
+- a Render Blueprint for the API, persistent case disk and public Next.js web
+  service, with secrets supplied outside Git.
 
-The repository now has:
+## Evidence and safety rules
 
-- a public Apache-2.0 project with explicit third-party/source boundaries;
-- a governed FastAPI intake API with purpose and consent checks;
-- a responsive Next.js case-intake dashboard;
-- persistent SQLAlchemy evidence models for subjects, identifiers,
-  observations, claims and evidence links;
-- deterministic identifier normalization and public-safe redaction;
-- provenance, retrieval time, expiry/freshness and evidence-relation semantics;
-- bounded PDF and UTF-8 text upload validation and isolated extraction;
-- review-only document-derived candidates that require explicit human
-  confirmation before later research;
-- a typed provider framework with centralized purpose, consent, contact-risk
-  and candidate authorization;
-- bounded provider retry, local rate budgets, concurrency, timeout and response
-  size controls;
-- server-side-only provider secret resolution;
-- provenance-bearing provider observations that never become claims
-  automatically;
-- a synthetic provider used to verify the execution contract without network
-  access;
-- a governed Sherlock 0.16.0 development adapter for username-to-public-account
-  existence checks over a fixed eight-site allowlist;
-- explicit account states where a positive same-handle hit remains an account
-  candidate and never becomes an identity claim automatically;
-- a deterministic M5 correlation engine with persisted run/factor records,
-  candidate-bound supporting evidence and derived source-independence groups;
-- explicit stale-evidence exclusion, contradiction vetoes and replay digests;
-- M5 results that remain `uncalibrated` research-triage output with
-  `is_identity_claim=false` rather than presenting a rule score as a match
-  probability;
-- GitHub CI for the API on Python 3.11 and 3.13 plus web lint, TypeScript and
-  production build checks.
+- AI is not evidence.
+- Source observations, factual claims and correlation decisions are separate.
+- Same-handle reuse is weak evidence, not proof of identity.
+- A discovered public identifier is a research pivot, not an identity claim.
+- Stale evidence and contradictions remain visible.
+- A hard contradiction can veto positive evidence.
+- Real case data and provider credentials never enter Git.
+- No private-account bypass, credential/OTP theft, account-recovery probing,
+  CAPTCHA/WAF evasion or unauthorized system access.
+- No covert IP/device discovery, tracking-link collection or deanonymization.
+- No Internet-scale biometric/face identification.
+- Regulated employment, housing, credit and insurance eligibility decisions are
+  outside the product boundary.
 
-The next milestone is **M6 — local evidence intelligence dashboard** (Issue
-`#13`). M6 stays development/local and synthetic-fixture driven. Production
-personal-case access remains gated behind the M7 authentication, authorization,
-retention, audit and abuse-control work.
+## Optional public-web discovery
 
-Sherlock remains an internal development adapter; there is no public
-unauthenticated provider-execution endpoint. Live AI identity decisions,
-production authentication, private-account access and real-case report export
-are also not implemented.
+Broad exact-match public web discovery is optional. Set `BRAVE_SEARCH_API_KEY`
+server-side to enable the reviewed Brave Search API adapter. Search result pages
+are not automatically fetched; returned index metadata remains discovery
+evidence and never becomes an identity claim by itself.
 
-## Intended modes
-
-- self-audit
-- consented due diligence
-- public-source research
-- professional credential verification
-
-Regulated eligibility decisions such as employment, housing, credit and
-insurance are blocked. Supporting those uses later would require a separate
-legal/compliance workstream rather than a UI toggle.
+Without this secret, PersonaLattice still runs the local/public-profile/provider
+research paths and simply omits licensed web-index discovery.
 
 ## Repository map
 
 ```text
-apps/web/                  Next.js dashboard
-services/api/              FastAPI API + policy/evidence/upload/provider core
-services/api/app/correlation/ deterministic M5 evidence correlation
-docs/                      architecture, roadmap and decisions
-docs/CONTINUITY.md         chat-to-chat project handover
-THIRD_PARTY.md             license/integration boundary
-SECURITY.md                handling rules for sensitive data
+apps/web/                         public shell + private admin console
+services/api/                     FastAPI authentication/research/case API
+services/api/app/evidence/        canonical evidence models and normalization
+services/api/app/correlation/     deterministic M5 evidence-strength engine
+services/api/app/convergence.py   bounded public-evidence pivot graph
+services/api/app/live_m5.py       live evidence admission into M5 semantics
+services/api/app/public_search.py optional licensed public-index discovery
+docs/                             architecture, roadmap and decisions
+render.yaml                       Render API + web deployment Blueprint
+THIRD_PARTY.md                    license/integration boundary
+SECURITY.md                       sensitive-data handling rules
 ```
 
 ## Local development
@@ -112,31 +118,35 @@ SECURITY.md                handling rules for sensitive data
 Backend requires Python 3.11 or newer.
 
 ```bash
-python3 --version
 python3 -m venv .venv
 .venv/bin/pip install -e "./services/api[dev]"
 .venv/bin/pytest services/api/tests
 .venv/bin/uvicorn app.main:app --app-dir services/api --reload --host 127.0.0.1 --port 8000
 ```
 
-On macOS, if the system `python3` is older than 3.11:
-
-```bash
-brew install python@3.13
-"$(brew --prefix python@3.13)/bin/python3.13" -m venv .venv
-```
-
 Frontend:
 
 ```bash
 cd apps/web
-npm install
+npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://127.0.0.1:3000`.
+
+## Deployment secrets
+
+The Render Blueprint prompts for sensitive values instead of storing them in the
+repository:
+
+- `PERSONALATTICE_ADMIN_USERNAME`
+- `PERSONALATTICE_ADMIN_PASSWORD_HASH`
+- `BRAVE_SEARCH_API_KEY` (optional)
+
+The password itself is never stored in Git; the API expects an Argon2 password
+hash.
 
 ## License
 
-Original PersonaLattice code is Apache-2.0. Third-party licenses do not become
-Apache-2.0 simply because an integration exists here. See `THIRD_PARTY.md`.
+Original PersonaLattice code is Apache-2.0. Third-party licenses and external
+source terms remain separate integration boundaries. See `THIRD_PARTY.md`.
