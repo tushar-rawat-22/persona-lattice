@@ -3,17 +3,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from .types import (
-    Action,
-    AuthorizationDecision,
-    AuthorizationRequest,
-    DecisionReason,
-    Role,
-)
-
-
-_OWNER_ACTIONS = {Action.READ, Action.UPDATE}
-_ADMIN_ACTIONS = {Action.READ, Action.UPDATE, Action.DELETE, Action.ADMIN}
+from .types import AuthorizationDecision, AuthorizationRequest, DecisionReason
 
 
 class AuthorizationDenied(PermissionError):
@@ -27,6 +17,14 @@ def authorize(
     *,
     now: datetime | None = None,
 ) -> AuthorizationDecision:
+    """Authorize one protected operation for PersonaLattice's sole admin.
+
+    M7 intentionally has no tenant, role or ownership hierarchy. The authentication
+    adapter must first resolve an opaque server-side session into an
+    AuthenticatedPrincipal. Any protected operation without that principal fails
+    closed. Resource identifiers never confer authority by themselves.
+    """
+
     principal = request.principal
     if principal is None:
         return AuthorizationDecision(False, DecisionReason.DENY_ANONYMOUS)
@@ -37,22 +35,7 @@ def authorize(
     if principal.session_expires_at <= evaluated_at:
         return AuthorizationDecision(False, DecisionReason.DENY_SESSION_EXPIRED)
 
-    membership = principal.membership_for(request.resource.tenant_id)
-    if membership is None:
-        return AuthorizationDecision(False, DecisionReason.DENY_TENANT_MEMBERSHIP)
-
-    if membership.role is Role.ADMIN:
-        if request.action in _ADMIN_ACTIONS:
-            return AuthorizationDecision(True, DecisionReason.ALLOW_TENANT_ADMIN)
-        return AuthorizationDecision(False, DecisionReason.DENY_ACTION_NOT_GRANTED)
-
-    if request.resource.owner_subject_id != principal.subject_id:
-        return AuthorizationDecision(False, DecisionReason.DENY_NOT_OWNER)
-
-    if request.action in _OWNER_ACTIONS:
-        return AuthorizationDecision(True, DecisionReason.ALLOW_OWNER)
-
-    return AuthorizationDecision(False, DecisionReason.DENY_ACTION_NOT_GRANTED)
+    return AuthorizationDecision(True, DecisionReason.ALLOW_ADMIN)
 
 
 def require_authorized(
