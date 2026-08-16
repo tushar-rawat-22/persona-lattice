@@ -1,369 +1,263 @@
 # Continuity
 
-This is the public-safe handover for continuing PersonaLattice in a new ChatGPT
-conversation without rebuilding context from scratch.
+This is the public-safe continuation record for PersonaLattice. Read it together
+with `docs/ROADMAP.md`, `docs/V2_SOURCE_EXPANSION_PLAN.md` and the ADRs, then
+verify GitHub before changing anything. Do not trust commit/state claims blindly.
 
-## How to use this file
-
-At the start of a new project chat:
-
-1. ask ChatGPT to read this file and the linked status/architecture documents;
-2. verify the repository state rather than trusting this file blindly;
-3. continue from the "Next work" section;
-4. update this file after every meaningful milestone.
-
-Do not put API keys, real investigation identifiers, private case data or
-unredacted screenshots in this file.
+Never put API keys, real research identifiers, private retained-case data,
+password hashes, session material or unredacted investigation screenshots here.
 
 ## Project
 
-- Name: PersonaLattice
 - Repository: `tushar-rawat-22/persona-lattice`
-- Visibility: public
 - Local checkout: `~/persona-lattice`
+- Default branch: `main`
 - License: Apache-2.0 for original code
-- Product: evidence-first identity intelligence and consented/public-source research
+- Product: private evidence-first public/authorized research workbench
+- Operating model: one authenticated operator; public route is demo/preview only
 
-## Non-negotiable design rules
+## Non-negotiable evidence semantics
 
-- AI is not evidence.
-- Every factual claim must trace to source observations.
-- Raw personal-data case files never enter Git.
-- Provider credentials never enter Git or browser-facing contracts.
-- Source/license/purpose gates exist before provider execution.
-- Silent mode excludes sources with subject-contact risk.
-- Uploaded document instructions are data, not execution authority.
-- Document-derived candidates require human review before external research.
-- Same-handle reuse across sites is not identity proof.
-- A heuristic correlation score is not a calibrated identity probability.
-- Regulated employment/housing/credit/insurance decisions remain blocked.
+These are architecture rules, not UI wording:
+
+- source Observations, factual Claims and correlation results stay separate;
+- every factual conclusion must preserve provenance;
+- a discovered clue is a research lead, not proof of identity;
+- same-handle reuse alone is weak evidence and never identity proof;
+- M5 is deterministic evidence-strength triage, not identity probability;
+- `calibration_status` remains `uncalibrated`;
+- `is_identity_claim` remains `false`;
+- contradictions/vetoes and stale evidence remain visible;
+- no AI/ML/embedding/biometric identity decision is in the correlation path;
+- no provider expansion is authorized by an M5 score;
+- unknown/not-found/unavailable are legitimate outcomes and must not be guessed
+  into positive evidence.
+
+## Non-negotiable security/privacy boundary
+
+PersonaLattice may expand attributable public information and explicitly
+authorized data. It does not add:
+
+- private-account bypass;
+- login/account-recovery enumeration;
+- credential, password, OTP, session or token collection;
+- CAPTCHA/WAF/proxy/Tor evasion;
+- hidden KYC or government-ID acquisition;
+- covert personal/device IP discovery;
+- live location tracking;
+- covert subject contact;
+- regulated employment/housing/credit/insurance eligibility decisions.
+
+The recursive V2 lead extractor also blocks government-ID, credential/token and
+personal/device-IP field classes from entering the lead graph. It can retain only
+the blocked field name for audit/debugging, never the blocked value.
 
 ## Architecture baseline
 
-- Next.js web dashboard under `apps/web`
-- FastAPI service under `services/api`
-- SQLAlchemy evidence core under `services/api/app/evidence`
-- deterministic correlation core under `services/api/app/correlation`
-- bounded file intake/extraction under `services/api/app/uploads`
-- governed provider framework under `services/api/app/providers`
-- bounded dashboard read model under `services/api/app/dashboard`
-- public docs live under `docs`
-- `THIRD_PARTY.md` tracks license/integration boundaries
+- Next.js operator/public UI: `apps/web`
+- FastAPI API: `services/api`
+- M1 evidence/persistence/normalization: `services/api/app/evidence`
+- M2 bounded file intake: `services/api/app/uploads`
+- M3 governed provider framework: `services/api/app/providers`
+- M5 deterministic correlation: `services/api/app/correlation`
+- V1/V2 convergence: `services/api/app/convergence.py`
+- V2 typed leads/frontier/source planning: `services/api/app/intelligence`
+- private retained cases: `services/api/app/cases.py`
+- audit/auth/session boundaries: `services/api/app/audit.py`, admin auth/session
+  modules
+- V2 source expansion plan: `docs/V2_SOURCE_EXPANSION_PLAN.md`
+- V2 ADRs: `0010`, `0011`, `0012`
 
-## Completed milestones
+## Completed foundation milestones
 
-### M0 — public foundation: COMPLETE
+M0 through M6 are complete and remain historical foundations:
 
-Published:
+- M0: repository/product/API/web/CI foundation;
+- M1: persistent evidence model, conservative normalization and provenance;
+- M2: bounded file intake/extraction and human-review candidates;
+- M3: governed provider contracts, purpose/consent/credential/rate/resource gates;
+- M4: reviewed bounded Sherlock username discovery;
+- M5: deterministic explainable evidence correlation;
+- M6: local synthetic evidence-intelligence dashboard.
 
-- repository, Apache-2.0 license and source policy;
-- architecture/product/roadmap documentation;
-- governed case-intake API;
-- consent and purpose enforcement;
-- provider/contact-risk planning with no live provider execution;
-- Next.js case-intake dashboard shell;
-- CI for API on Python 3.11 and 3.13;
-- CI for web lint, typecheck and production build.
+Important M5 closure commit: `6555ae8ecee3aff8ef4a2ce191d055b17902d63f`.
+M6 toolchain/lockfile closure was published through PR `#14`.
 
-Key M0 verification:
+## Private V1 — implemented and locally accepted
 
-- governed API commit: `2dd8d12ab96819b182a9bf563d1a9d946b0b366c`
-- backend warning-cleanup commit: `6fb1d305b4d198cff8a35d3a1f9daffc93a95e47`
-- dashboard/CI implementation commit: `8cc62091865d71ff1177877c4e5337a463436628`
-- post-merge M0 CI run: `31901840132`, conclusion `success`
+The repository now also contains the private one-admin V1 product:
 
-### M1 — evidence core: COMPLETE
+- one deployment-configured admin identity; no public registration/teams;
+- Argon2 password verification and opaque HttpOnly session cookie;
+- logout/revocation, CSRF protection and same-origin `/api` proxy;
+- public root contains only product/demo content;
+- private `/admin` console performs real authorized intake/research;
+- retained cases, deletion/expiry and privacy-safe audit events;
+- GitHub/GitLab/Codeforces public-profile enrichment;
+- reviewed Sherlock account-candidate discovery;
+- phone numbering-plan/carrier/region/time-zone metadata;
+- exact public-email/public-web paths where configured and allowed;
+- ephemeral canonical evidence graph feeding M5 before the bounded retained report
+  is stored.
 
-Published through PR `#4`:
+The operator has successfully run the product locally through a public HTTPS
+ngrok tunnel with the Next.js service on port 3000 and the FastAPI service bound
+to local port 8000. Login and authenticated case reads returned HTTP 200 during
+manual acceptance. The tunnel is an operational preview, not durable hosting.
+Do not commit its ephemeral URL or any test identifier.
 
-- persistent `Subject`, `Identifier`, `Observation`, `Claim` and `EvidenceLink`
-  SQLAlchemy models;
-- database-agnostic UUIDs and SQLite development/test persistence;
-- deterministic phone, email, username, URL, name and organization
-  normalization outside the HTTP layer;
-- source provenance, retrieval timestamps and optional expiry/freshness;
-- support/contradict/unresolved evidence relationships;
-- AI may originate a `Claim` but `ai` is not an allowed observation source;
-- public-safe phone/email redaction helpers;
-- ADR `0003-evidence-core-persistence.md`;
-- synthetic-only tests.
+## V2 recursive evidence graph foundation — COMPLETE
 
-M1 verification:
+The V2 goal is:
 
-- initial evidence commit: `ac241696792553ea767677606efefc4275be5a8d`
-- conservative-normalization correction: `21651e2c1ce56d57a08e569af6652ca912096778`
-- final test-alignment commit: `35a6be3ba3609b1324158c62f02240b38db91f26`
-- merge commit: `22d8b4c100db4861ad1890bcb224f890cd652210`
-- final PR CI: `31902885290`, API 3.11 PASS, API 3.13 PASS, web PASS
-- post-merge CI: `31902946010`, API 3.11 PASS, API 3.13 PASS, web PASS
+> Start with the smallest defensible clue and expand outward through attributable
+> public or explicitly authorized evidence. Every clue becomes a typed lead;
+> every lead preserves its source; only policy-approved leads become another
+> automated query.
 
-During review we rejected generic case-folding for email local-parts and
-usernames and rejected stripping URL fragments. Provider-specific equivalence
-rules remain outside the generic core.
+### PR #20 — typed lead graph foundation
 
-### M2 — safe file intake and extraction boundary: COMPLETE
+Merge commit: `e66944259c545cdfe8e4020312357b92a42911ba`.
 
-Published through PR `#6`:
+Implemented:
 
-- PDF and UTF-8 text are the only enabled file formats;
-- maximum five files, 2 MiB per file and 6 MiB combined batch;
-- multipart parser/request limits plus independent streaming byte ceilings;
-- untrusted filename, MIME and byte-level checks;
-- private UUID-named temporary storage with restrictive permissions and SHA-256
-  provenance;
-- spawned extraction worker with timeout/output/PDF resource ceilings;
-- raw staged bytes deleted before request completion;
-- extracted content marked `untrusted_document_content`;
-- deterministic identifier candidates start in `pending_human_review`;
-- upload-evidence helper records extraction as an `UPLOAD` observation;
-- dashboard uploads real PDF/TXT files without provider execution;
-- ADR `0004-safe-file-intake.md`.
+- `LeadKind`: username, email, phone, URL, domain, name, organization, location;
+- dispositions: `auto_pivot`, `review_required`, `display_only`, `blocked`;
+- exact-field allowlisted lead extraction;
+- M1 normalization reused as the generic normalization authority;
+- newly discovered phone numbers default to review-required rather than silent
+  fan-out;
+- contextual name/org/location default to display-only;
+- government IDs, credentials/tokens and personal/device IP fields fail closed;
+- deterministic frontier infrastructure with reservations and budgets;
+- ADR `0010-recursive-evidence-lead-graph.md`;
+- `docs/V2_SOURCE_EXPANSION_PLAN.md`.
 
-M2 verification:
+A concrete bug was fixed here: the old convergence node key generically
+case-folded identifiers even though M1 intentionally preserves generic username
+case and email local-part case. V2 now uses M1-consistent comparison keys.
 
-- implementation commit: `4e9368ae4e7b7b66b5bca81825753a9c9d58d4c2`
-- PR: `#6`
-- PR CI: `31903890954`, API 3.11 PASS, API 3.13 PASS, web PASS
-- merge commit: `f90b06279917cf5ddbd6bb81642e74deb3c8d5ca`
-- post-merge CI: `31904034376`, API 3.11 PASS, API 3.13 PASS, web PASS
-- closure commit: `1130ec3cb69c308cb281c6edf3790a7ac2ee86d9`
-- closure CI: `31904139862`, API 3.11 PASS, API 3.13 PASS, web PASS
+### PR #21 — deterministic frontier orchestration
 
-### M3 — governed provider execution framework: COMPLETE
+Merge commit: `2a69224e53ea1912879032548a38f017bfcafb6a`.
+Post-merge CI run `31974590505`: success.
 
-Published through PR `#8`:
+Implemented:
 
-- typed/versioned provider descriptors, queries, results and error classes;
-- source category, execution/review state, contact risk, allowed purposes,
-  authentication mode and resource budgets in the registry;
-- central authorization immediately before adapter execution;
-- M2 document-derived candidates must already be human-confirmed, authorized
-  and match the stored identifier kind/value;
-- credentials resolve only from server-side configuration and never appear in
-  the execution request contract;
-- bounded retry classification with exponential delay;
-- every actual adapter attempt consumes the local rate budget;
-- per-provider semaphore concurrency, timeout and response-size ceilings;
-- provider results become M1 `PROVIDER` observations with provider/version/source
-  provenance, never automatic claims;
-- public-safe provider log redaction helper;
-- `synthetic_echo` is the only executable adapter through M3 and performs no
-  network call;
-- ADR `0005-provider-execution-boundary.md`.
+- `LeadFrontier` is the run-local admission authority;
+- capacity is reserved before provider execution so future concurrency cannot
+  oversubscribe node/edge/kind/fan-out budgets;
+- final lead outcomes include `admitted`, `provider_failed`, `duplicate`,
+  `review_required`, `display_only` and reason-coded budget stops;
+- failed execution releases capacity but the same lead is not retried repeatedly
+  in one run;
+- duplicate clue origins remain visible even though canonical provider execution
+  happens once;
+- lead decisions are retained in additive `lead_graph` report state;
+- current private-V1 depth/node behavior remains compatible;
+- ADR `0011-deterministic-frontier-orchestration.md`.
 
-M3 verification:
+Review caught and fixed two subtle flaws before closure: reservation capacity had
+to count against future concurrent budgets, and duplicate detection had to take
+precedence over depth-limit reporting so known clues do not falsely mark a run as
+truncated.
 
-- initial framework commit: `3b19fde27fabdd8cdc4d366596014c528f874ec2`
-- retry-budget correction: `24fd93416d22a62f87f5e8f0c267bdda38714c3e`
-- explicit timeout/concurrency tests: `6fe43aaac59d14cd9b9e5a307d8aadae1350d78e`
-- PR: `#8`
-- final PR CI run: `31904533035`, API 3.11 PASS, API 3.13 PASS (`55 passed`), web PASS
-- merge commit: `01b955637a25fda9e2efb12ffa6799e179923d6a`
-- post-merge CI run: `31904600206`, API 3.11 PASS, API 3.13 PASS, web PASS
-- closure commit: `c9332016494d5794cb02c4d7fd3a927f5c5872e1`
-- closure CI run: `31904785271`, API 3.11 PASS, API 3.13 PASS, web PASS
+### PR #22 — source capability registry and planner
 
-M3 review deliberately caught two gaps before merge. Retries initially consumed
-the local rate budget only once per high-level execution; the fix moved budget
-consumption inside the actual-attempt loop. The first green implementation also
-lacked direct timeout/concurrency acceptance tests; both were added and the
-final PR/main runs are green.
+Merge commit: `b1192fd15d73c144faba6279559db3e2b6ae2980`.
+Post-merge CI run `31974993479`: API 3.11 PASS, API 3.13 PASS, web PASS,
+deployment-image PASS.
 
-### M4 — governed username and public-account discovery: COMPLETE
+Implemented:
 
-Published through PR `#10`:
+- static source capability catalog separated from execution authority;
+- accepted/emitted lead kinds, lifecycle status, source mode, cost class,
+  credential class, source-policy review state and recursive eligibility;
+- non-executing source planner with `active`, `optional`, `deferred`, `planned`
+  and budget-excluded buckets;
+- current zero-spend-capable sources separated from metered optional search;
+- existing deferred/manual/reference provider-registry candidates represented
+  without making them executable;
+- planned integration targets for Bluesky, Gravatar, WebFinger/ActivityPub,
+  RDAP and user-authorized Google People imports;
+- source catalog/provider-registry consistency tests;
+- ADR `0012-source-capability-catalog.md`.
 
-- `sherlock-project==0.16.0` is the pinned published development dependency;
-- the adapter reads Sherlock's packaged site data without using its live
-  manifest/exclusions loader and permits only eight reviewed sites;
-- parent-to-worker IPC carries only username, approved site names and timeout;
-  arbitrary URL/site metadata cannot be supplied across the worker boundary;
-- synchronous upstream execution runs in a child process that M3 timeout
-  cancellation kills and reaps;
-- M3 centrally enforces Sherlock's username-only identifier contract;
-- claimed, available, unknown, illegal and WAF outcomes remain explicit;
-- a claimed hit must have a valid public HTTP(S) profile URL;
-- positive hits are provider observations with `account_candidate=true` and
-  `identity_claim=false`;
-- provider-log redaction now covers usernames;
-- full page bodies are not returned from the worker or persisted;
-- no provider-execution HTTP endpoint was added; Sherlock remains an internal
-  development adapter rather than an unauthenticated public research surface;
-- no browser opening, login/cookies, private-profile access, proxies, Tor/I2P,
-  CAPTCHA/WAF bypass, follower-graph collection, account contact/recovery or
-  automatic identity correlation was added;
-- Maigret 0.6.3 remains non-executable.
+A catalog match is never permission to call a source. Planned/review/manual/
+reference entries remain non-recursive by construction until an adapter and
+current source-policy review exist.
 
-M4 verification:
+## Current research graph
 
-- initial implementation: `0ebe8e8e995e927c69664d617c097718a9f37a88`
-- worker allowlist hardening: `7fe7b19c89c69ad0cf41a0f8ac23c1996003e466`
-- published-version correction: `4a3538fc17f4b701d7d8615872bd308f34d09f07`
-- duplicate-result test correction: `b42bb4dbd08bdd67a9729fbce81c4689c0f13da2`
-- PR: `#10`
-- final PR CI run: `31905880652`, API 3.11 PASS, API 3.13 PASS (`64 passed`), web PASS
-- merge commit: `7cf43b4769da3e144e799163b4719e5cef0bf2b8`
-- post-merge CI run: `31906017367`, API 3.11 PASS, API 3.13 PASS, web PASS
-- closure commit: `09ae730cd771460bb8b798ecafdc879bbd3d4d30`
-- closure CI run: `31906147923`, API 3.11 PASS, API 3.13 PASS, web PASS
+The intended V2 flow is now:
 
-M4 review caught three real assumptions before closure. First, the initial
-worker shape accepted caller-supplied site metadata, which was too close to an
-arbitrary-URL transport; it now accepts approved site names only and reloads the
-pinned package data independently. Second, the repository declared Sherlock
-0.16.1 but CI proved that version was not published on the package index, so the
-runtime was corrected to reviewed/published 0.16.0 rather than bypassing
-reproducible installation. Third, one test expected the duplicate-result guard
-while returning two rows against a one-site budget; the budget guard correctly
-fired first, so the fixture was corrected without changing production behavior.
+```text
+operator seed
+  -> M1 normalization
+  -> source capability plan
+  -> live source/provider authorization
+  -> bounded source execution
+  -> provenance-bearing Observation
+  -> exact-field lead extraction
+  -> lead disposition
+  -> deterministic frontier admission
+  -> next research node
+  -> repeat within budgets
+  -> ephemeral canonical M1 graph
+  -> M5 evidence-strength triage
+  -> bounded retained report/provenance record
+```
 
-### M5 — explainable evidence correlation engine: COMPLETE
+The working recursive graph stays ephemeral during a run. PersonaLattice does
+not yet create a second persistent raw-personal-data graph, so case deletion does
+not leave a hidden duplicate evidence store.
 
-Published through PR `#12`:
+## Current limits that are deliberate
 
-- correlation runs and factor records are persisted separately from factual
-  Claims and source Observations;
-- policy version `m5-evidence-strength-v1` uses a small explicit factor
-  vocabulary and fixed reviewed weights/thresholds;
-- same-username evidence is deliberately weak and cannot be promoted to exact
-  confirmed identifier overlap;
-- every non-username factor needs a supporting source Observation explicitly
-  bound to the account candidate;
-- exact confirmed identifier overlap also requires candidate-bound source
-  evidence recording the relevant non-username identifier IDs;
-- source-independence groups are derived from stored provider/source-host
-  provenance rather than accepted from callers;
-- only the strongest positive factor in one derived independence group counts;
-- stale source observations stay visible but contribute zero;
-- a hard contradiction is a veto and produces `contradicted` rather than being
-  averaged away;
-- `strong_candidate` requires both the score threshold and evidence from at
-  least two positive derived independence groups plus a strong factor type;
-- canonical sorted input/output JSON and SHA-256 digests make replays
-  deterministic, and identical requests reuse their persisted run;
-- every result remains `calibration_status=uncalibrated` and
-  `is_identity_claim=false`;
-- M5 performs no external provider/network call and no AI, ML, embedding or
-  biometric decision.
+- convergence maximum depth remains 2;
+- convergence maximum nodes remains 12;
+- planned source adapters do not execute yet;
+- contextual names, organizations and locations do not autonomously fan out;
+- newly discovered phone numbers require review;
+- public-search snippets do not automatically become identifier leads;
+- no identity probability is displayed or stored;
+- no API/source is claimed to provide universal account membership or hidden
+  personal identifiers.
 
-M5 verification:
-
-- initial implementation: `ceaa22df568b616af774aa238a404ae92f0ec42e`
-- evidence-source hardening: `1e9b7afb55d7778f5100dd1d08425ef45b60ed21`
-- PR: `#12`
-- final PR CI run: `31936091573`, API 3.11 PASS, API 3.13 PASS (`72 passed`), web PASS
-- merge commit: `6555ae8ecee3aff8ef4a2ce191d055b17902d63f`
-- post-merge CI run: `31936152926`, API 3.11 PASS, API 3.13 PASS, web PASS
-
-M5 review rejected an important first-draft assumption. Callers initially could
-supply `independence_group`; that meant the same underlying evidence could be
-renamed into separate groups. The final engine derives grouping from stored
-provenance. The same review also rejected counting a subject-level identifier as
-candidate evidence unless a source Observation explicitly binds that identifier
-to the candidate account.
-
-A derived hostname/provider group is a conservative independence proxy, not
-proof that two differently hosted sources are genuinely independent. That
-limitation remains explicit. The evidence score is therefore triage, not an
-identity probability.
-
-### M6 — local evidence intelligence dashboard: COMPLETE
-
-Published through PR `#14` on branch `m6-dashboard-intelligence`:
-
-- bounded `app.dashboard` read model over existing case/evidence/correlation
-  state without adding a stored-case network read endpoint;
-- synthetic acceptance coverage raises the API suite from 72 to 79 tests;
-- static `/dashboard` route uses committed synthetic fixture data only;
-- complete, no-evidence, empty, loading and fail-closed error states;
-- source Observations, factual Claims and M5 correlation triage remain visibly
-  separate;
-- factor views trace back to source observation IDs/provenance;
-- stale evidence and contradiction/veto states remain directly visible;
-- M5 score is explicitly labelled as uncalibrated evidence-strength triage and
-  is never rendered as an identity probability;
-- claim confidence is displayed as a separate stored field;
-- manual PC/laptop review verified the information hierarchy and visible
-  keyboard focus;
-- ADR `0008` records the deliberate decision not to introduce a stored-case
-  browser/API surface before authorization exists;
-- Turbopack root and local development origin are explicit;
-- generated `next-env.d.ts` and TypeScript build cache no longer dirty Git;
-- Node 24 is pinned through `.nvmrc`;
-- `apps/web/package-lock.json` is committed and web CI uses `npm ci`.
-
-M6 verification before documentation closure:
-
-- backend read-model commit: `d1d3e15101f5689ba4abc59761bbd020a81cb690`
-- dashboard commit: `dfa4352a55e71d0d801a729bf78431483665a67f`
-- local-dev configuration fix: `570b2f174dd970e490d48249b713bea1f9a0dd3b`
-- generated-type policy commit: `a66e0a8c4f21fc4fae7aa196e86d9b19342e78c2`
-- Node/cache policy commit: `be3a7688592d2a67e89225f7485fb25cef908142`
-- lockfile/`npm ci` commit: `6c4a48a5a914f3cc352c9944d0f7450b3c367fac`
-- PR: `#14`
-- PR CI run `#66`: success at `6c4a48a5a914f3cc352c9944d0f7450b3c367fac`
-- API Python 3.11/3.13 and web lint/typecheck/build remain green;
-- local production build emitted `/dashboard` as static content.
-
-Two cosmetic observations from desktop review — singular `1 claims` copy and
-equal-height candidate-card whitespace — are intentionally not M6 closure
-blockers. They do not change semantics, security, privacy, accessibility of the
-reviewed controls or evidence interpretation and can be handled during later UI
-refinement.
-
-Through M6, no real case data, provider credential, live AI, production
-authentication, biometric matching, real-case report export or unauthenticated
-stored-case read surface has been introduced. Sherlock remains the only real
-network-capable development adapter and stays behind the governed internal
-execution boundary.
+Do not raise graph breadth/depth simply to make demos look richer. First measure
+wrong-pivot, duplicate, provider-failure, graph-growth and source-reliability
+rates on synthetic/consented fixtures.
 
 ## Next work
 
-**M7 — identity, tenancy and authorization foundation.**
+**V2 source-adapter activation, one reviewed source family at a time.**
 
-The post-M6 roadmap has been deliberately split so production personal-data
-access is not unlocked by authentication alone.
+Order of work:
 
-M7 must establish:
+1. add adapter/runtime consistency so a catalogued source cannot execute unless
+   its live adapter, catalog capability and source-policy gate agree;
+2. build synthetic fixture adapters/tests for the planned source contract before
+   real network calls;
+3. activate low/no-spend public sources in this order after fresh official-source
+   review: Bluesky public profiles, Gravatar public profiles, WebFinger/
+   ActivityPub federation resolution, RDAP domain metadata;
+4. expose source-plan/lead states in the private graph UI: executed, not-found,
+   queued, review-required, display-only, blocked, unavailable, budget-stopped;
+5. only after the graph/source layer is measured, proceed to M10 labelled
+   evaluation/calibration work.
 
-- production authentication/session security;
-- explicit tenant/owner boundaries for cases and evidence objects;
-- deny-by-default object-level and function-level authorization;
-- cross-user, cross-tenant and privilege-boundary authorization tests;
-- no production stored-case read/list endpoint until those controls exist
-  together.
-
-Later milestones separately cover privacy lifecycle/governance, production case
-workflows, evaluation/calibration, provider economics and enterprise evidence
-integrity. See `docs/ROADMAP.md` for the current sequence.
-
-## Bootstrap recovery record
-
-The initial M0 bootstrap was interrupted twice before backend publication:
-
-1. macOS resolved `python3` to Python 3.9.6 while the API requires 3.11+;
-2. a broad Ruff range installed Ruff 0.16 and changed the lint contract.
-
-Recovery decision:
-
-- keep Python >=3.11 and Homebrew Python 3.13 locally;
-- pin Ruff 0.15.15 and define the lint rule set explicitly;
-- publish backend code only after lint, compile, tests and smoke verification.
-
-## Backend warning cleanup
-
-The baseline uses HTTPX2 2.9.0 for Starlette TestClient, the current 422 status
-constant and treats Starlette deprecation warnings as test failures.
+Paid enrichment is not the next step. The architecture should first make adding a
+source boring, bounded and reviewable.
 
 ## Update discipline
 
-For every milestone update:
+After every meaningful block record:
 
-- current repository/branch;
-- latest meaningful commits;
-- tests and verification run;
+- verified main HEAD and relevant branch/PR;
+- CI/test state;
 - what changed;
-- what did not change;
+- what explicitly did not change;
+- assumptions challenged/fixed;
 - unresolved risks;
 - next authorized work.
 
