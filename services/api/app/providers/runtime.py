@@ -9,7 +9,7 @@ import os
 from typing import Any
 
 from .base import AuthMode, Provider, ProviderDescriptor, ProviderQuery, ProviderResult
-from .contracts import ExecutionRequest
+from .contracts import ExecutionRequest, QueryOrigin
 from .errors import (
     ProviderAuthError,
     ProviderExecutionError,
@@ -46,12 +46,10 @@ def _serialized_size(result: ProviderResult) -> int:
 
 @dataclass(frozen=True, slots=True)
 class PreparedProviderExecution:
-    """Policy-authorized provider selection without a network call or secret read.
+    """Provider selection after an initial policy check and before remote execution.
 
-    The object is created only by `ProviderRuntime.prepare()`. Store-specific
-    validation may safely happen after preparation and before the remote call,
-    preserving the existing fail-closed ordering where execution policy is
-    checked before subject/identifier lookup details can affect the response.
+    `execute_prepared()` re-runs the policy check before credentials or network I/O,
+    so manually constructing this value cannot bypass execution policy.
     """
 
     request: ExecutionRequest
@@ -97,7 +95,7 @@ class ProviderRuntime:
         }
 
     def prepare(self, request: ExecutionRequest) -> PreparedProviderExecution:
-        """Select and authorize a provider without touching credentials/network."""
+        """Select and initially authorize a provider without credentials/network I/O."""
 
         adapter = self.adapters.get(request.provider_name)
         if adapter is None:
@@ -127,11 +125,11 @@ class ProviderRuntime:
         prepared: PreparedProviderExecution,
         query: ProviderQuery,
     ) -> ProviderResult:
-        """Execute a previously policy-authorized provider selection.
+        """Validate and execute a prepared provider selection.
 
-        This method validates that the query still belongs to the authorized
-        request. A caller cannot prepare one subject/provider and substitute a
-        different query afterward.
+        The policy is intentionally re-checked here. `PreparedProviderExecution`
+        is a data object rather than a security token, so constructing one outside
+        `prepare()` must never grant execution authority.
         """
 
         request = prepared.request
@@ -142,6 +140,11 @@ class ProviderRuntime:
             raise ProviderValidationError("Prepared provider is not owned by this runtime.")
         if request.provider_name != descriptor.name or adapter.descriptor != descriptor:
             raise ProviderValidationError("Prepared provider execution is inconsistent.")
+
+        # Reauthorize immediately before secret resolution/network I/O. This makes
+        # the prepared object non-bypassable and keeps policy at the last runtime gate.
+        authorize_execution(descriptor, request)
+
         if query.subject_id != request.subject_id or query.identifier_id != request.identifier_id:
             raise ProviderValidationError("Provider query does not match the authorized request.")
         if (
@@ -153,6 +156,20 @@ class ProviderRuntime:
             )
         if not query.identifier_value.strip():
             raise ProviderValidationError("Provider query identifier value is empty.")
+
+        if request.query_origin is QueryOrigin.CONFIRMED_DOCUMENT_CANDIDATE:
+            candidate = request.document_candidate
+            assert candidate is not None  # authorize_execution() requires it
+            if candidate.identifier_kind is None:
+                raise ProviderValidationError("Document candidate has no identifier kind.")
+            if candidate.identifier_kind.value != query.identifier_kind:
+                raise ProviderValidationError(
+                    "Document candidate identifier kind does not match provider query."
+                )
+            if candidate.value != query.identifier_value:
+                raise ProviderValidationError(
+                    "Document candidate identifier value does not match provider query."
+                )
 
         secret: str | None = None
         if descriptor.auth_mode is AuthMode.API_KEY:
