@@ -25,7 +25,7 @@ NOW = datetime(2026, 8, 16, 10, 30, tzinfo=UTC)
 def principal(*, subject_id=None, tenant_id=None, role=Role.MEMBER, expired=False):
     return AuthenticatedPrincipal(
         subject_id=subject_id or uuid4(),
-        session_id="synthetic-session",
+        session_record_id=uuid4(),
         session_expires_at=NOW + (timedelta(minutes=-1) if expired else timedelta(hours=1)),
         memberships=(TenantMembership(tenant_id=tenant_id or uuid4(), role=role),),
     )
@@ -204,13 +204,20 @@ def test_require_authorized_raises_with_structured_denial_reason():
     assert exc_info.value.decision.reason is DecisionReason.DENY_NOT_OWNER
 
 
+def test_principal_uses_internal_session_record_not_bearer_secret():
+    actor = principal()
+
+    assert isinstance(actor.session_record_id, type(uuid4()))
+    assert not hasattr(actor, "session_id")
+
+
 def test_principal_rejects_duplicate_tenant_memberships():
     tenant_id = uuid4()
 
     with pytest.raises(ValueError, match="duplicate tenant memberships"):
         AuthenticatedPrincipal(
             subject_id=uuid4(),
-            session_id="synthetic-session",
+            session_record_id=uuid4(),
             session_expires_at=NOW + timedelta(hours=1),
             memberships=(
                 TenantMembership(tenant_id=tenant_id, role=Role.MEMBER),

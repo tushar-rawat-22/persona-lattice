@@ -45,13 +45,11 @@ class TenantMembership:
 @dataclass(frozen=True, slots=True)
 class AuthenticatedPrincipal:
     subject_id: UUID
-    session_id: str
+    session_record_id: UUID
     session_expires_at: datetime
     memberships: tuple[TenantMembership, ...]
 
     def __post_init__(self) -> None:
-        if not self.session_id or len(self.session_id) > 128:
-            raise ValueError("session_id must be between 1 and 128 characters")
         if self.session_expires_at.tzinfo is None:
             raise ValueError("session_expires_at must be timezone-aware")
         tenant_ids = [membership.tenant_id for membership in self.memberships]
