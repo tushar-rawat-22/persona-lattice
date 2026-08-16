@@ -27,14 +27,24 @@ type StoredCase = {
   report: QuickReport;
 };
 
-async function request(path: string, init?: RequestInit) {
+type QuickResearchProps = {
+  csrfToken: string;
+};
+
+async function request(path: string, init?: RequestInit, csrfToken?: string) {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const unsafe = !["GET", "HEAD", "OPTIONS"].includes(method);
   return fetch(`${API_URL}${path}`, {
     ...init,
     credentials: "include",
+    headers: {
+      ...(init?.headers ?? {}),
+      ...(unsafe && csrfToken ? { "X-PersonaLattice-CSRF": csrfToken } : {}),
+    },
   });
 }
 
-export function QuickResearch() {
+export function QuickResearch({ csrfToken }: QuickResearchProps) {
   const [kind, setKind] = useState<ResearchKind>("username");
   const [value, setValue] = useState("");
   const [activeCase, setActiveCase] = useState<StoredCase | null>(null);
@@ -70,16 +80,20 @@ export function QuickResearch() {
     setActiveCase(null);
     setBusy(true);
     try {
-      const response = await request("/v1/cases/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind,
-          value,
-          purpose: "public_source_research",
-          consent_acknowledged: false,
-        }),
-      });
+      const response = await request(
+        "/v1/cases/run",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind,
+            value,
+            purpose: "public_source_research",
+            consent_acknowledged: false,
+          }),
+        },
+        csrfToken,
+      );
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(
@@ -108,7 +122,11 @@ export function QuickResearch() {
   }
 
   async function deleteCase(caseId: string) {
-    const response = await request(`/v1/cases/${caseId}`, { method: "DELETE" });
+    const response = await request(
+      `/v1/cases/${caseId}`,
+      { method: "DELETE" },
+      csrfToken,
+    );
     if (!response.ok && response.status !== 404) {
       setError("Stored case could not be deleted.");
       return;
@@ -146,7 +164,7 @@ export function QuickResearch() {
             />
           </label>
         </div>
-        <button type="submit" disabled={busy || !value.trim()}>
+        <button type="submit" disabled={busy || !value.trim() || !csrfToken}>
           {busy ? "Researching public sources…" : "Run and save research case"}
         </button>
       </form>
