@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="shell publicShell">
@@ -12,8 +14,8 @@ export default function Home() {
           </p>
         </div>
         <div className="publicNav">
-          <a className="textLink" href="/dashboard">Synthetic evidence demo</a>
-          <a className="textLink subtle" href="/admin">Operator access</a>
+          <Link className="textLink" href="/dashboard">Synthetic evidence demo</Link>
+          <Link className="textLink subtle" href="/admin">Operator access</Link>
         </div>
       </header>
 
