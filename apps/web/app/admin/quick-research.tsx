@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -18,22 +18,48 @@ type QuickReport = {
   warnings: string[];
 };
 
+type StoredCase = {
+  id: string;
+  created_at: string;
+  expires_at: string;
+  seed_kind: ResearchKind;
+  seed_value: string;
+  report: QuickReport;
+};
+
+async function request(path: string, init?: RequestInit) {
+  return fetch(`${API_URL}${path}`, {
+    ...init,
+    credentials: "include",
+  });
+}
+
 export function QuickResearch() {
   const [kind, setKind] = useState<ResearchKind>("username");
   const [value, setValue] = useState("");
-  const [report, setReport] = useState<QuickReport | null>(null);
+  const [activeCase, setActiveCase] = useState<StoredCase | null>(null);
+  const [recentCases, setRecentCases] = useState<StoredCase[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const refreshCases = useCallback(async () => {
+    const response = await request("/v1/cases?limit=8");
+    if (!response.ok) return;
+    setRecentCases((await response.json()) as StoredCase[]);
+  }, []);
+
+  useEffect(() => {
+    refreshCases().catch(() => undefined);
+  }, [refreshCases]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    setReport(null);
+    setActiveCase(null);
     setBusy(true);
     try {
-      const response = await fetch(`${API_URL}/v1/research/quick`, {
+      const response = await request("/v1/cases/run", {
         method: "POST",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           kind,
@@ -48,7 +74,10 @@ export function QuickResearch() {
           typeof body.detail === "string" ? body.detail : "Research request failed.",
         );
       }
-      setReport(body as QuickReport);
+      const stored = body as StoredCase;
+      setActiveCase(stored);
+      setValue(stored.seed_value);
+      await refreshCases();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Research request failed.");
     } finally {
@@ -56,11 +85,33 @@ export function QuickResearch() {
     }
   }
 
+  async function openCase(caseId: string) {
+    setError("");
+    const response = await request(`/v1/cases/${caseId}`);
+    if (!response.ok) {
+      setError("Stored case could not be loaded.");
+      return;
+    }
+    setActiveCase((await response.json()) as StoredCase);
+  }
+
+  async function deleteCase(caseId: string) {
+    const response = await request(`/v1/cases/${caseId}`, { method: "DELETE" });
+    if (!response.ok && response.status !== 404) {
+      setError("Stored case could not be deleted.");
+      return;
+    }
+    if (activeCase?.id === caseId) setActiveCase(null);
+    await refreshCases();
+  }
+
+  const report = activeCase?.report ?? null;
+
   return (
     <section className="panel">
       <div className="panelHeader">
-        <div><span className="index">02</span><h2>Quick research</h2></div>
-        <span className="count">admin only</span>
+        <div><span className="index">02</span><h2>Live research</h2></div>
+        <span className="count">private cases</span>
       </div>
       <form className="quickResearchForm" onSubmit={submit}>
         <div className="twoColumn">
@@ -84,14 +135,15 @@ export function QuickResearch() {
           </label>
         </div>
         <button type="submit" disabled={busy || !value.trim()}>
-          {busy ? "Researching public sources…" : "Run quick research"}
+          {busy ? "Researching public sources…" : "Run and save research case"}
         </button>
       </form>
 
       {error && <p className="error quickResult">{error}</p>}
-      {report && (
+      {activeCase && report && (
         <div className="quickResult">
-          <div className="caseId">{report.kind.toUpperCase()} · {report.normalized_value}</div>
+          <div className="caseId">CASE {activeCase.id.slice(0, 8)} · {report.kind.toUpperCase()} · {report.normalized_value}</div>
+          <p className="muted">Stored until {new Date(activeCase.expires_at).toLocaleString()} unless deleted earlier.</p>
           {report.warnings.map((warning) => <p className="muted" key={warning}>{warning}</p>)}
           <div className="providerList">
             {report.observations.map((observation, index) => (
@@ -112,6 +164,29 @@ export function QuickResearch() {
           </p>
         </div>
       )}
+
+      <div className="recentCases">
+        <div className="panelHeader compactPanelHeader">
+          <div><span className="index">RECENT</span><h2>Stored cases</h2></div>
+          <button className="secondaryButton" type="button" onClick={() => refreshCases()}>Refresh</button>
+        </div>
+        {recentCases.length === 0 ? (
+          <p className="muted">No retained research cases yet.</p>
+        ) : (
+          <div className="providerList">
+            {recentCases.map((item) => (
+              <div className="caseRow" key={item.id}>
+                <button className="caseOpen" type="button" onClick={() => openCase(item.id)}>
+                  <strong>{item.seed_kind}</strong>
+                  <span>{item.seed_value}</span>
+                  <small>{item.id.slice(0, 8)}</small>
+                </button>
+                <button className="dangerButton" type="button" onClick={() => deleteCase(item.id)}>Delete</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
