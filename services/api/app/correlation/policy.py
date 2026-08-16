@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+from .types import FactorKind
+
+M5_POLICY_VERSION = "m5-evidence-strength-v1"
+
+FACTOR_WEIGHTS: dict[FactorKind, int] = {
+    FactorKind.SAME_USERNAME: 10,
+    FactorKind.EXACT_CONFIRMED_IDENTIFIER_OVERLAP: 55,
+    FactorKind.INDEPENDENT_CROSS_LINK: 35,
+    FactorKind.COMPATIBLE_PROFILE_METADATA: 15,
+    FactorKind.TEMPORAL_COMPATIBILITY: 10,
+    FactorKind.HARD_CONTRADICTION: -100,
+}
+
+POSSIBLE_MATCH_THRESHOLD = 25
+STRONG_CANDIDATE_THRESHOLD = 70
+MIN_STRONG_INDEPENDENCE_GROUPS = 2
+STRONG_FACTOR_KINDS = frozenset(
+    {
+        FactorKind.EXACT_CONFIRMED_IDENTIFIER_OVERLAP,
+        FactorKind.INDEPENDENT_CROSS_LINK,
+    }
+)
+VETO_FACTOR_KINDS = frozenset({FactorKind.HARD_CONTRADICTION})
