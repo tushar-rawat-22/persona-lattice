@@ -1,10 +1,11 @@
 services:
-  - type: web
+  - type: pserv
     name: personalattice-api
     runtime: docker
     dockerfilePath: ./services/api/Dockerfile
-    healthCheckPath: /health
     envVars:
+      - key: PORT
+        value: "10001"
       - key: PERSONALATTICE_ADMIN_USERNAME
         sync: false
       - key: PERSONALATTICE_ADMIN_PASSWORD_HASH
@@ -39,6 +40,6 @@ services:
         value: "/api"
       - key: PERSONALATTICE_API_HOSTPORT
         fromService:
-          type: web
+          type: pserv
           name: personalattice-api
           property: hostport
