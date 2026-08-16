@@ -22,6 +22,7 @@ _DEFAULT_SESSION_SECONDS = 8 * 60 * 60
 _MAX_SESSION_SECONDS = 24 * 60 * 60
 _LOGIN_WINDOW_SECONDS = 15 * 60
 _MAX_LOGIN_FAILURES = 8
+_CSRF_HEADER = "X-PersonaLattice-CSRF"
 
 
 class AuthConfigurationError(RuntimeError):
@@ -41,6 +42,7 @@ class AdminAuthConfig:
 class SessionRecord:
     id: UUID
     token_hash: str
+    csrf_token: str
     created_at: datetime
     expires_at: datetime
     revoked_at: datetime | None = None
@@ -49,6 +51,7 @@ class SessionRecord:
 @dataclass(frozen=True, slots=True)
 class LoginResult:
     token: str
+    csrf_token: str
     principal: AuthenticatedPrincipal
     cookie_name: str
     cookie_secure: bool
@@ -121,25 +124,32 @@ def _token_hash(token: str) -> str:
 
 
 class SessionStore:
-    """Minimal fail-closed server-side session store for the one-admin product.
+    """Fail-closed in-memory session store for the one-admin deployment.
 
-    Only hashes of bearer tokens are retained. A process restart invalidates all
-    sessions, which is a safe failure mode. M7 can move the same record contract to
-    durable storage before a multi-worker production deployment is enabled.
+    Only hashes of bearer session tokens are retained. CSRF tokens are independent
+    random values and do not authenticate a request without the HttpOnly session
+    cookie. Process restart invalidates all sessions by design.
     """
 
     def __init__(self) -> None:
         self._records: dict[str, SessionRecord] = {}
         self._lock = RLock()
 
-    def create(self, *, lifetime_seconds: int, now: datetime | None = None) -> tuple[str, SessionRecord]:
+    def create(
+        self,
+        *,
+        lifetime_seconds: int,
+        now: datetime | None = None,
+    ) -> tuple[str, SessionRecord]:
         created_at = now or datetime.now(UTC)
         if created_at.tzinfo is None:
             raise ValueError("session creation time must be timezone-aware")
         token = secrets.token_urlsafe(32)
+        csrf_token = secrets.token_urlsafe(32)
         record = SessionRecord(
             id=uuid4(),
             token_hash=_token_hash(token),
+            csrf_token=csrf_token,
             created_at=created_at,
             expires_at=created_at + timedelta(seconds=lifetime_seconds),
         )
@@ -241,6 +251,7 @@ def authenticate_admin(
     )
     return LoginResult(
         token=token,
+        csrf_token=record.csrf_token,
         principal=AuthenticatedPrincipal(
             session_record_id=record.id,
             session_expires_at=record.expires_at,
@@ -259,7 +270,7 @@ def _unauthorized() -> HTTPException:
     )
 
 
-def require_admin(request: Request) -> AuthenticatedPrincipal:
+def _resolve_request_session(request: Request) -> tuple[AdminAuthConfig, SessionRecord]:
     try:
         config = load_admin_auth_config()
     except AuthConfigurationError as exc:
@@ -272,10 +283,35 @@ def require_admin(request: Request) -> AuthenticatedPrincipal:
     record = SESSION_STORE.resolve(token)
     if record is None:
         raise _unauthorized()
+    return config, record
+
+
+def require_admin(request: Request) -> AuthenticatedPrincipal:
+    _config, record = _resolve_request_session(request)
     return AuthenticatedPrincipal(
         session_record_id=record.id,
         session_expires_at=record.expires_at,
     )
+
+
+def require_admin_write(request: Request) -> AuthenticatedPrincipal:
+    _config, record = _resolve_request_session(request)
+    supplied = request.headers.get(_CSRF_HEADER, "")
+    if not supplied or not secrets.compare_digest(supplied, record.csrf_token):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="CSRF validation failed.",
+            headers={"Cache-Control": "no-store"},
+        )
+    return AuthenticatedPrincipal(
+        session_record_id=record.id,
+        session_expires_at=record.expires_at,
+    )
+
+
+def get_admin_session_record(request: Request) -> SessionRecord:
+    _config, record = _resolve_request_session(request)
+    return record
 
 
 def set_admin_session_cookie(response: Response, login: LoginResult) -> None:
