@@ -127,34 +127,87 @@ labelled evaluation and demonstrated calibration.
 
 ## M6 — local evidence intelligence dashboard
 
-**Status: next — Issue #13**
+**Status: complete**
 
-- typed read model for one synthetic/local case
-- case timeline, evidence/source panel and account-candidate panel
-- explainable M5 factor and contradiction/veto views
-- visually distinct source Observation, factual Claim and correlation-triage
-  semantics
-- source provenance and freshness shown with relevant evidence
-- deterministic empty/loading/error/no-evidence fixture states
-- accessible/responsive web behavior
-- no unauthenticated production route that lists or reads stored personal cases
-- no real-case report export before the M7 access/retention policy exists
+- bounded typed read model for a single case without a stored-case HTTP read
+  endpoint;
+- static `/dashboard` route backed only by synthetic fixtures;
+- case summary, normalized identifiers, source timeline, factual Claims,
+  account candidates, M5 factor breakdown, provenance, freshness and visible
+  contradiction/stale-evidence states;
+- complete, no-evidence, empty, loading and fail-closed error states;
+- M5 evidence score is labelled as an uncalibrated rule score and never shown as
+  an identity probability;
+- claim confidence remains visually and semantically distinct from M5 triage;
+- keyboard focus and semantic structure verified on the PC/laptop operator
+  target;
+- local Next.js development configuration hardened so framework-generated files
+  no longer dirty Git;
+- Node 24 pinned through `.nvmrc`, `package-lock.json` committed and CI switched
+  to reproducible `npm ci` installs;
+- no unauthenticated stored-case read/list route, real-case export, AI identity
+  decision, biometric matching or autonomous provider expansion.
 
-M6 deliberately remains local/development and synthetic-fixture driven. The old
-roadmap sequence would otherwise put a rich personal-data dashboard ahead of
-production authentication and authorization, which is the wrong security
-boundary.
+M6 is intentionally an operator information-architecture and safety milestone,
+not the final commercial UI. Tablet/mobile product optimization is not an M6
+closure gate; future workflow evidence may justify it later.
 
-## M7 — privacy and production hardening
+## M7 — identity, tenancy and authorization foundation
 
-- authentication and authorization
-- retention/deletion
-- audit log
-- abuse controls
-- provider contract review
-- privacy review by jurisdiction
-- security testing
-- production case access and real-case export only after those controls exist
+**Status: next**
+
+- production authentication and session security;
+- explicit tenant/owner boundaries for cases and evidence objects;
+- object-level and function-level authorization with deny-by-default policy;
+- authorization tests for cross-user, cross-tenant and privilege-boundary cases;
+- no production stored-case endpoint until these controls are enforced together.
+
+M7 deliberately separates authorization from the rest of production hardening.
+Authentication alone is not enough to safely expose identity case objects.
+
+## M8 — privacy lifecycle and governance
+
+- purpose and policy records that are enforceable rather than decorative;
+- retention schedules and deletion workflows;
+- audit events for sensitive access and policy changes;
+- data-minimization and response-field allowlists;
+- jurisdiction/purpose policy hooks and documented review boundaries;
+- abuse-control policy for stalking, harassment, doxxing and other misuse risks.
+
+## M9 — production case platform
+
+- authenticated and authorized real-case access only after M7/M8 controls exist;
+- controlled provider execution from case workflows;
+- production evidence views and operator triage;
+- export/share capabilities only under explicit access, retention and audit
+  policy;
+- multi-user collaboration only after tenant isolation is proven.
+
+## M10 — evaluation and calibration laboratory
+
+- consented/synthetic labelled evaluation datasets;
+- deterministic replay suites and factor ablation studies;
+- false-positive/false-negative and threshold analysis;
+- calibration research kept separate from production identity claims;
+- no marketing or UI probability claim unless evaluation evidence supports it.
+
+## M11 — provider and cost intelligence
+
+- provider reliability, coverage, latency and failure-characteristic tracking;
+- licensing/allowed-purpose/retention restrictions alongside each provider;
+- per-query and per-case cost attribution;
+- query budgets, spend ceilings and cost-aware orchestration;
+- paid-provider expansion only when unit economics and governance are explicit.
+
+## M12 — enterprise evidence integrity
+
+- policy-controlled evidence preservation rather than indiscriminate capture;
+- acquisition metadata, integrity hashes and reproducibility records;
+- clear separation between original observation and derived interpretation;
+- controlled evidence export and chain-of-custody-style auditability where the
+  workflow requires it;
+- retention/licensing/copyright constraints designed before broad archival
+  capture.
 
 ## Deferred
 

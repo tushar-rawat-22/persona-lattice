@@ -46,6 +46,7 @@ unredacted screenshots in this file.
 - deterministic correlation core under `services/api/app/correlation`
 - bounded file intake/extraction under `services/api/app/uploads`
 - governed provider framework under `services/api/app/providers`
+- bounded dashboard read model under `services/api/app/dashboard`
 - public docs live under `docs`
 - `THIRD_PARTY.md` tracks license/integration boundaries
 
@@ -266,31 +267,75 @@ proof that two differently hosted sources are genuinely independent. That
 limitation remains explicit. The evidence score is therefore triage, not an
 identity probability.
 
-Through M5, no real case data, provider credential, live AI, production
-authentication, biometric matching or real-case report export has been
-introduced. Sherlock is still the only real network-capable development adapter
-and remains behind the governed internal execution boundary.
+### M6 — local evidence intelligence dashboard: COMPLETE
+
+Published through PR `#14` on branch `m6-dashboard-intelligence`:
+
+- bounded `app.dashboard` read model over existing case/evidence/correlation
+  state without adding a stored-case network read endpoint;
+- synthetic acceptance coverage raises the API suite from 72 to 79 tests;
+- static `/dashboard` route uses committed synthetic fixture data only;
+- complete, no-evidence, empty, loading and fail-closed error states;
+- source Observations, factual Claims and M5 correlation triage remain visibly
+  separate;
+- factor views trace back to source observation IDs/provenance;
+- stale evidence and contradiction/veto states remain directly visible;
+- M5 score is explicitly labelled as uncalibrated evidence-strength triage and
+  is never rendered as an identity probability;
+- claim confidence is displayed as a separate stored field;
+- manual PC/laptop review verified the information hierarchy and visible
+  keyboard focus;
+- ADR `0008` records the deliberate decision not to introduce a stored-case
+  browser/API surface before authorization exists;
+- Turbopack root and local development origin are explicit;
+- generated `next-env.d.ts` and TypeScript build cache no longer dirty Git;
+- Node 24 is pinned through `.nvmrc`;
+- `apps/web/package-lock.json` is committed and web CI uses `npm ci`.
+
+M6 verification before documentation closure:
+
+- backend read-model commit: `d1d3e15101f5689ba4abc59761bbd020a81cb690`
+- dashboard commit: `dfa4352a55e71d0d801a729bf78431483665a67f`
+- local-dev configuration fix: `570b2f174dd970e490d48249b713bea1f9a0dd3b`
+- generated-type policy commit: `a66e0a8c4f21fc4fae7aa196e86d9b19342e78c2`
+- Node/cache policy commit: `be3a7688592d2a67e89225f7485fb25cef908142`
+- lockfile/`npm ci` commit: `6c4a48a5a914f3cc352c9944d0f7450b3c367fac`
+- PR: `#14`
+- PR CI run `#66`: success at `6c4a48a5a914f3cc352c9944d0f7450b3c367fac`
+- API Python 3.11/3.13 and web lint/typecheck/build remain green;
+- local production build emitted `/dashboard` as static content.
+
+Two cosmetic observations from desktop review — singular `1 claims` copy and
+equal-height candidate-card whitespace — are intentionally not M6 closure
+blockers. They do not change semantics, security, privacy, accessibility of the
+reviewed controls or evidence interpretation and can be handled during later UI
+refinement.
+
+Through M6, no real case data, provider credential, live AI, production
+authentication, biometric matching, real-case report export or unauthenticated
+stored-case read surface has been introduced. Sherlock remains the only real
+network-capable development adapter and stays behind the governed internal
+execution boundary.
 
 ## Next work
 
-**M6 — local evidence intelligence dashboard (Issue `#13`).**
+**M7 — identity, tenancy and authorization foundation.**
 
-The sequencing is intentionally tightened before UI work:
+The post-M6 roadmap has been deliberately split so production personal-data
+access is not unlocked by authentication alone.
 
-- build a typed single-case read model from existing stored evidence and M5
-  correlation results;
-- use synthetic fixtures and local/development workflows only;
-- visually distinguish source Observations, factual Claims and derived M5 triage;
-- surface provenance, stale evidence and contradiction/veto states directly;
-- never display M5 evidence score as a calibrated probability;
-- do not add an unauthenticated production route that lists or reads stored
-  personal cases;
-- defer real-case export and multi-user case access until M7 authentication,
-  authorization, retention and audit controls exist.
+M7 must establish:
 
-This corrects the old roadmap sequence: a rich identity dashboard should not
-become a production personal-data surface before the access-control boundary is
-built.
+- production authentication/session security;
+- explicit tenant/owner boundaries for cases and evidence objects;
+- deny-by-default object-level and function-level authorization;
+- cross-user, cross-tenant and privilege-boundary authorization tests;
+- no production stored-case read/list endpoint until those controls exist
+  together.
+
+Later milestones separately cover privacy lifecycle/governance, production case
+workflows, evaluation/calibration, provider economics and enterprise evidence
+integrity. See `docs/ROADMAP.md` for the current sequence.
 
 ## Bootstrap recovery record
 
