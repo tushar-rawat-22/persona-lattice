@@ -65,7 +65,7 @@ PersonaLattice is an evidence-first private research workbench. The public deplo
 
 **Status: complete**
 
-- deterministic correlation over already-stored evidence
+- deterministic correlation over stored evidence
 - separate correlation run/factor records
 - explicit contradiction/veto rules
 - provenance-derived independence groups
@@ -88,55 +88,82 @@ PersonaLattice is an evidence-first private research workbench. The public deplo
 
 ## M7 — private one-admin live research product
 
-**Status: active**
+**Status: repository implementation complete**
 
-M7 replaces the earlier multi-tenant plan. PersonaLattice currently has one operator, so access control is deliberately narrow and fail-closed rather than pretending to be a SaaS account system.
+Merged to `main` in private V1 merge commit
+`bcadef6968dc20f17c8dd9dd1e9bec415b582c34`.
 
-Implemented on the M7 branch:
+M7 now includes:
 
 - one deployment-configured admin identity; no registration, teams, tenants or invitations;
-- Argon2id password hashing with no plaintext credential in Git/browser code;
-- opaque HttpOnly session cookie, bounded expiry, logout/revocation and login throttling;
-- browser bearer secret remains outside downstream authorization;
-- independent per-session CSRF token required for unsafe authenticated requests;
-- public root exposes synthetic/blurred product content only and does not receive real case payloads;
+- Argon2 password hashing with no plaintext credential in Git/browser code;
+- opaque HttpOnly session cookie, bounded expiry, logout/revocation and CSRF protection;
+- public root exposes synthetic/demo product content only and does not receive real case payloads;
 - private `/admin` console for authenticated intake and research;
-- same-origin Next.js `/api` proxy for the private API;
-- authenticated live username research through the governed Sherlock allowlist;
-- allowlisted enrichment from GitHub's public user API while preserving same-handle-as-candidate semantics;
+- same-origin Next.js `/api` proxy;
+- reviewed Sherlock username discovery plus GitHub, GitLab and Codeforces public-profile enrichment;
 - phone numbering-plan/carrier/region/time-zone metadata without subscriber-identity claims;
-- email/domain and public-URL normalization without invented ownership;
-- retained private research cases in SQLite with configurable expiry, list/read/delete endpoints and UUIDs that do not bypass authentication;
-- bounded PDF/TXT/JPEG/PNG intake; photo handling extracts file/EXIF metadata only and does not perform face identification;
-- persistent-case and protected-write tests including known-UUID anonymous denial and CSRF failure cases.
+- exact public-email matching where a source explicitly exposes the address;
+- bounded PDF/TXT/JPEG/PNG intake;
+- structured retained research cases and private report rendering;
+- Render deployment Blueprint with a public Next.js service and private FastAPI service.
 
-Remaining M7 closure gates:
-
-- final CI green after the image/EXIF block;
-- add a concise structured human-readable case report instead of exposing only provider JSON;
-- document the deployment constraint that in-memory sessions require one API worker;
-- add deployment manifests using persistent protected storage and production-secure cookie settings;
-- verify the hosted public preview returns no private case data before login;
-- verify one real self-audit from an operator-controlled identifier before declaring M7 complete.
+Hosted acceptance remains an operational deployment gate rather than missing repository code. It requires the repository owner to connect Render, enter deployment secrets and verify the live boundary.
 
 ## M8 — privacy lifecycle, audit and source expansion
 
-- automatic retention purge plus explicit delete-all workflow;
-- audit events for login, research execution, case access and deletion without recording secrets;
-- stronger at-rest deployment controls and backup policy;
-- purpose/source policy records and data-minimization review;
-- optional exact-match public-web search provider for phone/email/handle when a reviewed API credential is configured;
-- provider reliability/cost tracking before paid enrichment expands;
-- abuse controls remain relevant even for a single operator because the product can process third-party personal data.
+**Status: substantially incorporated into private V1**
+
+Implemented:
+
+- automatic expiry purge plus explicit per-case and delete-all workflows;
+- audit events for login, research execution, case access and deletion without copying research seeds, provider payloads or session secrets;
+- 30-day default retained-case lifecycle;
+- persistent deployment disk with secrets outside Git;
+- optional exact-match Brave public-web discovery for phone/email/handle/URL;
+- bounded source/resource budgets and data-minimization rules;
+- private API deployment so the research service has no public internet endpoint.
+
+Post-deployment operational work remains:
+
+- choose and document backup/restore policy after the real Render service exists;
+- measure provider reliability, latency and cost before paid enrichment expands;
+- review retention duration against actual operator use rather than assuming 30 days is optimal forever.
 
 ## M9 — evidence graph and report convergence
 
-- persist live provider outputs into the M1 Subject/Identifier/Observation graph rather than only the quick-case JSON store;
-- run M5 explainable correlation over live retained evidence;
-- render one consolidated evidence report with source timeline, connected identifiers, contradictions, freshness and unresolved gaps;
-- generate export only after explicit retention/audit policy is in place.
+**Status: private V1 design implemented with one deliberate change**
+
+The original roadmap proposed retaining a second persistent M1 graph for live research. That would duplicate personal data after a case was retained. Private V1 instead admits live provider evidence into an ephemeral canonical M1 graph, runs the existing deterministic M5 engine, and stores the resulting report/provenance decision record in the retained case.
+
+Implemented:
+
+- live provider outputs are normalized into canonical M1 evidence semantics for evaluation;
+- M5 correlation runs over live account-candidate evidence;
+- same-handle remains weak, exact-identifier overlap cannot self-bootstrap, stale/contradiction semantics remain explicit;
+- converged reports include source observations, research pivots, M5 factors, gaps and provenance;
+- deleting the retained case does not leave a hidden second persistent live-evidence database.
+
+Export remains intentionally deferred until hosted retention/audit behavior has been exercised with operator-controlled data.
+
+## Immediate next gate — hosted V1 acceptance
+
+This is the next action before adding more providers or beginning calibration work:
+
+1. connect the repository's `main` branch to one Render Blueprint;
+2. confirm `personalattice-api` is created as a private service and has no public `onrender.com` endpoint;
+3. enter `PERSONALATTICE_ADMIN_USERNAME` and `PERSONALATTICE_ADMIN_PASSWORD_HASH` as deployment secrets;
+4. optionally enter `BRAVE_SEARCH_API_KEY` for licensed broad public-web discovery;
+5. verify the unauthenticated public shell cannot read cases, audit records or research endpoints;
+6. log in through the public web service and perform one self-audit using an operator-controlled identifier;
+7. delete the test case, log out, and verify the same private endpoints return unauthorized again;
+8. record the deployed URL, verification date and any production-only defects without committing private case data or credentials.
+
+No further provider expansion should be merged before this gate passes. Production behavior is now the highest-value unknown.
 
 ## M10 — evaluation and calibration laboratory
+
+**Status: next research milestone after hosted acceptance**
 
 - consented/synthetic labelled evaluation datasets
 - deterministic replay and factor-ablation studies
