@@ -67,6 +67,43 @@ async def test_convergence_follows_only_allowlisted_public_fields() -> None:
 
 
 @pytest.mark.asyncio
+async def test_convergence_accepts_reviewed_gitlab_and_codeforces_aliases() -> None:
+    calls: list[tuple[ResearchKind, str]] = []
+
+    async def runner(*, kind, value, purpose, consent_acknowledged):
+        calls.append((kind, value))
+        if kind is ResearchKind.USERNAME and value == "seed":
+            return _report(
+                kind,
+                value,
+                details={
+                    "public_email": "gitlab-public@example.test",
+                    "twitter": "gitlab_handle",
+                    "website_url": "https://gitlab-site.example.test",
+                    "linkedin": "person-name",
+                    "discord": "person#0001",
+                },
+            )
+        return _report(kind, value)
+
+    result = await run_converged_research(
+        kind=ResearchKind.USERNAME,
+        value="seed",
+        purpose=Purpose.PUBLIC_SOURCE_RESEARCH,
+        consent_acknowledged=False,
+        runner=runner,
+    )
+
+    called = set(calls)
+    assert (ResearchKind.EMAIL, "gitlab-public@example.test") in called
+    assert (ResearchKind.USERNAME, "gitlab_handle") in called
+    assert (ResearchKind.URL, "https://gitlab-site.example.test") in called
+    assert all("person-name" not in value for _kind, value in called)
+    assert all("person#0001" not in value for _kind, value in called)
+    assert len(result.edges) == 3
+
+
+@pytest.mark.asyncio
 async def test_convergence_deduplicates_identical_public_pivots_before_lookup() -> None:
     counts = defaultdict(int)
 
@@ -87,7 +124,7 @@ async def test_convergence_deduplicates_identical_public_pivots_before_lookup() 
                         source="two",
                         source_locator="https://two.test",
                         summary="two",
-                        details={"email": "same@example.test"},
+                        details={"public_email": "same@example.test"},
                     ),
                 ),
             )
