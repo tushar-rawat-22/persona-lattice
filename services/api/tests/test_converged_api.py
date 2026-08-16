@@ -29,8 +29,8 @@ def _configure(monkeypatch, tmp_path) -> str:
 
 
 def test_converged_case_requires_authentication(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
     client.cookies.clear()
-    monkeypatch.setenv("PERSONALATTICE_DB_PATH", str(tmp_path / "cases.sqlite3"))
     response = client.post(
         "/v1/cases/run-converged",
         json={
@@ -64,6 +64,7 @@ def test_phone_converged_case_is_bounded_and_persisted(monkeypatch, tmp_path) ->
     assert report["executive_summary"]["identity_claim"] is False
     assert report["safety_boundary"]["covert_ip_discovery"] is False
     assert report["nodes"][0]["observations"][0]["source"] == "libphonenumber_metadata"
+    assert report["m5"]["is_identity_claim"] is False
 
     loaded = client.get(f"/v1/cases/{body['id']}")
     assert loaded.status_code == 200
