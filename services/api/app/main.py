@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +15,7 @@ from .admin_auth import (
     set_admin_session_cookie,
 )
 from .authz import AuthenticatedPrincipal
+from .cases import CASE_STORE, StoredCase
 from .evidence import IdentifierKind, InvalidIdentifier, normalize_collection, normalize_identifier
 from .models import CaseIntake, IntakePreview, ProviderPlan, Purpose
 from .policy import enforce_purpose
@@ -24,7 +25,7 @@ from .providers.errors import (
     ProviderRateBudgetExceeded,
 )
 from .providers.registry import PROVIDERS
-from .research import ResearchKind, run_quick_research
+from .research import QuickResearchReport, ResearchKind, run_quick_research
 from .uploads import (
     FileBatchPreview,
     MAX_FILE_BYTES,
@@ -44,7 +45,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type"],
 )
 
@@ -79,6 +80,26 @@ class QuickResearchResponse(BaseModel):
     normalized_value: str
     observations: list[QuickObservationResponse]
     warnings: list[str]
+
+
+class StoredCaseResponse(BaseModel):
+    id: UUID
+    created_at: str
+    expires_at: str
+    seed_kind: ResearchKind
+    seed_value: str
+    report: dict[str, Any]
+
+
+def _stored_case_response(record: StoredCase) -> StoredCaseResponse:
+    return StoredCaseResponse(
+        id=record.id,
+        created_at=record.created_at.isoformat(),
+        expires_at=record.expires_at.isoformat(),
+        seed_kind=record.seed_kind,
+        seed_value=record.seed_value,
+        report=record.report,
+    )
 
 
 @app.get("/health")
@@ -157,27 +178,16 @@ def preview_intake(
 
     warnings: list[str] = []
 
-    full_name, scalar_warnings = _normalize_scalar(
-        IdentifierKind.NAME,
-        payload.full_name,
-    )
+    full_name, scalar_warnings = _normalize_scalar(IdentifierKind.NAME, payload.full_name)
     warnings.extend(scalar_warnings)
-
     phones, phone_warnings = _normalize_values(IdentifierKind.PHONE, payload.phones)
     warnings.extend(phone_warnings)
-
     emails, email_warnings = _normalize_values(IdentifierKind.EMAIL, payload.emails)
     warnings.extend(email_warnings)
-
-    usernames, username_warnings = _normalize_values(
-        IdentifierKind.USERNAME,
-        payload.usernames,
-    )
+    usernames, username_warnings = _normalize_values(IdentifierKind.USERNAME, payload.usernames)
     warnings.extend(username_warnings)
-
     urls, url_warnings = _normalize_values(IdentifierKind.URL, payload.urls)
     warnings.extend(url_warnings)
-
     organizations, organization_warnings = _normalize_values(
         IdentifierKind.ORGANIZATION,
         payload.organizations,
@@ -216,14 +226,10 @@ def preview_intake(
     )
 
 
-@app.post("/v1/research/quick", response_model=QuickResearchResponse)
-async def quick_research(
-    payload: QuickResearchRequest,
-    _principal: AuthenticatedPrincipal = Depends(require_admin),
-) -> QuickResearchResponse:
+async def _execute_research(payload: QuickResearchRequest) -> QuickResearchReport:
     enforce_purpose(payload.purpose, payload.consent_acknowledged)
     try:
-        report = await run_quick_research(
+        return await run_quick_research(
             kind=payload.kind,
             value=payload.value,
             purpose=payload.purpose,
@@ -250,6 +256,13 @@ async def quick_research(
             detail="A public-source provider failed to complete the request.",
         ) from exc
 
+
+@app.post("/v1/research/quick", response_model=QuickResearchResponse)
+async def quick_research(
+    payload: QuickResearchRequest,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> QuickResearchResponse:
+    report = await _execute_research(payload)
     return QuickResearchResponse(
         kind=report.kind,
         normalized_value=report.normalized_value,
@@ -264,6 +277,52 @@ async def quick_research(
         ],
         warnings=list(report.warnings),
     )
+
+
+@app.post("/v1/cases/run", response_model=StoredCaseResponse)
+async def run_case(
+    payload: QuickResearchRequest,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> StoredCaseResponse:
+    report = await _execute_research(payload)
+    record = CASE_STORE.create(
+        seed_kind=report.kind,
+        seed_value=report.normalized_value,
+        report=report,
+    )
+    return _stored_case_response(record)
+
+
+@app.get("/v1/cases", response_model=list[StoredCaseResponse])
+def list_cases(
+    limit: int = 20,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> list[StoredCaseResponse]:
+    try:
+        records = CASE_STORE.list_recent(limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+    return [_stored_case_response(record) for record in records]
+
+
+@app.get("/v1/cases/{case_id}", response_model=StoredCaseResponse)
+def get_case(
+    case_id: UUID,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> StoredCaseResponse:
+    record = CASE_STORE.get(case_id)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found.")
+    return _stored_case_response(record)
+
+
+@app.delete("/v1/cases/{case_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_case(
+    case_id: UUID,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> Response:
+    CASE_STORE.delete(case_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def _parse_consent(value: object) -> bool:
