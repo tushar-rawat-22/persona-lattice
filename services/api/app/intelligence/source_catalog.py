@@ -24,6 +24,7 @@ class SourceMode(StrEnum):
     OPEN_STANDARD = "open_standard"
     USER_AUTHORIZED = "user_authorized"
     MANUAL = "manual"
+    REFERENCE = "reference"
 
 
 class SourceCostClass(StrEnum):
@@ -39,6 +40,7 @@ class SourceCredentialClass(StrEnum):
     NONE = "none"
     FREE_API_KEY = "free_api_key"
     METERED_API_KEY = "metered_api_key"
+    API_KEY_UNKNOWN_COST = "api_key_unknown_cost"
     USER_OAUTH = "user_oauth"
     MANUAL = "manual"
 
@@ -122,8 +124,9 @@ class SourceCapability:
 
 
 # The catalog describes current logical sources plus integration targets.
-# PLANNED entries are architecture declarations only: they cannot execute until a
-# real adapter, current source-policy review, fixtures and execution gate exist.
+# PLANNED/REVIEW_REQUIRED/MANUAL_ONLY/REFERENCE_ONLY entries are architecture
+# declarations only: they cannot execute recursively until a real adapter, current
+# source-policy review, fixtures and execution gate exist.
 SOURCE_CATALOG: tuple[SourceCapability, ...] = (
     SourceCapability(
         name="local_normalization",
@@ -250,6 +253,97 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         note="Exact-identifier public-web search; snippets do not become new leads.",
     ),
     SourceCapability(
+        name="numverify",
+        accepts=frozenset({LeadKind.PHONE}),
+        emits=frozenset({LeadKind.LOCATION}),
+        status=SourceStatus.REVIEW_REQUIRED,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.UNKNOWN,
+        credential_class=SourceCredentialClass.API_KEY_UNKNOWN_COST,
+        source_policy_reviewed=False,
+        recursive_eligible=False,
+        priority=100,
+        note="Existing provider-registry candidate; exact current terms/privacy/cost review required.",
+    ),
+    SourceCapability(
+        name="abstract_phone_intelligence",
+        accepts=frozenset({LeadKind.PHONE}),
+        emits=frozenset({LeadKind.LOCATION}),
+        status=SourceStatus.REVIEW_REQUIRED,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.UNKNOWN,
+        credential_class=SourceCredentialClass.API_KEY_UNKNOWN_COST,
+        source_policy_reviewed=False,
+        recursive_eligible=False,
+        priority=105,
+        note="Existing provider-registry candidate; exact current terms/privacy/cost review required.",
+    ),
+    SourceCapability(
+        name="ipqualityscore",
+        accepts=frozenset({LeadKind.PHONE}),
+        emits=frozenset(),
+        status=SourceStatus.REVIEW_REQUIRED,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.UNKNOWN,
+        credential_class=SourceCredentialClass.API_KEY_UNKNOWN_COST,
+        source_policy_reviewed=False,
+        recursive_eligible=False,
+        priority=110,
+        note="Phone-risk metadata candidate only after current source-policy/cost review.",
+    ),
+    SourceCapability(
+        name="maigret",
+        accepts=frozenset({LeadKind.USERNAME}),
+        emits=frozenset({LeadKind.URL}),
+        status=SourceStatus.PLANNED,
+        mode=SourceMode.GOVERNED_PROVIDER,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=False,
+        recursive_eligible=False,
+        priority=115,
+        note="Existing planned username-discovery candidate; no recursion/proxy/autoupdate activation.",
+    ),
+    SourceCapability(
+        name="whatsmyname",
+        accepts=frozenset({LeadKind.USERNAME}),
+        emits=frozenset({LeadKind.URL}),
+        status=SourceStatus.REVIEW_REQUIRED,
+        mode=SourceMode.GOVERNED_PROVIDER,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=False,
+        recursive_eligible=False,
+        priority=120,
+        note="Dataset/license boundary must be reviewed before executable use.",
+    ),
+    SourceCapability(
+        name="truecaller_manual",
+        accepts=frozenset({LeadKind.PHONE}),
+        emits=frozenset({LeadKind.NAME}),
+        status=SourceStatus.MANUAL_ONLY,
+        mode=SourceMode.MANUAL,
+        cost_class=SourceCostClass.MANUAL,
+        credential_class=SourceCredentialClass.MANUAL,
+        source_policy_reviewed=False,
+        recursive_eligible=False,
+        priority=125,
+        note="Manual-only because lookup visibility/contact risk may exist; never silent recursion.",
+    ),
+    SourceCapability(
+        name="phoneinfoga",
+        accepts=frozenset({LeadKind.PHONE}),
+        emits=frozenset(),
+        status=SourceStatus.REFERENCE_ONLY,
+        mode=SourceMode.REFERENCE,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=False,
+        recursive_eligible=False,
+        priority=130,
+        note="Reference-only; not executable through the Apache core.",
+    ),
+    SourceCapability(
         name="bluesky_public_profile",
         accepts=frozenset({LeadKind.USERNAME}),
         emits=frozenset(
@@ -261,7 +355,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         credential_class=SourceCredentialClass.NONE,
         source_policy_reviewed=False,
         recursive_eligible=False,
-        priority=70,
+        priority=140,
         note=(
             "Adapter target: Bluesky public AppView profile lookup by reviewed handle/DID "
             "semantics; no activation until a current source-policy review."
@@ -279,7 +373,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         credential_class=SourceCredentialClass.FREE_API_KEY,
         source_policy_reviewed=False,
         recursive_eligible=False,
-        priority=75,
+        priority=145,
         note=(
             "Adapter target: SHA-256 email identifier to public profile data; production "
             "adapter should use a server-side API key."
@@ -295,7 +389,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         credential_class=SourceCredentialClass.NONE,
         source_policy_reviewed=False,
         recursive_eligible=False,
-        priority=80,
+        priority=150,
         note=(
             "Adapter target for recognized federated profile URLs; generic usernames alone "
             "are insufficient to choose the WebFinger host."
@@ -311,7 +405,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         credential_class=SourceCredentialClass.NONE,
         source_policy_reviewed=False,
         recursive_eligible=False,
-        priority=85,
+        priority=155,
         note=(
             "Adapter target for registration metadata that the authoritative RDAP service "
             "actually returns; privacy redaction remains authoritative."
@@ -329,7 +423,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         credential_class=SourceCredentialClass.USER_OAUTH,
         source_policy_reviewed=False,
         recursive_eligible=False,
-        priority=90,
+        priority=160,
         note="Future explicit user-authorized import; not public people search.",
     ),
 )
@@ -345,6 +439,7 @@ def sources_for_lead(
     *,
     include_optional: bool = True,
     include_planned: bool = False,
+    include_deferred: bool = False,
     zero_spend_only: bool = False,
     recursive_only: bool = False,
 ) -> tuple[SourceCapability, ...]:
@@ -359,6 +454,14 @@ def sources_for_lead(
         allowed_statuses.add(SourceStatus.OPTIONAL)
     if include_planned:
         allowed_statuses.add(SourceStatus.PLANNED)
+    if include_deferred:
+        allowed_statuses.update(
+            {
+                SourceStatus.REVIEW_REQUIRED,
+                SourceStatus.MANUAL_ONLY,
+                SourceStatus.REFERENCE_ONLY,
+            }
+        )
 
     selected = [
         source
