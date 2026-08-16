@@ -23,8 +23,9 @@ class SourceBinding:
     """Bridge from V2 capability metadata to existing runtime code.
 
     A binding is not permission to execute. It states which existing execution
-    boundary currently owns a catalogued source so policy can reject drift before
-    a source is invoked.
+    boundary currently owns a catalogued source and which declared lead kinds are
+    actually wired today. A source capability may be broader than its current
+    runtime binding; that gap is surfaced as deferred coverage, never assumed.
     """
 
     source_name: str
@@ -112,10 +113,13 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
     SourceBinding(
         source_name="public_dns_infrastructure",
         backend=SourceExecutionBackend.LEGACY_RESEARCH,
-        accepts=frozenset({LeadKind.URL, LeadKind.DOMAIN}),
+        # The source capability can conceptually accept a bare domain, but the
+        # current private-V1 runner only wires DNS from a URL seed. Do not claim
+        # current DOMAIN execution until ResearchKind/runtime support exists.
+        accepts=frozenset({LeadKind.URL}),
         migration_note=(
             "Public DNS performs bounded network I/O and must be brought behind the same runtime "
-            "admission model before new network metadata sources are added."
+            "admission model before domain-seed or new network metadata sources are added."
         ),
     ),
     SourceBinding(
@@ -154,9 +158,9 @@ def _validate_binding(binding: SourceBinding) -> None:
         raise SourceBindingError(
             f"Binding {binding.source_name!r} is not source-policy reviewed and recursive-eligible."
         )
-    if binding.accepts != capability.accepts:
+    if not binding.accepts.issubset(capability.accepts):
         raise SourceBindingError(
-            f"Binding {binding.source_name!r} identifier kinds drift from the source catalog."
+            f"Binding {binding.source_name!r} claims lead kinds absent from the source catalog."
         )
 
     if binding.backend is SourceExecutionBackend.LOCAL_DETERMINISTIC:
@@ -244,7 +248,7 @@ def source_binding_for(
         raise SourceBindingError(f"Source {source_name!r} has no executable runtime binding.")
     if kind is not None and kind not in binding.accepts:
         raise SourceBindingError(
-            f"Source {source_name!r} is not bound for {kind.value!r} leads."
+            f"Source {source_name!r} is not currently bound for {kind.value!r} leads."
         )
     return binding
 
