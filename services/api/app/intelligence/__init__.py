@@ -20,6 +20,7 @@ from .source_catalog import (
     SourceStatus,
     sources_for_lead,
 )
+from .source_planner import SourcePlan, build_source_plan
 
 __all__ = [
     "FrontierDecision",
@@ -37,7 +38,9 @@ __all__ = [
     "SourceCostClass",
     "SourceCredentialClass",
     "SourceMode",
+    "SourcePlan",
     "SourceStatus",
+    "build_source_plan",
     "extract_observation_leads",
     "sources_for_lead",
 ]
