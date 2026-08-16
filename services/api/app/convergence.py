@@ -6,6 +6,8 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import StrEnum
 
+from .intelligence import LeadDisposition, LeadKind, extract_observation_leads
+from .intelligence.contracts import LeadCandidate, canonicalize_lead
 from .models import Purpose
 from .research import QuickResearchReport, ResearchKind, run_quick_research
 
@@ -32,7 +34,12 @@ class ResearchNode:
 
     @property
     def key(self) -> str:
-        return f"{self.kind.value}:{self.report.normalized_value.casefold()}"
+        lead_kind = LeadKind(self.kind.value)
+        _display_value, comparison_key = canonicalize_lead(
+            lead_kind,
+            self.report.normalized_value,
+        )
+        return f"{lead_kind.value}:{comparison_key}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,44 +64,47 @@ class ConvergedResearchReport:
 ResearchRunner = Callable[..., Awaitable[QuickResearchReport]]
 
 
-def _text(value: object) -> str | None:
-    if value is None or isinstance(value, bool):
-        return None
-    text = str(value).strip()
-    return text or None
+def _pivot_candidates(
+    report: QuickResearchReport,
+) -> tuple[tuple[LeadCandidate, ...], tuple[str, ...]]:
+    """Extract only policy-approved automatic pivots from reviewed observations.
 
-
-def _pivot_candidates(report: QuickResearchReport) -> list[tuple[ResearchKind, str, PivotReason, str, str]]:
-    """Return only reviewed attributable public fields that may become research seeds.
-
-    The aliases below match the allowlisted public fields returned by the existing
-    GitHub, GitLab and Codeforces integrations. Location, company, subscriber
-    metadata, Discord/LinkedIn identifiers and network identifiers remain display
-    evidence only; they are not autonomous pivots.
+    The intelligence extractor also models review-only/display-only leads. Those
+    remain available to future UI/report layers but are deliberately not executed
+    by the current convergence loop.
     """
 
-    candidates: list[tuple[ResearchKind, str, PivotReason, str, str]] = []
+    candidates: dict[str, LeadCandidate] = {}
+    blocked_fields: set[str] = set()
+
     for observation in report.observations:
-        details = observation.details
-        fields = (
-            (ResearchKind.EMAIL, details.get("email"), PivotReason.PUBLIC_EMAIL),
-            (ResearchKind.EMAIL, details.get("public_email"), PivotReason.PUBLIC_EMAIL),
-            (ResearchKind.USERNAME, details.get("username"), PivotReason.PUBLIC_USERNAME),
-            (ResearchKind.USERNAME, details.get("login"), PivotReason.PUBLIC_USERNAME),
-            (ResearchKind.USERNAME, details.get("handle"), PivotReason.PUBLIC_USERNAME),
-            (ResearchKind.USERNAME, details.get("twitter_username"), PivotReason.PUBLIC_USERNAME),
-            (ResearchKind.USERNAME, details.get("twitter"), PivotReason.PUBLIC_USERNAME),
-            (ResearchKind.URL, details.get("blog"), PivotReason.PUBLIC_URL),
-            (ResearchKind.URL, details.get("website_url"), PivotReason.PUBLIC_URL),
+        extraction = extract_observation_leads(
+            details=observation.details,
+            source=observation.source,
+            source_locator=observation.source_locator,
         )
-        for kind, raw, reason in fields:
-            value = _text(raw)
-            if value is None:
+        blocked_fields.update(extraction.blocked_field_names)
+        for candidate in extraction.candidates:
+            if candidate.disposition is not LeadDisposition.AUTO_PIVOT:
                 continue
-            candidates.append(
-                (kind, value, reason, observation.source, observation.source_locator)
-            )
-    return candidates
+            candidates.setdefault(candidate.key, candidate)
+
+    ordered = tuple(
+        sorted(
+            candidates.values(),
+            key=lambda item: (item.kind.value, item.comparison_key, item.source, item.field_name),
+        )
+    )
+    return ordered, tuple(sorted(blocked_fields))
+
+
+def _pivot_reason(candidate: LeadCandidate) -> PivotReason:
+    try:
+        return PivotReason(candidate.reason.value)
+    except ValueError as exc:  # defensive: auto-pivot rules must map to a public pivot reason
+        raise RuntimeError(
+            f"Automatic lead reason {candidate.reason.value!r} is not a convergence pivot."
+        ) from exc
 
 
 def _node_payload(node: ResearchNode) -> dict[str, object]:
@@ -212,7 +222,7 @@ async def run_converged_research(
     edges: list[ResearchEdge] = []
     warnings: list[str] = list(seed_report.warnings)
     visited = {seed_node.key}
-    attempted_raw = {(kind.value, value.strip().casefold())}
+    attempted = {seed_node.key}
     queue: deque[ResearchNode] = deque([seed_node])
     truncated = False
 
@@ -221,38 +231,43 @@ async def run_converged_research(
         if parent.depth >= max_depth:
             continue
 
-        for pivot_kind, pivot_value, reason, source, source_locator in _pivot_candidates(
-            parent.report
-        ):
+        pivot_candidates, blocked_fields = _pivot_candidates(parent.report)
+        for field_name in blocked_fields:
+            warnings.append(
+                f"Blocked lead field {field_name!r} was not admitted to recursive research."
+            )
+
+        for lead in pivot_candidates:
             if len(nodes) >= max_nodes:
                 truncated = True
                 queue.clear()
                 break
 
-            raw_key = (pivot_kind.value, pivot_value.strip().casefold())
-            if raw_key in attempted_raw:
+            if lead.key in attempted:
                 continue
-            attempted_raw.add(raw_key)
+            attempted.add(lead.key)
 
+            pivot_kind = ResearchKind(lead.kind.value)
             try:
                 pivot_report = await runner(
                     kind=pivot_kind,
-                    value=pivot_value,
+                    value=lead.value,
                     purpose=purpose,
                     consent_acknowledged=consent_acknowledged,
                 )
             except Exception as exc:  # provider failures are isolated per public pivot
                 warnings.append(
-                    f"Pivot {pivot_kind.value} from {source} could not be researched: {type(exc).__name__}."
+                    f"Pivot {pivot_kind.value} from {lead.source} could not be researched: "
+                    f"{type(exc).__name__}."
                 )
                 continue
 
             candidate = ResearchNode(
                 kind=pivot_kind,
-                value=pivot_value,
+                value=lead.value,
                 depth=parent.depth + 1,
                 parent_key=parent.key,
-                pivot_reason=reason,
+                pivot_reason=_pivot_reason(lead),
                 report=pivot_report,
             )
             if candidate.key in visited:
@@ -264,9 +279,9 @@ async def run_converged_research(
                 ResearchEdge(
                     parent_key=parent.key,
                     child_key=candidate.key,
-                    reason=reason,
-                    source=source,
-                    source_locator=source_locator,
+                    reason=_pivot_reason(lead),
+                    source=lead.source,
+                    source_locator=lead.source_locator,
                 )
             )
             warnings.extend(pivot_report.warnings)
