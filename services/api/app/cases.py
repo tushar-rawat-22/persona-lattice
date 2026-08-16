@@ -9,6 +9,7 @@ from pathlib import Path
 import sqlite3
 from uuid import UUID, uuid4
 
+from .reporting import build_structured_report
 from .research import QuickResearchReport, ResearchKind
 
 
@@ -83,6 +84,7 @@ def _report_payload(report: QuickResearchReport) -> dict[str, object]:
         "normalized_value": report.normalized_value,
         "observations": [asdict(item) for item in report.observations],
         "warnings": list(report.warnings),
+        "structured_report": build_structured_report(report),
     }
 
 
