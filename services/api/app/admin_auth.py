@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 import os
 import secrets
-from threading import RLock
+from threading import BoundedSemaphore, RLock
+from time import sleep
 from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
@@ -21,7 +23,9 @@ _PASSWORD_HASHER = PasswordHasher()
 _DEFAULT_SESSION_SECONDS = 8 * 60 * 60
 _MAX_SESSION_SECONDS = 24 * 60 * 60
 _LOGIN_WINDOW_SECONDS = 15 * 60
-_MAX_LOGIN_FAILURES = 8
+_LOGIN_SOFT_THRESHOLD = 3
+_LOGIN_MAX_DELAY_SECONDS = 2.0
+_LOGIN_VERIFY_SEMAPHORE = BoundedSemaphore(value=2)
 _CSRF_HEADER = "X-PersonaLattice-CSRF"
 
 
@@ -188,6 +192,14 @@ class SessionStore:
 
 
 class LoginThrottle:
+    """Apply bounded delay to repeated failures without creating an admin lockout.
+
+    The API sits behind a private-network proxy in production. A hard IP lockout
+    would let an attacker who shares or controls the visible proxy source deny the
+    only administrator access. Failure delay therefore slows repeated verification
+    attempts but a correct password is always checked.
+    """
+
     def __init__(self) -> None:
         self._failures: dict[str, deque[datetime]] = defaultdict(deque)
         self._lock = RLock()
@@ -199,15 +211,15 @@ class LoginThrottle:
             failures.popleft()
         return failures
 
-    def blocked(self, key: str, *, now: datetime | None = None) -> bool:
+    def failure(self, key: str, *, now: datetime | None = None) -> float:
         evaluated_at = now or datetime.now(UTC)
         with self._lock:
-            return len(self._prune(key, evaluated_at)) >= _MAX_LOGIN_FAILURES
-
-    def failure(self, key: str, *, now: datetime | None = None) -> None:
-        evaluated_at = now or datetime.now(UTC)
-        with self._lock:
-            self._prune(key, evaluated_at).append(evaluated_at)
+            failures = self._prune(key, evaluated_at)
+            failures.append(evaluated_at)
+            excess = max(0, len(failures) - _LOGIN_SOFT_THRESHOLD)
+            if excess == 0:
+                return 0.0
+            return min(_LOGIN_MAX_DELAY_SECONDS, 0.25 * (2 ** (excess - 1)))
 
     def success(self, key: str) -> None:
         with self._lock:
@@ -228,20 +240,23 @@ def authenticate_admin(
     *,
     source_key: str,
     now: datetime | None = None,
+    delay_fn: Callable[[float], None] = sleep,
 ) -> LoginResult | None:
     config = load_admin_auth_config()
     evaluated_at = now or datetime.now(UTC)
 
-    if LOGIN_THROTTLE.blocked(source_key, now=evaluated_at):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many failed login attempts. Try again later.",
-        )
+    # Bound simultaneous Argon2 work so unauthenticated traffic cannot fan out
+    # password verification across an unbounded number of worker threads. The
+    # failure delay is applied only after the slot is released so throttling
+    # cannot occupy the scarce password-verification capacity itself.
+    with _LOGIN_VERIFY_SEMAPHORE:
+        username_matches = secrets.compare_digest(username, config.username)
+        password_matches = verify_admin_password(config.password_hash, password)
 
-    username_matches = secrets.compare_digest(username, config.username)
-    password_matches = verify_admin_password(config.password_hash, password)
     if not username_matches or not password_matches:
-        LOGIN_THROTTLE.failure(source_key, now=evaluated_at)
+        delay = LOGIN_THROTTLE.failure(source_key, now=evaluated_at)
+        if delay > 0:
+            delay_fn(delay)
         return None
 
     LOGIN_THROTTLE.success(source_key)
@@ -249,6 +264,7 @@ def authenticate_admin(
         lifetime_seconds=config.session_seconds,
         now=evaluated_at,
     )
+
     return LoginResult(
         token=token,
         csrf_token=record.csrf_token,

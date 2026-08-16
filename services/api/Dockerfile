@@ -20,6 +20,6 @@ ENV PERSONALATTICE_DB_PATH=/var/data/personalattice/personalattice.db \
     PERSONALATTICE_CASE_RETENTION_DAYS=30 \
     PERSONALATTICE_COOKIE_SECURE=true
 
-EXPOSE 10000
+EXPOSE 10001
 
-CMD ["sh", "-c", "uvicorn app.main:app --app-dir /app/services/api --host 0.0.0.0 --port ${PORT:-10000} --workers 1 --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "uvicorn app.main:app --app-dir /app/services/api --host 0.0.0.0 --port ${PORT:-10001} --workers 1 --no-proxy-headers"]

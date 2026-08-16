@@ -19,6 +19,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install -e "./services/api[dev]"
+      - run: python -m pip check
+      - name: Audit installed Python dependencies
+        run: python -m pip_audit --local --skip-editable
       - run: ruff check services/api
       - name: Run API tests
         shell: bash
@@ -45,9 +48,19 @@ jobs:
           node-version-file: ".nvmrc"
       - working-directory: apps/web
         run: npm ci --no-audit --no-fund
+      - name: Audit production web dependencies
+        working-directory: apps/web
+        run: npm audit --omit=dev --audit-level=high
       - working-directory: apps/web
         run: npm run lint
       - working-directory: apps/web
         run: npm run typecheck
       - working-directory: apps/web
         run: npm run build
+
+  deployment-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build production API image
+        run: docker build --file services/api/Dockerfile --tag personalattice-api:ci .
