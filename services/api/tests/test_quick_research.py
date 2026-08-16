@@ -63,7 +63,7 @@ async def _github_profile(username: str):
     }
 
 
-def _login(monkeypatch) -> None:
+def _login(monkeypatch) -> str:
     client.cookies.clear()
     SESSION_STORE.clear()
     LOGIN_THROTTLE.clear()
@@ -76,6 +76,7 @@ def _login(monkeypatch) -> None:
         json={"username": "admin", "password": PASSWORD},
     )
     assert response.status_code == 200
+    return response.json()["csrf_token"]
 
 
 @pytest.mark.asyncio
@@ -163,9 +164,10 @@ def test_quick_research_endpoint_requires_admin(monkeypatch) -> None:
 
 
 def test_authenticated_phone_research_endpoint_returns_bounded_report(monkeypatch) -> None:
-    _login(monkeypatch)
+    csrf = _login(monkeypatch)
     response = client.post(
         "/v1/research/quick",
+        headers={"X-PersonaLattice-CSRF": csrf},
         json={
             "kind": "phone",
             "value": "+919876543210",
