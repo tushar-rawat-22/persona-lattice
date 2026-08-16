@@ -10,7 +10,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .admin_auth import (
     authenticate_admin,
+    get_admin_session_record,
     require_admin,
+    require_admin_write,
     revoke_admin_session,
     set_admin_session_cookie,
 )
@@ -46,7 +48,7 @@ app.add_middleware(
     allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-PersonaLattice-CSRF"],
 )
 
 
@@ -59,6 +61,7 @@ class AdminSessionResponse(BaseModel):
     authenticated: bool
     session_record_id: str
     expires_at: str
+    csrf_token: str
 
 
 class QuickResearchRequest(BaseModel):
@@ -131,22 +134,30 @@ def admin_login(
         authenticated=True,
         session_record_id=str(login.principal.session_record_id),
         expires_at=login.principal.session_expires_at.isoformat(),
+        csrf_token=login.csrf_token,
     )
 
 
 @app.get("/v1/auth/session", response_model=AdminSessionResponse)
 def admin_session(
+    request: Request,
     principal: AuthenticatedPrincipal = Depends(require_admin),
 ) -> AdminSessionResponse:
+    record = get_admin_session_record(request)
     return AdminSessionResponse(
         authenticated=True,
         session_record_id=str(principal.session_record_id),
         expires_at=principal.session_expires_at.isoformat(),
+        csrf_token=record.csrf_token,
     )
 
 
 @app.post("/v1/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
-def admin_logout(request: Request, response: Response) -> Response:
+def admin_logout(
+    request: Request,
+    response: Response,
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
+) -> Response:
     revoke_admin_session(request, response)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
@@ -172,7 +183,7 @@ def _normalize_values(kind: IdentifierKind, values: list[str]) -> tuple[list[str
 @app.post("/v1/intake/preview", response_model=IntakePreview)
 def preview_intake(
     payload: CaseIntake,
-    _principal: AuthenticatedPrincipal = Depends(require_admin),
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
 ) -> IntakePreview:
     enforce_purpose(payload.purpose, payload.consent_acknowledged)
 
@@ -260,7 +271,7 @@ async def _execute_research(payload: QuickResearchRequest) -> QuickResearchRepor
 @app.post("/v1/research/quick", response_model=QuickResearchResponse)
 async def quick_research(
     payload: QuickResearchRequest,
-    _principal: AuthenticatedPrincipal = Depends(require_admin),
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
 ) -> QuickResearchResponse:
     report = await _execute_research(payload)
     return QuickResearchResponse(
@@ -282,7 +293,7 @@ async def quick_research(
 @app.post("/v1/cases/run", response_model=StoredCaseResponse)
 async def run_case(
     payload: QuickResearchRequest,
-    _principal: AuthenticatedPrincipal = Depends(require_admin),
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
 ) -> StoredCaseResponse:
     report = await _execute_research(payload)
     record = CASE_STORE.create(
@@ -319,7 +330,7 @@ def get_case(
 @app.delete("/v1/cases/{case_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_case(
     case_id: UUID,
-    _principal: AuthenticatedPrincipal = Depends(require_admin),
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
 ) -> Response:
     CASE_STORE.delete(case_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -358,7 +369,7 @@ def _parse_purpose(value: object) -> Purpose:
 @app.post("/v1/files/preview", response_model=FileBatchPreview)
 async def preview_files(
     request: Request,
-    _principal: AuthenticatedPrincipal = Depends(require_admin),
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
 ) -> FileBatchPreview:
     content_length = request.headers.get("content-length")
     if content_length:
