@@ -3,11 +3,28 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from app.admin_auth import LOGIN_THROTTLE, SESSION_STORE, hash_admin_password
 from app.main import app
 from app.uploads import MAX_FILES
 
 
 client = TestClient(app)
+PASSWORD = "synthetic-admin-password-123!"
+
+
+def _configure_and_login(monkeypatch) -> None:
+    client.cookies.clear()
+    SESSION_STORE.clear()
+    LOGIN_THROTTLE.clear()
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_PASSWORD_HASH", hash_admin_password(PASSWORD))
+    monkeypatch.setenv("PERSONALATTICE_COOKIE_SECURE", "false")
+    monkeypatch.setenv("PERSONALATTICE_SESSION_COOKIE", "personalattice_test_session")
+    response = client.post(
+        "/v1/auth/login",
+        json={"username": "admin", "password": PASSWORD},
+    )
+    assert response.status_code == 200, response.text
 
 
 def _form(consent: str = "true", purpose: str = "self_audit") -> dict[str, str]:
@@ -17,10 +34,28 @@ def _form(consent: str = "true", purpose: str = "self_audit") -> dict[str, str]:
     }
 
 
+def test_file_preview_requires_admin_session(monkeypatch) -> None:
+    client.cookies.clear()
+    SESSION_STORE.clear()
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("PERSONALATTICE_ADMIN_PASSWORD_HASH", hash_admin_password(PASSWORD))
+    monkeypatch.setenv("PERSONALATTICE_COOKIE_SECURE", "false")
+    monkeypatch.setenv("PERSONALATTICE_SESSION_COOKIE", "personalattice_test_session")
+
+    response = client.post(
+        "/v1/files/preview",
+        data=_form(),
+        files=[("files", ("synthetic.txt", b"hello", "text/plain"))],
+    )
+
+    assert response.status_code == 401
+
+
 def test_file_preview_extracts_text_and_returns_review_only_candidates(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
+    _configure_and_login(monkeypatch)
     storage = tmp_path / "uploads"
     monkeypatch.setenv("PERSONALATTICE_UPLOAD_DIR", str(storage))
 
@@ -65,6 +100,7 @@ def test_file_preview_extracts_text_and_returns_review_only_candidates(
 
 
 def test_file_preview_enforces_consent_before_extraction(monkeypatch, tmp_path: Path) -> None:
+    _configure_and_login(monkeypatch)
     storage = tmp_path / "uploads"
     monkeypatch.setenv("PERSONALATTICE_UPLOAD_DIR", str(storage))
 
@@ -83,6 +119,7 @@ def test_file_preview_rejects_mime_mismatch_without_echoing_sensitive_input(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
+    _configure_and_login(monkeypatch)
     monkeypatch.setenv("PERSONALATTICE_UPLOAD_DIR", str(tmp_path / "uploads"))
     sensitive_filename = "person@example.test.php.pdf"
     sensitive_content = b"+12025550123 private marker"
@@ -100,7 +137,8 @@ def test_file_preview_rejects_mime_mismatch_without_echoing_sensitive_input(
     assert "File 1" in response.json()["detail"]
 
 
-def test_file_preview_rejects_too_many_files() -> None:
+def test_file_preview_rejects_too_many_files(monkeypatch) -> None:
+    _configure_and_login(monkeypatch)
     files = [
         ("files", (f"synthetic-{index}.txt", b"x", "text/plain"))
         for index in range(MAX_FILES + 1)
