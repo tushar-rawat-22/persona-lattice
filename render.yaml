@@ -35,6 +35,7 @@ services:
     rootDir: apps/web
     buildCommand: npm ci --no-audit --no-fund && npm run build
     startCommand: npm start
+    healthCheckPath: /
     envVars:
       - key: NODE_VERSION
         value: "24.14.1"
