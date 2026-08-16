@@ -35,14 +35,37 @@ class SourceCostClass(StrEnum):
     UNKNOWN = "unknown"
 
 
+class SourceCredentialClass(StrEnum):
+    NONE = "none"
+    FREE_API_KEY = "free_api_key"
+    METERED_API_KEY = "metered_api_key"
+    USER_OAUTH = "user_oauth"
+    MANUAL = "manual"
+
+
+_ZERO_SPEND_COST_CLASSES = frozenset(
+    {
+        SourceCostClass.LOCAL,
+        SourceCostClass.ZERO_DIRECT_COST,
+        SourceCostClass.FREE_TIER,
+    }
+)
+_ZERO_SPEND_CREDENTIAL_CLASSES = frozenset(
+    {
+        SourceCredentialClass.NONE,
+        SourceCredentialClass.FREE_API_KEY,
+    }
+)
+
+
 @dataclass(frozen=True, slots=True)
 class SourceCapability:
     """Static capability declaration for one logical research source.
 
-    This catalog does not execute anything. It lets the planner answer what a
+    This catalog never executes a source. It lets the planner answer what a
     source *could* accept/emit before an adapter, credential or network call is
-    considered. Execution policy remains authoritative in the provider/research
-    layer.
+    considered. The existing provider/research execution policy remains the
+    authority that decides whether a call is actually allowed.
     """
 
     name: str
@@ -51,10 +74,9 @@ class SourceCapability:
     status: SourceStatus
     mode: SourceMode
     cost_class: SourceCostClass
-    terms_reviewed: bool
+    credential_class: SourceCredentialClass
+    source_policy_reviewed: bool
     recursive_eligible: bool
-    zero_budget_eligible: bool
-    auth_required: bool = False
     priority: int = 100
     note: str = ""
 
@@ -70,18 +92,38 @@ class SourceCapability:
             SourceStatus.OPTIONAL,
         }:
             raise ValueError("Only active or optional sources may be recursive-eligible.")
-        if self.recursive_eligible and not self.terms_reviewed:
+        if self.recursive_eligible and not self.source_policy_reviewed:
             raise ValueError("Recursive-eligible sources require a reviewed source policy.")
-        if self.zero_budget_eligible and self.cost_class in {
-            SourceCostClass.METERED,
-            SourceCostClass.UNKNOWN,
-        }:
-            raise ValueError("Metered/unknown-cost sources cannot be zero-budget eligible.")
+        if self.mode is SourceMode.USER_AUTHORIZED and (
+            self.credential_class is not SourceCredentialClass.USER_OAUTH
+        ):
+            raise ValueError("User-authorized sources must declare user OAuth credentials.")
+        if self.mode is SourceMode.MANUAL and (
+            self.credential_class is not SourceCredentialClass.MANUAL
+        ):
+            raise ValueError("Manual sources must declare manual credentials/workflow.")
+        if self.cost_class is SourceCostClass.METERED and (
+            self.credential_class is not SourceCredentialClass.METERED_API_KEY
+        ):
+            raise ValueError("Metered sources must declare a metered API credential.")
+
+    @property
+    def zero_spend_eligible(self) -> bool:
+        """Whether current source policy requires no paid credential/service tier.
+
+        This is a planning hint, not a permanent pricing promise. Planned sources
+        must still pass source-policy review immediately before activation.
+        """
+
+        return (
+            self.cost_class in _ZERO_SPEND_COST_CLASSES
+            and self.credential_class in _ZERO_SPEND_CREDENTIAL_CLASSES
+        )
 
 
-# The catalog describes current logical sources plus reviewed integration targets.
-# Planned entries are architecture declarations only: they cannot execute until a
-# real adapter, source-policy review, fixtures and execution gate exist.
+# The catalog describes current logical sources plus integration targets.
+# PLANNED entries are architecture declarations only: they cannot execute until a
+# real adapter, current source-policy review, fixtures and execution gate exist.
 SOURCE_CATALOG: tuple[SourceCapability, ...] = (
     SourceCapability(
         name="local_normalization",
@@ -90,9 +132,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.ACTIVE,
         mode=SourceMode.LOCAL,
         cost_class=SourceCostClass.LOCAL,
-        terms_reviewed=True,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
         recursive_eligible=True,
-        zero_budget_eligible=True,
         priority=5,
         note="Deterministic local parsing only; no external identity claim.",
     ),
@@ -103,9 +145,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.ACTIVE,
         mode=SourceMode.LOCAL,
         cost_class=SourceCostClass.LOCAL,
-        terms_reviewed=True,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
         recursive_eligible=True,
-        zero_budget_eligible=True,
         priority=10,
         note="Numbering-plan/carrier/region metadata; not subscriber identity.",
     ),
@@ -116,9 +158,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.ACTIVE,
         mode=SourceMode.GOVERNED_PROVIDER,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        terms_reviewed=True,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
         recursive_eligible=True,
-        zero_budget_eligible=True,
         priority=20,
         note="Pinned reviewed site allowlist; account hits remain candidates only.",
     ),
@@ -138,9 +180,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.ACTIVE,
         mode=SourceMode.PUBLIC_API,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        terms_reviewed=True,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
         recursive_eligible=True,
-        zero_budget_eligible=True,
         priority=25,
         note="Public profile fields only; same-handle remains insufficient identity evidence.",
     ),
@@ -160,9 +202,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.ACTIVE,
         mode=SourceMode.PUBLIC_API,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        terms_reviewed=True,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
         recursive_eligible=True,
-        zero_budget_eligible=True,
         priority=30,
         note="Username and exact public-email lookup paths only.",
     ),
@@ -173,9 +215,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.ACTIVE,
         mode=SourceMode.PUBLIC_API,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        terms_reviewed=True,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
         recursive_eligible=True,
-        zero_budget_eligible=True,
         priority=35,
         note="Public profile fields only.",
     ),
@@ -186,9 +228,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.ACTIVE,
         mode=SourceMode.OPEN_STANDARD,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        terms_reviewed=True,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
         recursive_eligible=True,
-        zero_budget_eligible=True,
         priority=40,
         note="Public hostname infrastructure only; never a subject/device IP lead.",
     ),
@@ -201,10 +243,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.OPTIONAL,
         mode=SourceMode.LICENSED_SEARCH,
         cost_class=SourceCostClass.METERED,
-        terms_reviewed=True,
+        credential_class=SourceCredentialClass.METERED_API_KEY,
+        source_policy_reviewed=True,
         recursive_eligible=True,
-        zero_budget_eligible=False,
-        auth_required=True,
         priority=60,
         note="Exact-identifier public-web search; snippets do not become new leads.",
     ),
@@ -217,11 +258,14 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.PLANNED,
         mode=SourceMode.PUBLIC_API,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        terms_reviewed=False,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=False,
         recursive_eligible=False,
-        zero_budget_eligible=True,
         priority=70,
-        note="Adapter target: public profile lookup by reviewed handle semantics.",
+        note=(
+            "Adapter target: Bluesky public AppView profile lookup by reviewed handle/DID "
+            "semantics; no activation until a current source-policy review."
+        ),
     ),
     SourceCapability(
         name="gravatar_public_profile",
@@ -232,12 +276,14 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.PLANNED,
         mode=SourceMode.PUBLIC_API,
         cost_class=SourceCostClass.FREE_TIER,
-        terms_reviewed=False,
+        credential_class=SourceCredentialClass.FREE_API_KEY,
+        source_policy_reviewed=False,
         recursive_eligible=False,
-        zero_budget_eligible=True,
-        auth_required=False,
         priority=75,
-        note="Adapter target: SHA-256 email identifier to openly accessible profile data.",
+        note=(
+            "Adapter target: SHA-256 email identifier to public profile data; production "
+            "adapter should use a server-side API key."
+        ),
     ),
     SourceCapability(
         name="webfinger_activitypub",
@@ -246,11 +292,14 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.PLANNED,
         mode=SourceMode.OPEN_STANDARD,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        terms_reviewed=False,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=False,
         recursive_eligible=False,
-        zero_budget_eligible=True,
         priority=80,
-        note="Adapter target for recognized federated profile URLs; generic usernames are insufficient.",
+        note=(
+            "Adapter target for recognized federated profile URLs; generic usernames alone "
+            "are insufficient to choose the WebFinger host."
+        ),
     ),
     SourceCapability(
         name="rdap_domain_registry",
@@ -259,11 +308,14 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         status=SourceStatus.PLANNED,
         mode=SourceMode.OPEN_STANDARD,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        terms_reviewed=False,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=False,
         recursive_eligible=False,
-        zero_budget_eligible=True,
         priority=85,
-        note="Adapter target for registry/domain metadata; registry redaction remains authoritative.",
+        note=(
+            "Adapter target for registration metadata that the authoritative RDAP service "
+            "actually returns; privacy redaction remains authoritative."
+        ),
     ),
     SourceCapability(
         name="google_people_authorized",
@@ -273,11 +325,10 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
         status=SourceStatus.PLANNED,
         mode=SourceMode.USER_AUTHORIZED,
-        cost_class=SourceCostClass.FREE_TIER,
-        terms_reviewed=False,
+        cost_class=SourceCostClass.UNKNOWN,
+        credential_class=SourceCredentialClass.USER_OAUTH,
+        source_policy_reviewed=False,
         recursive_eligible=False,
-        zero_budget_eligible=True,
-        auth_required=True,
         priority=90,
         note="Future explicit user-authorized import; not public people search.",
     ),
@@ -294,10 +345,14 @@ def sources_for_lead(
     *,
     include_optional: bool = True,
     include_planned: bool = False,
-    zero_budget_only: bool = False,
+    zero_spend_only: bool = False,
     recursive_only: bool = False,
 ) -> tuple[SourceCapability, ...]:
-    """Return deterministic source capabilities that declare support for a lead kind."""
+    """Return deterministic source capabilities that declare support for a lead kind.
+
+    A catalog match is planning metadata only. It never bypasses adapter existence,
+    source policy, purpose/consent checks, credentials, budgets or execution gates.
+    """
 
     allowed_statuses = {SourceStatus.ACTIVE}
     if include_optional:
@@ -310,7 +365,7 @@ def sources_for_lead(
         for source in SOURCE_CATALOG
         if kind in source.accepts
         and source.status in allowed_statuses
-        and (not zero_budget_only or source.zero_budget_eligible)
+        and (not zero_spend_only or source.zero_spend_eligible)
         and (not recursive_only or source.recursive_eligible)
     ]
     return tuple(sorted(selected, key=lambda source: (source.priority, source.name)))
