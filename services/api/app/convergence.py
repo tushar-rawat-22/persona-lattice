@@ -79,6 +79,9 @@ def _pivot_candidates(report: QuickResearchReport) -> list[tuple[ResearchKind, s
         fields = (
             (ResearchKind.EMAIL, details.get("email"), PivotReason.PUBLIC_EMAIL),
             (ResearchKind.EMAIL, details.get("public_email"), PivotReason.PUBLIC_EMAIL),
+            (ResearchKind.USERNAME, details.get("username"), PivotReason.PUBLIC_USERNAME),
+            (ResearchKind.USERNAME, details.get("login"), PivotReason.PUBLIC_USERNAME),
+            (ResearchKind.USERNAME, details.get("handle"), PivotReason.PUBLIC_USERNAME),
             (ResearchKind.USERNAME, details.get("twitter_username"), PivotReason.PUBLIC_USERNAME),
             (ResearchKind.USERNAME, details.get("twitter"), PivotReason.PUBLIC_USERNAME),
             (ResearchKind.URL, details.get("blog"), PivotReason.PUBLIC_URL),
