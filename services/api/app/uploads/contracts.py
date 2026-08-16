@@ -44,7 +44,7 @@ class ArtifactPreview(BaseModel):
     extraction_method: str
     extracted_text: str
     extracted_chars: int
-    trust_boundary: Literal["untrusted_document_content"] = "untrusted_document_content"
+    trust_boundary: Literal["untrusted_uploaded_content"] = "untrusted_uploaded_content"
     storage_retained: Literal[False] = False
     candidates: list[ReviewCandidate] = Field(default_factory=list)
 
