@@ -56,15 +56,22 @@ def test_lead_extractor_blocks_highly_sensitive_fields_without_copying_values() 
         {
             "aadhaar_number": "1111-2222-3333",
             "password": "do-not-retain",
+            "ip": "203.0.113.99",
             "device_ip": "198.51.100.42",
             "public_email": "safe@example.test",
         }
     )
 
-    assert result.blocked_field_names == ("aadhaar_number", "device_ip", "password")
+    assert result.blocked_field_names == (
+        "aadhaar_number",
+        "device_ip",
+        "ip",
+        "password",
+    )
     serialized = repr(result)
     assert "1111-2222-3333" not in serialized
     assert "do-not-retain" not in serialized
+    assert "203.0.113.99" not in serialized
     assert "198.51.100.42" not in serialized
     assert any(candidate.value == "safe@example.test" for candidate in result.candidates)
 
