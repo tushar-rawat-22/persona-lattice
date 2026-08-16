@@ -15,6 +15,7 @@ from phonenumbers import carrier, geocoder, timezone
 
 from .evidence import IdentifierKind, normalize_identifier
 from .models import Purpose
+from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.contracts import ExecutionRequest
 from .providers.policy import authorize_execution
@@ -55,6 +56,7 @@ class QuickResearchReport:
 
 PublicLookup = Callable[[str], Awaitable[dict[str, object] | None]]
 PublicSearchLookup = Callable[[str], Awaitable[tuple[PublicSearchResult, ...]]]
+NetworkLookup = Callable[[str], Awaitable[tuple[str, ...]]]
 
 _SHERLOCK_BUDGET = RateBudget(limit=6, window_seconds=60.0)
 _GITHUB_BUDGET = RateBudget(limit=20, window_seconds=60.0)
@@ -144,24 +146,9 @@ def _github_observation(payload: dict[str, object]) -> QuickObservation | None:
         return None
 
     allowed_fields = (
-        "login",
-        "id",
-        "avatar_url",
-        "html_url",
-        "name",
-        "company",
-        "blog",
-        "location",
-        "email",
-        "hireable",
-        "bio",
-        "twitter_username",
-        "public_repos",
-        "public_gists",
-        "followers",
-        "following",
-        "created_at",
-        "updated_at",
+        "login", "id", "avatar_url", "html_url", "name", "company", "blog", "location",
+        "email", "hireable", "bio", "twitter_username", "public_repos", "public_gists",
+        "followers", "following", "created_at", "updated_at",
     )
     details = {field: payload.get(field) for field in allowed_fields}
     details.update(
@@ -379,7 +366,8 @@ async def _research_email(
 
     if len(observations) == 1:
         warnings.append(
-            "No approved external source established a public profile for this email; PersonaLattice does not infer an owner."
+            "No approved external source established a public profile for this email; "
+            "PersonaLattice does not infer an owner."
         )
 
     return QuickResearchReport(
@@ -390,24 +378,60 @@ async def _research_email(
     )
 
 
-def _research_url(normalized_value: str) -> QuickResearchReport:
+async def _research_url(
+    normalized_value: str,
+    *,
+    public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
+    network_lookup: NetworkLookup = resolve_public_host_ips,
+) -> QuickResearchReport:
     parts = urlsplit(normalized_value)
+    hostname = parts.hostname or ""
+    observations = [
+        QuickObservation(
+            source="local_normalization",
+            source_locator=normalized_value,
+            summary="Canonical public URL metadata extracted locally.",
+            details={
+                "scheme": parts.scheme,
+                "hostname": parts.hostname,
+                "path": parts.path,
+                "personal_identity_claim": False,
+            },
+        )
+    ]
+    warnings: list[str] = []
+
+    if hostname:
+        try:
+            public_ips = await network_lookup(hostname)
+        except OSError:
+            public_ips = ()
+            warnings.append("Public DNS infrastructure lookup was temporarily unavailable.")
+        if public_ips:
+            observations.append(
+                QuickObservation(
+                    source="public_dns_infrastructure",
+                    source_locator=f"dns://{hostname}",
+                    summary="Globally reachable addresses for the public hostname; website infrastructure only.",
+                    details={
+                        "hostname": hostname,
+                        "public_infrastructure_ips": list(public_ips),
+                        "personal_device_ip_claim": False,
+                        "physical_location_claim": False,
+                    },
+                )
+            )
+
+    search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
+    observations.extend(search_observations)
+    if search_warning:
+        warnings.append(search_warning)
+
     return QuickResearchReport(
         kind=ResearchKind.URL,
         normalized_value=normalized_value,
-        observations=(
-            QuickObservation(
-                source="local_normalization",
-                source_locator=normalized_value,
-                summary="Canonical public URL metadata extracted locally.",
-                details={
-                    "scheme": parts.scheme,
-                    "hostname": parts.hostname,
-                    "path": parts.path,
-                    "personal_identity_claim": False,
-                },
-            ),
-        ),
+        observations=tuple(observations),
+        warnings=tuple(warnings),
     )
 
 
@@ -423,6 +447,7 @@ async def run_quick_research(
     codeforces_lookup: PublicLookup = lookup_codeforces_handle,
     gitlab_email_lookup: PublicLookup = lookup_gitlab_public_email,
     public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
+    network_lookup: NetworkLookup = resolve_public_host_ips,
 ) -> QuickResearchReport:
     identifier_kind = IdentifierKind(kind.value)
     normalized = normalize_identifier(identifier_kind, value)
@@ -450,5 +475,9 @@ async def run_quick_research(
             public_search_lookup=public_search_lookup,
         )
     if kind is ResearchKind.URL:
-        return _research_url(normalized.normalized_value)
+        return await _research_url(
+            normalized.normalized_value,
+            public_search_lookup=public_search_lookup,
+            network_lookup=network_lookup,
+        )
     raise ValueError("Unsupported research kind.")
