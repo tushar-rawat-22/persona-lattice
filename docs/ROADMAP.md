@@ -90,20 +90,22 @@ the worker, and tests duplicate rejection inside the configured result budget.
 
 ## M5 — explainable evidence correlation engine
 
-**Status: next — Issue #11**
+**Status: in implementation/review — Issue #11**
 
-- deterministic candidate graph and factor records
-- versioned weights/thresholds and explicit contradiction/veto rules
+- deterministic candidate correlation over already-stored evidence only
+- dedicated correlation run/factor records, separate from factual claims
+- versioned factor weights/thresholds and explicit contradiction/veto rules
 - source-independence groups so mirrors/restatements cannot inflate evidence
-- stale-evidence handling as an explicit policy
-- same-handle reuse alone remains non-decisive
+- stale observations remain visible but contribute zero in the initial policy
+- same-handle reuse alone remains insufficient evidence
+- canonical input/output digests and replay-safe persistence
 - explainable triage outcomes rather than automatic identity claims
 - no external provider calls in the correlation engine
 - no AI/ML/biometric matching in the decision path
 
 The earlier phrase "calibrated confidence bands" is intentionally tightened.
 M5 must not label a heuristic score as an identity probability until a separate,
-reviewed labeled evaluation can actually demonstrate calibration. Initial M5
+reviewed labelled evaluation can actually demonstrate calibration. Initial M5
 output is an evidence-strength/triage result with an explicit uncalibrated
 status.
 

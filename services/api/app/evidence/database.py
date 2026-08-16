@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from collections.abc import Iterator
 from contextlib import contextmanager
+from importlib import import_module
 
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
@@ -38,6 +39,8 @@ def create_database_engine(url: str) -> Engine:
 
 
 def create_schema(engine: Engine) -> None:
+    # Correlation has its own ORM domain but shares the evidence metadata/transaction.
+    import_module("app.correlation.models")
     Base.metadata.create_all(engine)
 
 
