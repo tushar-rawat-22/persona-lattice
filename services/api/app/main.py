@@ -1,11 +1,19 @@
 # SPDX-License-Identifier: Apache-2.0
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 from starlette.datastructures import UploadFile
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .admin_auth import (
+    authenticate_admin,
+    require_admin,
+    revoke_admin_session,
+    set_admin_session_cookie,
+)
+from .authz import AuthenticatedPrincipal
 from .evidence import IdentifierKind, InvalidIdentifier, normalize_collection, normalize_identifier
 from .models import CaseIntake, IntakePreview, ProviderPlan, Purpose
 from .policy import enforce_purpose
@@ -28,15 +36,71 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
 
 
+class AdminLoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=200)
+    password: str = Field(min_length=1, max_length=1024)
+
+
+class AdminSessionResponse(BaseModel):
+    authenticated: bool
+    session_record_id: str
+    expires_at: str
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "personalattice-api"}
+
+
+@app.post("/v1/auth/login", response_model=AdminSessionResponse)
+def admin_login(
+    payload: AdminLoginRequest,
+    request: Request,
+    response: Response,
+) -> AdminSessionResponse:
+    source_key = request.client.host if request.client else "unknown"
+    login = authenticate_admin(
+        payload.username,
+        payload.password,
+        source_key=source_key,
+    )
+    if login is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin credentials.",
+            headers={"Cache-Control": "no-store"},
+        )
+
+    set_admin_session_cookie(response, login)
+    return AdminSessionResponse(
+        authenticated=True,
+        session_record_id=str(login.principal.session_record_id),
+        expires_at=login.principal.session_expires_at.isoformat(),
+    )
+
+
+@app.get("/v1/auth/session", response_model=AdminSessionResponse)
+def admin_session(
+    principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> AdminSessionResponse:
+    return AdminSessionResponse(
+        authenticated=True,
+        session_record_id=str(principal.session_record_id),
+        expires_at=principal.session_expires_at.isoformat(),
+    )
+
+
+@app.post("/v1/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
+def admin_logout(request: Request, response: Response) -> Response:
+    revoke_admin_session(request, response)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 def _normalize_scalar(kind: IdentifierKind, raw: str | None) -> tuple[str | None, list[str]]:
@@ -57,7 +121,10 @@ def _normalize_values(kind: IdentifierKind, values: list[str]) -> tuple[list[str
 
 
 @app.post("/v1/intake/preview", response_model=IntakePreview)
-def preview_intake(payload: CaseIntake) -> IntakePreview:
+def preview_intake(
+    payload: CaseIntake,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> IntakePreview:
     enforce_purpose(payload.purpose, payload.consent_acknowledged)
 
     warnings: list[str] = []
@@ -152,7 +219,10 @@ def _parse_purpose(value: object) -> Purpose:
 
 
 @app.post("/v1/files/preview", response_model=FileBatchPreview)
-async def preview_files(request: Request) -> FileBatchPreview:
+async def preview_files(
+    request: Request,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> FileBatchPreview:
     content_length = request.headers.get("content-length")
     if content_length:
         try:
