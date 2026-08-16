@@ -16,8 +16,10 @@ from .admin_auth import (
     revoke_admin_session,
     set_admin_session_cookie,
 )
+from .audit import AUDIT_STORE, AuditEvent
 from .authz import AuthenticatedPrincipal
 from .cases import CASE_STORE, StoredCase
+from .convergence import build_converged_payload, run_converged_research
 from .evidence import IdentifierKind, InvalidIdentifier, normalize_collection, normalize_identifier
 from .models import CaseIntake, IntakePreview, ProviderPlan, Purpose
 from .policy import enforce_purpose
@@ -40,7 +42,7 @@ from .uploads import (
 app = FastAPI(
     title="PersonaLattice API",
     version="0.0.1",
-    description="Evidence-first identity intelligence API bootstrap.",
+    description="Evidence-first private identity research API.",
 )
 
 app.add_middleware(
@@ -85,6 +87,10 @@ class QuickResearchResponse(BaseModel):
     warnings: list[str]
 
 
+class ConvergedResearchResponse(BaseModel):
+    report: dict[str, Any]
+
+
 class StoredCaseResponse(BaseModel):
     id: UUID
     created_at: str
@@ -92,6 +98,18 @@ class StoredCaseResponse(BaseModel):
     seed_kind: ResearchKind
     seed_value: str
     report: dict[str, Any]
+
+
+class MutationCountResponse(BaseModel):
+    count: int
+
+
+class AuditEventResponse(BaseModel):
+    id: UUID
+    created_at: str
+    event_type: str
+    case_id: UUID | None
+    details: dict[str, Any]
 
 
 def _stored_case_response(record: StoredCase) -> StoredCaseResponse:
@@ -102,6 +120,16 @@ def _stored_case_response(record: StoredCase) -> StoredCaseResponse:
         seed_kind=record.seed_kind,
         seed_value=record.seed_value,
         report=record.report,
+    )
+
+
+def _audit_response(event: AuditEvent) -> AuditEventResponse:
+    return AuditEventResponse(
+        id=event.id,
+        created_at=event.created_at.isoformat(),
+        event_type=event.event_type,
+        case_id=event.case_id,
+        details=event.details,
     )
 
 
@@ -130,6 +158,7 @@ def admin_login(
         )
 
     set_admin_session_cookie(response, login)
+    AUDIT_STORE.record("auth.login_success")
     return AdminSessionResponse(
         authenticated=True,
         session_record_id=str(login.principal.session_record_id),
@@ -158,6 +187,7 @@ def admin_logout(
     response: Response,
     _principal: AuthenticatedPrincipal = Depends(require_admin_write),
 ) -> Response:
+    AUDIT_STORE.record("auth.logout")
     revoke_admin_session(request, response)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
@@ -268,12 +298,44 @@ async def _execute_research(payload: QuickResearchRequest) -> QuickResearchRepor
         ) from exc
 
 
+async def _execute_converged(payload: QuickResearchRequest):
+    enforce_purpose(payload.purpose, payload.consent_acknowledged)
+    try:
+        return await run_converged_research(
+            kind=payload.kind,
+            value=payload.value,
+            purpose=payload.purpose,
+            consent_acknowledged=payload.consent_acknowledged,
+        )
+    except InvalidIdentifier as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except ProviderPolicyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Research provider policy blocked this request.",
+        ) from exc
+    except ProviderRateBudgetExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Local research rate budget is exhausted. Try again shortly.",
+        ) from exc
+    except ProviderExecutionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="A public-source provider failed to complete the request.",
+        ) from exc
+
+
 @app.post("/v1/research/quick", response_model=QuickResearchResponse)
 async def quick_research(
     payload: QuickResearchRequest,
     _principal: AuthenticatedPrincipal = Depends(require_admin_write),
 ) -> QuickResearchResponse:
     report = await _execute_research(payload)
+    AUDIT_STORE.record("research.quick", details={"kind": report.kind.value})
     return QuickResearchResponse(
         kind=report.kind,
         normalized_value=report.normalized_value,
@@ -290,6 +352,19 @@ async def quick_research(
     )
 
 
+@app.post("/v1/research/converge", response_model=ConvergedResearchResponse)
+async def converge_research(
+    payload: QuickResearchRequest,
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
+) -> ConvergedResearchResponse:
+    report = await _execute_converged(payload)
+    AUDIT_STORE.record(
+        "research.converged",
+        details={"kind": report.seed_kind.value, "node_count": len(report.nodes)},
+    )
+    return ConvergedResearchResponse(report=build_converged_payload(report))
+
+
 @app.post("/v1/cases/run", response_model=StoredCaseResponse)
 async def run_case(
     payload: QuickResearchRequest,
@@ -300,6 +375,31 @@ async def run_case(
         seed_kind=report.kind,
         seed_value=report.normalized_value,
         report=report,
+    )
+    AUDIT_STORE.record("case.create", case_id=record.id, details={"mode": "quick"})
+    return _stored_case_response(record)
+
+
+@app.post("/v1/cases/run-converged", response_model=StoredCaseResponse)
+async def run_converged_case(
+    payload: QuickResearchRequest,
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
+) -> StoredCaseResponse:
+    report = await _execute_converged(payload)
+    report_payload = {
+        "kind": report.seed_kind.value,
+        "normalized_value": report.seed_value,
+        "converged_report": build_converged_payload(report),
+    }
+    record = CASE_STORE.create_payload(
+        seed_kind=report.seed_kind,
+        seed_value=report.seed_value,
+        report_payload=report_payload,
+    )
+    AUDIT_STORE.record(
+        "case.create",
+        case_id=record.id,
+        details={"mode": "converged", "node_count": len(report.nodes)},
     )
     return _stored_case_response(record)
 
@@ -313,7 +413,26 @@ def list_cases(
         records = CASE_STORE.list_recent(limit=limit)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+    AUDIT_STORE.record("case.list", details={"result_count": len(records)})
     return [_stored_case_response(record) for record in records]
+
+
+@app.post("/v1/cases/purge-expired", response_model=MutationCountResponse)
+def purge_expired_cases(
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
+) -> MutationCountResponse:
+    count = CASE_STORE.purge_expired()
+    AUDIT_STORE.record("case.purge_expired", details={"count": count})
+    return MutationCountResponse(count=count)
+
+
+@app.delete("/v1/cases", response_model=MutationCountResponse)
+def delete_all_cases(
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
+) -> MutationCountResponse:
+    count = CASE_STORE.delete_all()
+    AUDIT_STORE.record("case.delete_all", details={"count": count})
+    return MutationCountResponse(count=count)
 
 
 @app.get("/v1/cases/{case_id}", response_model=StoredCaseResponse)
@@ -324,6 +443,7 @@ def get_case(
     record = CASE_STORE.get(case_id)
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found.")
+    AUDIT_STORE.record("case.read", case_id=record.id)
     return _stored_case_response(record)
 
 
@@ -332,8 +452,21 @@ def delete_case(
     case_id: UUID,
     _principal: AuthenticatedPrincipal = Depends(require_admin_write),
 ) -> Response:
-    CASE_STORE.delete(case_id)
+    deleted = CASE_STORE.delete(case_id)
+    AUDIT_STORE.record("case.delete", case_id=case_id, details={"deleted": deleted})
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.get("/v1/audit", response_model=list[AuditEventResponse])
+def list_audit_events(
+    limit: int = 100,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> list[AuditEventResponse]:
+    try:
+        events = AUDIT_STORE.list_recent(limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
+    return [_audit_response(event) for event in events]
 
 
 def _parse_consent(value: object) -> bool:
@@ -404,12 +537,14 @@ async def preview_files(
                 )
 
             try:
-                return await process_upload_batch(raw_files)
+                result = await process_upload_batch(raw_files)
             except UploadBatchError as exc:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail=exc.public_message,
                 ) from exc
+            AUDIT_STORE.record("file.preview", details={"file_count": len(raw_files)})
+            return result
     except StarletteHTTPException as exc:
         if exc.status_code == status.HTTP_400_BAD_REQUEST:
             raise HTTPException(
