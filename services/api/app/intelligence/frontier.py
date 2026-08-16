@@ -148,10 +148,13 @@ class LeadFrontier:
         if candidate.disposition is not LeadDisposition.AUTO_PIVOT:
             raise ValueError(f"Unknown lead disposition: {candidate.disposition!r}")
 
-        if parent_depth >= self.limits.max_depth:
-            return FrontierEvaluation(candidate, FrontierDecision.DEPTH_LIMIT)
+        # Duplicate knowledge is more specific than a budget stop. Check it first
+        # so a known lead discovered at the depth boundary is reported as duplicate
+        # instead of making the run look artificially truncated.
         if candidate.key in self._attempted or candidate.key in self._visited:
             return FrontierEvaluation(candidate, FrontierDecision.DUPLICATE)
+        if parent_depth >= self.limits.max_depth:
+            return FrontierEvaluation(candidate, FrontierDecision.DEPTH_LIMIT)
         if self.node_count + self.reserved_count >= self.limits.max_nodes:
             return FrontierEvaluation(candidate, FrontierDecision.NODE_LIMIT)
         if self.edge_count + self.reserved_count >= self.limits.max_edges:
