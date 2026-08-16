@@ -35,6 +35,7 @@ unredacted screenshots in this file.
 - Uploaded document instructions are data, not execution authority.
 - Document-derived candidates require human review before external research.
 - Same-handle reuse across sites is not identity proof.
+- A heuristic correlation score is not a calibrated identity probability.
 - Regulated employment/housing/credit/insurance decisions remain blocked.
 
 ## Architecture baseline
@@ -42,6 +43,7 @@ unredacted screenshots in this file.
 - Next.js web dashboard under `apps/web`
 - FastAPI service under `services/api`
 - SQLAlchemy evidence core under `services/api/app/evidence`
+- deterministic correlation core under `services/api/app/correlation`
 - bounded file intake/extraction under `services/api/app/uploads`
 - governed provider framework under `services/api/app/providers`
 - public docs live under `docs`
@@ -201,6 +203,8 @@ M4 verification:
 - final PR CI run: `31905880652`, API 3.11 PASS, API 3.13 PASS (`64 passed`), web PASS
 - merge commit: `7cf43b4769da3e144e799163b4719e5cef0bf2b8`
 - post-merge CI run: `31906017367`, API 3.11 PASS, API 3.13 PASS, web PASS
+- closure commit: `09ae730cd771460bb8b798ecafdc879bbd3d4d30`
+- closure CI run: `31906147923`, API 3.11 PASS, API 3.13 PASS, web PASS
 
 M4 review caught three real assumptions before closure. First, the initial
 worker shape accepted caller-supplied site metadata, which was too close to an
@@ -212,31 +216,81 @@ reproducible installation. Third, one test expected the duplicate-result guard
 while returning two rows against a one-site budget; the budget guard correctly
 fired first, so the fixture was corrected without changing production behavior.
 
-Through M4, the only real external network-capable adapter is the bounded
-Sherlock development adapter, and it is not exposed through a public provider
-execution endpoint. No real case data, provider credential, live AI, production
-authentication or report export has been introduced.
+### M5 — explainable evidence correlation engine: COMPLETE
+
+Published through PR `#12`:
+
+- correlation runs and factor records are persisted separately from factual
+  Claims and source Observations;
+- policy version `m5-evidence-strength-v1` uses a small explicit factor
+  vocabulary and fixed reviewed weights/thresholds;
+- same-username evidence is deliberately weak and cannot be promoted to exact
+  confirmed identifier overlap;
+- every non-username factor needs a supporting source Observation explicitly
+  bound to the account candidate;
+- exact confirmed identifier overlap also requires candidate-bound source
+  evidence recording the relevant non-username identifier IDs;
+- source-independence groups are derived from stored provider/source-host
+  provenance rather than accepted from callers;
+- only the strongest positive factor in one derived independence group counts;
+- stale source observations stay visible but contribute zero;
+- a hard contradiction is a veto and produces `contradicted` rather than being
+  averaged away;
+- `strong_candidate` requires both the score threshold and evidence from at
+  least two positive derived independence groups plus a strong factor type;
+- canonical sorted input/output JSON and SHA-256 digests make replays
+  deterministic, and identical requests reuse their persisted run;
+- every result remains `calibration_status=uncalibrated` and
+  `is_identity_claim=false`;
+- M5 performs no external provider/network call and no AI, ML, embedding or
+  biometric decision.
+
+M5 verification:
+
+- initial implementation: `ceaa22df568b616af774aa238a404ae92f0ec42e`
+- evidence-source hardening: `1e9b7afb55d7778f5100dd1d08425ef45b60ed21`
+- PR: `#12`
+- final PR CI run: `31936091573`, API 3.11 PASS, API 3.13 PASS (`72 passed`), web PASS
+- merge commit: `6555ae8ecee3aff8ef4a2ce191d055b17902d63f`
+- post-merge CI run: `31936152926`, API 3.11 PASS, API 3.13 PASS, web PASS
+
+M5 review rejected an important first-draft assumption. Callers initially could
+supply `independence_group`; that meant the same underlying evidence could be
+renamed into separate groups. The final engine derives grouping from stored
+provenance. The same review also rejected counting a subject-level identifier as
+candidate evidence unless a source Observation explicitly binds that identifier
+to the candidate account.
+
+A derived hostname/provider group is a conservative independence proxy, not
+proof that two differently hosted sources are genuinely independent. That
+limitation remains explicit. The evidence score is therefore triage, not an
+identity probability.
+
+Through M5, no real case data, provider credential, live AI, production
+authentication, biometric matching or real-case report export has been
+introduced. Sherlock is still the only real network-capable development adapter
+and remains behind the governed internal execution boundary.
 
 ## Next work
 
-**M5 — explainable evidence correlation engine (Issue `#11`).**
+**M6 — local evidence intelligence dashboard (Issue `#13`).**
 
-M5 is deliberately deterministic before it is probabilistic:
+The sequencing is intentionally tightened before UI work:
 
-- correlate existing identifiers/observations only; no new provider calls;
-- keep correlation results separate from factual Claims;
-- use versioned factor weights, contradiction/veto rules and source-independence
-  groups;
-- make same-handle-only evidence non-decisive;
-- expose every contributing observation and reason;
-- test stale evidence, duplicated mirrors, collisions and contradictions with
-  synthetic/adversarial fixtures;
-- do not describe a heuristic score as a calibrated identity probability.
+- build a typed single-case read model from existing stored evidence and M5
+  correlation results;
+- use synthetic fixtures and local/development workflows only;
+- visually distinguish source Observations, factual Claims and derived M5 triage;
+- surface provenance, stale evidence and contradiction/veto states directly;
+- never display M5 evidence score as a calibrated probability;
+- do not add an unauthenticated production route that lists or reads stored
+  personal cases;
+- defer real-case export and multi-user case access until M7 authentication,
+  authorization, retention and audit controls exist.
 
-The older roadmap wording around "calibrated confidence bands" was too strong.
-Calibration requires a lawful, reviewed labeled benchmark and empirical
-validation; until that exists, M5 will expose evidence-strength/triage outcomes
-with an explicit uncalibrated status.
+This corrects the old roadmap sequence: a rich identity dashboard should not
+become a production personal-data surface before the access-control boundary is
+built.
 
 ## Bootstrap recovery record
 

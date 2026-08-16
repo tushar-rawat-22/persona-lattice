@@ -90,33 +90,60 @@ the worker, and tests duplicate rejection inside the configured result budget.
 
 ## M5 — explainable evidence correlation engine
 
-**Status: in implementation/review — Issue #11**
+**Status: complete**
 
 - deterministic candidate correlation over already-stored evidence only
 - dedicated correlation run/factor records, separate from factual claims
 - versioned factor weights/thresholds and explicit contradiction/veto rules
-- source-independence groups so mirrors/restatements cannot inflate evidence
+- source-independence groups derived from stored provider/source-host provenance
+  rather than supplied by callers
+- every non-username factor requires supporting source evidence explicitly bound
+  to the candidate observation
+- exact confirmed identifier overlap requires candidate-bound source evidence
+  that records the confirmed non-username identifier IDs
 - stale observations remain visible but contribute zero in the initial policy
 - same-handle reuse alone remains insufficient evidence
 - canonical input/output digests and replay-safe persistence
 - explainable triage outcomes rather than automatic identity claims
+- every result remains `uncalibrated` and `is_identity_claim=false`
 - no external provider calls in the correlation engine
 - no AI/ML/biometric matching in the decision path
 
-The earlier phrase "calibrated confidence bands" is intentionally tightened.
-M5 must not label a heuristic score as an identity probability until a separate,
-reviewed labelled evaluation can actually demonstrate calibration. Initial M5
-output is an evidence-strength/triage result with an explicit uncalibrated
-status.
+Review caught a material weakness before merge: the initial draft allowed the
+caller to name an evidence independence group. That would have allowed the same
+source to be relabelled into multiple groups and inflate evidence. The final
+engine derives the group from stored provenance. The same review tightened
+strong-factor binding so a subject-level identifier cannot be counted as proof
+about a candidate account without a candidate-bound source observation.
 
-## M6 — dashboard intelligence
+Host/provider provenance is still only a conservative independence proxy, not
+proof that differently hosted sources are genuinely independent. The policy
+keeps that limitation explicit rather than representing the rule score as a
+probability.
 
-- case timeline
-- evidence graph
-- missing-data/gap panel
-- professional vs personal evidence views
-- source freshness and confidence
-- exportable report
+The earlier phrase "calibrated confidence bands" was intentionally rejected.
+A heuristic evidence score is not an identity probability without an appropriate
+labelled evaluation and demonstrated calibration.
+
+## M6 — local evidence intelligence dashboard
+
+**Status: next — Issue #13**
+
+- typed read model for one synthetic/local case
+- case timeline, evidence/source panel and account-candidate panel
+- explainable M5 factor and contradiction/veto views
+- visually distinct source Observation, factual Claim and correlation-triage
+  semantics
+- source provenance and freshness shown with relevant evidence
+- deterministic empty/loading/error/no-evidence fixture states
+- accessible/responsive web behavior
+- no unauthenticated production route that lists or reads stored personal cases
+- no real-case report export before the M7 access/retention policy exists
+
+M6 deliberately remains local/development and synthetic-fixture driven. The old
+roadmap sequence would otherwise put a rich personal-data dashboard ahead of
+production authentication and authorization, which is the wrong security
+boundary.
 
 ## M7 — privacy and production hardening
 
@@ -127,6 +154,7 @@ status.
 - provider contract review
 - privacy review by jurisdiction
 - security testing
+- production case access and real-case export only after those controls exist
 
 ## Deferred
 

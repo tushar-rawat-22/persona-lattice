@@ -3,7 +3,7 @@
 PersonaLattice is an evidence-first identity intelligence project. It is being
 built to take a messy set of identifiers — names, phones, emails, usernames,
 links, organizations and uploaded documents — and turn them into a
-source-linked, confidence-scored research report.
+source-linked, explainable research report.
 
 The project is deliberately **not** a "type a phone number and magically know
 everything" tool. Identity data is incomplete, duplicated and often wrong.
@@ -38,7 +38,7 @@ untrusted source material, not as instructions to the application.
 
 ## Current status
 
-**M0 through M4 are complete.**
+**M0 through M5 are complete.**
 
 The repository now has:
 
@@ -65,18 +65,24 @@ The repository now has:
   existence checks over a fixed eight-site allowlist;
 - explicit account states where a positive same-handle hit remains an account
   candidate and never becomes an identity claim automatically;
+- a deterministic M5 correlation engine with persisted run/factor records,
+  candidate-bound supporting evidence and derived source-independence groups;
+- explicit stale-evidence exclusion, contradiction vetoes and replay digests;
+- M5 results that remain `uncalibrated` research-triage output with
+  `is_identity_claim=false` rather than presenting a rule score as a match
+  probability;
 - GitHub CI for the API on Python 3.11 and 3.13 plus web lint, TypeScript and
   production build checks.
 
-The next milestone is **M5 — explainable evidence correlation** (Issue `#11`).
-The initial correlation engine will be deterministic and auditable. It will not
-present a heuristic evidence score as an identity probability without a
-separate calibration study.
+The next milestone is **M6 — local evidence intelligence dashboard** (Issue
+`#13`). M6 stays development/local and synthetic-fixture driven. Production
+personal-case access remains gated behind the M7 authentication, authorization,
+retention, audit and abuse-control work.
 
-Sherlock is currently an internal development adapter; there is no public
-unauthenticated provider-execution endpoint. Live AI model calls, production
-authentication, private-account access and report export are also not
-implemented.
+Sherlock remains an internal development adapter; there is no public
+unauthenticated provider-execution endpoint. Live AI identity decisions,
+production authentication, private-account access and real-case report export
+are also not implemented.
 
 ## Intended modes
 
@@ -94,6 +100,7 @@ legal/compliance workstream rather than a UI toggle.
 ```text
 apps/web/                  Next.js dashboard
 services/api/              FastAPI API + policy/evidence/upload/provider core
+services/api/app/correlation/ deterministic M5 evidence correlation
 docs/                      architecture, roadmap and decisions
 docs/CONTINUITY.md         chat-to-chat project handover
 THIRD_PARTY.md             license/integration boundary
