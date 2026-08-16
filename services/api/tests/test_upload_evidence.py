@@ -40,5 +40,5 @@ def test_extraction_observation_keeps_artifact_provenance() -> None:
         assert observation.source_kind == ObservationSourceKind.UPLOAD
         assert observation.source_locator == f"artifact://{artifact_id}"
         assert observation.payload["sha256"] == "a" * 64
-        assert observation.payload["trust_boundary"] == "untrusted_document_content"
+        assert observation.payload["trust_boundary"] == "untrusted_uploaded_content"
         assert observation.payload["extracted_text"] == "Synthetic document content."

@@ -4,12 +4,13 @@ from pathlib import Path
 
 
 MAX_FILES = 5
-MAX_FILE_BYTES = 2 * 1024 * 1024
-MAX_TOTAL_BYTES = 6 * 1024 * 1024
+MAX_FILE_BYTES = 5 * 1024 * 1024
+MAX_TOTAL_BYTES = 12 * 1024 * 1024
 MAX_REQUEST_BYTES = MAX_TOTAL_BYTES + 1024 * 1024
 MAX_EXTRACTED_CHARS = 200_000
 MAX_PDF_PAGES = 40
 MAX_PDF_CONTENT_STREAM_BYTES = 8 * 1024 * 1024
+MAX_IMAGE_PIXELS = 25_000_000
 EXTRACTION_TIMEOUT_SECONDS = 6.0
 EXTRACTION_MEMORY_BYTES = 512 * 1024 * 1024
 EXTRACTION_CPU_SECONDS = 4
@@ -17,6 +18,9 @@ EXTRACTION_CPU_SECONDS = 4
 ALLOWED_MEDIA_TYPES = {
     ".txt": {"text/plain", "application/octet-stream"},
     ".pdf": {"application/pdf", "application/octet-stream"},
+    ".jpg": {"image/jpeg", "application/octet-stream"},
+    ".jpeg": {"image/jpeg", "application/octet-stream"},
+    ".png": {"image/png", "application/octet-stream"},
 }
 DANGEROUS_INNER_SUFFIXES = {
     ".asp",
@@ -79,7 +83,7 @@ def validate_filename(filename: str | None) -> str:
     if extension not in ALLOWED_MEDIA_TYPES:
         raise UploadPolicyError(
             "unsupported_extension",
-            "Only PDF and UTF-8 text files are accepted in this milestone.",
+            "Only PDF, UTF-8 text, JPEG and PNG evidence files are accepted.",
         )
 
     inner_suffixes = {suffix.lower() for suffix in path.suffixes[:-1]}
@@ -98,7 +102,7 @@ def validate_claimed_media_type(extension: str, content_type: str | None) -> Non
     if normalized not in ALLOWED_MEDIA_TYPES[extension]:
         raise UploadPolicyError(
             "media_type_mismatch",
-            "The supplied file type does not match the allowed document type.",
+            "The supplied file type does not match the allowed evidence type.",
         )
 
 
@@ -157,5 +161,21 @@ def validate_content(extension: str, data: bytes) -> ValidatedContent:
             detected_media_type="text/plain",
             text_encoding="utf-8",
         )
+
+    if extension in {".jpg", ".jpeg"}:
+        if len(data) < 4 or not data.startswith(b"\xff\xd8\xff"):
+            raise UploadPolicyError(
+                "signature_mismatch",
+                "The file content does not have a valid JPEG signature.",
+            )
+        return ValidatedContent(extension=extension, detected_media_type="image/jpeg")
+
+    if extension == ".png":
+        if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise UploadPolicyError(
+                "signature_mismatch",
+                "The file content does not have a valid PNG signature.",
+            )
+        return ValidatedContent(extension=extension, detected_media_type="image/png")
 
     raise UploadPolicyError("unsupported_extension", "The file type is not supported.")
