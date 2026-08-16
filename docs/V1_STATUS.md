@@ -105,10 +105,13 @@ persistent personal-data store after case deletion.
 
 `render.yaml` defines:
 
-- `personalattice-api` as the FastAPI/Docker service with a persistent case disk;
+- `personalattice-api` as a Render private service (`pserv`) with a persistent
+  case disk and no public internet endpoint;
+- the private API listens on port `10001` because Render reserves port `10000`
+  for private-network communication;
 - `personalattice-web` as the public Next.js service;
-- same-origin browser requests under `/api` proxy to the API using Render's
-  service `hostport` reference;
+- same-origin browser requests under `/api` proxy to the private API using
+  Render's service `hostport` reference;
 - admin username and Argon2 password hash as dashboard-provided secrets;
 - optional `BRAVE_SEARCH_API_KEY` as a dashboard-provided secret.
 
@@ -140,8 +143,8 @@ V1 code can be merged when all of these are true:
 6. real-case endpoints remain admin protected;
 7. convergence and M5 synthetic acceptance tests pass;
 8. retention/delete/audit tests pass;
-9. deployment Blueprint contains both web and API services without hardcoded
-   credentials.
+9. deployment Blueprint contains both web and private API services without
+   hardcoded credentials.
 
 Actual Internet deployment still requires the repository owner to connect the
 Render account and enter deployment secrets. That account-bound action is not a
