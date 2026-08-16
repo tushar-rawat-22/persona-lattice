@@ -15,7 +15,6 @@ export default function Home() {
         </div>
         <div className="publicNav">
           <Link className="textLink" href="/dashboard">Synthetic evidence demo</Link>
-          <Link className="textLink subtle" href="/admin">Operator access</Link>
         </div>
       </header>
 
