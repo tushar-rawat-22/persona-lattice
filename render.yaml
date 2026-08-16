@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: personalattice-api
+    runtime: docker
+    dockerfilePath: ./services/api/Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: PERSONALATTICE_ADMIN_USERNAME
+        sync: false
+      - key: PERSONALATTICE_ADMIN_PASSWORD_HASH
+        sync: false
+      - key: PERSONALATTICE_SESSION_SECONDS
+        value: "28800"
+      - key: PERSONALATTICE_COOKIE_SECURE
+        value: "true"
+      - key: PERSONALATTICE_SESSION_COOKIE
+        value: "__Host-personalattice_session"
+      - key: PERSONALATTICE_DB_PATH
+        value: "/var/data/personalattice/personalattice.db"
+      - key: PERSONALATTICE_CASE_RETENTION_DAYS
+        value: "30"
+    disk:
+      name: personalattice-data
+      mountPath: /var/data/personalattice
+      sizeGB: 1
