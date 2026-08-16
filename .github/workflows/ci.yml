@@ -30,7 +30,7 @@ jobs:
         with:
           node-version-file: ".nvmrc"
       - working-directory: apps/web
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - working-directory: apps/web
         run: npm run lint
       - working-directory: apps/web
