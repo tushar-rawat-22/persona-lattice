@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
+from typing import Any
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
@@ -17,7 +18,13 @@ from .authz import AuthenticatedPrincipal
 from .evidence import IdentifierKind, InvalidIdentifier, normalize_collection, normalize_identifier
 from .models import CaseIntake, IntakePreview, ProviderPlan, Purpose
 from .policy import enforce_purpose
+from .providers.errors import (
+    ProviderExecutionError,
+    ProviderPolicyError,
+    ProviderRateBudgetExceeded,
+)
 from .providers.registry import PROVIDERS
+from .research import ResearchKind, run_quick_research
 from .uploads import (
     FileBatchPreview,
     MAX_FILE_BYTES,
@@ -51,6 +58,27 @@ class AdminSessionResponse(BaseModel):
     authenticated: bool
     session_record_id: str
     expires_at: str
+
+
+class QuickResearchRequest(BaseModel):
+    kind: ResearchKind
+    value: str = Field(min_length=1, max_length=2048)
+    purpose: Purpose = Purpose.PUBLIC_SOURCE_RESEARCH
+    consent_acknowledged: bool = False
+
+
+class QuickObservationResponse(BaseModel):
+    source: str
+    source_locator: str
+    summary: str
+    details: dict[str, Any]
+
+
+class QuickResearchResponse(BaseModel):
+    kind: ResearchKind
+    normalized_value: str
+    observations: list[QuickObservationResponse]
+    warnings: list[str]
 
 
 @app.get("/health")
@@ -185,6 +213,56 @@ def preview_intake(
         normalized=normalized,
         provider_plan=plans,
         warnings=warnings,
+    )
+
+
+@app.post("/v1/research/quick", response_model=QuickResearchResponse)
+async def quick_research(
+    payload: QuickResearchRequest,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> QuickResearchResponse:
+    enforce_purpose(payload.purpose, payload.consent_acknowledged)
+    try:
+        report = await run_quick_research(
+            kind=payload.kind,
+            value=payload.value,
+            purpose=payload.purpose,
+            consent_acknowledged=payload.consent_acknowledged,
+        )
+    except InvalidIdentifier as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except ProviderPolicyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Research provider policy blocked this request.",
+        ) from exc
+    except ProviderRateBudgetExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Local research rate budget is exhausted. Try again shortly.",
+        ) from exc
+    except ProviderExecutionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="A public-source provider failed to complete the request.",
+        ) from exc
+
+    return QuickResearchResponse(
+        kind=report.kind,
+        normalized_value=report.normalized_value,
+        observations=[
+            QuickObservationResponse(
+                source=item.source,
+                source_locator=item.source_locator,
+                summary=item.summary,
+                details=item.details,
+            )
+            for item in report.observations
+        ],
+        warnings=list(report.warnings),
     )
 
 
