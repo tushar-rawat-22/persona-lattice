@@ -6,6 +6,28 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 type ResearchKind = "username" | "phone" | "email" | "url";
 
+type StructuredReport = {
+  executive_summary: {
+    observation_count: number;
+    source_count: number;
+    sources: string[];
+    connected_identifier_count: number;
+    public_account_candidate_count: number;
+    identity_probability: null;
+    identity_claim: false;
+    interpretation: string;
+  };
+  connected_identifiers: Array<{
+    kind: string;
+    value: string;
+    source: string;
+    source_locator: string;
+    status: string;
+  }>;
+  coverage_gaps: string[];
+  provenance_rule: string;
+};
+
 type QuickReport = {
   kind: ResearchKind;
   normalized_value: string;
@@ -16,6 +38,7 @@ type QuickReport = {
     details: Record<string, unknown>;
   }>;
   warnings: string[];
+  structured_report?: StructuredReport;
 };
 
 type StoredCase = {
@@ -136,6 +159,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
   }
 
   const report = activeCase?.report ?? null;
+  const structured = report?.structured_report;
 
   return (
     <section className="panel">
@@ -174,6 +198,43 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
         <div className="quickResult">
           <div className="caseId">CASE {activeCase.id.slice(0, 8)} · {report.kind.toUpperCase()} · {report.normalized_value}</div>
           <p className="muted">Stored until {new Date(activeCase.expires_at).toLocaleString()} unless deleted earlier.</p>
+
+          {structured && (
+            <div className="reportSummary">
+              <div className="reportMetricGrid">
+                <div><strong>{structured.executive_summary.observation_count}</strong><span>observations</span></div>
+                <div><strong>{structured.executive_summary.source_count}</strong><span>sources</span></div>
+                <div><strong>{structured.executive_summary.connected_identifier_count}</strong><span>connected fields</span></div>
+                <div><strong>{structured.executive_summary.public_account_candidate_count}</strong><span>account candidates</span></div>
+              </div>
+              <p className="reportBoundary">{structured.executive_summary.interpretation}</p>
+
+              {structured.connected_identifiers.length > 0 && (
+                <div className="reportSection">
+                  <h3>Connected public fields</h3>
+                  <div className="connectedGrid">
+                    {structured.connected_identifiers.map((item) => (
+                      <div className="connectedField" key={`${item.kind}-${item.value}-${item.source}`}>
+                        <span>{item.kind}</span>
+                        <strong>{item.value}</strong>
+                        <small>{item.source} · {item.source_locator}</small>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {structured.coverage_gaps.length > 0 && (
+                <div className="reportSection">
+                  <h3>Not established</h3>
+                  <ul className="coverageList">
+                    {structured.coverage_gaps.map((gap) => <li key={gap}>{gap}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           {report.warnings.map((warning) => <p className="muted" key={warning}>{warning}</p>)}
           <div className="providerList">
             {report.observations.map((observation, index) => (
@@ -189,9 +250,6 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
               </article>
             ))}
           </div>
-          <p className="muted">
-            Public-account matches and metadata are evidence candidates, not automatic identity claims.
-          </p>
         </div>
       )}
 
