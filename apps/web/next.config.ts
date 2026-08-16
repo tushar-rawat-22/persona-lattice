@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
-const apiOrigin = process.env.PERSONALATTICE_API_ORIGIN ?? "http://127.0.0.1:8000";
+const apiOrigin =
+  process.env.PERSONALATTICE_API_ORIGIN ??
+  (process.env.PERSONALATTICE_API_HOSTPORT
+    ? `http://${process.env.PERSONALATTICE_API_HOSTPORT}`
+    : "http://127.0.0.1:8000");
 
 const securityHeaders = [
   {
