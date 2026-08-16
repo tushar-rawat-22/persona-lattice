@@ -14,6 +14,7 @@ export default function Home() {
           </p>
         </div>
         <div className="publicNav">
+          <Link className="adminLoginButton" href="/admin">Admin login</Link>
           <Link className="textLink" href="/dashboard">Synthetic evidence demo</Link>
         </div>
       </header>
@@ -39,6 +40,7 @@ export default function Home() {
           <div className="previewLock">
             <strong>Admin credentials required</strong>
             <span>Real intake and stored case data are never sent to an unauthenticated browser.</span>
+            <Link className="adminLoginButton" href="/admin">Open admin login</Link>
           </div>
         </article>
 
