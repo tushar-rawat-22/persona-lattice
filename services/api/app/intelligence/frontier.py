@@ -69,12 +69,21 @@ class FrontierEvaluation:
     decision: FrontierDecision
 
 
+@dataclass(frozen=True, slots=True)
+class _Reservation:
+    kind: LeadKind
+    parent_key: str
+
+
 class LeadFrontier:
     """Deterministic run-local admission state for recursive leads.
 
     `consider()` reserves an automatic candidate before a provider call so the
-    same clue cannot cause duplicate network attempts in one run. `admit()` is
-    called only after a successful research result has produced a graph node.
+    same clue cannot cause duplicate network attempts in one run and concurrent
+    work cannot oversubscribe graph budgets. `admit()` converts the reservation
+    into a real graph node/edge after successful research. `fail()` releases the
+    capacity after a failed provider call while keeping the clue in the attempted
+    set so one run does not retry it through a different path.
     """
 
     def __init__(
@@ -91,6 +100,9 @@ class LeadFrontier:
         self._kind_counts[seed_kind] = 1
         self._child_counts: dict[str, int] = defaultdict(int)
         self._edge_count = 0
+        self._reservations: dict[str, _Reservation] = {}
+        self._reserved_kind_counts: dict[LeadKind, int] = defaultdict(int)
+        self._reserved_child_counts: dict[str, int] = defaultdict(int)
 
     @property
     def node_count(self) -> int:
@@ -99,6 +111,24 @@ class LeadFrontier:
     @property
     def edge_count(self) -> int:
         return self._edge_count
+
+    @property
+    def reserved_count(self) -> int:
+        return len(self._reservations)
+
+    def _release_reservation(self, candidate_key: str) -> _Reservation | None:
+        reservation = self._reservations.pop(candidate_key, None)
+        if reservation is None:
+            return None
+
+        self._reserved_kind_counts[reservation.kind] -= 1
+        if self._reserved_kind_counts[reservation.kind] <= 0:
+            self._reserved_kind_counts.pop(reservation.kind, None)
+
+        self._reserved_child_counts[reservation.parent_key] -= 1
+        if self._reserved_child_counts[reservation.parent_key] <= 0:
+            self._reserved_child_counts.pop(reservation.parent_key, None)
+        return reservation
 
     def consider(
         self,
@@ -120,19 +150,36 @@ class LeadFrontier:
             return FrontierEvaluation(candidate, FrontierDecision.DEPTH_LIMIT)
         if candidate.key in self._attempted or candidate.key in self._visited:
             return FrontierEvaluation(candidate, FrontierDecision.DUPLICATE)
-        if self.node_count >= self.limits.max_nodes:
+        if self.node_count + self.reserved_count >= self.limits.max_nodes:
             return FrontierEvaluation(candidate, FrontierDecision.NODE_LIMIT)
-        if self.edge_count >= self.limits.max_edges:
+        if self.edge_count + self.reserved_count >= self.limits.max_edges:
             return FrontierEvaluation(candidate, FrontierDecision.EDGE_LIMIT)
-        if self._child_counts[parent_key] >= self.limits.max_auto_children_per_parent:
+        if (
+            self._child_counts[parent_key] + self._reserved_child_counts[parent_key]
+            >= self.limits.max_auto_children_per_parent
+        ):
             return FrontierEvaluation(candidate, FrontierDecision.PARENT_FANOUT_LIMIT)
 
         kind_limit = self.limits.kind_limit(candidate.kind)
-        if kind_limit is not None and self._kind_counts[candidate.kind] >= kind_limit:
+        if kind_limit is not None and (
+            self._kind_counts[candidate.kind] + self._reserved_kind_counts[candidate.kind]
+            >= kind_limit
+        ):
             return FrontierEvaluation(candidate, FrontierDecision.KIND_LIMIT)
 
         self._attempted.add(candidate.key)
+        self._reservations[candidate.key] = _Reservation(
+            kind=candidate.kind,
+            parent_key=parent_key,
+        )
+        self._reserved_kind_counts[candidate.kind] += 1
+        self._reserved_child_counts[parent_key] += 1
         return FrontierEvaluation(candidate, FrontierDecision.ENQUEUE)
+
+    def fail(self, candidate: LeadCandidate) -> None:
+        """Release budget reserved for a failed lookup without making it retryable."""
+
+        self._release_reservation(candidate.key)
 
     def admit(
         self,
@@ -142,6 +189,12 @@ class LeadFrontier:
         parent_key: str,
     ) -> FrontierDecision:
         """Admit a successful result node while suppressing normalized duplicates."""
+
+        reservation = self._release_reservation(candidate.key)
+        if reservation is None:
+            raise ValueError("Lead must be reserved with consider() before admit().")
+        if reservation.parent_key != parent_key:
+            raise ValueError("Lead reservation parent does not match admit() parent.")
 
         if actual_key in self._visited:
             return FrontierDecision.DUPLICATE
