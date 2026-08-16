@@ -65,12 +65,12 @@ def _text(value: object) -> str | None:
 
 
 def _pivot_candidates(report: QuickResearchReport) -> list[tuple[ResearchKind, str, PivotReason, str, str]]:
-    """Return only allowlisted public fields that can safely become new research seeds.
+    """Return only reviewed attributable public fields that may become research seeds.
 
-    A discovered value is a pivot, not an identity claim. We deliberately do not
-    pivot location/company fields, inferred subscriber metadata, private fields,
-    or network identifiers. The source locator is carried into the edge so every
-    expansion remains attributable.
+    The aliases below match the allowlisted public fields returned by the existing
+    GitHub, GitLab and Codeforces integrations. Location, company, subscriber
+    metadata, Discord/LinkedIn identifiers and network identifiers remain display
+    evidence only; they are not autonomous pivots.
     """
 
     candidates: list[tuple[ResearchKind, str, PivotReason, str, str]] = []
@@ -78,8 +78,11 @@ def _pivot_candidates(report: QuickResearchReport) -> list[tuple[ResearchKind, s
         details = observation.details
         fields = (
             (ResearchKind.EMAIL, details.get("email"), PivotReason.PUBLIC_EMAIL),
+            (ResearchKind.EMAIL, details.get("public_email"), PivotReason.PUBLIC_EMAIL),
             (ResearchKind.USERNAME, details.get("twitter_username"), PivotReason.PUBLIC_USERNAME),
+            (ResearchKind.USERNAME, details.get("twitter"), PivotReason.PUBLIC_USERNAME),
             (ResearchKind.URL, details.get("blog"), PivotReason.PUBLIC_URL),
+            (ResearchKind.URL, details.get("website_url"), PivotReason.PUBLIC_URL),
         )
         for kind, raw, reason in fields:
             value = _text(raw)
