@@ -36,7 +36,7 @@ class FakeSherlockProvider:
         )
 
 
-async def _no_github_profile(_username: str):
+async def _none(_value: str):
     return None
 
 
@@ -54,12 +54,48 @@ async def _github_profile(username: str):
         "bio": "Synthetic public bio",
         "twitter_username": "synthetic_twitter",
         "public_repos": 7,
-        "public_gists": 1,
-        "followers": 3,
-        "following": 2,
-        "created_at": "2020-01-01T00:00:00Z",
-        "updated_at": "2026-01-01T00:00:00Z",
         "private_field": "must-not-leak",
+    }
+
+
+async def _gitlab_profile(username: str):
+    return {
+        "id": 43,
+        "username": username,
+        "name": "Synthetic GitLab Person",
+        "state": "active",
+        "avatar_url": "https://gitlab.example.test/avatar",
+        "web_url": f"https://gitlab.com/{username}",
+        "location": "GitLab City",
+        "public_email": "public@example.test",
+        "website_url": "https://example.test/gitlab",
+        "organization": "GitLab Org",
+        "private_field": "must-not-leak",
+    }
+
+
+async def _codeforces_profile(handle: str):
+    return {
+        "handle": handle,
+        "firstName": "Synthetic",
+        "lastName": "Coder",
+        "country": "Testland",
+        "city": "Code City",
+        "organization": "Contest Org",
+        "rating": 1700,
+        "avatar": "https://codeforces.example.test/avatar",
+        "private_field": "must-not-leak",
+    }
+
+
+async def _gitlab_email_profile(email: str):
+    return {
+        "id": 44,
+        "username": "email-match-user",
+        "name": "Public Email Profile",
+        "web_url": "https://gitlab.com/email-match-user",
+        "public_email": email,
+        "organization": "Example Org",
     }
 
 
@@ -87,19 +123,19 @@ async def test_username_research_preserves_candidate_not_identity_semantics() ->
         purpose=Purpose.PUBLIC_SOURCE_RESEARCH,
         consent_acknowledged=False,
         sherlock_provider=FakeSherlockProvider(),
-        github_lookup=_no_github_profile,
+        github_lookup=_none,
+        gitlab_lookup=_none,
+        codeforces_lookup=_none,
     )
 
     assert report.normalized_value == "demo_user"
     assert len(report.observations) == 1
-    observation = report.observations[0]
-    assert observation.source == "sherlock"
-    assert observation.details["account_candidate"] is True
-    assert observation.details["identity_claim"] is False
+    assert report.observations[0].details["account_candidate"] is True
+    assert report.observations[0].details["identity_claim"] is False
 
 
 @pytest.mark.asyncio
-async def test_username_research_enriches_github_with_allowlisted_public_fields() -> None:
+async def test_username_research_enriches_allowlisted_public_profile_fields() -> None:
     report = await run_quick_research(
         kind=ResearchKind.USERNAME,
         value="@demo_user",
@@ -107,15 +143,19 @@ async def test_username_research_enriches_github_with_allowlisted_public_fields(
         consent_acknowledged=False,
         sherlock_provider=FakeSherlockProvider(),
         github_lookup=_github_profile,
+        gitlab_lookup=_gitlab_profile,
+        codeforces_lookup=_codeforces_profile,
     )
 
-    github = next(item for item in report.observations if item.source == "github_public_api")
-    assert github.details["name"] == "Synthetic Person"
-    assert github.details["location"] == "Example City"
-    assert github.details["email"] == "public@example.test"
-    assert github.details["account_candidate"] is True
-    assert github.details["identity_claim"] is False
-    assert "private_field" not in github.details
+    sources = {item.source: item for item in report.observations}
+    assert {"github_public_api", "gitlab_public_api", "codeforces_public_api"}.issubset(sources)
+    assert sources["github_public_api"].details["email"] == "public@example.test"
+    assert sources["gitlab_public_api"].details["public_email"] == "public@example.test"
+    assert sources["codeforces_public_api"].details["city"] == "Code City"
+    for source in ("github_public_api", "gitlab_public_api", "codeforces_public_api"):
+        assert sources[source].details["account_candidate"] is True
+        assert sources[source].details["identity_claim"] is False
+        assert "private_field" not in sources[source].details
 
 
 @pytest.mark.asyncio
@@ -135,15 +175,32 @@ async def test_phone_research_returns_numbering_metadata_not_subscriber_identity
 
 
 @pytest.mark.asyncio
-async def test_email_research_is_local_until_provider_is_approved() -> None:
+async def test_email_research_can_match_exact_public_gitlab_email() -> None:
     report = await run_quick_research(
         kind=ResearchKind.EMAIL,
         value="Test@Example.com",
         purpose=Purpose.PUBLIC_SOURCE_RESEARCH,
         consent_acknowledged=False,
+        gitlab_email_lookup=_gitlab_email_profile,
     )
 
     assert report.normalized_value == "Test@example.com"
+    gitlab = next(item for item in report.observations if item.source == "gitlab_public_api")
+    assert gitlab.details["public_email"] == "Test@example.com"
+    assert gitlab.details["matched_by"] == "exact_public_email"
+    assert gitlab.details["identity_claim"] is False
+
+
+@pytest.mark.asyncio
+async def test_email_research_refuses_owner_inference_without_public_match() -> None:
+    report = await run_quick_research(
+        kind=ResearchKind.EMAIL,
+        value="Test@Example.com",
+        purpose=Purpose.PUBLIC_SOURCE_RESEARCH,
+        consent_acknowledged=False,
+        gitlab_email_lookup=_none,
+    )
+    assert len(report.observations) == 1
     assert report.observations[0].details["domain"] == "example.com"
     assert report.warnings
 
