@@ -8,8 +8,6 @@ from .types import (
     DecisionReason,
     ResourceRef,
     ResourceType,
-    Role,
-    TenantMembership,
 )
 
 __all__ = [
@@ -21,8 +19,6 @@ __all__ = [
     "DecisionReason",
     "ResourceRef",
     "ResourceType",
-    "Role",
-    "TenantMembership",
     "authorize",
     "require_authorized",
 ]
