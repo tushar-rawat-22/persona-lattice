@@ -38,13 +38,19 @@ class GraphFixtureLead:
             raise ValueError("Only automatic fixture leads can model a provider failure.")
         if self.provider_fails and self.actual_key is not None:
             raise ValueError("A failed fixture provider cannot also declare an admitted result key.")
-        if self.actual_key is not None and not self.actual_key.strip():
-            raise ValueError("Fixture actual_key must be non-empty when provided.")
+        if self.actual_key is not None and (
+            not self.actual_key or self.actual_key.strip() != self.actual_key
+        ):
+            raise ValueError("Fixture actual_key must be non-empty and trimmed when provided.")
         if (
             self.actual_key is not None
             and self.candidate.disposition is not LeadDisposition.AUTO_PIVOT
         ):
             raise ValueError("Only automatic fixture leads may declare an actual result key.")
+        if self.actual_key is not None and not self.actual_key.startswith(
+            f"{self.candidate.kind.value}:"
+        ):
+            raise ValueError("Fixture actual_key kind must match the candidate lead kind.")
 
     @property
     def result_key(self) -> str:
