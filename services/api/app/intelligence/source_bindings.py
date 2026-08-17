@@ -20,13 +20,7 @@ class SourceExecutionBackend(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class SourceBinding:
-    """Bridge from V2 capability metadata to existing runtime code.
-
-    A binding is not permission to execute. It states which existing execution
-    boundary currently owns a catalogued source and which declared lead kinds are
-    actually wired today. A source capability may be broader than its current
-    runtime binding; that gap is surfaced as deferred coverage, never assumed.
-    """
+    """Bridge from V2 capability metadata to existing runtime code."""
 
     source_name: str
     backend: SourceExecutionBackend
@@ -41,31 +35,18 @@ class SourceBinding:
             raise ValueError("Source binding must declare at least one accepted lead kind.")
         if self.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER and not self.provider_name:
             raise ValueError("M3 governed-adapter bindings require provider_name.")
-        if (
-            self.backend is not SourceExecutionBackend.M3_GOVERNED_ADAPTER
-            and self.provider_name is not None
-        ):
+        if self.backend is not SourceExecutionBackend.M3_GOVERNED_ADAPTER and self.provider_name is not None:
             raise ValueError("Only M3 governed-adapter bindings may declare provider_name.")
 
 
-# These are migration bridges for private-V1 network behavior that still lives in
-# research.py or its helpers. New V2 sources are forbidden from joining this set.
-# They must use the governed provider boundary before activation.
 _LEGACY_RESEARCH_ALLOWLIST = frozenset(
     {
-        "gitlab_public_api",
         "codeforces_public_api",
         "public_dns_infrastructure",
         "brave_public_web_index",
     }
 )
-
-_LOCAL_DETERMINISTIC_ALLOWLIST = frozenset(
-    {
-        "local_normalization",
-        "libphonenumber_metadata",
-    }
-)
+_LOCAL_DETERMINISTIC_ALLOWLIST = frozenset({"local_normalization", "libphonenumber_metadata"})
 
 
 SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
@@ -95,11 +76,10 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
     ),
     SourceBinding(
         source_name="gitlab_public_api",
-        backend=SourceExecutionBackend.LEGACY_RESEARCH,
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="gitlab_public_api",
         accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL}),
-        migration_note=(
-            "Migrate username and exact-public-email paths into the governed provider runtime."
-        ),
+        migration_note="Username and exact-public-email lookups execute through ProviderRuntime.",
     ),
     SourceBinding(
         source_name="codeforces_public_api",
@@ -110,9 +90,6 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
     SourceBinding(
         source_name="public_dns_infrastructure",
         backend=SourceExecutionBackend.LEGACY_RESEARCH,
-        # The source capability can conceptually accept a bare domain, but the
-        # current private-V1 runner only wires DNS from a URL seed. Do not claim
-        # current DOMAIN execution until ResearchKind/runtime support exists.
         accepts=frozenset({LeadKind.URL}),
         migration_note=(
             "Public DNS performs bounded network I/O and must be brought behind the same runtime "
@@ -122,9 +99,7 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
     SourceBinding(
         source_name="brave_public_web_index",
         backend=SourceExecutionBackend.LEGACY_RESEARCH,
-        accepts=frozenset(
-            {LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.PHONE, LeadKind.URL}
-        ),
+        accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.PHONE, LeadKind.URL}),
         migration_note=(
             "Keep optional metered search behind one governed runtime before adding more search sources."
         ),
@@ -144,13 +119,9 @@ class SourceBindingError(RuntimeError):
 def _validate_binding(binding: SourceBinding) -> None:
     capability = SOURCE_BY_NAME.get(binding.source_name)
     if capability is None:
-        raise SourceBindingError(
-            f"Binding {binding.source_name!r} has no source capability declaration."
-        )
+        raise SourceBindingError(f"Binding {binding.source_name!r} has no source capability declaration.")
     if capability.status not in {SourceStatus.ACTIVE, SourceStatus.OPTIONAL}:
-        raise SourceBindingError(
-            f"Binding {binding.source_name!r} points at a non-current source status."
-        )
+        raise SourceBindingError(f"Binding {binding.source_name!r} points at a non-current source status.")
     if not capability.source_policy_reviewed or not capability.recursive_eligible:
         raise SourceBindingError(
             f"Binding {binding.source_name!r} is not source-policy reviewed and recursive-eligible."
@@ -192,13 +163,9 @@ def _validate_binding(binding: SourceBinding) -> None:
             f"M3 provider {binding.provider_name!r} has contact risk and cannot be a silent recursive binding."
         )
     if not descriptor.allowed_purposes:
-        raise SourceBindingError(
-            f"M3 provider {binding.provider_name!r} has no allowed purposes."
-        )
+        raise SourceBindingError(f"M3 provider {binding.provider_name!r} has no allowed purposes.")
     try:
-        descriptor_kinds = frozenset(
-            LeadKind(kind) for kind in descriptor.supported_identifier_kinds
-        )
+        descriptor_kinds = frozenset(LeadKind(kind) for kind in descriptor.supported_identifier_kinds)
     except ValueError as exc:
         raise SourceBindingError(
             f"M3 provider {binding.provider_name!r} declares an unknown lead kind."
@@ -211,10 +178,8 @@ def _validate_binding(binding: SourceBinding) -> None:
 
 def validate_source_bindings() -> None:
     """Fail closed if catalog, migration bindings and M3 provider policy drift."""
-
     for binding in SOURCE_BINDINGS:
         _validate_binding(binding)
-
     required_current_sources = {
         source.name
         for source in SOURCE_BY_NAME.values()
@@ -232,13 +197,8 @@ def validate_source_bindings() -> None:
         )
 
 
-def source_binding_for(
-    source_name: str,
-    *,
-    kind: LeadKind | None = None,
-) -> SourceBinding:
+def source_binding_for(source_name: str, *, kind: LeadKind | None = None) -> SourceBinding:
     """Return a validated current binding; never upgrades planned/deferred sources."""
-
     validate_source_bindings()
     binding = SOURCE_BINDING_BY_NAME.get(source_name)
     if binding is None:
@@ -250,6 +210,4 @@ def source_binding_for(
     return binding
 
 
-# Import-time validation turns accidental catalog/provider/binding drift into a
-# deterministic startup/test failure rather than a surprise during research.
 validate_source_bindings()
