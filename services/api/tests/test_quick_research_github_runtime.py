@@ -26,7 +26,9 @@ async def _no_public_search(_value: str):
 
 
 @pytest.mark.asyncio
-async def test_production_github_enrichment_path_runs_through_provider_runtime(monkeypatch) -> None:
+async def test_production_github_enrichment_path_runs_through_shared_provider_runtime(
+    monkeypatch,
+) -> None:
     class FakeGitHubProvider:
         descriptor = PROVIDER_BY_NAME["github_public_api"]
 
@@ -52,12 +54,9 @@ async def test_production_github_enrichment_path_runs_through_provider_runtime(m
             )
 
     github_provider = FakeGitHubProvider()
-    monkeypatch.setattr(research_module, "_DEFAULT_GITHUB_PROVIDER", github_provider)
-    monkeypatch.setattr(
-        research_module,
-        "_GITHUB_RUNTIME",
-        ProviderRuntime(adapters=[github_provider]),
-    )
+    runtime = ProviderRuntime(adapters=[github_provider])
+    monkeypatch.setattr(research_module, "DEFAULT_GITHUB_PROVIDER", github_provider)
+    monkeypatch.setattr(research_module, "DEFAULT_PROVIDER_RUNTIME", runtime)
 
     report = await run_quick_research(
         kind=ResearchKind.USERNAME,
