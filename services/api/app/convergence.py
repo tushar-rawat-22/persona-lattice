@@ -8,9 +8,9 @@ from enum import StrEnum
 
 from .intelligence import (
     FrontierDecision,
-    FrontierLimits,
     LeadFrontier,
     LeadKind,
+    compatibility_frontier_limits,
     extract_observation_leads,
 )
 from .intelligence.contracts import LeadCandidate, canonicalize_lead
@@ -192,21 +192,6 @@ def _lead_decision_payload(record: LeadTraversalRecord) -> dict[str, object]:
     }
 
 
-def _compatibility_frontier_limits(*, max_depth: int, max_nodes: int) -> FrontierLimits:
-    """Use the new scheduler without silently tightening private-V1 behavior yet."""
-
-    return FrontierLimits(
-        max_depth=max_depth,
-        max_nodes=max_nodes,
-        max_edges=max(0, max_nodes - 1),
-        max_auto_children_per_parent=max_nodes,
-        max_username_nodes=max_nodes,
-        max_email_nodes=max_nodes,
-        max_phone_nodes=max_nodes,
-        max_url_nodes=max_nodes,
-    )
-
-
 def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object]:
     source_names = sorted(
         {
@@ -309,7 +294,7 @@ async def run_converged_research(
     frontier = LeadFrontier(
         seed_key=seed_node.key,
         seed_kind=LeadKind(kind.value),
-        limits=_compatibility_frontier_limits(max_depth=max_depth, max_nodes=max_nodes),
+        limits=compatibility_frontier_limits(max_depth=max_depth, max_nodes=max_nodes),
     )
     nodes: list[ResearchNode] = [seed_node]
     edges: list[ResearchEdge] = []

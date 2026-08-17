@@ -9,11 +9,26 @@ from .contracts import (
     LeadReason,
 )
 from .extractor import extract_observation_leads
-from .frontier import FrontierDecision, FrontierEvaluation, FrontierLimits, LeadFrontier
+from .frontier import (
+    FrontierDecision,
+    FrontierEvaluation,
+    FrontierLimits,
+    LeadFrontier,
+    compatibility_frontier_limits,
+)
 from .graph_evaluation import (
     GraphEvaluationCounters,
     PivotRelevance,
     build_graph_evaluation_counters,
+)
+from .graph_limit_evaluation import (
+    GraphFixtureLead,
+    GraphLimitComparison,
+    GraphLimitDelta,
+    GraphLimitScenario,
+    GraphLimitScenarioResult,
+    compare_graph_limit_fixture,
+    evaluate_graph_limit_fixture,
 )
 from .source_bindings import (
     SOURCE_BINDING_BY_NAME,
@@ -43,6 +58,11 @@ __all__ = [
     "FrontierEvaluation",
     "FrontierLimits",
     "GraphEvaluationCounters",
+    "GraphFixtureLead",
+    "GraphLimitComparison",
+    "GraphLimitDelta",
+    "GraphLimitScenario",
+    "GraphLimitScenarioResult",
     "LeadCandidate",
     "LeadDisposition",
     "LeadExtractionResult",
@@ -69,6 +89,9 @@ __all__ = [
     "build_graph_evaluation_counters",
     "build_source_evaluation_counters",
     "build_source_plan",
+    "compare_graph_limit_fixture",
+    "compatibility_frontier_limits",
+    "evaluate_graph_limit_fixture",
     "extract_observation_leads",
     "source_binding_for",
     "sources_for_lead",
