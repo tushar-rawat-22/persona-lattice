@@ -14,6 +14,7 @@ from .intelligence import (
     extract_observation_leads,
 )
 from .intelligence.contracts import LeadCandidate, canonicalize_lead
+from .intelligence.source_reporting import build_source_run_report
 from .models import Purpose
 from .research import QuickResearchReport, ResearchKind, run_quick_research
 
@@ -139,6 +140,18 @@ def _pivot_reason(candidate: LeadCandidate) -> PivotReason:
         ) from exc
 
 
+def _node_source_run_report(report: QuickResearchReport) -> dict[str, object]:
+    """Project typed source state when present without breaking legacy runners.
+
+    QuickResearchReport source-state population is being wired source-by-source.
+    Custom/test runners created before that contract may not expose `source_runs`;
+    those nodes receive an explicit empty projection rather than inferred states.
+    """
+
+    source_runs = getattr(report, "source_runs", ())
+    return build_source_run_report(source_runs)
+
+
 def _node_payload(node: ResearchNode) -> dict[str, object]:
     return {
         "key": node.key,
@@ -148,6 +161,7 @@ def _node_payload(node: ResearchNode) -> dict[str, object]:
         "parent_key": node.parent_key,
         "pivot_reason": node.pivot_reason.value,
         "warnings": list(node.report.warnings),
+        "source_runs": _node_source_run_report(node.report),
         "observations": [
             {
                 "source": observation.source,
