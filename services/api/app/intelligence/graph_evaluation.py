@@ -128,19 +128,34 @@ def build_graph_evaluation_counters(
             f"invalid={invalid_label_values!r}."
         )
 
+    node_count = len(report.nodes)
+    edge_count = len(report.edges)
+    admitted_pivot_count = decision_counts[FrontierDecision.ADMITTED]
+    added_node_count = node_count - 1
+    if node_count < 1:
+        raise ValueError("Graph evaluation requires exactly one seed-rooted graph, not an empty graph.")
+    if any(node.depth < 0 for node in report.nodes):
+        raise ValueError("Graph evaluation cannot measure a graph with negative node depth.")
+    if edge_count != added_node_count:
+        raise ValueError(
+            "Converged graph invariant failed: edge count must equal non-seed node count."
+        )
+    if admitted_pivot_count != added_node_count:
+        raise ValueError(
+            "Converged graph invariant failed: admitted pivots must equal non-seed node count."
+        )
+
     wrong_pivot_count = sum(label is PivotRelevance.WRONG for label in labels.values())
     relevant_pivot_count = sum(label is PivotRelevance.RELEVANT for label in labels.values())
-    admitted_pivot_count = decision_counts[FrontierDecision.ADMITTED]
     automatic_terminal_decision_count = sum(
         decision_counts[decision] for decision in _AUTOMATIC_TERMINAL
     )
 
-    node_count = len(report.nodes)
     return GraphEvaluationCounters(
         node_count=node_count,
-        added_node_count=max(0, node_count - 1),
-        edge_count=len(report.edges),
-        max_observed_depth=max((node.depth for node in report.nodes), default=0),
+        added_node_count=added_node_count,
+        edge_count=edge_count,
+        max_observed_depth=max(node.depth for node in report.nodes),
         lead_decision_count=len(report.lead_decisions),
         automatic_terminal_decision_count=automatic_terminal_decision_count,
         admitted_pivot_count=admitted_pivot_count,
