@@ -113,7 +113,9 @@ Important distinction: `not_found` proves execution completed; optional-not-
 configured and local-budget outcomes prove that execution did not start. The
 contract reports `execution_attempted`, not network transport, because local
 deterministic sources can execute without network I/O. Only `executed` may retain
-positive observation counts/source locators. ADR 0021 records the decision.
+a positive observation count. Exact source locators remain canonical Observation/
+provenance fields and are not duplicated into source-state records. ADR 0021
+records the decision.
 
 The contract is intentionally additive in this block. Existing retained report
 payloads are not rewritten yet.
