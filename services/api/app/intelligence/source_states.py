@@ -92,7 +92,7 @@ class SourceRunRecord:
             )
 
     @property
-    def network_attempted(self) -> bool:
+    def execution_attempted(self) -> bool:
         """Whether the state proves that source execution reached an attempt."""
 
         if self.state in {SourceRunState.EXECUTED, SourceRunState.NOT_FOUND}:
