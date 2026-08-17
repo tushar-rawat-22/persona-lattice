@@ -29,6 +29,7 @@ from .source_catalog import (
     SourceStatus,
     sources_for_lead,
 )
+from .source_evaluation import build_source_evaluation_counters
 from .source_planner import SourcePlan, build_source_plan
 from .source_states import SourceRunReason, SourceRunRecord, SourceRunState
 
@@ -58,6 +59,7 @@ __all__ = [
     "SourceRunRecord",
     "SourceRunState",
     "SourceStatus",
+    "build_source_evaluation_counters",
     "build_source_plan",
     "extract_observation_leads",
     "source_binding_for",
