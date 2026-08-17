@@ -12,14 +12,14 @@ Do not put API keys, real research identifiers, retained-case data, password has
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #50: `fc038e7aefded2b13a4252d07181aae65330c74a`
-- PR #50 exact tested head: `ab22dcb11cd6891938314160055e2d88acdde679`
-- PR #50 CI run: `32071968812`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #52: `9b4fab9f86b4e9bf5e12689cb91fbcde09a3a269`
+- PR #52 exact tested head: `ef1ee81b47234e887fcc26a2c3057649c03d906b`
+- PR #52 CI run: `32076607311`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #50 closes the runtime-side execution-phase ambiguity needed for honest source-run reporting. `ProviderValidationError` remains phase-ambiguous. New `ProviderResultValidationError` is used only after provider output has returned and then failed the result contract. The shared `source_provider_exception_record()` mapper converts only provable exception classes into source-run records.
+PR #52 removes quick research's competing governed-provider exception classifier. Governed provider failures now use `source_provider_exception_record()` for phase-proven source-run semantics. Injected compatibility callables remain an explicit exception because their invocation is itself a known attempt boundary.
 
-During review the first documentation commit accidentally reused ADR number 0030, which already belongs to PR #48. The duplicate file was removed and this block now owns ADR 0031. Do not reuse an ADR number even when filenames differ.
+ADR 0032 records this decision. The next architecture gate is the already-existing optional Brave exact-match migration; no new provider is authorized yet.
 
 ## Permanent evidence semantics
 
@@ -81,7 +81,9 @@ Provider/runtime sequence completed:
 - PR #29: process-wide shared runtime;
 - PR #30: GitLab governed runtime;
 - PR #31: Codeforces governed runtime;
-- PR #32: public DNS governed runtime.
+- PR #32: public DNS governed runtime;
+- PR #50: phase-proven runtime validation boundary plus shared provider-exception mapper; ADR 0031;
+- PR #52: quick research adopts the shared mapper; ADR 0032.
 
 Source-state/report/evaluation sequence completed:
 
@@ -94,12 +96,11 @@ Source-state/report/evaluation sequence completed:
 - PR #42: complete deterministic source state/reason fixture matrix; ADR 0027;
 - PR #44: deterministic graph-growth/duplicate counters plus label-gated wrong-pivot measurement; ADR 0028;
 - PR #46: deterministic labelled graph-limit comparison through the real `LeadFrontier`; ADR 0029;
-- PR #48: provider-policy/missing-secret/malformed-result source outcome vocabulary and privacy-safe evaluation counters; ADR 0030;
-- PR #50: phase-proven runtime validation boundary plus shared provider-exception mapper; ADR 0031.
+- PR #48: provider-policy/missing-secret/malformed-result source outcome vocabulary and privacy-safe evaluation counters; ADR 0030.
 
 Current governed production sources: Sherlock, GitHub, GitLab, Codeforces and public DNS. The only remaining legacy network binding is optional metered Brave exact-match search. No new third-party source is authorized during architecture closure.
 
-## Source-run semantics after PR #50
+## Source-run semantics after PR #52
 
 The retained source-run projection is intentionally privacy-minimal. It carries logical source name, lead kind, state/reason, observation count and execution/terminal flags only. Identifier values, source locators, provider payloads, secrets and exception text remain in their existing canonical owners.
 
@@ -116,11 +117,13 @@ Typed distinctions include:
 - `unavailable / malformed_result`: provider output was returned but failed a proven post-attempt result check;
 - queued/review/display/blocked policy states remain available for scheduler/report integration.
 
-`ProviderResultValidationError` now proves the post-attempt malformed-result phase for invalid returned result contracts, non-serializable returned payloads and blank returned source locators. `ProviderResponseTooLarge` is also post-attempt and remains its existing type.
+`ProviderResultValidationError` proves the post-attempt malformed-result phase for invalid returned result contracts, non-serializable returned payloads and blank returned source locators. `ProviderResponseTooLarge` is also post-attempt and remains its existing type.
 
-Critical rule: generic `ProviderValidationError` still maps to no source-run record. It can be raised before provider contact for request/provider mismatches and must not be guessed into `malformed_result`. `ProviderPolicyError` and the current missing-server-secret `ProviderAuthError` path are pre-attempt. Local rate-budget rejection is also pre-attempt.
+Critical rule: generic `ProviderValidationError` maps to no source-run record. It can be raised before provider contact for request/provider mismatches and must not be guessed into `malformed_result`. `ProviderPolicyError`, missing-server-secret `ProviderAuthError`, and local rate-budget rejection are pre-attempt.
 
-`source_provider_exception_record()` is now the single phase-proven provider-exception mapper. Quick research still has a local exception mapper for compatibility and must be switched to the shared mapper in the next block without breaking injected test/provider seams.
+`source_provider_exception_record()` is the single governed provider-exception mapper. Quick research now delegates to it. Injected compatibility lookups still run outside `ProviderRuntime`; an otherwise-unclassified exception from an invoked injected callable may be recorded as generic `execution_failure` because invocation proves the attempt. Typed policy/configuration/local-budget outcomes keep their normal shared semantics.
+
+Warnings are operator-facing context only. They are not parsed to derive source state. Exception text is not copied into retained source-run records.
 
 Evaluation counters separate malformed attempted failures, local/policy/configuration non-attempts and remote attempted failures. The public evaluation projection deliberately uses `missing_secret_config_count` rather than a key containing the forbidden privacy token `credential`.
 
@@ -147,11 +150,10 @@ PR #46 adds a network-free limit-comparison harness through the real `LeadFronti
 
 ## Immediate next gate
 
-1. Replace quick research's local provider-exception mapping with `source_provider_exception_record()` so policy blocks, missing server-side secrets and proven malformed results reach retained source-run reports without inference. Keep the separate injected-test compatibility path explicit.
-2. Migrate the existing optional Brave path behind `ProviderRuntime` only if no-key zero-spend operation remains intact and no source coverage is expanded.
-3. Remove the final legacy network allowance after that migration.
-4. Finish document-candidate-to-reviewed-lead plumbing and operator source-state/evaluation exposure.
-5. Run final architecture consistency evaluation before activating new third-party sources.
+1. Migrate the existing optional Brave exact-match path behind `ProviderRuntime` without changing query scope or source coverage. No-key operation must remain an explicit non-attempt and the baseline must remain zero-spend.
+2. Remove the final `legacy_research` network allowance after Brave is governed.
+3. Finish document-candidate-to-reviewed-lead plumbing and operator source-state/evaluation exposure.
+4. Run final architecture consistency evaluation before activating new third-party sources.
 
 Production recursion remains depth 2 / 12 nodes. Do not raise it from the single regression fixture; representative synthetic/consented labelled evaluation and provider cost/yield implications are still required.
 
