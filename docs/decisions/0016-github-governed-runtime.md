@@ -5,10 +5,11 @@ Status: accepted for V2-D migration
 ## Context
 
 After Sherlock moved onto `ProviderRuntime`, GitHub remained a direct HTTP branch
-inside `research.py`. The direct path already had conservative controls (public
-endpoint only, 4-second timeout, 64 KiB response ceiling and a local 20-per-minute
-budget), but keeping it there would preserve the architectural split that V2-D is
-trying to remove.
+inside `research.py`. The direct path already bounded the public endpoint, timeout
+and response size, but it carried a local 20-per-minute budget that did not match
+GitHub's unauthenticated primary REST limit of 60 requests per hour. Keeping that
+budget while moving the source would have preserved both the architectural split
+and an upstream-rate assumption that was too aggressive.
 
 GitHub's official REST API exposes a public `GET /users/{username}` resource. The
 public representation may be requested without authentication, returns 404 when
@@ -19,6 +20,10 @@ URL, name/company/location/email when the user has made those fields public.
 
 Introduce `GitHubPublicProfileProvider` and register it as a reviewed development
 provider backed by the shared M3 `ProviderRuntime`.
+
+The provider descriptor uses a local budget of **50 requests per 3600 seconds**.
+That leaves headroom below GitHub's documented unauthenticated primary limit
+instead of trying to consume the entire upstream allowance.
 
 The adapter:
 
@@ -70,6 +75,7 @@ Positive:
 - GitHub response validation happens before profile data becomes a QuickObservation;
 - private/account-management response fields cannot leak through generic payload
   copying;
+- the local request budget is aligned with anonymous upstream semantics;
 - the migration pattern is now proven for an ordinary public REST API, not only a
   subprocess-backed provider.
 
@@ -80,6 +86,13 @@ Costs:
   official API semantics;
 - direct raw-payload compatibility remains temporarily available for tests until
   legacy quick-research injection surfaces are cleaned up.
+
+## Regression guard
+
+The provider-registry tests assert that GitHub is one of the governed recursive
+providers and that its local budget remains 50 requests per 3600 seconds and below
+the documented anonymous hourly primary limit. This specifically guards against
+reintroducing the stale 20-per-minute setting.
 
 ## Next migration
 
