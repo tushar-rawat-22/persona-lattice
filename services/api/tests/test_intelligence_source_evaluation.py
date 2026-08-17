@@ -74,7 +74,7 @@ def test_evaluation_counters_separate_provider_failure_from_local_stops() -> Non
         "malformed_result_count": 0,
         "local_budget_stop_count": 1,
         "optional_not_configured_count": 1,
-        "credential_not_configured_count": 0,
+        "missing_secret_config_count": 0,
         "provider_policy_block_count": 0,
         "queued_count": 0,
         "review_required_count": 0,
