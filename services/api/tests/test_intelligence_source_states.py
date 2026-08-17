@@ -21,7 +21,7 @@ def test_executed_state_requires_observations_and_source_locators() -> None:
         source_locators=("https://github.com/example", "https://github.com/example/repo"),
     )
 
-    assert record.network_attempted is True
+    assert record.execution_attempted is True
     assert record.terminal_for_automation is True
 
     with pytest.raises(ValueError, match="at least one observation"):
@@ -51,11 +51,11 @@ def test_not_found_is_an_attempted_zero_observation_terminal_state() -> None:
     )
 
     assert record.observation_count == 0
-    assert record.network_attempted is True
+    assert record.execution_attempted is True
     assert record.terminal_for_automation is True
 
 
-def test_optional_not_configured_is_unavailable_without_claiming_network_execution() -> None:
+def test_optional_not_configured_is_unavailable_without_claiming_execution() -> None:
     record = SourceRunRecord(
         source_name="brave_public_web_index",
         lead_kind=LeadKind.EMAIL,
@@ -63,7 +63,7 @@ def test_optional_not_configured_is_unavailable_without_claiming_network_executi
         reason=SourceRunReason.OPTIONAL_NOT_CONFIGURED,
     )
 
-    assert record.network_attempted is False
+    assert record.execution_attempted is False
     assert record.terminal_for_automation is True
 
 
@@ -78,10 +78,10 @@ def test_provider_failure_and_remote_rate_limit_record_an_attempt() -> None:
             state=SourceRunState.UNAVAILABLE,
             reason=reason,
         )
-        assert record.network_attempted is True
+        assert record.execution_attempted is True
 
 
-def test_local_budget_stop_does_not_claim_network_execution() -> None:
+def test_local_budget_stop_does_not_claim_execution() -> None:
     record = SourceRunRecord(
         source_name="github_public_api",
         lead_kind=LeadKind.USERNAME,
@@ -89,7 +89,7 @@ def test_local_budget_stop_does_not_claim_network_execution() -> None:
         reason=SourceRunReason.LOCAL_BUDGET,
     )
 
-    assert record.network_attempted is False
+    assert record.execution_attempted is False
     assert record.terminal_for_automation is True
 
 
@@ -101,7 +101,7 @@ def test_queue_is_the_only_nonterminal_automatic_state() -> None:
         reason=SourceRunReason.ELIGIBLE_QUEUED,
     )
 
-    assert record.network_attempted is False
+    assert record.execution_attempted is False
     assert record.terminal_for_automation is False
 
 
@@ -124,8 +124,21 @@ def test_nonexecuting_policy_states_are_explicit_and_terminal(
         reason=reason,
     )
 
-    assert record.network_attempted is False
+    assert record.execution_attempted is False
     assert record.terminal_for_automation is True
+
+
+def test_local_deterministic_execution_is_an_attempt_without_claiming_network_io() -> None:
+    record = SourceRunRecord(
+        source_name="local_normalization",
+        lead_kind=LeadKind.EMAIL,
+        state=SourceRunState.EXECUTED,
+        reason=SourceRunReason.RESULTS_RETURNED,
+        observation_count=1,
+        source_locators=("local://normalization",),
+    )
+
+    assert record.execution_attempted is True
 
 
 def test_state_reason_mismatch_fails_closed() -> None:
