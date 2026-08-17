@@ -19,6 +19,7 @@ The provider:
 - sends no credential, token or API key;
 - uses the existing bounded system resolver rather than adding a third-party DNS service;
 - preserves the existing globally-routable-address filter and eight-address ceiling in `network_metadata.py`;
+- independently revalidates resolver output as IP addresses, rejects any non-global result, enforces the eight-address ceiling again, canonicalizes addresses and de-duplicates them before admission;
 - treats an empty/NXDOMAIN-style result as valid no-observation output;
 - maps resolver `OSError` failures to a transient provider failure;
 - emits a `dns://<hostname>` source locator;
@@ -46,7 +47,8 @@ Positive:
 - all current zero-direct-cost network sources except optional Brave now use the shared governed runtime;
 - DNS execution shares process-wide policy, rate, concurrency and timeout controls;
 - source binding metadata can no longer classify DNS as legacy research;
-- provider output makes the infrastructure-only semantics explicit at the adapter boundary.
+- provider output makes the infrastructure-only semantics explicit at the adapter boundary;
+- a future resolver implementation cannot bypass the provider's global-IP and result-count checks.
 
 Costs:
 
