@@ -1,24 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
-import json
 import os
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit, urlunsplit
-from urllib.request import Request, urlopen
+from urllib.parse import urlsplit, urlunsplit
+from uuid import uuid4
 
-from .providers.rate_limit import RateBudget
+from .evidence import IdentifierKind
+from .models import Purpose
+from .providers.base import ProviderQuery
+from .providers.contracts import ExecutionRequest
 
 
-BRAVE_SEARCH_ENDPOINT = "https://api.search.brave.com/res/v1/web/search"
 _MAX_QUERY_CHARS = 300
 _MAX_RESULTS = 10
-_MAX_RESPONSE_BYTES = 256 * 1024
-_TIMEOUT_SECONDS = 5.0
 _RESULT_TEXT_CHARS = 600
-_SEARCH_BUDGET = RateBudget(limit=10, window_seconds=60.0)
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,51 +102,44 @@ def _decode_results(payload: object) -> tuple[PublicSearchResult, ...]:
     return tuple(results)
 
 
-def _search_sync(identifier: str, api_key: str) -> tuple[PublicSearchResult, ...]:
-    query = urlencode(
-        {
-            "q": _exact_query(identifier),
-            "count": str(_MAX_RESULTS),
-            "safesearch": "moderate",
-            "text_decorations": "false",
-            "result_filter": "web",
-        }
-    )
-    request = Request(
-        f"{BRAVE_SEARCH_ENDPOINT}?{query}",
-        headers={
-            "Accept": "application/json",
-            "X-Subscription-Token": api_key,
-            "User-Agent": "PersonaLattice/0.0.1 private-public-evidence-research",
-        },
-        method="GET",
-    )
-    try:
-        with urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
-            raw = response.read(_MAX_RESPONSE_BYTES + 1)
-    except HTTPError as exc:
-        raise RuntimeError("Public search provider rejected the request.") from exc
-    except (URLError, TimeoutError) as exc:
-        raise RuntimeError("Public search provider was unavailable.") from exc
-
-    if len(raw) > _MAX_RESPONSE_BYTES:
-        raise RuntimeError("Public search response exceeded the configured limit.")
-    try:
-        payload = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise RuntimeError("Public search returned invalid JSON.") from exc
-    return _decode_results(payload)
-
-
 async def search_exact_public_mentions(identifier: str) -> tuple[PublicSearchResult, ...]:
-    """Search a licensed public web index for an exact identifier mention.
+    """Run the existing optional exact-match search through ProviderRuntime.
 
-    This is discovery evidence only. Results are not fetched automatically and
-    snippets are not converted into identity claims or hidden/private data.
+    The helper keeps the private-V1 callable surface for quick research and tests.
+    Missing configuration remains a no-op so the default product stays zero-spend.
+    Production execution itself is owned by the process-wide governed runtime.
     """
 
-    key = _api_key()
-    if key is None:
+    if not public_search_configured():
         return ()
-    _SEARCH_BUDGET.consume()
-    return await asyncio.to_thread(_search_sync, identifier, key)
+
+    # Lazy import avoids a module cycle: the Brave adapter reuses the bounded
+    # result decoding helpers above.
+    from .providers.shared_runtime import DEFAULT_BRAVE_PROVIDER, DEFAULT_PROVIDER_RUNTIME
+
+    subject_id = uuid4()
+    identifier_id = uuid4()
+    request = ExecutionRequest(
+        provider_name=DEFAULT_BRAVE_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=Purpose.PUBLIC_SOURCE_RESEARCH,
+        consent_acknowledged=False,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.USERNAME.value,
+            identifier_value=identifier,
+        ),
+    )
+    return tuple(
+        PublicSearchResult(
+            title=str(item.payload.get("title", "")),
+            url=item.source_locator,
+            description=str(item.payload.get("description", "")),
+        )
+        for item in result.observations
+    )
