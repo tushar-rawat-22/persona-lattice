@@ -112,7 +112,8 @@ Completed source-state/report/evaluation work:
 - PR #37: converged node source-run projection;
 - PR #38: normal quick research emits factual source-run records;
 - PR #40: deterministic aggregate/per-source evaluation counters;
-- PR #42: deterministic full-vocabulary source evaluation fixture matrix.
+- PR #42: deterministic full-vocabulary source evaluation fixture matrix;
+- PR #44: deterministic graph-growth/duplicate counters and label-gated wrong-pivot measurement.
 
 The source-run path does not infer provider contact from warning strings. An optional source that was never configured is not a negative result. A local pre-call budget stop is not a provider failure. A completed `not_found` call is a valid completed lookup.
 
@@ -120,9 +121,11 @@ PR #40 deliberately adds **counts, not reliability percentages**. Current evalua
 
 PR #42 locks every current source-run state and reason into one deterministic synthetic matrix. If the vocabulary changes later, evaluation semantics must be reviewed and the matrix updated instead of silently accepting the new state.
 
+PR #44 adds structural graph counters for growth, maximum depth, admitted pivots, duplicate suppression, provider failures and budget stops. Wrong-pivot counts require explicit synthetic or consented relevance labels keyed to admitted child nodes. Unlabelled production pivots remain unscored; no graph-quality percentage is inferred.
+
 Remaining before V2-D closes:
 
-1. add graph-growth/wrong-pivot/duplicate measurements over deterministic graph fixtures;
+1. run deterministic labelled graph fixtures that compare graph growth, duplicate suppression and wrong-pivot exposure under the current ceilings before considering any limit change;
 2. add explicit typed pre-execution/configuration/malformed-result outcomes only where the runtime can prove them;
 3. migrate the existing optional Brave exact-match path behind `ProviderRuntime` while preserving no-key zero-spend operation and without expanding source coverage;
 4. remove the final legacy network execution allowance;
@@ -134,13 +137,14 @@ No new third-party source should be activated during these closure blocks.
 
 ## M10 — evaluation and calibration laboratory
 
-**Status: deterministic source-failure fixture layer established; graph evaluation remains**
+**Status: source-state fixtures and graph counter contract established; labelled graph comparisons remain**
 
 Required before increasing recursion limits or changing correlation thresholds:
 
 - deterministic full-vocabulary source failure/state fixture matrix;
-- wrong-pivot and duplicate measurements;
-- graph-growth measurements;
+- deterministic graph-growth and duplicate counters;
+- label-gated wrong-pivot counts with explicit labelled denominators;
+- controlled graph fixture comparisons under candidate limits;
 - provider attempt/failure/no-match/yield counts with explicit denominators;
 - deterministic replay/factor ablations;
 - labelled false-positive/false-negative and threshold analysis where a defensible labelled set exists;
@@ -150,9 +154,9 @@ Observation count is evidence yield, not evidence quality. Provider percentages 
 
 ## Immediate next gate
 
-Add deterministic graph-growth, duplicate and wrong-pivot measurements before changing recursion limits. After that, finish the remaining existing-source migration and document-to-reviewed-lead plumbing.
+Run deterministic labelled graph fixtures against the existing depth-2 / 12-node policy and candidate limits without changing production limits. Use the new counters to show exactly how added capacity changes graph growth, duplicate suppression and labelled wrong-pivot exposure.
 
-Only after V2-D architecture closure may new public/API sources be reviewed one at a time. Each activation must re-check current official terms, authentication, limits and cost from primary sources; old pricing or quota notes are not authority.
+After that, finish the remaining existing-source migration and document-to-reviewed-lead plumbing. Only after V2-D architecture closure may new public/API sources be reviewed one at a time. Each activation must re-check current official terms, authentication, limits and cost from primary sources; old pricing or quota notes are not authority.
 
 Success means a small clue can grow into a broad evidence graph while the operator can answer for every hop:
 

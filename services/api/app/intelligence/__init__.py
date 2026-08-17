@@ -10,6 +10,11 @@ from .contracts import (
 )
 from .extractor import extract_observation_leads
 from .frontier import FrontierDecision, FrontierEvaluation, FrontierLimits, LeadFrontier
+from .graph_evaluation import (
+    GraphEvaluationCounters,
+    PivotRelevance,
+    build_graph_evaluation_counters,
+)
 from .source_bindings import (
     SOURCE_BINDING_BY_NAME,
     SOURCE_BINDINGS,
@@ -37,12 +42,14 @@ __all__ = [
     "FrontierDecision",
     "FrontierEvaluation",
     "FrontierLimits",
+    "GraphEvaluationCounters",
     "LeadCandidate",
     "LeadDisposition",
     "LeadExtractionResult",
     "LeadFrontier",
     "LeadKind",
     "LeadReason",
+    "PivotRelevance",
     "SOURCE_BINDING_BY_NAME",
     "SOURCE_BINDINGS",
     "SOURCE_BY_NAME",
@@ -59,6 +66,7 @@ __all__ = [
     "SourceRunRecord",
     "SourceRunState",
     "SourceStatus",
+    "build_graph_evaluation_counters",
     "build_source_evaluation_counters",
     "build_source_plan",
     "extract_observation_leads",
