@@ -16,6 +16,7 @@ from .intelligence.source_outcomes import (
     source_execution_failure_record,
     source_local_budget_record,
     source_optional_not_configured_record,
+    source_provider_exception_record,
     source_result_record,
 )
 from .intelligence.source_states import SourceRunRecord
@@ -23,14 +24,7 @@ from .models import Purpose
 from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.contracts import ExecutionRequest
-from .providers.errors import (
-    ProviderExecutionError,
-    ProviderRateBudgetExceeded,
-    ProviderRemoteRateLimitError,
-    ProviderResponseTooLarge,
-    ProviderTimeoutError,
-    ProviderTransientError,
-)
+from .providers.errors import ProviderRateBudgetExceeded
 from .providers.github_public import fetch_github_public_profile
 from .providers.runtime import ProviderRuntime
 from .providers.shared_runtime import (
@@ -92,22 +86,21 @@ def _source_run_for_exception(
     exc: BaseException,
     injected_attempt: bool = False,
 ) -> SourceRunRecord | None:
-    """Map only execution facts we can prove from the exception boundary."""
+    """Map provider failures through the shared phase-proven source contract.
 
-    if isinstance(exc, ProviderRateBudgetExceeded):
-        return source_local_budget_record(source_name=source_name, lead_kind=lead_kind)
-    if isinstance(exc, ProviderRemoteRateLimitError):
-        return source_execution_failure_record(
-            source_name=source_name,
-            lead_kind=lead_kind,
-            remote_rate_limited=True,
-        )
+    Injected compatibility lookups execute outside ProviderRuntime, so an
+    exception from one of those callables is known to be post-attempt even when
+    it is not a typed provider exception.
+    """
+
+    mapped = source_provider_exception_record(
+        source_name=source_name,
+        lead_kind=lead_kind,
+        exc=exc,
+    )
+    if mapped is not None:
+        return mapped
     if injected_attempt:
-        return source_execution_failure_record(source_name=source_name, lead_kind=lead_kind)
-    if isinstance(
-        exc,
-        (ProviderTimeoutError, ProviderTransientError, ProviderResponseTooLarge),
-    ) or type(exc) is ProviderExecutionError:
         return source_execution_failure_record(source_name=source_name, lead_kind=lead_kind)
     return None
 
