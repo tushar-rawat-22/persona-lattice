@@ -4,7 +4,7 @@ Status: accepted for V2-D architecture completion
 
 ## Context
 
-PersonaLattice already distinguishes lead disposition and frontier outcomes, but source execution itself is still mostly inferred from observations and warnings. That is too ambiguous for a recursive research product. An operator needs to know whether a source actually ran, returned no match, was never configured, was blocked before execution, hit a local budget, or failed after a network attempt.
+PersonaLattice already distinguishes lead disposition and frontier outcomes, but source execution itself is still mostly inferred from observations and warnings. That is too ambiguous for a recursive research product. An operator needs to know whether a source actually ran, returned no match, was never configured, was blocked before execution, hit a local budget, or failed during execution.
 
 The distinction matters for evidence quality, cost control and debugging. In particular, `not_found` must never be confused with `unavailable`, and an optional metered provider that is not configured must not look like a failed query.
 
@@ -21,7 +21,7 @@ The stable states are:
 - `display_only` — the clue is context and is intentionally non-executable;
 - `blocked` — policy forbids execution;
 - `unavailable` — execution could not produce an answer because the optional source is not configured, the provider failed, or the remote service rate-limited the request;
-- `budget_stopped` — a local PersonaLattice budget prevented the request before network execution.
+- `budget_stopped` — a local PersonaLattice budget prevented execution from starting.
 
 Each state has a constrained reason vocabulary. Invalid state/reason combinations fail closed.
 
@@ -29,11 +29,13 @@ A source-run record stores the source name, lead kind, state, reason, observatio
 
 ## Execution semantics
 
-The contract exposes whether a network attempt is actually proven by the outcome:
+The contract exposes whether a source execution attempt is actually proven by the outcome:
 
 - `executed` and `not_found` prove an attempt;
 - provider failure and remote rate-limit outcomes prove an attempt;
 - optional-not-configured, local-budget, policy and queue states do not.
+
+The property is deliberately named `execution_attempted`, not `network_attempted`. Local deterministic sources such as normalization can execute without network I/O, and the report contract must not invent transport claims it cannot prove.
 
 Only `executed` may retain observation counts or source locators. This prevents a blocked, unavailable or not-found state from smuggling positive-looking evidence into the report.
 
