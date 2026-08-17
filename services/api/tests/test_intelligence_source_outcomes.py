@@ -5,9 +5,12 @@ import pytest
 
 from app.intelligence.contracts import LeadKind
 from app.intelligence.source_outcomes import (
+    source_credential_not_configured_record,
     source_execution_failure_record,
     source_local_budget_record,
+    source_malformed_result_record,
     source_optional_not_configured_record,
+    source_provider_policy_record,
     source_result_record,
 )
 from app.intelligence.source_states import SourceRunReason, SourceRunState
@@ -67,6 +70,39 @@ def test_execution_failure_is_attempted_unavailability() -> None:
 
     assert record.state is SourceRunState.UNAVAILABLE
     assert record.reason is SourceRunReason.EXECUTION_FAILURE
+    assert record.execution_attempted is True
+
+
+def test_provider_policy_block_is_explicit_without_claiming_execution() -> None:
+    record = source_provider_policy_record(
+        source_name="github_public_api",
+        lead_kind=LeadKind.USERNAME,
+    )
+
+    assert record.state is SourceRunState.BLOCKED
+    assert record.reason is SourceRunReason.PROVIDER_POLICY
+    assert record.execution_attempted is False
+
+
+def test_missing_required_credential_is_explicit_without_claiming_execution() -> None:
+    record = source_credential_not_configured_record(
+        source_name="synthetic_credentialed_provider",
+        lead_kind=LeadKind.EMAIL,
+    )
+
+    assert record.state is SourceRunState.UNAVAILABLE
+    assert record.reason is SourceRunReason.CREDENTIAL_NOT_CONFIGURED
+    assert record.execution_attempted is False
+
+
+def test_malformed_result_is_an_attempted_failure() -> None:
+    record = source_malformed_result_record(
+        source_name="github_public_api",
+        lead_kind=LeadKind.USERNAME,
+    )
+
+    assert record.state is SourceRunState.UNAVAILABLE
+    assert record.reason is SourceRunReason.MALFORMED_RESULT
     assert record.execution_attempted is True
 
 
