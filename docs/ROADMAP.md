@@ -102,7 +102,8 @@ Completed provider/runtime work:
 - PR #29: one process-wide production runtime;
 - PR #30: GitLab runtime migration;
 - PR #31: Codeforces runtime migration;
-- PR #32: public DNS runtime migration.
+- PR #32: public DNS runtime migration;
+- PR #50: phase-proven provider result validation and shared provider-exception outcome mapping.
 
 Completed source-state/report/evaluation work:
 
@@ -117,7 +118,9 @@ Completed source-state/report/evaluation work:
 - PR #46: network-free labelled graph-limit comparison through the real `LeadFrontier` policy, with production/evaluation compatibility limits centralized in one constructor;
 - PR #48: explicit provider-policy, missing-secret configuration and malformed-result outcome vocabulary, with dedicated constructors and evaluation counters.
 
-The source-run path does not infer provider contact from warning strings. An optional source that was never configured is not a negative result. A local pre-call budget stop is not a provider failure. A completed `not_found` call is a valid completed lookup. PR #48 extends the same rule to provider-policy rejections and missing server-side secrets: both are non-attempt states. A malformed result is an attempted failure only when the execution boundary proves provider output was already returned.
+The source-run path does not infer provider contact from warning strings. An optional source that was never configured is not a negative result. A local pre-call budget stop is not a provider failure. A completed `not_found` call is a valid completed lookup. PR #48 extends the same rule to provider-policy rejections and missing server-side secrets: both are non-attempt states.
+
+PR #50 makes malformed-result reporting mechanically provable at the runtime boundary. `ProviderValidationError` remains phase-ambiguous and must not be reported as a provider attempt. `ProviderResultValidationError` is reserved for invalid returned result contracts, non-serializable returned payloads and blank returned source locators after provider output exists. `source_provider_exception_record()` now maps only stable exception classes whose attempt semantics are known.
 
 PR #40 deliberately adds **counts, not reliability percentages**. Current evaluation records attempts, completed attempts, attempted failures, result-bearing records, no-match results, observation yield, remote rate limits, execution failures, malformed results, local budget stops, optional-unconfigured states, missing-secret configuration states, provider-policy blocks and scheduler/review/display/blocked states. Sample size remains visible globally and per source.
 
@@ -129,7 +132,7 @@ PR #46 runs labelled synthetic leads through the actual frontier scheduler under
 
 Remaining before V2-D closes:
 
-1. wire the new PR #48 outcome constructors into quick-research/runtime error handling only at boundaries where the execution phase is provable; keep generic validation errors unclassified until the phase is explicit;
+1. replace quick research's local provider-exception classifier with the shared phase-proven `source_provider_exception_record()` mapper while retaining explicit injected-test compatibility;
 2. migrate the existing optional Brave exact-match path behind `ProviderRuntime` while preserving no-key zero-spend operation and without expanding source coverage;
 3. remove the final legacy network execution allowance;
 4. finish document-candidate-to-reviewed-lead plumbing;
@@ -163,7 +166,7 @@ Observation count is evidence yield, not evidence quality. Provider percentages 
 
 ## Immediate next gate
 
-Wire the PR #48 source-outcome vocabulary into actual runtime/quick-research handling only where the system can prove the execution phase. Provider-policy rejection and missing required server-side secrets must remain non-attempts; malformed-result reporting is allowed only after returned provider output is known. Generic validation failures must not be guessed into either category.
+Switch quick research to the shared phase-proven provider-exception mapper. Provider-policy rejection and missing required server-side secrets must remain non-attempts; malformed-result reporting is allowed only through the post-attempt runtime type. Generic validation failures must remain unclassified. Injected compatibility lookups need their own explicit attempted-failure handling because they do not run through `ProviderRuntime`.
 
 After that, migrate the already-existing optional Brave path behind `ProviderRuntime`, remove the final legacy network allowance, and finish document-to-reviewed-lead plumbing. Only after V2-D architecture closure may new public/API sources be reviewed one at a time. Each activation must re-check current official terms, authentication, limits and cost from primary sources; old pricing or quota notes are not authority.
 
