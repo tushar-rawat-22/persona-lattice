@@ -56,6 +56,56 @@ def source_execution_failure_record(
     )
 
 
+def source_provider_policy_record(
+    *,
+    source_name: str,
+    lead_kind: LeadKind,
+) -> SourceRunRecord:
+    """Record a provider-policy rejection that happened before execution."""
+
+    return SourceRunRecord(
+        source_name=source_name,
+        lead_kind=lead_kind,
+        state=SourceRunState.BLOCKED,
+        reason=SourceRunReason.PROVIDER_POLICY,
+    )
+
+
+def source_credential_not_configured_record(
+    *,
+    source_name: str,
+    lead_kind: LeadKind,
+) -> SourceRunRecord:
+    """Record a required server-side credential missing before provider contact."""
+
+    return SourceRunRecord(
+        source_name=source_name,
+        lead_kind=lead_kind,
+        state=SourceRunState.UNAVAILABLE,
+        reason=SourceRunReason.CREDENTIAL_NOT_CONFIGURED,
+    )
+
+
+def source_malformed_result_record(
+    *,
+    source_name: str,
+    lead_kind: LeadKind,
+) -> SourceRunRecord:
+    """Record a provider attempt whose returned result failed runtime validation.
+
+    Use this only when the runtime has already received provider output and can
+    prove that the failure is post-attempt. Generic validation failures remain
+    deliberately unclassified until their execution phase is known.
+    """
+
+    return SourceRunRecord(
+        source_name=source_name,
+        lead_kind=lead_kind,
+        state=SourceRunState.UNAVAILABLE,
+        reason=SourceRunReason.MALFORMED_RESULT,
+    )
+
+
 def source_optional_not_configured_record(
     *,
     source_name: str,
