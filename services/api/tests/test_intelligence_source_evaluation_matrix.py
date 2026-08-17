@@ -14,9 +14,12 @@ def _matrix() -> tuple[SourceRunRecord, ...]:
         SourceRunRecord("fixture_scheduler", LeadKind.PHONE, SourceRunState.REVIEW_REQUIRED, SourceRunReason.REVIEW_GATE),
         SourceRunRecord("fixture_scheduler", LeadKind.NAME, SourceRunState.DISPLAY_ONLY, SourceRunReason.DISPLAY_ONLY_POLICY),
         SourceRunRecord("fixture_scheduler", LeadKind.LOCATION, SourceRunState.BLOCKED, SourceRunReason.BLOCKED_POLICY),
+        SourceRunRecord("fixture_policy", LeadKind.USERNAME, SourceRunState.BLOCKED, SourceRunReason.PROVIDER_POLICY),
         SourceRunRecord("fixture_optional", LeadKind.URL, SourceRunState.UNAVAILABLE, SourceRunReason.OPTIONAL_NOT_CONFIGURED),
+        SourceRunRecord("fixture_config", LeadKind.EMAIL, SourceRunState.UNAVAILABLE, SourceRunReason.CREDENTIAL_NOT_CONFIGURED),
         SourceRunRecord("fixture_remote", LeadKind.USERNAME, SourceRunState.UNAVAILABLE, SourceRunReason.EXECUTION_FAILURE),
         SourceRunRecord("fixture_remote", LeadKind.USERNAME, SourceRunState.UNAVAILABLE, SourceRunReason.REMOTE_RATE_LIMIT),
+        SourceRunRecord("fixture_remote", LeadKind.USERNAME, SourceRunState.UNAVAILABLE, SourceRunReason.MALFORMED_RESULT),
         SourceRunRecord("fixture_budget", LeadKind.DOMAIN, SourceRunState.BUDGET_STOPPED, SourceRunReason.LOCAL_BUDGET),
     )
 
@@ -30,22 +33,25 @@ def test_fixture_matrix_covers_the_entire_current_state_and_reason_vocabulary() 
 def test_fixture_matrix_locks_attempt_failure_and_no_match_semantics() -> None:
     aggregate = build_source_evaluation_counters(_matrix())["aggregate"]
     assert aggregate == {
-        "record_count": 10,
-        "attempt_count": 4,
+        "record_count": 13,
+        "attempt_count": 5,
         "completed_attempt_count": 2,
-        "failed_attempt_count": 2,
+        "failed_attempt_count": 3,
         "unclassified_attempt_count": 0,
         "result_record_count": 1,
         "no_match_count": 1,
         "observation_count": 3,
         "remote_rate_limit_count": 1,
         "execution_failure_count": 1,
+        "malformed_result_count": 1,
         "local_budget_stop_count": 1,
         "optional_not_configured_count": 1,
+        "missing_secret_config_count": 1,
+        "provider_policy_block_count": 1,
         "queued_count": 1,
         "review_required_count": 1,
         "display_only_count": 1,
-        "blocked_count": 1,
+        "blocked_count": 2,
     }
     assert aggregate["attempt_count"] == (
         aggregate["completed_attempt_count"]
@@ -61,16 +67,21 @@ def test_fixture_matrix_is_order_invariant() -> None:
     assert build_source_evaluation_counters(records[3:] + records[:3]) == expected
 
 
-def test_fixture_matrix_keeps_local_optional_and_remote_outcomes_separate() -> None:
+def test_fixture_matrix_keeps_preflight_budget_and_remote_outcomes_separate() -> None:
     by_source = build_source_evaluation_counters(_matrix())["by_source"]
     assert by_source["fixture_optional"]["attempt_count"] == 0
     assert by_source["fixture_optional"]["optional_not_configured_count"] == 1
+    assert by_source["fixture_config"]["attempt_count"] == 0
+    assert by_source["fixture_config"]["missing_secret_config_count"] == 1
+    assert by_source["fixture_policy"]["attempt_count"] == 0
+    assert by_source["fixture_policy"]["provider_policy_block_count"] == 1
     assert by_source["fixture_budget"]["attempt_count"] == 0
     assert by_source["fixture_budget"]["local_budget_stop_count"] == 1
-    assert by_source["fixture_remote"]["attempt_count"] == 2
-    assert by_source["fixture_remote"]["failed_attempt_count"] == 2
+    assert by_source["fixture_remote"]["attempt_count"] == 3
+    assert by_source["fixture_remote"]["failed_attempt_count"] == 3
     assert by_source["fixture_remote"]["execution_failure_count"] == 1
     assert by_source["fixture_remote"]["remote_rate_limit_count"] == 1
+    assert by_source["fixture_remote"]["malformed_result_count"] == 1
     assert by_source["fixture_profile"]["completed_attempt_count"] == 2
     assert by_source["fixture_profile"]["failed_attempt_count"] == 0
     assert by_source["fixture_profile"]["no_match_count"] == 1

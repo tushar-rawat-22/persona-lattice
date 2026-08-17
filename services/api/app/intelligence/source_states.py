@@ -29,9 +29,12 @@ class SourceRunReason(StrEnum):
     REVIEW_GATE = "review_gate"
     DISPLAY_ONLY_POLICY = "display_only_policy"
     BLOCKED_POLICY = "blocked_policy"
+    PROVIDER_POLICY = "provider_policy"
     OPTIONAL_NOT_CONFIGURED = "optional_not_configured"
+    CREDENTIAL_NOT_CONFIGURED = "credential_not_configured"
     EXECUTION_FAILURE = "execution_failure"
     REMOTE_RATE_LIMIT = "remote_rate_limit"
+    MALFORMED_RESULT = "malformed_result"
     LOCAL_BUDGET = "local_budget"
 
 
@@ -41,12 +44,19 @@ _ALLOWED_REASONS: dict[SourceRunState, frozenset[SourceRunReason]] = {
     SourceRunState.QUEUED: frozenset({SourceRunReason.ELIGIBLE_QUEUED}),
     SourceRunState.REVIEW_REQUIRED: frozenset({SourceRunReason.REVIEW_GATE}),
     SourceRunState.DISPLAY_ONLY: frozenset({SourceRunReason.DISPLAY_ONLY_POLICY}),
-    SourceRunState.BLOCKED: frozenset({SourceRunReason.BLOCKED_POLICY}),
+    SourceRunState.BLOCKED: frozenset(
+        {
+            SourceRunReason.BLOCKED_POLICY,
+            SourceRunReason.PROVIDER_POLICY,
+        }
+    ),
     SourceRunState.UNAVAILABLE: frozenset(
         {
             SourceRunReason.OPTIONAL_NOT_CONFIGURED,
+            SourceRunReason.CREDENTIAL_NOT_CONFIGURED,
             SourceRunReason.EXECUTION_FAILURE,
             SourceRunReason.REMOTE_RATE_LIMIT,
+            SourceRunReason.MALFORMED_RESULT,
         }
     ),
     SourceRunState.BUDGET_STOPPED: frozenset({SourceRunReason.LOCAL_BUDGET}),
@@ -91,6 +101,7 @@ class SourceRunRecord:
         return self.reason in {
             SourceRunReason.EXECUTION_FAILURE,
             SourceRunReason.REMOTE_RATE_LIMIT,
+            SourceRunReason.MALFORMED_RESULT,
         }
 
     @property
