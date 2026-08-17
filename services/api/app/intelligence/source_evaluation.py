@@ -32,8 +32,13 @@ def _counter_payload(records: tuple[SourceRunRecord, ...]) -> dict[str, int]:
         "observation_count": sum(item.observation_count for item in records),
         "remote_rate_limit_count": reason_counts[SourceRunReason.REMOTE_RATE_LIMIT],
         "execution_failure_count": reason_counts[SourceRunReason.EXECUTION_FAILURE],
+        "malformed_result_count": reason_counts[SourceRunReason.MALFORMED_RESULT],
         "local_budget_stop_count": reason_counts[SourceRunReason.LOCAL_BUDGET],
         "optional_not_configured_count": reason_counts[SourceRunReason.OPTIONAL_NOT_CONFIGURED],
+        "credential_not_configured_count": reason_counts[
+            SourceRunReason.CREDENTIAL_NOT_CONFIGURED
+        ],
+        "provider_policy_block_count": reason_counts[SourceRunReason.PROVIDER_POLICY],
         "queued_count": state_counts[SourceRunState.QUEUED],
         "review_required_count": state_counts[SourceRunState.REVIEW_REQUIRED],
         "display_only_count": state_counts[SourceRunState.DISPLAY_ONLY],
