@@ -11,10 +11,26 @@ from uuid import uuid4
 from phonenumbers import carrier, geocoder, timezone
 
 from .evidence import IdentifierKind, normalize_identifier
+from .intelligence.contracts import LeadKind
+from .intelligence.source_outcomes import (
+    source_execution_failure_record,
+    source_local_budget_record,
+    source_optional_not_configured_record,
+    source_result_record,
+)
+from .intelligence.source_states import SourceRunRecord
 from .models import Purpose
 from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.contracts import ExecutionRequest
+from .providers.errors import (
+    ProviderExecutionError,
+    ProviderRateBudgetExceeded,
+    ProviderRemoteRateLimitError,
+    ProviderResponseTooLarge,
+    ProviderTimeoutError,
+    ProviderTransientError,
+)
 from .providers.github_public import fetch_github_public_profile
 from .providers.runtime import ProviderRuntime
 from .providers.shared_runtime import (
@@ -33,7 +49,11 @@ from .public_profiles import (
     lookup_gitlab_public_email,
     lookup_gitlab_username,
 )
-from .public_search import PublicSearchResult, search_exact_public_mentions
+from .public_search import (
+    PublicSearchResult,
+    public_search_configured,
+    search_exact_public_mentions,
+)
 
 
 class ResearchKind(StrEnum):
@@ -57,11 +77,39 @@ class QuickResearchReport:
     normalized_value: str
     observations: tuple[QuickObservation, ...]
     warnings: tuple[str, ...] = ()
+    source_runs: tuple[SourceRunRecord, ...] = ()
 
 
 PublicLookup = Callable[[str], Awaitable[dict[str, object] | None]]
 PublicSearchLookup = Callable[[str], Awaitable[tuple[PublicSearchResult, ...]]]
 NetworkLookup = Callable[[str], Awaitable[tuple[str, ...]]]
+
+
+def _source_run_for_exception(
+    *,
+    source_name: str,
+    lead_kind: LeadKind,
+    exc: BaseException,
+    injected_attempt: bool = False,
+) -> SourceRunRecord | None:
+    """Map only execution facts we can prove from the exception boundary."""
+
+    if isinstance(exc, ProviderRateBudgetExceeded):
+        return source_local_budget_record(source_name=source_name, lead_kind=lead_kind)
+    if isinstance(exc, ProviderRemoteRateLimitError):
+        return source_execution_failure_record(
+            source_name=source_name,
+            lead_kind=lead_kind,
+            remote_rate_limited=True,
+        )
+    if injected_attempt:
+        return source_execution_failure_record(source_name=source_name, lead_kind=lead_kind)
+    if isinstance(
+        exc,
+        (ProviderTimeoutError, ProviderTransientError, ProviderResponseTooLarge),
+    ) or type(exc) is ProviderExecutionError:
+        return source_execution_failure_record(source_name=source_name, lead_kind=lead_kind)
+    return None
 
 
 def _sherlock_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
@@ -139,12 +187,48 @@ def _public_search_observations(results: tuple[PublicSearchResult, ...]) -> list
 async def _public_search(
     identifier: str,
     lookup: PublicSearchLookup,
-) -> tuple[list[QuickObservation], str | None]:
+    *,
+    lead_kind: LeadKind,
+) -> tuple[list[QuickObservation], str | None, SourceRunRecord]:
+    if lookup is search_exact_public_mentions and not public_search_configured():
+        return (
+            [],
+            None,
+            source_optional_not_configured_record(
+                source_name="brave_public_web_index",
+                lead_kind=lead_kind,
+            ),
+        )
     try:
         results = await lookup(identifier)
+    except ProviderRateBudgetExceeded:
+        return (
+            [],
+            "Licensed public-web exact-match search hit its local request budget.",
+            source_local_budget_record(
+                source_name="brave_public_web_index",
+                lead_kind=lead_kind,
+            ),
+        )
     except RuntimeError:
-        return [], "Licensed public-web exact-match search was temporarily unavailable."
-    return _public_search_observations(results), None
+        return (
+            [],
+            "Licensed public-web exact-match search was temporarily unavailable.",
+            source_execution_failure_record(
+                source_name="brave_public_web_index",
+                lead_kind=lead_kind,
+            ),
+        )
+    observations = _public_search_observations(results)
+    return (
+        observations,
+        None,
+        source_result_record(
+            source_name="brave_public_web_index",
+            lead_kind=lead_kind,
+            observation_count=len(observations),
+        ),
+    )
 
 
 async def lookup_github_public_profile(username: str) -> dict[str, object] | None:
@@ -433,6 +517,13 @@ async def _research_username(
     )
     observations = [_sherlock_observation_from_provider(item) for item in result.observations]
     warnings: list[str] = []
+    source_runs = [
+        source_result_record(
+            source_name="sherlock",
+            lead_kind=LeadKind.USERNAME,
+            observation_count=len(observations),
+        )
+    ]
     injected_gitlab = None if gitlab_lookup is lookup_gitlab_username else gitlab_lookup
     injected_codeforces = None if codeforces_lookup is lookup_codeforces_handle else codeforces_lookup
     enrichments = await asyncio.gather(
@@ -463,21 +554,53 @@ async def _research_username(
         ),
         return_exceptions=True,
     )
-    github_observations, gitlab_observations, codeforces_observations = enrichments
-    if isinstance(github_observations, Exception):
-        warnings.append("GitHub public profile enrichment was temporarily unavailable.")
-    else:
-        observations.extend(github_observations)
-    if isinstance(gitlab_observations, Exception):
-        warnings.append("GitLab public profile enrichment was temporarily unavailable.")
-    else:
-        observations.extend(gitlab_observations)
-    if isinstance(codeforces_observations, Exception):
-        warnings.append("Codeforces public profile enrichment was temporarily unavailable.")
-    else:
-        observations.extend(codeforces_observations)
-    search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
+    enrichment_specs = (
+        (
+            "github_public_api",
+            github_lookup is not None,
+            enrichments[0],
+            "GitHub public profile enrichment was temporarily unavailable.",
+        ),
+        (
+            "gitlab_public_api",
+            injected_gitlab is not None,
+            enrichments[1],
+            "GitLab public profile enrichment was temporarily unavailable.",
+        ),
+        (
+            "codeforces_public_api",
+            injected_codeforces is not None,
+            enrichments[2],
+            "Codeforces public profile enrichment was temporarily unavailable.",
+        ),
+    )
+    for source_name, injected_attempt, outcome, warning in enrichment_specs:
+        if isinstance(outcome, BaseException):
+            warnings.append(warning)
+            source_run = _source_run_for_exception(
+                source_name=source_name,
+                lead_kind=LeadKind.USERNAME,
+                exc=outcome,
+                injected_attempt=injected_attempt,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+            continue
+        observations.extend(outcome)
+        source_runs.append(
+            source_result_record(
+                source_name=source_name,
+                lead_kind=LeadKind.USERNAME,
+                observation_count=len(outcome),
+            )
+        )
+    search_observations, search_warning, search_run = await _public_search(
+        normalized_value,
+        public_search_lookup,
+        lead_kind=LeadKind.USERNAME,
+    )
     observations.extend(search_observations)
+    source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     return QuickResearchReport(
@@ -485,6 +608,7 @@ async def _research_username(
         normalized_value=normalized_value,
         observations=tuple(observations),
         warnings=tuple(warnings),
+        source_runs=tuple(source_runs),
     )
 
 
@@ -517,9 +641,21 @@ async def _research_phone(
             details=details,
         )
     ]
+    source_runs = [
+        source_result_record(
+            source_name="libphonenumber_metadata",
+            lead_kind=LeadKind.PHONE,
+            observation_count=1,
+        )
+    ]
     warnings: list[str] = []
-    search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
+    search_observations, search_warning, search_run = await _public_search(
+        normalized_value,
+        public_search_lookup,
+        lead_kind=LeadKind.PHONE,
+    )
     observations.extend(search_observations)
+    source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     return QuickResearchReport(
@@ -527,6 +663,7 @@ async def _research_phone(
         normalized_value=normalized_value,
         observations=tuple(observations),
         warnings=tuple(warnings),
+        source_runs=tuple(source_runs),
     )
 
 
@@ -551,6 +688,13 @@ async def _research_email(
             },
         )
     ]
+    source_runs = [
+        source_result_record(
+            source_name="local_normalization",
+            lead_kind=LeadKind.EMAIL,
+            observation_count=1,
+        )
+    ]
     warnings: list[str] = []
     subject_id = uuid4()
     identifier_id = uuid4()
@@ -567,12 +711,33 @@ async def _research_email(
             consent_acknowledged=consent_acknowledged,
             injected_lookup=injected_gitlab,
         )
-    except Exception:
+    except Exception as exc:
         gitlab_observations = []
         warnings.append("GitLab public-email lookup was temporarily unavailable.")
+        source_run = _source_run_for_exception(
+            source_name="gitlab_public_api",
+            lead_kind=LeadKind.EMAIL,
+            exc=exc,
+            injected_attempt=injected_gitlab is not None,
+        )
+        if source_run is not None:
+            source_runs.append(source_run)
+    else:
+        source_runs.append(
+            source_result_record(
+                source_name="gitlab_public_api",
+                lead_kind=LeadKind.EMAIL,
+                observation_count=len(gitlab_observations),
+            )
+        )
     observations.extend(gitlab_observations)
-    search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
+    search_observations, search_warning, search_run = await _public_search(
+        normalized_value,
+        public_search_lookup,
+        lead_kind=LeadKind.EMAIL,
+    )
     observations.extend(search_observations)
+    source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     if len(observations) == 1:
@@ -585,6 +750,7 @@ async def _research_email(
         normalized_value=normalized_value,
         observations=tuple(observations),
         warnings=tuple(warnings),
+        source_runs=tuple(source_runs),
     )
 
 
@@ -610,6 +776,13 @@ async def _research_url(
             },
         )
     ]
+    source_runs = [
+        source_result_record(
+            source_name="local_normalization",
+            lead_kind=LeadKind.URL,
+            observation_count=1,
+        )
+    ]
     warnings: list[str] = []
     subject_id = uuid4()
     identifier_id = uuid4()
@@ -623,12 +796,33 @@ async def _research_url(
             consent_acknowledged=consent_acknowledged,
             injected_lookup=injected_network,
         )
-    except Exception:
+    except Exception as exc:
         dns_observations = []
         warnings.append("Public DNS infrastructure lookup was temporarily unavailable.")
+        source_run = _source_run_for_exception(
+            source_name="public_dns_infrastructure",
+            lead_kind=LeadKind.URL,
+            exc=exc,
+            injected_attempt=injected_network is not None,
+        )
+        if source_run is not None:
+            source_runs.append(source_run)
+    else:
+        source_runs.append(
+            source_result_record(
+                source_name="public_dns_infrastructure",
+                lead_kind=LeadKind.URL,
+                observation_count=len(dns_observations),
+            )
+        )
     observations.extend(dns_observations)
-    search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
+    search_observations, search_warning, search_run = await _public_search(
+        normalized_value,
+        public_search_lookup,
+        lead_kind=LeadKind.URL,
+    )
     observations.extend(search_observations)
+    source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     return QuickResearchReport(
@@ -636,6 +830,7 @@ async def _research_url(
         normalized_value=normalized_value,
         observations=tuple(observations),
         warnings=tuple(warnings),
+        source_runs=tuple(source_runs),
     )
 
 
