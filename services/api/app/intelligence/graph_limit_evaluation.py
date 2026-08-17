@@ -47,10 +47,10 @@ class GraphFixtureLead:
             and self.candidate.disposition is not LeadDisposition.AUTO_PIVOT
         ):
             raise ValueError("Only automatic fixture leads may declare an actual result key.")
-        if self.actual_key is not None and not self.actual_key.startswith(
-            f"{self.candidate.kind.value}:"
-        ):
-            raise ValueError("Fixture actual_key kind must match the candidate lead kind.")
+        if self.actual_key is not None:
+            expected_prefix = f"{self.candidate.kind.value}:"
+            if not self.actual_key.startswith(expected_prefix) or not self.actual_key[len(expected_prefix) :]:
+                raise ValueError("Fixture actual_key kind must match the candidate lead kind.")
 
     @property
     def result_key(self) -> str:
@@ -120,11 +120,15 @@ class _FixtureReport:
 def _validate_fixture_truth(
     *,
     seed_key: str,
+    seed_kind: LeadKind,
     leads_by_parent: Mapping[str, Sequence[GraphFixtureLead]],
     pivot_relevance_by_key: Mapping[str, PivotRelevance],
 ) -> None:
     if not seed_key or seed_key.strip() != seed_key:
         raise ValueError("Fixture seed_key must be non-empty and trimmed.")
+    seed_prefix = f"{seed_kind.value}:"
+    if not seed_key.startswith(seed_prefix) or not seed_key[len(seed_prefix) :]:
+        raise ValueError("Fixture seed_key kind must match seed_kind.")
 
     possible_result_keys = {
         lead.result_key
@@ -132,6 +136,13 @@ def _validate_fixture_truth(
         for lead in leads
         if lead.candidate.disposition is LeadDisposition.AUTO_PIVOT and not lead.provider_fails
     }
+    invalid_parent_keys = sorted(set(leads_by_parent) - ({seed_key} | possible_result_keys))
+    if invalid_parent_keys:
+        raise ValueError(
+            "Fixture parent keys must be the seed or possible successful result keys: "
+            f"invalid={invalid_parent_keys!r}."
+        )
+
     invalid_keys = sorted(set(pivot_relevance_by_key) - possible_result_keys)
     if invalid_keys:
         raise ValueError(
@@ -170,6 +181,7 @@ def evaluate_graph_limit_fixture(
 
     _validate_fixture_truth(
         seed_key=seed_key,
+        seed_kind=seed_kind,
         leads_by_parent=leads_by_parent,
         pivot_relevance_by_key=pivot_relevance_by_key,
     )
