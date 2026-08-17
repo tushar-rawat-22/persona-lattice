@@ -126,8 +126,8 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         timeout_seconds=4.0,
         max_response_bytes=64 * 1024,
         max_concurrency=2,
-        rate_limit=20,
-        rate_window_seconds=60.0,
+        rate_limit=50,
+        rate_window_seconds=3600.0,
     ),
     ProviderDescriptor(
         name="whatsmyname",
