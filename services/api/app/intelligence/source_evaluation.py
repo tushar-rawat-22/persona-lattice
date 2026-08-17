@@ -35,7 +35,7 @@ def _counter_payload(records: tuple[SourceRunRecord, ...]) -> dict[str, int]:
         "malformed_result_count": reason_counts[SourceRunReason.MALFORMED_RESULT],
         "local_budget_stop_count": reason_counts[SourceRunReason.LOCAL_BUDGET],
         "optional_not_configured_count": reason_counts[SourceRunReason.OPTIONAL_NOT_CONFIGURED],
-        "credential_not_configured_count": reason_counts[
+        "missing_secret_config_count": reason_counts[
             SourceRunReason.CREDENTIAL_NOT_CONFIGURED
         ],
         "provider_policy_block_count": reason_counts[SourceRunReason.PROVIDER_POLICY],
