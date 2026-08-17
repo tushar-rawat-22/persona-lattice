@@ -91,7 +91,7 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — source-adapter/runtime consistency and architecture closure
 
-**Status: active; most runtime/source-state work complete**
+**Status: active; governed outcome/reporting architecture substantially complete**
 
 Completed provider/runtime work:
 
@@ -103,7 +103,8 @@ Completed provider/runtime work:
 - PR #30: GitLab runtime migration;
 - PR #31: Codeforces runtime migration;
 - PR #32: public DNS runtime migration;
-- PR #50: phase-proven provider result validation and shared provider-exception outcome mapping.
+- PR #50: phase-proven provider result validation and shared provider-exception outcome mapping;
+- PR #52: quick research switched to the shared phase-proven source-outcome mapper, eliminating its competing governed-provider classifier.
 
 Completed source-state/report/evaluation work:
 
@@ -118,9 +119,11 @@ Completed source-state/report/evaluation work:
 - PR #46: network-free labelled graph-limit comparison through the real `LeadFrontier` policy, with production/evaluation compatibility limits centralized in one constructor;
 - PR #48: explicit provider-policy, missing-secret configuration and malformed-result outcome vocabulary, with dedicated constructors and evaluation counters.
 
-The source-run path does not infer provider contact from warning strings. An optional source that was never configured is not a negative result. A local pre-call budget stop is not a provider failure. A completed `not_found` call is a valid completed lookup. PR #48 extends the same rule to provider-policy rejections and missing server-side secrets: both are non-attempt states.
+The source-run path does not infer provider contact from warning strings. An optional source that was never configured is not a negative result. A local pre-call budget stop is not a provider failure. A completed `not_found` call is a valid completed lookup. Provider-policy rejection and missing required server-side configuration are non-attempt states.
 
-PR #50 makes malformed-result reporting mechanically provable at the runtime boundary. `ProviderValidationError` remains phase-ambiguous and must not be reported as a provider attempt. `ProviderResultValidationError` is reserved for invalid returned result contracts, non-serializable returned payloads and blank returned source locators after provider output exists. `source_provider_exception_record()` now maps only stable exception classes whose attempt semantics are known.
+PR #50 makes malformed-result reporting mechanically provable at the runtime boundary. `ProviderValidationError` remains phase-ambiguous and must not be reported as a provider attempt. `ProviderResultValidationError` is reserved for invalid returned result contracts, non-serializable returned payloads and blank returned source locators after provider output exists.
+
+PR #52 removes the remaining semantic duplication in quick research. Governed provider exceptions now flow through `source_provider_exception_record()`. Injected compatibility callables remain explicitly separate: when invocation itself proves an attempt, an otherwise-unclassified injected failure may be recorded as a generic execution failure. Warnings remain human context and are never parsed into source state.
 
 PR #40 deliberately adds **counts, not reliability percentages**. Current evaluation records attempts, completed attempts, attempted failures, result-bearing records, no-match results, observation yield, remote rate limits, execution failures, malformed results, local budget stops, optional-unconfigured states, missing-secret configuration states, provider-policy blocks and scheduler/review/display/blocked states. Sample size remains visible globally and per source.
 
@@ -132,12 +135,11 @@ PR #46 runs labelled synthetic leads through the actual frontier scheduler under
 
 Remaining before V2-D closes:
 
-1. replace quick research's local provider-exception classifier with the shared phase-proven `source_provider_exception_record()` mapper while retaining explicit injected-test compatibility;
-2. migrate the existing optional Brave exact-match path behind `ProviderRuntime` while preserving no-key zero-spend operation and without expanding source coverage;
-3. remove the final legacy network execution allowance;
-4. finish document-candidate-to-reviewed-lead plumbing;
-5. expose source-state/evaluation summaries cleanly to the operator;
-6. run final architecture consistency evaluation before activating new network providers.
+1. migrate the existing optional Brave exact-match path behind `ProviderRuntime` while preserving no-key zero-spend operation and without expanding source coverage;
+2. remove the final legacy network execution allowance;
+3. finish document-candidate-to-reviewed-lead plumbing;
+4. expose source-state/evaluation summaries cleanly to the operator;
+5. run final architecture consistency evaluation before activating new network providers.
 
 No new third-party source should be activated during these closure blocks.
 
@@ -166,9 +168,9 @@ Observation count is evidence yield, not evidence quality. Provider percentages 
 
 ## Immediate next gate
 
-Switch quick research to the shared phase-proven provider-exception mapper. Provider-policy rejection and missing required server-side secrets must remain non-attempts; malformed-result reporting is allowed only through the post-attempt runtime type. Generic validation failures must remain unclassified. Injected compatibility lookups need their own explicit attempted-failure handling because they do not run through `ProviderRuntime`.
+Migrate the already-existing optional Brave exact-match search behind `ProviderRuntime` without making it a required dependency. No-key operation must continue to produce an explicit non-attempt state, the default product must remain zero-spend, and this migration must not expand query scope or source coverage. After that, remove the final `legacy_research` network allowance.
 
-After that, migrate the already-existing optional Brave path behind `ProviderRuntime`, remove the final legacy network allowance, and finish document-to-reviewed-lead plumbing. Only after V2-D architecture closure may new public/API sources be reviewed one at a time. Each activation must re-check current official terms, authentication, limits and cost from primary sources; old pricing or quota notes are not authority.
+Then finish document-candidate-to-reviewed-lead plumbing and operator source-state/evaluation exposure. Only after V2-D architecture closure may new public/API sources be reviewed one at a time. Each activation must re-check current official terms, authentication, limits and cost from primary sources; old pricing or quota notes are not authority.
 
 Production recursion remains depth 2 / 12 nodes. The comparison harness is an evaluation tool, not a configuration change.
 
