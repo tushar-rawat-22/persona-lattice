@@ -24,6 +24,7 @@ from .errors import (
 )
 from .executor import ProviderExecutor
 from .github_public import GitHubPublicProfileProvider, fetch_github_public_profile
+from .gitlab_public import GitLabPublicProfileProvider, fetch_gitlab_public_profile
 from .logging import REDACTED_SECRET, sanitize_provider_log
 from .mock import SyntheticEchoProvider
 from .policy import authorize_execution
@@ -45,6 +46,7 @@ __all__ = [
     "ContactRisk",
     "ExecutionRequest",
     "GitHubPublicProfileProvider",
+    "GitLabPublicProfileProvider",
     "MAX_SHERLOCK_SITES",
     "PROVIDERS",
     "PROVIDER_BY_NAME",
@@ -76,6 +78,7 @@ __all__ = [
     "SyntheticEchoProvider",
     "authorize_execution",
     "fetch_github_public_profile",
+    "fetch_gitlab_public_profile",
     "load_reviewed_sherlock_sites",
     "sanitize_provider_log",
 ]
