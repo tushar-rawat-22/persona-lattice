@@ -19,6 +19,7 @@ from .providers.github_public import fetch_github_public_profile
 from .providers.runtime import ProviderRuntime
 from .providers.shared_runtime import (
     DEFAULT_GITHUB_PROVIDER,
+    DEFAULT_GITLAB_PROVIDER,
     DEFAULT_PROVIDER_RUNTIME,
     DEFAULT_SHERLOCK_PROVIDER,
 )
@@ -82,6 +83,16 @@ def _github_observation_from_provider(item: ProviderObservationData) -> QuickObs
     )
 
 
+def _gitlab_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    matched_by = str(item.payload.get("matched_by", "public_profile"))
+    return QuickObservation(
+        source="gitlab_public_api",
+        source_locator=item.source_locator,
+        summary=f"GitLab public profile matched by {matched_by}; account candidate only.",
+        details=dict(item.payload),
+    )
+
+
 def _public_search_observations(results: tuple[PublicSearchResult, ...]) -> list[QuickObservation]:
     return [
         QuickObservation(
@@ -100,10 +111,7 @@ def _public_search_observations(results: tuple[PublicSearchResult, ...]) -> list
     ]
 
 
-async def _public_search(
-    identifier: str,
-    lookup: PublicSearchLookup,
-) -> tuple[list[QuickObservation], str | None]:
+async def _public_search(identifier: str, lookup: PublicSearchLookup) -> tuple[list[QuickObservation], str | None]:
     try:
         results = await lookup(identifier)
     except RuntimeError:
@@ -112,51 +120,22 @@ async def _public_search(
 
 
 async def lookup_github_public_profile(username: str) -> dict[str, object] | None:
-    """Compatibility helper for callers needing the raw public GitHub payload.
-
-    Production quick research does not call this helper; it uses the governed
-    GitHub provider/runtime path below.
-    """
-
+    """Compatibility helper for callers needing the raw public GitHub payload."""
     return await fetch_github_public_profile(username)
 
 
 def _legacy_github_observation(payload: dict[str, object]) -> QuickObservation | None:
-    """Convert an explicitly injected legacy test lookup without widening fields."""
-
     login = payload.get("login")
     html_url = payload.get("html_url")
     if not isinstance(login, str) or not isinstance(html_url, str):
         return None
-
     allowed_fields = (
-        "login",
-        "id",
-        "avatar_url",
-        "html_url",
-        "name",
-        "company",
-        "blog",
-        "location",
-        "email",
-        "hireable",
-        "bio",
-        "twitter_username",
-        "public_repos",
-        "public_gists",
-        "followers",
-        "following",
-        "created_at",
-        "updated_at",
+        "login", "id", "avatar_url", "html_url", "name", "company", "blog", "location",
+        "email", "hireable", "bio", "twitter_username", "public_repos", "public_gists",
+        "followers", "following", "created_at", "updated_at",
     )
     details = {field: payload.get(field) for field in allowed_fields}
-    details.update(
-        {
-            "account_candidate": True,
-            "identity_claim": False,
-            "field_visibility": "public_profile_api",
-        }
-    )
+    details.update({"account_candidate": True, "identity_claim": False, "field_visibility": "public_profile_api"})
     return QuickObservation(
         source="github_public_api",
         source_locator=html_url,
@@ -180,7 +159,6 @@ async def _github_observations(
             return []
         observation = _legacy_github_observation(payload)
         return [] if observation is None else [observation]
-
     request = ExecutionRequest(
         provider_name=DEFAULT_GITHUB_PROVIDER.descriptor.name,
         subject_id=subject_id,
@@ -200,7 +178,7 @@ async def _github_observations(
     return [_github_observation_from_provider(item) for item in result.observations]
 
 
-def _gitlab_observation(payload: dict[str, object], *, matched_by: str) -> QuickObservation | None:
+def _legacy_gitlab_observation(payload: dict[str, object], *, matched_by: str) -> QuickObservation | None:
     username = payload.get("username")
     web_url = payload.get("web_url")
     if not isinstance(username, str) or not isinstance(web_url, str):
@@ -222,18 +200,49 @@ def _gitlab_observation(payload: dict[str, object], *, matched_by: str) -> Quick
     )
 
 
+async def _gitlab_observations(
+    normalized_value: str,
+    *,
+    identifier_kind: IdentifierKind,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+    injected_lookup: PublicLookup | None,
+) -> list[QuickObservation]:
+    if injected_lookup is not None:
+        payload = await injected_lookup(normalized_value)
+        if payload is None:
+            return []
+        matched_by = "username" if identifier_kind is IdentifierKind.USERNAME else "exact_public_email"
+        observation = _legacy_gitlab_observation(payload, matched_by=matched_by)
+        return [] if observation is None else [observation]
+
+    request = ExecutionRequest(
+        provider_name=DEFAULT_GITLAB_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=identifier_kind.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_gitlab_observation_from_provider(item) for item in result.observations]
+
+
 def _codeforces_observation(payload: dict[str, object]) -> QuickObservation | None:
     handle = payload.get("handle")
     if not isinstance(handle, str):
         return None
     details = codeforces_public_observation_fields(payload)
-    details.update(
-        {
-            "account_candidate": True,
-            "identity_claim": False,
-            "field_visibility": "public_profile_api",
-        }
-    )
+    details.update({"account_candidate": True, "identity_claim": False, "field_visibility": "public_profile_api"})
     return QuickObservation(
         source="codeforces_public_api",
         source_locator=f"https://codeforces.com/profile/{quote(handle, safe='')}",
@@ -273,9 +282,9 @@ async def _research_username(
             identifier_value=normalized_value,
         ),
     )
-
     observations = [_sherlock_observation_from_provider(item) for item in result.observations]
     warnings: list[str] = []
+    injected_gitlab = None if gitlab_lookup is lookup_gitlab_username else gitlab_lookup
     enrichments = await asyncio.gather(
         _github_observations(
             normalized_value,
@@ -285,36 +294,37 @@ async def _research_username(
             consent_acknowledged=consent_acknowledged,
             injected_lookup=github_lookup,
         ),
-        gitlab_lookup(normalized_value),
+        _gitlab_observations(
+            normalized_value,
+            identifier_kind=IdentifierKind.USERNAME,
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
+            injected_lookup=injected_gitlab,
+        ),
         codeforces_lookup(normalized_value),
         return_exceptions=True,
     )
-    github_observations, gitlab_payload, codeforces_payload = enrichments
-
+    github_observations, gitlab_observations, codeforces_payload = enrichments
     if isinstance(github_observations, Exception):
         warnings.append("GitHub public profile enrichment was temporarily unavailable.")
     else:
         observations.extend(github_observations)
-
-    if isinstance(gitlab_payload, Exception):
+    if isinstance(gitlab_observations, Exception):
         warnings.append("GitLab public profile enrichment was temporarily unavailable.")
-    elif gitlab_payload is not None:
-        enriched = _gitlab_observation(gitlab_payload, matched_by="username")
-        if enriched is not None:
-            observations.append(enriched)
-
+    else:
+        observations.extend(gitlab_observations)
     if isinstance(codeforces_payload, Exception):
         warnings.append("Codeforces public profile enrichment was temporarily unavailable.")
     elif codeforces_payload is not None:
         enriched = _codeforces_observation(codeforces_payload)
         if enriched is not None:
             observations.append(enriched)
-
     search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
     observations.extend(search_observations)
     if search_warning:
         warnings.append(search_warning)
-
     return QuickResearchReport(
         kind=ResearchKind.USERNAME,
         normalized_value=normalized_value,
@@ -368,6 +378,8 @@ async def _research_phone(
 async def _research_email(
     normalized_value: str,
     *,
+    purpose: Purpose,
+    consent_acknowledged: bool,
     gitlab_email_lookup: PublicLookup = lookup_gitlab_public_email,
     public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
 ) -> QuickResearchReport:
@@ -385,27 +397,32 @@ async def _research_email(
         )
     ]
     warnings: list[str] = []
+    subject_id = uuid4()
+    identifier_id = uuid4()
+    injected_gitlab = None if gitlab_email_lookup is lookup_gitlab_public_email else gitlab_email_lookup
     try:
-        gitlab_payload = await gitlab_email_lookup(normalized_value)
-    except RuntimeError:
-        gitlab_payload = None
+        gitlab_observations = await _gitlab_observations(
+            normalized_value,
+            identifier_kind=IdentifierKind.EMAIL,
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
+            injected_lookup=injected_gitlab,
+        )
+    except Exception:
+        gitlab_observations = []
         warnings.append("GitLab public-email lookup was temporarily unavailable.")
-    if gitlab_payload is not None:
-        enriched = _gitlab_observation(gitlab_payload, matched_by="exact_public_email")
-        if enriched is not None:
-            observations.append(enriched)
-
+    observations.extend(gitlab_observations)
     search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
     observations.extend(search_observations)
     if search_warning:
         warnings.append(search_warning)
-
     if len(observations) == 1:
         warnings.append(
             "No approved external source established a public profile for this email; "
             "PersonaLattice does not infer an owner."
         )
-
     return QuickResearchReport(
         kind=ResearchKind.EMAIL,
         normalized_value=normalized_value,
@@ -436,7 +453,6 @@ async def _research_url(
         )
     ]
     warnings: list[str] = []
-
     if hostname:
         try:
             public_ips = await network_lookup(hostname)
@@ -460,12 +476,10 @@ async def _research_url(
                     },
                 )
             )
-
     search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
     observations.extend(search_observations)
     if search_warning:
         warnings.append(search_warning)
-
     return QuickResearchReport(
         kind=ResearchKind.URL,
         normalized_value=normalized_value,
@@ -490,7 +504,6 @@ async def run_quick_research(
 ) -> QuickResearchReport:
     identifier_kind = IdentifierKind(kind.value)
     normalized = normalize_identifier(identifier_kind, value)
-
     if kind is ResearchKind.USERNAME:
         return await _research_username(
             normalized.normalized_value,
@@ -510,6 +523,8 @@ async def run_quick_research(
     if kind is ResearchKind.EMAIL:
         return await _research_email(
             normalized.normalized_value,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
             gitlab_email_lookup=gitlab_email_lookup,
             public_search_lookup=public_search_lookup,
         )

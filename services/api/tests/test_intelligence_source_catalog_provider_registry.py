@@ -39,12 +39,18 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         for name in PROVIDER_BY_NAME
         if name in SOURCE_BY_NAME and SOURCE_BY_NAME[name].recursive_eligible
     }
-    assert recursive_registry_sources == {"sherlock", "github_public_api"}
+    assert recursive_registry_sources == {"sherlock", "github_public_api", "gitlab_public_api"}
 
 
 def test_github_public_api_budget_keeps_hourly_headroom() -> None:
     descriptor = PROVIDER_BY_NAME["github_public_api"]
-
     assert descriptor.rate_window_seconds == 3600.0
     assert descriptor.rate_limit == 50
     assert descriptor.rate_limit < GITHUB_UNAUTHENTICATED_PRIMARY_LIMIT_PER_HOUR
+
+
+def test_gitlab_public_api_keeps_the_existing_conservative_local_budget() -> None:
+    descriptor = PROVIDER_BY_NAME["gitlab_public_api"]
+    assert descriptor.rate_window_seconds == 60.0
+    assert descriptor.rate_limit == 20
+    assert descriptor.supported_identifier_kinds == frozenset({"username", "email"})

@@ -26,6 +26,7 @@ CONSENTED_PURPOSES = frozenset(
 )
 PHONE_ONLY = frozenset({"phone"})
 USERNAME_ONLY = frozenset({"username"})
+USERNAME_EMAIL = frozenset({"username", "email"})
 
 
 PROVIDERS: tuple[ProviderDescriptor, ...] = (
@@ -128,6 +129,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         max_concurrency=2,
         rate_limit=50,
         rate_window_seconds=3600.0,
+    ),
+    ProviderDescriptor(
+        name="gitlab_public_api",
+        capability="public_profile_enrichment",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official unauthenticated GitLab users endpoint; exact username or public-email "
+            "matches only, with public profile fields admitted as account-candidate evidence."
+        ),
+        version="v4",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=USERNAME_EMAIL,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=64 * 1024,
+        max_concurrency=2,
+        rate_limit=20,
+        rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
         name="whatsmyname",
