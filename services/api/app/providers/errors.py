@@ -11,7 +11,15 @@ class ProviderPolicyError(ProviderExecutionError):
 
 
 class ProviderValidationError(ProviderExecutionError):
+    """Validation failure whose execution phase is not necessarily known."""
+
     code = "provider_validation_error"
+
+
+class ProviderResultValidationError(ProviderValidationError):
+    """Validation failure proven to have happened after provider output returned."""
+
+    code = "provider_result_validation_error"
 
 
 class ProviderAuthError(ProviderExecutionError):

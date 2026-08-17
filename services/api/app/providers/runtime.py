@@ -15,6 +15,7 @@ from .errors import (
     ProviderExecutionError,
     ProviderRemoteRateLimitError,
     ProviderResponseTooLarge,
+    ProviderResultValidationError,
     ProviderTimeoutError,
     ProviderValidationError,
 )
@@ -40,7 +41,9 @@ def _serialized_size(result: ProviderResult) -> int:
     try:
         serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
     except (TypeError, ValueError) as exc:
-        raise ProviderValidationError("Provider result is not JSON serializable.") from exc
+        raise ProviderResultValidationError(
+            "Provider result is not JSON serializable."
+        ) from exc
     return len(serialized)
 
 
@@ -190,7 +193,9 @@ class ProviderRuntime:
                         timeout=descriptor.timeout_seconds,
                     )
                 if not isinstance(result, ProviderResult):
-                    raise ProviderValidationError("Provider returned an invalid result contract.")
+                    raise ProviderResultValidationError(
+                        "Provider returned an invalid result contract."
+                    )
                 break
             except asyncio.TimeoutError as exc:
                 last_error = ProviderTimeoutError("Provider call timed out.")
@@ -219,6 +224,8 @@ class ProviderRuntime:
 
         for observation in result.observations:
             if not observation.source_locator.strip():
-                raise ProviderValidationError("Provider observation requires a source locator.")
+                raise ProviderResultValidationError(
+                    "Provider observation requires a source locator."
+                )
 
         return result

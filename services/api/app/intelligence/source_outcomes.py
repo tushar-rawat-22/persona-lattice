@@ -1,6 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+from ..providers.errors import (
+    ProviderAuthError,
+    ProviderExecutionError,
+    ProviderPolicyError,
+    ProviderRateBudgetExceeded,
+    ProviderRemoteRateLimitError,
+    ProviderResponseTooLarge,
+    ProviderResultValidationError,
+    ProviderTimeoutError,
+    ProviderTransientError,
+    ProviderValidationError,
+)
 from .contracts import LeadKind
 from .source_states import SourceRunReason, SourceRunRecord, SourceRunState
 
@@ -134,3 +146,42 @@ def source_local_budget_record(
         state=SourceRunState.BUDGET_STOPPED,
         reason=SourceRunReason.LOCAL_BUDGET,
     )
+
+
+def source_provider_exception_record(
+    *,
+    source_name: str,
+    lead_kind: LeadKind,
+    exc: BaseException,
+) -> SourceRunRecord | None:
+    """Map a provider exception only when its execution phase is provable.
+
+    Generic ``ProviderValidationError`` remains deliberately unclassified because
+    it can describe either a pre-execution request mismatch or another validation
+    boundary whose phase is not encoded by the exception type.
+    """
+
+    if isinstance(exc, ProviderRateBudgetExceeded):
+        return source_local_budget_record(source_name=source_name, lead_kind=lead_kind)
+    if isinstance(exc, ProviderPolicyError):
+        return source_provider_policy_record(source_name=source_name, lead_kind=lead_kind)
+    if isinstance(exc, ProviderAuthError):
+        return source_credential_not_configured_record(
+            source_name=source_name,
+            lead_kind=lead_kind,
+        )
+    if isinstance(exc, ProviderResultValidationError):
+        return source_malformed_result_record(source_name=source_name, lead_kind=lead_kind)
+    if isinstance(exc, ProviderRemoteRateLimitError):
+        return source_execution_failure_record(
+            source_name=source_name,
+            lead_kind=lead_kind,
+            remote_rate_limited=True,
+        )
+    if isinstance(exc, (ProviderTimeoutError, ProviderTransientError, ProviderResponseTooLarge)):
+        return source_execution_failure_record(source_name=source_name, lead_kind=lead_kind)
+    if type(exc) is ProviderExecutionError:
+        return source_execution_failure_record(source_name=source_name, lead_kind=lead_kind)
+    if isinstance(exc, ProviderValidationError):
+        return None
+    return None
