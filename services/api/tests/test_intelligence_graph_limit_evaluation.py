@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import pytest
 
-from app.convergence import _compatibility_frontier_limits
 from app.intelligence.contracts import (
     LeadCandidate,
     LeadDisposition,
@@ -69,11 +68,17 @@ def _labelled_fixture() -> tuple[
     return seed_key, leads_by_parent, truth
 
 
-def test_shared_compatibility_limits_match_current_production_policy() -> None:
-    assert compatibility_frontier_limits(
-        max_depth=2,
-        max_nodes=12,
-    ) == _compatibility_frontier_limits(max_depth=2, max_nodes=12)
+def test_shared_compatibility_limits_match_current_production_policy_shape() -> None:
+    limits = compatibility_frontier_limits(max_depth=2, max_nodes=12)
+
+    assert limits.max_depth == 2
+    assert limits.max_nodes == 12
+    assert limits.max_edges == 11
+    assert limits.max_auto_children_per_parent == 12
+    assert limits.max_username_nodes == 12
+    assert limits.max_email_nodes == 12
+    assert limits.max_phone_nodes == 12
+    assert limits.max_url_nodes == 12
 
 
 def test_labelled_fixture_exposes_capacity_tradeoffs_without_changing_production_limits() -> None:
