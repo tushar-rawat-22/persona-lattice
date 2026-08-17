@@ -1,8 +1,8 @@
 # Continuity
 
-Public-safe engineering handover for PersonaLattice. Verify GitHub before changing anything; commit, CI and provider-policy claims here are checkpoints, not a substitute for inspection.
+Public-safe engineering handover for PersonaLattice. Verify GitHub before changing anything; this file is a checkpoint, not authority over the repository.
 
-Never put API keys, real research identifiers, retained-case data, password hashes, session material or unredacted investigation screenshots in this file.
+Do not put API keys, real research identifiers, retained-case data, password hashes, session material or unredacted investigation screenshots here.
 
 ## Repository checkpoint
 
@@ -12,9 +12,9 @@ Never put API keys, real research identifiers, retained-case data, password hash
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified `main`: `39535a8f4fbd6d33ca38f19f1d60eb191b58b422`
-- PR #38 exact head: `bb5c5117f3dabddba75f9750a1ef9b0300c14c52`
-- PR #38 CI: run `32042788240`, success across API 3.11/3.13, Ruff/audits, web and deployment image
+- Verified main after PR #40: `a6378da62646ea28fe26cc8c150ab44d22c69820`
+- PR #40 exact tested head: `8926b7f686b918c6559e97ff198a00c607ac5f15`
+- PR #40 CI run: `32046081716`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
 ## Permanent evidence semantics
@@ -29,11 +29,9 @@ Never put API keys, real research identifiers, retained-case data, password hash
 - Unknown, not-found, unavailable and budget-stopped are distinct outcomes.
 - No AI/ML/embedding/biometric identity decision is in the correlation path.
 
-## Permanent security/privacy/cost boundary
+## Permanent security, privacy and cost boundary
 
 PersonaLattice may expand attributable public information and explicitly authorized data. It does not add private-account bypass, login/account-recovery enumeration, credentials/passwords/OTP/session/token collection, CAPTCHA/WAF/proxy/Tor evasion, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking, covert subject contact, or regulated eligibility decisioning.
-
-The V2 lead extractor blocks government-ID, credential/token and personal/device-IP fields from recursive state and retains only blocked field names.
 
 The default product must remain usable with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations may exist only as optional extensions. Missing optional credentials must degrade explicitly rather than breaking baseline research.
 
@@ -46,7 +44,7 @@ The default product must remain usable with zero paid APIs, zero paid database, 
 - M3 governed execution: `services/api/app/providers`
 - M5 deterministic correlation: `services/api/app/correlation`
 - convergence: `services/api/app/convergence.py`
-- typed leads/frontier/source catalog/bindings/planning/reporting: `services/api/app/intelligence`
+- typed leads/frontier/source catalog/bindings/planning/reporting/evaluation: `services/api/app/intelligence`
 - quick research: `services/api/app/research.py`
 - retained cases: `services/api/app/cases.py`
 - source expansion design: `docs/V2_SOURCE_EXPANSION_PLAN.md`
@@ -57,44 +55,44 @@ M0-M6 are complete. Private V1 one-admin research, retention/deletion, audit, lo
 
 ### V2-A — typed lead graph — complete
 
-PR #20, merge `e66944259c545cdfe8e4020312357b92a42911ba`. Exact-field lead extraction, M1-consistent normalization, dispositions, blocked sensitive field classes and ADR 0010.
+PR #20. Exact-field lead extraction, M1-consistent normalization, dispositions, blocked sensitive field classes and ADR 0010.
 
 ### V2-B — deterministic frontier — complete
 
-PR #21, merge `2a69224e53ea1912879032548a38f017bfcafb6a`. Post-merge CI `31974590505`: success. Reservation-safe frontier, duplicate/cycle suppression, reason-coded outcomes and bounded additive lead-graph report state. Depth/node ceilings remain 2/12.
+PR #21. Reservation-safe frontier, duplicate/cycle suppression, reason-coded outcomes and bounded additive lead-graph report state. Depth/node ceilings remain 2/12.
 
 ### V2-C — capability registry/planner — complete
 
-PR #22, merge `b1192fd15d73c144faba6279559db3e2b6ae2980`. Post-merge CI `31974993479`: API 3.11/3.13, web and deployment image PASS. Capability, cost/credential/review state and zero-spend planning are separated from execution authority.
+PR #22. Capability, cost/credential/review state and zero-spend planning are separated from execution authority.
 
-### V2-D — runtime consistency and source-state closure — active
+### V2-D — runtime consistency and architecture closure — active
 
-Runtime migration sequence:
+Provider/runtime sequence completed so far:
 
-- PR #24: source binding admission; merge `a92afe8ddc12a16d837e95f575660f838d39af28`;
-- PR #25: reusable `ProviderRuntime`; merge `0759ea2d514b9606e8ac31bf700d8e75afa6dc1c`;
-- PR #26: Sherlock governed quick research; next main checkpoint `2d0a3dc54b00b81047a69274ca2ec1da3148f7cd`;
-- PR #27: GitHub governed runtime; merge `fb4e672c438103588bacc0f7190ef116796dd0ac`;
-- PR #28: GitHub rate/regression repair; merge `69b0d462f9a45f0440dd867bdd96a674e0b7ebb0`;
-- PR #29: process-wide shared runtime; merge `a12174b05caabd880e947603845420f63ffa8c67`;
-- PR #30: GitLab governed runtime; merge `a001d902ed807f6e7c7e61d94d8aeae40e8239dc`;
-- PR #31: Codeforces governed runtime; merge `111788f8daf96805a6456202d5b2a702d554f534`;
-- PR #32: public DNS governed runtime; merge `66410eff175bc4cee09460cac0c33584f937f628`;
-- PR #33: documentation standard; merge `8191a049d334b4a77b48e23d6d00a4830d7473ba`.
+- PR #24: source binding admission;
+- PR #25: reusable `ProviderRuntime`;
+- PR #26: Sherlock governed quick research;
+- PR #27: GitHub governed runtime;
+- PR #28: GitHub rate/regression repair;
+- PR #29: process-wide shared runtime;
+- PR #30: GitLab governed runtime;
+- PR #31: Codeforces governed runtime;
+- PR #32: public DNS governed runtime.
 
-Source-state/report sequence:
+Source-state/report sequence completed:
 
-- PR #34: typed source-run state contract; merge `1a8d875396b8ad6730416d3373ad5b4f8bd09650`; ADR 0021;
-- PR #35: deterministic privacy-bounded source-run report projection; merge `ff876d92b969aa6657ce23f0329d61104d4141eb`; ADR 0022;
-- PR #36: explicit execution outcome mapping; merge `e26158720f78a9db8972235142a900394c8a4b9e`; ADR 0023;
-- PR #37: converged node `source_runs` projection; merge `35c4428916c9a5d5fe30ca21fbdc2b98fb4bc0a0`; ADR 0024; exact PR head CI run `32039578511` succeeded;
-- PR #38: factual quick-research source-run population; merge `39535a8f4fbd6d33ca38f19f1d60eb191b58b422`; ADR 0025; exact head CI run `32042788240` succeeded.
+- PR #34: typed source-run state contract; ADR 0021;
+- PR #35: deterministic privacy-bounded source-run projection; ADR 0022;
+- PR #36: explicit execution outcome mapping; ADR 0023;
+- PR #37: converged node `source_runs` projection; ADR 0024;
+- PR #38: factual quick-research source-run population; ADR 0025;
+- PR #40: deterministic aggregate/per-source evaluation counters; ADR 0026.
 
 Current governed production sources: Sherlock, GitHub, GitLab, Codeforces and public DNS. The only remaining legacy network binding is optional metered Brave exact-match search. No new third-party source is authorized during architecture closure.
 
-## Source-run semantics
+## Source-run and evaluation semantics
 
-The retained source-run projection is intentionally privacy-minimal. It carries logical source name, lead kind, state/reason, observation count and execution/terminal flags only. Identifier values, source locators, provider payloads, credentials and exception text remain in their existing canonical owners and are not copied into this projection.
+The retained source-run projection is intentionally privacy-minimal. It carries logical source name, lead kind, state/reason, observation count and execution/terminal flags only. Identifier values, source locators, provider payloads, credentials and exception text remain in their existing canonical owners.
 
 Current typed distinctions:
 
@@ -106,7 +104,15 @@ Current typed distinctions:
 - `unavailable / execution_failure`: execution was entered and failed;
 - queued/review/display/blocked states remain available for scheduler/report integration.
 
-Normal quick research now emits these records at the point where the outcome is known, so converged reports no longer need an empty compatibility projection for normal execution. The implementation deliberately refuses to call ambiguous policy/auth/preflight exceptions attempted provider failures when the execution boundary cannot prove provider contact.
+PR #40 adds descriptive evaluation counters over those records. Counts are available globally and per logical source for attempts, completed attempts, attempted failures, result-bearing records, no-match results, admitted observation count, rate limits, execution failures, local budget stops, optional-unconfigured states and scheduler/review/display/blocked states.
+
+Important interpretation rules:
+
+- `not_found` is a completed lookup, not a provider failure;
+- local budget stops and optional-unconfigured sources are not provider attempts;
+- remote rate limits and proven execution failures are attempted failures;
+- `unclassified_attempt_count` exists so future state drift cannot be silently forced into success/failure buckets;
+- no reliability percentage, confidence score or identity-quality score is authorized from these counters yet.
 
 ## Current deliberate limits
 
@@ -123,14 +129,14 @@ Normal quick research now emits these records at the point where the outcome is 
 
 ## Immediate next gate
 
-1. Add explicit typed outcomes for pre-execution policy/configuration failures and malformed-result cases where the current boundary can prove them; do not guess from warning text.
-2. Add source reliability/budget evaluation counters over the retained source-run projection before changing recursion limits.
-3. Migrate the existing optional Brave path behind `ProviderRuntime` only if the migration preserves no-key zero-spend operation and does not activate any new source coverage.
-4. Remove the final legacy network allowlist after that migration.
-5. Finish document-candidate-to-reviewed-lead plumbing and source-state operator exposure.
-6. Start M10-style failure/growth evaluation before raising recursion limits or activating new network providers.
+1. Add deterministic synthetic/failure fixtures that exercise the evaluation counters across provider failure, remote rate limit, no-match, local budget and optional-unconfigured cases.
+2. Add graph-growth/wrong-pivot/duplicate measurements before changing recursion limits.
+3. Add explicit typed outcomes for pre-execution policy/configuration and malformed-result cases only where the runtime can prove the state; do not guess from warning text.
+4. Migrate the existing optional Brave path behind `ProviderRuntime` only if no-key zero-spend operation remains intact and no new source coverage is activated.
+5. Remove the final legacy network allowance after that migration.
+6. Finish document-candidate-to-reviewed-lead plumbing and operator source-state exposure.
 
-Brave policy note as of 2026-08-17: existing project review classifies Search as metered/credentialed and therefore optional. Re-check official terms and quotas from primary sources before any later activation or cost-policy change.
+Do not raise recursion limits or activate new third-party sources until the failure/growth measurements exist and their denominators are understood.
 
 ## Update discipline
 
