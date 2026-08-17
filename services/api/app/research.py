@@ -15,8 +15,13 @@ from .models import Purpose
 from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.contracts import ExecutionRequest
-from .providers.github_public import GitHubPublicProfileProvider, fetch_github_public_profile
+from .providers.github_public import fetch_github_public_profile
 from .providers.runtime import ProviderRuntime
+from .providers.shared_runtime import (
+    DEFAULT_GITHUB_PROVIDER,
+    DEFAULT_PROVIDER_RUNTIME,
+    DEFAULT_SHERLOCK_PROVIDER,
+)
 from .providers.sherlock import SherlockProvider
 from .public_profiles import (
     codeforces_public_observation_fields,
@@ -54,11 +59,6 @@ class QuickResearchReport:
 PublicLookup = Callable[[str], Awaitable[dict[str, object] | None]]
 PublicSearchLookup = Callable[[str], Awaitable[tuple[PublicSearchResult, ...]]]
 NetworkLookup = Callable[[str], Awaitable[tuple[str, ...]]]
-
-_DEFAULT_SHERLOCK_PROVIDER = SherlockProvider()
-_SHERLOCK_RUNTIME = ProviderRuntime(adapters=[_DEFAULT_SHERLOCK_PROVIDER])
-_DEFAULT_GITHUB_PROVIDER = GitHubPublicProfileProvider()
-_GITHUB_RUNTIME = ProviderRuntime(adapters=[_DEFAULT_GITHUB_PROVIDER])
 
 
 def _sherlock_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
@@ -182,13 +182,13 @@ async def _github_observations(
         return [] if observation is None else [observation]
 
     request = ExecutionRequest(
-        provider_name=_DEFAULT_GITHUB_PROVIDER.descriptor.name,
+        provider_name=DEFAULT_GITHUB_PROVIDER.descriptor.name,
         subject_id=subject_id,
         identifier_id=identifier_id,
         purpose=purpose,
         consent_acknowledged=consent_acknowledged,
     )
-    result = await _GITHUB_RUNTIME.execute(
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
         request=request,
         query=ProviderQuery(
             subject_id=subject_id,
@@ -253,8 +253,8 @@ async def _research_username(
     codeforces_lookup: PublicLookup = lookup_codeforces_handle,
     public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
 ) -> QuickResearchReport:
-    adapter = provider or _DEFAULT_SHERLOCK_PROVIDER
-    runtime = _SHERLOCK_RUNTIME if provider is None else ProviderRuntime(adapters=[adapter])
+    adapter = provider or DEFAULT_SHERLOCK_PROVIDER
+    runtime = DEFAULT_PROVIDER_RUNTIME if provider is None else ProviderRuntime(adapters=[adapter])
     subject_id = uuid4()
     identifier_id = uuid4()
     request = ExecutionRequest(
