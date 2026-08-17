@@ -203,11 +203,12 @@ A source appearing in the catalog is never permission to call it.
 
 ## V2-D — source-adapter/runtime consistency
 
-**Status: active; current-provider migration substantially complete**
+**Status: active; provider migration and source-run reporting substantially complete**
 
-The original source-adapter gate is no longer future work. PRs #24 through #32
-have already established the binding/runtime boundary and migrated the current
-zero-direct-cost network sources onto the shared governed runtime.
+The original source-adapter gate is no longer future work. PRs #24 through #38
+have established one governed execution boundary for the current zero-direct-cost
+network sources and a typed, privacy-bounded source-state reporting path from
+quick research into converged reports.
 
 Completed:
 
@@ -220,21 +221,34 @@ Completed:
 - PR #30: GitLab username and exact-public-email runtime migration;
 - PR #31: Codeforces runtime migration and corrected request budget;
 - PR #32: public DNS runtime migration with infrastructure-only IP semantics;
-- typed source-run state/reason contract for `executed`, `not_found`, `queued`,
-  `review_required`, `display_only`, `blocked`, `unavailable` and
-  `budget_stopped` outcomes.
+- PR #34: typed source-run state/reason contract;
+- PR #35: deterministic privacy-bounded source-run report projection;
+- PR #36: explicit execution outcome mapping;
+- PR #37: converged nodes expose the source-run projection;
+- PR #38: normal quick research emits factual source-run records for completed
+  results, completed no-match calls, optional-unconfigured search, local budget
+  stops, remote rate limits and provable execution failures.
+
+The source-run path deliberately does not infer execution facts from warning
+strings. An optional source that was never configured is not a negative result,
+and a local pre-call budget stop is not a provider failure. Ambiguous policy,
+authentication and validation failures are not marked as attempted provider calls
+unless the execution boundary can prove that fact.
 
 Remaining before V2-D closes:
 
-1. wire typed source-run records into convergence/retained reports and synthetic
-   deterministic fixtures;
-2. migrate the existing optional Brave exact-match search behind
-   `ProviderRuntime` while keeping it outside the zero-spend baseline;
-3. remove the final legacy network execution allowance;
-4. finish document-candidate-to-reviewed-lead plumbing and source-state UI/report
+1. add explicit typed outcomes for pre-execution policy/configuration and malformed
+   result cases where the runtime can prove the state without guessing;
+2. add deterministic source reliability/budget evaluation counters and failure
+   fixtures over the retained source-run projection;
+3. migrate the existing optional Brave exact-match search behind `ProviderRuntime`
+   while preserving no-key zero-spend operation and without activating new source
+   coverage;
+4. remove the final legacy network execution allowance after that migration;
+5. finish document-candidate-to-reviewed-lead plumbing and operator source-state
    exposure;
-5. run consistency/failure-path evaluation before activating any new network
-   provider.
+6. run architecture consistency/failure-path evaluation before activating any new
+   network provider or increasing recursion limits.
 
 No new third-party source should be activated during these closure blocks.
 
@@ -253,8 +267,9 @@ Before increasing recursion limits or changing correlation thresholds:
 
 ## Immediate next gate
 
-Integrate the typed source-run contract into retained convergence/report output
-and deterministic fixtures. Then migrate optional Brave behind the shared runtime
+Tighten source-outcome completeness and add reliability/budget evaluation over the
+source-run records that now flow through normal quick research and converged
+reports. Then migrate the existing optional Brave path behind the shared runtime
 without making it a baseline dependency.
 
 After V2-D closes, new public/API sources may be reviewed one at a time. Each
