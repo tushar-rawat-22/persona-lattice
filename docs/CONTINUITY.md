@@ -12,10 +12,12 @@ Do not put API keys, real research identifiers, retained-case data, password has
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #46: `3e0f061d541590ed07044d5506b8042359ff2bc7`
-- PR #46 exact tested head: `4854533175f66b28d6f9c8db54dfcab240658e2b`
-- PR #46 CI run: `32061236295`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #48: `68c34dfbc38edbea2410db952ac3ca54be43b349`
+- PR #48 exact tested head: `806a9bffc69eca8c883c6fec52a57325345d52cb`
+- PR #48 CI run: `32066864997`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
+
+PR #48 initially failed API CI because the new evaluation key `credential_not_configured_count` violated the existing privacy-output regression test by containing the forbidden token `credential`. The implementation was corrected rather than weakening the test: the evaluation key is now `missing_secret_config_count`, while the internal typed reason remains `credential_not_configured`. The exact corrected head above passed the full CI matrix before merge.
 
 ## Permanent evidence semantics
 
@@ -26,14 +28,14 @@ Do not put API keys, real research identifiers, retained-case data, password has
 - M5 is deterministic evidence-strength triage, not identity probability.
 - `calibration_status=uncalibrated` and `is_identity_claim=false` remain fixed.
 - Contradictions/vetoes and stale evidence remain visible.
-- Unknown, not-found, unavailable and budget-stopped are distinct outcomes.
+- Unknown, not-found, unavailable, blocked and budget-stopped are distinct outcomes.
 - No AI/ML/embedding/biometric identity decision is in the correlation path.
 
 ## Permanent security, privacy and cost boundary
 
 PersonaLattice may expand attributable public information and explicitly authorized data. It does not add private-account bypass, login/account-recovery enumeration, credentials/passwords/OTP/session/token collection, CAPTCHA/WAF/proxy/Tor evasion, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking, covert subject contact, or regulated eligibility decisioning.
 
-The default product must remain usable with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations may exist only as optional extensions. Missing optional credentials must degrade explicitly rather than breaking baseline research.
+The default product must remain usable with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations may exist only as optional extensions. Missing optional configuration must degrade explicitly rather than breaking baseline research.
 
 ## Stable architecture
 
@@ -63,11 +65,11 @@ PR #21. Reservation-safe frontier, duplicate/cycle suppression, reason-coded out
 
 ### V2-C — capability registry/planner — complete
 
-PR #22. Capability, cost/credential/review state and zero-spend planning are separated from execution authority.
+PR #22. Capability, cost/configuration/review state and zero-spend planning are separated from execution authority.
 
 ### V2-D — runtime consistency and architecture closure — active
 
-Provider/runtime sequence completed so far:
+Provider/runtime sequence completed:
 
 - PR #24: source binding admission;
 - PR #25: reusable `ProviderRuntime`;
@@ -89,45 +91,39 @@ Source-state/report/evaluation sequence completed:
 - PR #40: deterministic aggregate/per-source evaluation counters; ADR 0026;
 - PR #42: complete deterministic source state/reason fixture matrix; ADR 0027;
 - PR #44: deterministic graph-growth/duplicate counters plus label-gated wrong-pivot measurement; ADR 0028;
-- PR #46: deterministic labelled graph-limit comparison through the real `LeadFrontier`; ADR 0029.
+- PR #46: deterministic labelled graph-limit comparison through the real `LeadFrontier`; ADR 0029;
+- PR #48: provable provider-policy/configuration/malformed-result outcome vocabulary, constructors and evaluation counters; ADR 0030.
 
 Current governed production sources: Sherlock, GitHub, GitLab, Codeforces and public DNS. The only remaining legacy network binding is optional metered Brave exact-match search. No new third-party source is authorized during architecture closure.
 
-## Source-run and graph-evaluation semantics
+## Source-run semantics after PR #48
 
-The retained source-run projection is intentionally privacy-minimal. It carries logical source name, lead kind, state/reason, observation count and execution/terminal flags only. Identifier values, source locators, provider payloads, credentials and exception text remain in their existing canonical owners.
+The retained source-run projection is intentionally privacy-minimal. It carries logical source name, lead kind, state/reason, observation count and execution/terminal flags only. Identifier values, source locators, provider payloads, secrets and exception text remain in their existing canonical owners.
 
-Current typed distinctions:
+Typed distinctions now include:
 
-- `executed / results_returned`: source execution completed with observations;
-- `not_found / no_match`: source execution completed with zero observations;
+- `executed / results_returned`: completed execution with observations;
+- `not_found / no_match`: completed execution with zero observations;
 - `unavailable / optional_not_configured`: optional source was not attempted;
-- `budget_stopped / local_budget`: local policy stopped the source before provider contact;
+- `budget_stopped / local_budget`: local policy stopped execution before provider contact;
+- `blocked / provider_policy`: provider policy rejected execution before an attempt;
+- `unavailable / credential_not_configured`: required server-side secret was absent before an attempt;
 - `unavailable / remote_rate_limit`: provider was attempted and rate-limited remotely;
 - `unavailable / execution_failure`: execution was entered and failed;
-- queued/review/display/blocked states remain available for scheduler/report integration.
+- `unavailable / malformed_result`: provider output was returned but failed a proven post-attempt result check;
+- queued/review/display/blocked policy states remain available for scheduler/report integration.
 
-PR #40 adds descriptive evaluation counters over those records. Counts are available globally and per logical source for attempts, completed attempts, attempted failures, result-bearing records, no-match results, admitted observation count, rate limits, execution failures, local budget stops, optional-unconfigured states and scheduler/review/display/blocked states.
+Critical rule: generic `ProviderValidationError` is still ambiguous because validation can occur before or after provider execution. Do not classify it as `malformed_result` unless the runtime boundary proves provider output was already returned. Similarly, do not classify arbitrary auth-like failures as missing configuration unless the exact preflight path proves the required server-side secret was absent.
 
-PR #42 adds a deterministic synthetic matrix that covers every current `SourceRunState` and `SourceRunReason`. Vocabulary expansion now fails the matrix until its attempt/completion/failure semantics are reviewed explicitly. The matrix also proves aggregate/per-source evaluation is order-invariant and keeps local policy/configuration outcomes separate from remote provider failures.
+Evaluation counters now separate malformed attempted failures, local/policy/configuration non-attempts and remote attempted failures. The public evaluation projection deliberately uses `missing_secret_config_count` rather than a key containing the forbidden privacy token `credential`.
 
-PR #44 adds `GraphEvaluationCounters` over canonical converged reports. Structural facts include node/edge growth, maximum observed depth, admitted pivots, duplicate suppression, provider failures, budget stops and review/display/blocked decisions. Evaluation fails closed if edge count, admitted pivots and non-seed node count drift from one another or node depth is invalid.
+## Graph-evaluation semantics
 
-Wrong-pivot truth is never inferred from usernames, provider agreement, graph shape or M5. It requires an explicit `PivotRelevance` label on an admitted child from a deterministic synthetic fixture or explicitly consented evaluation set. Labels for non-admitted keys fail closed. Unlabelled admitted pivots remain visible and unscored. The labelled-admitted count is the only valid wrong-pivot denominator; no quality percentage is emitted.
+PR #44 adds structural graph counters for node/edge growth, maximum depth, admitted pivots, duplicate suppression, provider failures, budget stops and review/display/blocked decisions. Evaluation fails closed if edge count, admitted pivots and non-seed node count drift or node depth is invalid.
 
-PR #46 adds a network-free limit-comparison harness that runs fixture leads through the real `LeadFrontier`. Production convergence and evaluation now share one `compatibility_frontier_limits()` constructor, preventing policy-shape drift. The regression comparison deliberately shows the tradeoff: allowing depth 3 on one labelled fixture adds two nodes, removes three depth-budget stops, adds one duplicate suppression event, and admits one additional relevant plus one additional wrong pivot. Those counts are contract evidence only; they do not authorize a production limit change.
+Wrong-pivot truth is never inferred from usernames, provider agreement, graph shape or M5. It requires explicit `PivotRelevance` labels from deterministic synthetic fixtures or explicitly consented evaluation sets. Labels for non-admitted keys fail closed. Unlabelled admitted pivots remain visible and unscored.
 
-Two fixture-integrity flaws were corrected before PR #46 merged: malformed result keys can no longer claim a different lead kind, and orphan/typo parent branches now fail closed instead of silently disappearing from an evaluation run. Seed key/kind mismatch also fails closed.
-
-Important interpretation rules:
-
-- `not_found` is a completed lookup, not a provider failure;
-- local budget stops and optional-unconfigured sources are not provider attempts;
-- remote rate limits and proven execution failures are attempted failures;
-- `unclassified_attempt_count` exists so future state drift cannot be silently forced into success/failure buckets;
-- graph growth/duplicate counts are structural facts, but wrong-pivot classification requires external evaluation truth;
-- candidate limit deltas are descriptive counts, not a quality score;
-- no reliability percentage, confidence score or identity-quality score is authorized from these counters yet.
+PR #46 adds a network-free limit-comparison harness through the real `LeadFrontier`. Production convergence and evaluation share `compatibility_frontier_limits()`. The regression fixture shows that depth 3 can both admit more relevant evidence and admit more wrong pivots; it is not authorization to change production limits.
 
 ## Current deliberate limits
 
@@ -144,10 +140,10 @@ Important interpretation rules:
 
 ## Immediate next gate
 
-1. Add explicit typed outcomes for pre-execution policy/configuration and malformed-result cases only where the runtime can prove the state; do not guess from warning text or missing observations.
-2. Migrate the existing optional Brave path behind `ProviderRuntime` only if no-key zero-spend operation remains intact and no new source coverage is activated.
+1. Wire PR #48 outcome constructors into runtime/quick-research handling only where execution phase is provable. Keep generic validation errors unclassified until the phase is explicit.
+2. Migrate the existing optional Brave path behind `ProviderRuntime` only if no-key zero-spend operation remains intact and no source coverage is expanded.
 3. Remove the final legacy network allowance after that migration.
-4. Finish document-candidate-to-reviewed-lead plumbing and operator source-state exposure.
+4. Finish document-candidate-to-reviewed-lead plumbing and operator source-state/evaluation exposure.
 5. Run final architecture consistency evaluation before activating new third-party sources.
 
 Production recursion remains depth 2 / 12 nodes. Do not raise it from the single regression fixture; representative synthetic/consented labelled evaluation and provider cost/yield implications are still required.

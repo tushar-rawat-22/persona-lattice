@@ -114,11 +114,12 @@ Completed source-state/report/evaluation work:
 - PR #40: deterministic aggregate/per-source evaluation counters;
 - PR #42: deterministic full-vocabulary source evaluation fixture matrix;
 - PR #44: deterministic graph-growth/duplicate counters and label-gated wrong-pivot measurement;
-- PR #46: network-free labelled graph-limit comparison through the real `LeadFrontier` policy, with production/evaluation compatibility limits centralized in one constructor.
+- PR #46: network-free labelled graph-limit comparison through the real `LeadFrontier` policy, with production/evaluation compatibility limits centralized in one constructor;
+- PR #48: explicit provider-policy, missing-secret configuration and malformed-result outcome vocabulary, with dedicated constructors and evaluation counters.
 
-The source-run path does not infer provider contact from warning strings. An optional source that was never configured is not a negative result. A local pre-call budget stop is not a provider failure. A completed `not_found` call is a valid completed lookup.
+The source-run path does not infer provider contact from warning strings. An optional source that was never configured is not a negative result. A local pre-call budget stop is not a provider failure. A completed `not_found` call is a valid completed lookup. PR #48 extends the same rule to provider-policy rejections and missing server-side secrets: both are non-attempt states. A malformed result is an attempted failure only when the execution boundary proves provider output was already returned.
 
-PR #40 deliberately adds **counts, not reliability percentages**. Current evaluation records attempts, completed attempts, attempted failures, result-bearing records, no-match results, observation yield, remote rate limits, execution failures, local budget stops, optional-unconfigured states and scheduler/review/display/blocked states. Sample size remains visible globally and per source.
+PR #40 deliberately adds **counts, not reliability percentages**. Current evaluation records attempts, completed attempts, attempted failures, result-bearing records, no-match results, observation yield, remote rate limits, execution failures, malformed results, local budget stops, optional-unconfigured states, missing-secret configuration states, provider-policy blocks and scheduler/review/display/blocked states. Sample size remains visible globally and per source.
 
 PR #42 locks every current source-run state and reason into one deterministic synthetic matrix. If the vocabulary changes later, evaluation semantics must be reviewed and the matrix updated instead of silently accepting the new state.
 
@@ -128,7 +129,7 @@ PR #46 runs labelled synthetic leads through the actual frontier scheduler under
 
 Remaining before V2-D closes:
 
-1. add explicit typed pre-execution/configuration/malformed-result outcomes only where the runtime can prove them;
+1. wire the new PR #48 outcome constructors into quick-research/runtime error handling only at boundaries where the execution phase is provable; keep generic validation errors unclassified until the phase is explicit;
 2. migrate the existing optional Brave exact-match path behind `ProviderRuntime` while preserving no-key zero-spend operation and without expanding source coverage;
 3. remove the final legacy network execution allowance;
 4. finish document-candidate-to-reviewed-lead plumbing;
@@ -147,7 +148,8 @@ Established:
 - deterministic graph-growth and duplicate counters;
 - label-gated wrong-pivot counts with explicit labelled denominators;
 - controlled graph-limit comparison through the real frontier scheduler;
-- provider attempt/failure/no-match/yield counts with explicit denominators.
+- provider attempt/failure/no-match/yield counts with explicit denominators;
+- explicit separation of local policy/configuration stops from attempted malformed/provider failures.
 
 Still required before increasing recursion limits or changing correlation thresholds:
 
@@ -161,11 +163,11 @@ Observation count is evidence yield, not evidence quality. Provider percentages 
 
 ## Immediate next gate
 
-Complete the remaining runtime outcome vocabulary: add explicit typed pre-execution/configuration and malformed-result outcomes only at boundaries where the system can prove what happened. Do not infer execution from warnings or missing observations.
+Wire the PR #48 source-outcome vocabulary into actual runtime/quick-research handling only where the system can prove the execution phase. Provider-policy rejection and missing required server-side secrets must remain non-attempts; malformed-result reporting is allowed only after returned provider output is known. Generic validation failures must not be guessed into either category.
 
 After that, migrate the already-existing optional Brave path behind `ProviderRuntime`, remove the final legacy network allowance, and finish document-to-reviewed-lead plumbing. Only after V2-D architecture closure may new public/API sources be reviewed one at a time. Each activation must re-check current official terms, authentication, limits and cost from primary sources; old pricing or quota notes are not authority.
 
-Production recursion remains depth 2 / 12 nodes. The new comparison harness is an evaluation tool, not a configuration change.
+Production recursion remains depth 2 / 12 nodes. The comparison harness is an evaluation tool, not a configuration change.
 
 Success means a small clue can grow into a broad evidence graph while the operator can answer for every hop:
 
