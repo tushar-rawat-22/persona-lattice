@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .github_public import GitHubPublicProfileProvider
+from .gitlab_public import GitLabPublicProfileProvider
 from .runtime import ProviderRuntime
 from .sherlock import SherlockProvider
 
@@ -11,10 +12,12 @@ from .sherlock import SherlockProvider
 # frozen legacy research boundary.
 DEFAULT_SHERLOCK_PROVIDER = SherlockProvider()
 DEFAULT_GITHUB_PROVIDER = GitHubPublicProfileProvider()
+DEFAULT_GITLAB_PROVIDER = GitLabPublicProfileProvider()
 DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
     adapters=[
         DEFAULT_SHERLOCK_PROVIDER,
         DEFAULT_GITHUB_PROVIDER,
+        DEFAULT_GITLAB_PROVIDER,
     ]
 )
 
