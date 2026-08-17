@@ -10,6 +10,7 @@ from .base import (
     ProviderStatus,
     SourceCategory,
 )
+from .codeforces_public import CodeforcesPublicProfileProvider, fetch_codeforces_public_profile
 from .contracts import ExecutionRequest, QueryOrigin
 from .errors import (
     ProviderAuthError,
@@ -43,6 +44,7 @@ from .sherlock import (
 __all__ = [
     "AccountDiscoveryState",
     "AuthMode",
+    "CodeforcesPublicProfileProvider",
     "ContactRisk",
     "ExecutionRequest",
     "GitHubPublicProfileProvider",
@@ -77,6 +79,7 @@ __all__ = [
     "SourceCategory",
     "SyntheticEchoProvider",
     "authorize_execution",
+    "fetch_codeforces_public_profile",
     "fetch_github_public_profile",
     "fetch_gitlab_public_profile",
     "load_reviewed_sherlock_sites",
