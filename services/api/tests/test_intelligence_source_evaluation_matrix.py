@@ -46,7 +46,7 @@ def test_fixture_matrix_locks_attempt_failure_and_no_match_semantics() -> None:
         "malformed_result_count": 1,
         "local_budget_stop_count": 1,
         "optional_not_configured_count": 1,
-        "credential_not_configured_count": 1,
+        "missing_secret_config_count": 1,
         "provider_policy_block_count": 1,
         "queued_count": 1,
         "review_required_count": 1,
@@ -72,7 +72,7 @@ def test_fixture_matrix_keeps_preflight_budget_and_remote_outcomes_separate() ->
     assert by_source["fixture_optional"]["attempt_count"] == 0
     assert by_source["fixture_optional"]["optional_not_configured_count"] == 1
     assert by_source["fixture_config"]["attempt_count"] == 0
-    assert by_source["fixture_config"]["credential_not_configured_count"] == 1
+    assert by_source["fixture_config"]["missing_secret_config_count"] == 1
     assert by_source["fixture_policy"]["attempt_count"] == 0
     assert by_source["fixture_policy"]["provider_policy_block_count"] == 1
     assert by_source["fixture_budget"]["attempt_count"] == 0
