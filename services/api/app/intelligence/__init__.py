@@ -30,6 +30,7 @@ from .source_catalog import (
     sources_for_lead,
 )
 from .source_planner import SourcePlan, build_source_plan
+from .source_states import SourceRunReason, SourceRunRecord, SourceRunState
 
 __all__ = [
     "FrontierDecision",
@@ -53,6 +54,9 @@ __all__ = [
     "SourceExecutionBackend",
     "SourceMode",
     "SourcePlan",
+    "SourceRunReason",
+    "SourceRunRecord",
+    "SourceRunState",
     "SourceStatus",
     "build_source_plan",
     "extract_observation_leads",

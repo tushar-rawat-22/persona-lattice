@@ -18,6 +18,8 @@ review explicitly changes that model.
 - No private-account bypass, credential/account-recovery enumeration, hidden
   KYC/government-ID acquisition, covert personal/device IP discovery or live
   tracking is a product capability.
+- The default product must remain usable without paid APIs, paid hosting, paid
+  databases, paid proxies or paid enrichment.
 
 ## M0 — public foundation
 
@@ -116,9 +118,11 @@ Implemented:
 
 Remaining operational work:
 
-- choose durable zero/low-cost hosting only if it improves the operator workflow;
+- prefer local/self-hosted operation unless durable free hosting materially
+  improves the operator workflow;
 - define backup/restore after a persistent production store actually exists;
-- keep measuring provider reliability and cost before paid enrichment.
+- keep measuring provider reliability and cost before any optional metered
+  enrichment is considered.
 
 ## M9 — evidence graph and report convergence
 
@@ -197,40 +201,46 @@ Implemented:
 
 A source appearing in the catalog is never permission to call it.
 
-## V2-D — source-adapter activation
+## V2-D — source-adapter/runtime consistency
 
-**Status: next implementation milestone**
+**Status: active; current-provider migration substantially complete**
 
-Goal: make a new source plug into the graph without adding another hard-coded
-branch to the research loop.
+The original source-adapter gate is no longer future work. PRs #24 through #32
+have already established the binding/runtime boundary and migrated the current
+zero-direct-cost network sources onto the shared governed runtime.
 
-Required before the first new network adapter:
+Completed:
 
-1. reconcile source catalog capability metadata with the live adapter/execution
-   boundary;
-2. require catalog + adapter + source-policy agreement before execution;
-3. add deterministic fixtures for success, not-found, malformed, rate-limit and
-   source-unavailable behavior;
-4. keep purpose/consent/credential/rate/resource gates immediately before calls;
-5. record exact source locators and emitted field visibility;
-6. surface source states separately: executed, not-found, queued,
-   review-required, display-only, blocked, unavailable, budget-stopped.
+- PR #24: catalog-to-runtime source binding admission;
+- PR #25: storage-independent `ProviderRuntime` extraction;
+- PR #26: Sherlock quick research moved to the governed runtime;
+- PR #27: GitHub public-profile runtime migration;
+- PR #28: GitHub rate-budget/regression repair;
+- PR #29: one process-wide production provider runtime;
+- PR #30: GitLab username and exact-public-email runtime migration;
+- PR #31: Codeforces runtime migration and corrected request budget;
+- PR #32: public DNS runtime migration with infrastructure-only IP semantics;
+- typed source-run state/reason contract for `executed`, `not_found`, `queued`,
+  `review_required`, `display_only`, `blocked`, `unavailable` and
+  `budget_stopped` outcomes.
 
-Activation order after fresh official-source review:
+Remaining before V2-D closes:
 
-1. Bluesky public profiles;
-2. Gravatar public profiles from an already-known email;
-3. WebFinger/ActivityPub resolution from a sufficiently scoped federated
-   resource/profile URL;
-4. RDAP domain metadata that the authoritative service actually returns;
-5. user-authorized imports only after OAuth/token/revocation/audit design.
+1. wire typed source-run records into convergence/retained reports and synthetic
+   deterministic fixtures;
+2. migrate the existing optional Brave exact-match search behind
+   `ProviderRuntime` while keeping it outside the zero-spend baseline;
+3. remove the final legacy network execution allowance;
+4. finish document-candidate-to-reviewed-lead plumbing and source-state UI/report
+   exposure;
+5. run consistency/failure-path evaluation before activating any new network
+   provider.
 
-Do not turn generic usernames into Internet-wide federation spraying and do not
-interpret redacted/missing RDAP fields as a reason to seek nonpublic data.
+No new third-party source should be activated during these closure blocks.
 
 ## M10 — evaluation and calibration laboratory
 
-**Status: follows V2 source-adapter measurement**
+**Status: follows V2-D architecture closure**
 
 Before increasing recursion limits or changing correlation thresholds:
 
@@ -243,9 +253,13 @@ Before increasing recursion limits or changing correlation thresholds:
 
 ## Immediate next gate
 
-Build the **source-adapter/runtime consistency layer** and synthetic adapter
-fixtures. Do not add paid enrichment first. The next architecture should make
-source activation boring, bounded and reviewable.
+Integrate the typed source-run contract into retained convergence/report output
+and deterministic fixtures. Then migrate optional Brave behind the shared runtime
+without making it a baseline dependency.
+
+After V2-D closes, new public/API sources may be reviewed one at a time. Each
+activation must re-check current official terms, authentication, limits and cost;
+old roadmap pricing notes are not authority.
 
 Success means a small clue can grow into a broad evidence graph while the
 operator can answer for every hop:
