@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
+from app.providers.base import AuthMode
 from app.providers.registry import PROVIDER_BY_NAME
 
 
@@ -46,6 +47,7 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         "gitlab_public_api",
         "codeforces_public_api",
         "public_dns_infrastructure",
+        "brave_public_web_index",
     }
 
 
@@ -79,4 +81,20 @@ def test_public_dns_policy_is_bounded_and_url_only() -> None:
     assert descriptor.max_response_bytes == 16 * 1024
     assert descriptor.max_concurrency == 2
     assert descriptor.rate_limit == 30
+    assert descriptor.rate_window_seconds == 60.0
+
+
+def test_brave_remains_optional_metered_and_preserves_existing_local_budget() -> None:
+    descriptor = PROVIDER_BY_NAME["brave_public_web_index"]
+    capability = SOURCE_BY_NAME["brave_public_web_index"]
+    assert capability.status is SourceStatus.OPTIONAL
+    assert capability.zero_spend_eligible is False
+    assert descriptor.auth_mode is AuthMode.API_KEY
+    assert descriptor.secret_env == "BRAVE_SEARCH_API_KEY"
+    assert descriptor.supported_identifier_kinds == frozenset({"username", "email", "phone", "url"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 5.0
+    assert descriptor.max_response_bytes == 256 * 1024
+    assert descriptor.max_concurrency == 1
+    assert descriptor.rate_limit == 10
     assert descriptor.rate_window_seconds == 60.0
