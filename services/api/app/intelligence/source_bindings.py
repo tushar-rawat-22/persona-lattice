@@ -39,12 +39,7 @@ class SourceBinding:
             raise ValueError("Only M3 governed-adapter bindings may declare provider_name.")
 
 
-_LEGACY_RESEARCH_ALLOWLIST = frozenset(
-    {
-        "public_dns_infrastructure",
-        "brave_public_web_index",
-    }
-)
+_LEGACY_RESEARCH_ALLOWLIST = frozenset({"brave_public_web_index"})
 _LOCAL_DETERMINISTIC_ALLOWLIST = frozenset({"local_normalization", "libphonenumber_metadata"})
 
 
@@ -89,12 +84,10 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
     ),
     SourceBinding(
         source_name="public_dns_infrastructure",
-        backend=SourceExecutionBackend.LEGACY_RESEARCH,
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="public_dns_infrastructure",
         accepts=frozenset({LeadKind.URL}),
-        migration_note=(
-            "Public DNS performs bounded network I/O and must be brought behind the same runtime "
-            "admission model before domain-seed or new network metadata sources are added."
-        ),
+        migration_note="Public URL hostname resolution executes through the shared ProviderRuntime.",
     ),
     SourceBinding(
         source_name="brave_public_web_index",
