@@ -57,9 +57,9 @@ _ALLOWED_REASONS: dict[SourceRunState, frozenset[SourceRunReason]] = {
 class SourceRunRecord:
     """Privacy-bounded report record for source scheduling/execution state.
 
-    This contract deliberately stores the lead kind and source outcome, not the
-    lead value. Existing lead/evidence records remain the authority for the
-    identifier itself and its provenance.
+    This contract stores state metadata only. Lead values and exact source
+    locators remain in their existing lead/Observation records so the report does
+    not create another copy of personal identifiers or provenance URLs.
     """
 
     source_name: str
@@ -67,7 +67,6 @@ class SourceRunRecord:
     state: SourceRunState
     reason: SourceRunReason
     observation_count: int = 0
-    source_locators: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.source_name or self.source_name.strip() != self.source_name:
@@ -76,20 +75,12 @@ class SourceRunRecord:
             raise ValueError("Source run reason is inconsistent with its state.")
         if self.observation_count < 0:
             raise ValueError("Source run observation_count cannot be negative.")
-        if any(not value or value.strip() != value for value in self.source_locators):
-            raise ValueError("Source run locators must be non-empty and trimmed.")
-        if len(set(self.source_locators)) != len(self.source_locators):
-            raise ValueError("Source run locators cannot contain duplicates.")
 
         if self.state is SourceRunState.EXECUTED:
             if self.observation_count < 1:
                 raise ValueError("Executed source runs require at least one observation.")
-            if not self.source_locators:
-                raise ValueError("Executed source runs require at least one source locator.")
-        elif self.observation_count != 0 or self.source_locators:
-            raise ValueError(
-                "Non-executed-result source states cannot retain observations or source locators."
-            )
+        elif self.observation_count != 0:
+            raise ValueError("Non-result source states cannot retain an observation count.")
 
     @property
     def execution_attempted(self) -> bool:
