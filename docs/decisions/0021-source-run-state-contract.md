@@ -25,7 +25,7 @@ The stable states are:
 
 Each state has a constrained reason vocabulary. Invalid state/reason combinations fail closed.
 
-A source-run record stores the source name, lead kind, state, reason, observation count and source locators. It deliberately does not copy the lead value into another report structure. Existing lead/evidence records remain the authority for identifiers and provenance.
+A source-run record stores only the source name, lead kind, state, reason and observation count. It deliberately does not copy the lead value or exact source locator into another report structure. Existing lead records and canonical Observations remain the authority for identifiers, exact locators and provenance.
 
 ## Execution semantics
 
@@ -37,7 +37,7 @@ The contract exposes whether a source execution attempt is actually proven by th
 
 The property is deliberately named `execution_attempted`, not `network_attempted`. Local deterministic sources such as normalization can execute without network I/O, and the report contract must not invent transport claims it cannot prove.
 
-Only `executed` may retain observation counts or source locators. This prevents a blocked, unavailable or not-found state from smuggling positive-looking evidence into the report.
+Only `executed` may retain a positive observation count. Exact source locators stay in canonical Observation/provenance records instead of being duplicated into source-state records.
 
 ## Consequences
 
