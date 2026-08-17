@@ -11,14 +11,13 @@ from app.intelligence.source_states import (
 )
 
 
-def test_executed_state_requires_observations_and_source_locators() -> None:
+def test_executed_state_requires_at_least_one_observation() -> None:
     record = SourceRunRecord(
         source_name="github_public_api",
         lead_kind=LeadKind.USERNAME,
         state=SourceRunState.EXECUTED,
         reason=SourceRunReason.RESULTS_RETURNED,
         observation_count=2,
-        source_locators=("https://github.com/example", "https://github.com/example/repo"),
     )
 
     assert record.execution_attempted is True
@@ -30,15 +29,6 @@ def test_executed_state_requires_observations_and_source_locators() -> None:
             lead_kind=LeadKind.USERNAME,
             state=SourceRunState.EXECUTED,
             reason=SourceRunReason.RESULTS_RETURNED,
-        )
-
-    with pytest.raises(ValueError, match="source locator"):
-        SourceRunRecord(
-            source_name="github_public_api",
-            lead_kind=LeadKind.USERNAME,
-            state=SourceRunState.EXECUTED,
-            reason=SourceRunReason.RESULTS_RETURNED,
-            observation_count=1,
         )
 
 
@@ -135,7 +125,6 @@ def test_local_deterministic_execution_is_an_attempt_without_claiming_network_io
         state=SourceRunState.EXECUTED,
         reason=SourceRunReason.RESULTS_RETURNED,
         observation_count=1,
-        source_locators=("local://normalization",),
     )
 
     assert record.execution_attempted is True
@@ -151,33 +140,22 @@ def test_state_reason_mismatch_fails_closed() -> None:
         )
 
 
-def test_nonexecuted_states_cannot_smuggle_observations_or_locators() -> None:
-    with pytest.raises(ValueError, match="cannot retain observations"):
+def test_non_result_states_cannot_smuggle_observation_counts() -> None:
+    with pytest.raises(ValueError, match="cannot retain an observation count"):
         SourceRunRecord(
             source_name="github_public_api",
             lead_kind=LeadKind.USERNAME,
             state=SourceRunState.NOT_FOUND,
             reason=SourceRunReason.NO_MATCH,
             observation_count=1,
-            source_locators=("https://github.com/example",),
         )
 
 
-def test_source_name_and_locators_are_strictly_bounded_strings() -> None:
+def test_source_name_must_be_trimmed() -> None:
     with pytest.raises(ValueError, match="source_name"):
         SourceRunRecord(
             source_name=" github_public_api ",
             lead_kind=LeadKind.USERNAME,
             state=SourceRunState.NOT_FOUND,
             reason=SourceRunReason.NO_MATCH,
-        )
-
-    with pytest.raises(ValueError, match="duplicates"):
-        SourceRunRecord(
-            source_name="github_public_api",
-            lead_kind=LeadKind.USERNAME,
-            state=SourceRunState.EXECUTED,
-            reason=SourceRunReason.RESULTS_RETURNED,
-            observation_count=2,
-            source_locators=("https://github.com/example", "https://github.com/example"),
         )
