@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+from .codeforces_public import CodeforcesPublicProfileProvider
 from .github_public import GitHubPublicProfileProvider
 from .gitlab_public import GitLabPublicProfileProvider
 from .runtime import ProviderRuntime
@@ -13,11 +14,13 @@ from .sherlock import SherlockProvider
 DEFAULT_SHERLOCK_PROVIDER = SherlockProvider()
 DEFAULT_GITHUB_PROVIDER = GitHubPublicProfileProvider()
 DEFAULT_GITLAB_PROVIDER = GitLabPublicProfileProvider()
+DEFAULT_CODEFORCES_PROVIDER = CodeforcesPublicProfileProvider()
 DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
     adapters=[
         DEFAULT_SHERLOCK_PROVIDER,
         DEFAULT_GITHUB_PROVIDER,
         DEFAULT_GITLAB_PROVIDER,
+        DEFAULT_CODEFORCES_PROVIDER,
     ]
 )
 
