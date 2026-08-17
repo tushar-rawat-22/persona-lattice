@@ -33,8 +33,8 @@ class _Report:
 
 def _fixture_report() -> _Report:
     return _Report(
-        nodes=(_Node(0), _Node(1), _Node(1), _Node(2)),
-        edges=(object(), object(), object()),
+        nodes=(_Node(0), _Node(1), _Node(2)),
+        edges=(object(), object()),
         lead_decisions=(
             _Decision(FrontierDecision.ADMITTED, "username:alpha"),
             _Decision(FrontierDecision.DUPLICATE),
@@ -58,9 +58,9 @@ def test_graph_evaluation_counts_growth_duplicates_and_labelled_wrong_pivots() -
         },
     )
 
-    assert counters.node_count == 4
-    assert counters.added_node_count == 3
-    assert counters.edge_count == 3
+    assert counters.node_count == 3
+    assert counters.added_node_count == 2
+    assert counters.edge_count == 2
     assert counters.max_observed_depth == 2
     assert counters.lead_decision_count == 8
     assert counters.automatic_terminal_decision_count == 5
@@ -105,6 +105,29 @@ def test_labels_require_explicit_pivot_relevance_values() -> None:
             _fixture_report(),
             admitted_pivot_labels={"username:alpha": "relevant"},  # type: ignore[dict-item]
         )
+
+
+def test_graph_evaluation_rejects_empty_or_structurally_inconsistent_graphs() -> None:
+    with pytest.raises(ValueError, match="not an empty graph"):
+        build_graph_evaluation_counters(_Report((), (), (), False))
+
+    with pytest.raises(ValueError, match="edge count"):
+        build_graph_evaluation_counters(
+            _Report(
+                (_Node(0), _Node(1)),
+                (),
+                (_Decision(FrontierDecision.ADMITTED, "x"),),
+                False,
+            )
+        )
+
+    with pytest.raises(ValueError, match="admitted pivots"):
+        build_graph_evaluation_counters(
+            _Report((_Node(0), _Node(1)), (object(),), (), False)
+        )
+
+    with pytest.raises(ValueError, match="negative node depth"):
+        build_graph_evaluation_counters(_Report((_Node(-1),), (), (), False))
 
 
 def test_graph_evaluation_is_order_invariant() -> None:
