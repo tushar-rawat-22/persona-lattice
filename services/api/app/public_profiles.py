@@ -7,13 +7,13 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from .providers.codeforces_public import fetch_codeforces_public_profile
 from .providers.rate_limit import RateBudget
 
 
 _MAX_RESPONSE_BYTES = 96 * 1024
 _TIMEOUT_SECONDS = 4.0
 _GITLAB_BUDGET = RateBudget(limit=20, window_seconds=60.0)
-_CODEFORCES_BUDGET = RateBudget(limit=20, window_seconds=60.0)
 
 
 def _fetch_json(url: str, *, user_agent: str) -> object:
@@ -91,34 +91,14 @@ async def lookup_gitlab_public_email(email: str) -> dict[str, object] | None:
     return await asyncio.to_thread(_gitlab_public_email_sync, email)
 
 
-def _codeforces_sync(handle: str) -> dict[str, object] | None:
-    query = urlencode({"handles": handle, "checkHistoricHandles": "true"})
-    payload = _fetch_json(
-        f"https://codeforces.com/api/user.info?{query}",
-        user_agent="PersonaLattice/0.0.1 public-profile-research",
-    )
-    if not isinstance(payload, dict):
-        raise RuntimeError("Codeforces public user lookup returned an invalid response shape.")
-    if payload.get("status") != "OK":
-        comment = payload.get("comment")
-        if isinstance(comment, str) and "not found" in comment.casefold():
-            return None
-        raise RuntimeError("Codeforces public user lookup failed.")
-    result = payload.get("result")
-    if not isinstance(result, list) or not result:
-        return None
-    first = result[0]
-    if not isinstance(first, dict):
-        raise RuntimeError("Codeforces public user lookup returned an invalid user shape.")
-    returned_handle = first.get("handle")
-    if not isinstance(returned_handle, str):
-        return None
-    return first
-
-
 async def lookup_codeforces_handle(handle: str) -> dict[str, object] | None:
-    _CODEFORCES_BUDGET.consume()
-    return await asyncio.to_thread(_codeforces_sync, handle)
+    """Compatibility helper for callers needing the raw public Codeforces payload.
+
+    Production quick research does not call this helper directly; it executes the
+    Codeforces adapter through the shared governed ProviderRuntime.
+    """
+
+    return await fetch_codeforces_public_profile(handle)
 
 
 def gitlab_public_observation_fields(payload: dict[str, object]) -> dict[str, object]:
