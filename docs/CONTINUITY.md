@@ -110,9 +110,10 @@ This block adds `app.intelligence.source_states`: a typed report vocabulary for
 `executed`, `not_found`, `queued`, `review_required`, `display_only`, `blocked`,
 `unavailable` and `budget_stopped`, plus constrained reasons and invariants.
 Important distinction: `not_found` proves execution completed; optional-not-
-configured and local-budget outcomes prove no network attempt. Only `executed`
-may retain positive observation counts/source locators. ADR 0021 records the
-decision.
+configured and local-budget outcomes prove that execution did not start. The
+contract reports `execution_attempted`, not network transport, because local
+deterministic sources can execute without network I/O. Only `executed` may retain
+positive observation counts/source locators. ADR 0021 records the decision.
 
 The contract is intentionally additive in this block. Existing retained report
 payloads are not rewritten yet.
