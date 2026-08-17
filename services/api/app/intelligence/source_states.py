@@ -30,7 +30,7 @@ class SourceRunReason(StrEnum):
     DISPLAY_ONLY_POLICY = "display_only_policy"
     BLOCKED_POLICY = "blocked_policy"
     OPTIONAL_NOT_CONFIGURED = "optional_not_configured"
-    PROVIDER_FAILURE = "provider_failure"
+    EXECUTION_FAILURE = "execution_failure"
     REMOTE_RATE_LIMIT = "remote_rate_limit"
     LOCAL_BUDGET = "local_budget"
 
@@ -45,7 +45,7 @@ _ALLOWED_REASONS: dict[SourceRunState, frozenset[SourceRunReason]] = {
     SourceRunState.UNAVAILABLE: frozenset(
         {
             SourceRunReason.OPTIONAL_NOT_CONFIGURED,
-            SourceRunReason.PROVIDER_FAILURE,
+            SourceRunReason.EXECUTION_FAILURE,
             SourceRunReason.REMOTE_RATE_LIMIT,
         }
     ),
@@ -98,7 +98,7 @@ class SourceRunRecord:
         if self.state in {SourceRunState.EXECUTED, SourceRunState.NOT_FOUND}:
             return True
         return self.reason in {
-            SourceRunReason.PROVIDER_FAILURE,
+            SourceRunReason.EXECUTION_FAILURE,
             SourceRunReason.REMOTE_RATE_LIMIT,
         }
 
