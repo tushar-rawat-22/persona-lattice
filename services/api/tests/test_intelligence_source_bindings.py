@@ -43,21 +43,23 @@ def test_only_deterministic_no_network_sources_use_local_backend() -> None:
     assert local == {"local_normalization", "libphonenumber_metadata"}
 
 
-def test_current_legacy_network_debt_shrinks_after_gitlab_migration() -> None:
+def test_current_legacy_network_debt_shrinks_after_codeforces_migration() -> None:
     legacy = {
         name
         for name, binding in SOURCE_BINDING_BY_NAME.items()
         if binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
     }
     assert legacy == {
-        "codeforces_public_api",
         "public_dns_infrastructure",
         "brave_public_web_index",
     }
     assert all(SOURCE_BINDING_BY_NAME[name].migration_note.strip() for name in legacy)
 
 
-@pytest.mark.parametrize("name", ["sherlock", "github_public_api"])
+@pytest.mark.parametrize(
+    "name",
+    ["sherlock", "github_public_api", "codeforces_public_api"],
+)
 def test_username_only_governed_sources_match_provider_descriptors(name: str) -> None:
     binding = source_binding_for(name, kind=LeadKind.USERNAME)
     descriptor = PROVIDER_BY_NAME[name]
