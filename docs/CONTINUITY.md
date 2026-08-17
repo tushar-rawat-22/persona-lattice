@@ -12,9 +12,9 @@ Do not put API keys, real research identifiers, retained-case data, password has
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main after PR #40: `a6378da62646ea28fe26cc8c150ab44d22c69820`
-- PR #40 exact tested head: `8926b7f686b918c6559e97ff198a00c607ac5f15`
-- PR #40 CI run: `32046081716`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified main after PR #42: `e4cfcd1576d13112f944d8095ece99cd38742a48`
+- PR #42 exact tested head: `9ab0289b2968ee9828fcb87d1da4f3013b9c0b71`
+- PR #42 CI run: `32050781713`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
 ## Permanent evidence semantics
@@ -79,14 +79,15 @@ Provider/runtime sequence completed so far:
 - PR #31: Codeforces governed runtime;
 - PR #32: public DNS governed runtime.
 
-Source-state/report sequence completed:
+Source-state/report/evaluation sequence completed:
 
 - PR #34: typed source-run state contract; ADR 0021;
 - PR #35: deterministic privacy-bounded source-run projection; ADR 0022;
 - PR #36: explicit execution outcome mapping; ADR 0023;
 - PR #37: converged node `source_runs` projection; ADR 0024;
 - PR #38: factual quick-research source-run population; ADR 0025;
-- PR #40: deterministic aggregate/per-source evaluation counters; ADR 0026.
+- PR #40: deterministic aggregate/per-source evaluation counters; ADR 0026;
+- PR #42: complete deterministic source state/reason fixture matrix; ADR 0027.
 
 Current governed production sources: Sherlock, GitHub, GitLab, Codeforces and public DNS. The only remaining legacy network binding is optional metered Brave exact-match search. No new third-party source is authorized during architecture closure.
 
@@ -105,6 +106,8 @@ Current typed distinctions:
 - queued/review/display/blocked states remain available for scheduler/report integration.
 
 PR #40 adds descriptive evaluation counters over those records. Counts are available globally and per logical source for attempts, completed attempts, attempted failures, result-bearing records, no-match results, admitted observation count, rate limits, execution failures, local budget stops, optional-unconfigured states and scheduler/review/display/blocked states.
+
+PR #42 adds a deterministic synthetic matrix that covers every current `SourceRunState` and `SourceRunReason`. Vocabulary expansion now fails the matrix until its attempt/completion/failure semantics are reviewed explicitly. The matrix also proves aggregate/per-source evaluation is order-invariant and keeps local policy/configuration outcomes separate from remote provider failures.
 
 Important interpretation rules:
 
@@ -129,14 +132,14 @@ Important interpretation rules:
 
 ## Immediate next gate
 
-1. Add deterministic synthetic/failure fixtures that exercise the evaluation counters across provider failure, remote rate limit, no-match, local budget and optional-unconfigured cases.
-2. Add graph-growth/wrong-pivot/duplicate measurements before changing recursion limits.
-3. Add explicit typed outcomes for pre-execution policy/configuration and malformed-result cases only where the runtime can prove the state; do not guess from warning text.
-4. Migrate the existing optional Brave path behind `ProviderRuntime` only if no-key zero-spend operation remains intact and no new source coverage is activated.
-5. Remove the final legacy network allowance after that migration.
-6. Finish document-candidate-to-reviewed-lead plumbing and operator source-state exposure.
+1. Add deterministic graph-growth, duplicate and wrong-pivot measurements before changing recursion limits.
+2. Add explicit typed outcomes for pre-execution policy/configuration and malformed-result cases only where the runtime can prove the state; do not guess from warning text.
+3. Migrate the existing optional Brave path behind `ProviderRuntime` only if no-key zero-spend operation remains intact and no new source coverage is activated.
+4. Remove the final legacy network allowance after that migration.
+5. Finish document-candidate-to-reviewed-lead plumbing and operator source-state exposure.
+6. Run final architecture consistency evaluation before activating new third-party sources.
 
-Do not raise recursion limits or activate new third-party sources until the failure/growth measurements exist and their denominators are understood.
+Do not raise recursion limits or activate new third-party sources until the graph-growth/wrong-pivot/duplicate measurements exist and their denominators are understood.
 
 ## Update discipline
 
