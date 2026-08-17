@@ -65,6 +65,25 @@ class FrontierLimits:
         }.get(kind)
 
 
+def compatibility_frontier_limits(*, max_depth: int, max_nodes: int) -> FrontierLimits:
+    """Return the exact broad limits used by the private-V1 compatibility path.
+
+    Keeping this constructor beside the scheduler prevents evaluation fixtures from
+    accidentally testing stricter per-kind/fanout defaults than production convergence.
+    """
+
+    return FrontierLimits(
+        max_depth=max_depth,
+        max_nodes=max_nodes,
+        max_edges=max(0, max_nodes - 1),
+        max_auto_children_per_parent=max_nodes,
+        max_username_nodes=max_nodes,
+        max_email_nodes=max_nodes,
+        max_phone_nodes=max_nodes,
+        max_url_nodes=max_nodes,
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class FrontierEvaluation:
     candidate: LeadCandidate
