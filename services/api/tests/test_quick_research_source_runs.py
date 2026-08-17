@@ -6,7 +6,14 @@ import pytest
 from app.intelligence.source_states import SourceRunReason, SourceRunState
 from app.models import Purpose
 from app.providers import ProviderResult
-from app.providers.errors import ProviderRateBudgetExceeded, ProviderRemoteRateLimitError
+from app.providers.errors import (
+    ProviderAuthError,
+    ProviderPolicyError,
+    ProviderRateBudgetExceeded,
+    ProviderRemoteRateLimitError,
+    ProviderResultValidationError,
+    ProviderValidationError,
+)
 from app.providers.registry import PROVIDER_BY_NAME
 from app.research import ResearchKind, run_quick_research
 
@@ -121,3 +128,78 @@ async def test_injected_remote_rate_limit_is_an_attempted_unavailable_state() ->
     assert github.state is SourceRunState.UNAVAILABLE
     assert github.reason is SourceRunReason.REMOTE_RATE_LIMIT
     assert github.execution_attempted is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("exc", "expected_state", "expected_reason", "execution_attempted"),
+    [
+        (
+            ProviderPolicyError("blocked before provider contact"),
+            SourceRunState.BLOCKED,
+            SourceRunReason.PROVIDER_POLICY,
+            False,
+        ),
+        (
+            ProviderAuthError("server-side secret missing"),
+            SourceRunState.UNAVAILABLE,
+            SourceRunReason.CREDENTIAL_NOT_CONFIGURED,
+            False,
+        ),
+        (
+            ProviderResultValidationError("malformed returned result"),
+            SourceRunState.UNAVAILABLE,
+            SourceRunReason.MALFORMED_RESULT,
+            True,
+        ),
+    ],
+)
+async def test_quick_research_uses_shared_phase_proven_provider_outcomes(
+    monkeypatch,
+    exc,
+    expected_state,
+    expected_reason,
+    execution_attempted,
+) -> None:
+    async def fail_github(*args, **kwargs):
+        raise exc
+
+    monkeypatch.setattr("app.research._github_observations", fail_github)
+
+    report = await run_quick_research(
+        kind=ResearchKind.USERNAME,
+        value="phase-check",
+        purpose=Purpose.SELF_AUDIT,
+        consent_acknowledged=True,
+        sherlock_provider=_EmptySherlock(),
+        gitlab_lookup=_no_profile,
+        codeforces_lookup=_no_profile,
+        public_search_lookup=_no_public_search,
+    )
+
+    github = next(record for record in report.source_runs if record.source_name == "github_public_api")
+    assert github.state is expected_state
+    assert github.reason is expected_reason
+    assert github.execution_attempted is execution_attempted
+
+
+@pytest.mark.asyncio
+async def test_phase_ambiguous_provider_validation_remains_unclassified(monkeypatch) -> None:
+    async def fail_github(*args, **kwargs):
+        raise ProviderValidationError("phase is deliberately unknown")
+
+    monkeypatch.setattr("app.research._github_observations", fail_github)
+
+    report = await run_quick_research(
+        kind=ResearchKind.USERNAME,
+        value="ambiguous-check",
+        purpose=Purpose.SELF_AUDIT,
+        consent_acknowledged=True,
+        sherlock_provider=_EmptySherlock(),
+        gitlab_lookup=_no_profile,
+        codeforces_lookup=_no_profile,
+        public_search_lookup=_no_public_search,
+    )
+
+    assert all(record.source_name != "github_public_api" for record in report.source_runs)
+    assert "GitHub public profile enrichment was temporarily unavailable." in report.warnings
