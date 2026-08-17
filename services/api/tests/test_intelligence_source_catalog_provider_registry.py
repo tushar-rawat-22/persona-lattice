@@ -6,6 +6,7 @@ from app.providers.registry import PROVIDER_BY_NAME
 
 
 GITHUB_UNAUTHENTICATED_PRIMARY_LIMIT_PER_HOUR = 60
+CODEFORCES_MINIMUM_REQUEST_INTERVAL_SECONDS = 2.0
 
 
 def test_existing_non_synthetic_provider_registry_entries_are_catalogued() -> None:
@@ -39,7 +40,12 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         for name in PROVIDER_BY_NAME
         if name in SOURCE_BY_NAME and SOURCE_BY_NAME[name].recursive_eligible
     }
-    assert recursive_registry_sources == {"sherlock", "github_public_api", "gitlab_public_api"}
+    assert recursive_registry_sources == {
+        "sherlock",
+        "github_public_api",
+        "gitlab_public_api",
+        "codeforces_public_api",
+    }
 
 
 def test_github_public_api_budget_keeps_hourly_headroom() -> None:
@@ -54,3 +60,11 @@ def test_gitlab_public_api_keeps_the_existing_conservative_local_budget() -> Non
     assert descriptor.rate_window_seconds == 60.0
     assert descriptor.rate_limit == 20
     assert descriptor.supported_identifier_kinds == frozenset({"username", "email"})
+
+
+def test_codeforces_budget_matches_documented_minimum_request_interval() -> None:
+    descriptor = PROVIDER_BY_NAME["codeforces_public_api"]
+    assert descriptor.rate_limit == 1
+    assert descriptor.rate_window_seconds == CODEFORCES_MINIMUM_REQUEST_INTERVAL_SECONDS
+    assert descriptor.max_concurrency == 1
+    assert descriptor.supported_identifier_kinds == frozenset({"username"})

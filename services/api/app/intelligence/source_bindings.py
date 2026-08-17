@@ -41,7 +41,6 @@ class SourceBinding:
 
 _LEGACY_RESEARCH_ALLOWLIST = frozenset(
     {
-        "codeforces_public_api",
         "public_dns_infrastructure",
         "brave_public_web_index",
     }
@@ -83,9 +82,10 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
     ),
     SourceBinding(
         source_name="codeforces_public_api",
-        backend=SourceExecutionBackend.LEGACY_RESEARCH,
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="codeforces_public_api",
         accepts=frozenset({LeadKind.USERNAME}),
-        migration_note="Migrate the public-profile lookup into the governed provider runtime.",
+        migration_note="Public user.info lookup executes through the shared ProviderRuntime.",
     ),
     SourceBinding(
         source_name="public_dns_infrastructure",

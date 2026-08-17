@@ -151,6 +151,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="codeforces_public_api",
+        capability="public_profile_enrichment",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official anonymous Codeforces user.info endpoint; public profile fields only, "
+            "with exact or historic-handle results retained as account candidates."
+        ),
+        version="user.info",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=USERNAME_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=64 * 1024,
+        max_concurrency=1,
+        rate_limit=1,
+        rate_window_seconds=2.0,
+    ),
+    ProviderDescriptor(
         name="whatsmyname",
         capability="username_dataset",
         status=ProviderStatus.REVIEW_REQUIRED.value,

@@ -18,6 +18,7 @@ from .providers.contracts import ExecutionRequest
 from .providers.github_public import fetch_github_public_profile
 from .providers.runtime import ProviderRuntime
 from .providers.shared_runtime import (
+    DEFAULT_CODEFORCES_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
     DEFAULT_PROVIDER_RUNTIME,
@@ -89,6 +90,20 @@ def _gitlab_observation_from_provider(item: ProviderObservationData) -> QuickObs
         source="gitlab_public_api",
         source_locator=item.source_locator,
         summary=f"GitLab public profile matched by {matched_by}; account candidate only.",
+        details=dict(item.payload),
+    )
+
+
+def _codeforces_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    handle = str(item.payload.get("handle", "public account"))
+    matched_by = str(item.payload.get("matched_by", "handle"))
+    return QuickObservation(
+        source="codeforces_public_api",
+        source_locator=item.source_locator,
+        summary=(
+            f"Codeforces public profile for @{handle} matched by {matched_by}; "
+            "account candidate only."
+        ),
         details=dict(item.payload),
     )
 
@@ -237,18 +252,60 @@ async def _gitlab_observations(
     return [_gitlab_observation_from_provider(item) for item in result.observations]
 
 
-def _codeforces_observation(payload: dict[str, object]) -> QuickObservation | None:
+def _legacy_codeforces_observation(payload: dict[str, object]) -> QuickObservation | None:
     handle = payload.get("handle")
     if not isinstance(handle, str):
         return None
     details = codeforces_public_observation_fields(payload)
-    details.update({"account_candidate": True, "identity_claim": False, "field_visibility": "public_profile_api"})
+    details.update(
+        {
+            "account_candidate": True,
+            "identity_claim": False,
+            "field_visibility": "public_profile_api",
+            "matched_by": "legacy_injected_lookup",
+        }
+    )
     return QuickObservation(
         source="codeforces_public_api",
         source_locator=f"https://codeforces.com/profile/{quote(handle, safe='')}",
-        summary=f"Codeforces public profile for @{handle}; same-handle account candidate only.",
+        summary=f"Codeforces public profile for @{handle}; account candidate only.",
         details=details,
     )
+
+
+async def _codeforces_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+    injected_lookup: PublicLookup | None,
+) -> list[QuickObservation]:
+    if injected_lookup is not None:
+        payload = await injected_lookup(normalized_value)
+        if payload is None:
+            return []
+        observation = _legacy_codeforces_observation(payload)
+        return [] if observation is None else [observation]
+
+    request = ExecutionRequest(
+        provider_name=DEFAULT_CODEFORCES_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.USERNAME.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_codeforces_observation_from_provider(item) for item in result.observations]
 
 
 async def _research_username(
@@ -285,6 +342,7 @@ async def _research_username(
     observations = [_sherlock_observation_from_provider(item) for item in result.observations]
     warnings: list[str] = []
     injected_gitlab = None if gitlab_lookup is lookup_gitlab_username else gitlab_lookup
+    injected_codeforces = None if codeforces_lookup is lookup_codeforces_handle else codeforces_lookup
     enrichments = await asyncio.gather(
         _github_observations(
             normalized_value,
@@ -303,10 +361,17 @@ async def _research_username(
             consent_acknowledged=consent_acknowledged,
             injected_lookup=injected_gitlab,
         ),
-        codeforces_lookup(normalized_value),
+        _codeforces_observations(
+            normalized_value,
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
+            injected_lookup=injected_codeforces,
+        ),
         return_exceptions=True,
     )
-    github_observations, gitlab_observations, codeforces_payload = enrichments
+    github_observations, gitlab_observations, codeforces_observations = enrichments
     if isinstance(github_observations, Exception):
         warnings.append("GitHub public profile enrichment was temporarily unavailable.")
     else:
@@ -315,12 +380,10 @@ async def _research_username(
         warnings.append("GitLab public profile enrichment was temporarily unavailable.")
     else:
         observations.extend(gitlab_observations)
-    if isinstance(codeforces_payload, Exception):
+    if isinstance(codeforces_observations, Exception):
         warnings.append("Codeforces public profile enrichment was temporarily unavailable.")
-    elif codeforces_payload is not None:
-        enriched = _codeforces_observation(codeforces_payload)
-        if enriched is not None:
-            observations.append(enriched)
+    else:
+        observations.extend(codeforces_observations)
     search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
     observations.extend(search_observations)
     if search_warning:
