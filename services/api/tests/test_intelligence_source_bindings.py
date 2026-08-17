@@ -43,14 +43,13 @@ def test_only_deterministic_no_network_sources_use_local_backend() -> None:
     assert local == {"local_normalization", "libphonenumber_metadata"}
 
 
-def test_current_legacy_network_debt_is_only_optional_brave() -> None:
+def test_no_current_source_uses_legacy_research_execution() -> None:
     legacy = {
         name
         for name, binding in SOURCE_BINDING_BY_NAME.items()
         if binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
     }
-    assert legacy == {"brave_public_web_index"}
-    assert SOURCE_BINDING_BY_NAME["brave_public_web_index"].migration_note.strip()
+    assert legacy == set()
 
 
 @pytest.mark.parametrize(
@@ -119,9 +118,11 @@ def test_binding_lookup_rejects_wrong_lead_kind() -> None:
         source_binding_for("github_public_api", kind=LeadKind.EMAIL)
 
 
-def test_optional_metered_search_has_binding_but_stays_optional_in_catalog() -> None:
-    binding = source_binding_for("brave_public_web_index", kind=LeadKind.EMAIL)
+def test_optional_metered_search_is_governed_but_not_zero_spend() -> None:
     capability = SOURCE_BY_NAME["brave_public_web_index"]
-    assert binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
+    for kind in (LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.PHONE, LeadKind.URL):
+        binding = source_binding_for("brave_public_web_index", kind=kind)
+        assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
+        assert binding.provider_name == "brave_public_web_index"
     assert capability.status is SourceStatus.OPTIONAL
     assert capability.zero_spend_eligible is False
