@@ -43,17 +43,14 @@ def test_only_deterministic_no_network_sources_use_local_backend() -> None:
     assert local == {"local_normalization", "libphonenumber_metadata"}
 
 
-def test_current_legacy_network_debt_shrinks_after_codeforces_migration() -> None:
+def test_current_legacy_network_debt_is_only_optional_brave() -> None:
     legacy = {
         name
         for name, binding in SOURCE_BINDING_BY_NAME.items()
         if binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
     }
-    assert legacy == {
-        "public_dns_infrastructure",
-        "brave_public_web_index",
-    }
-    assert all(SOURCE_BINDING_BY_NAME[name].migration_note.strip() for name in legacy)
+    assert legacy == {"brave_public_web_index"}
+    assert SOURCE_BINDING_BY_NAME["brave_public_web_index"].migration_note.strip()
 
 
 @pytest.mark.parametrize(
@@ -81,6 +78,23 @@ def test_gitlab_governed_binding_supports_username_and_exact_public_email() -> N
     assert descriptor.supported_identifier_kinds == frozenset({"username", "email"})
 
 
+def test_public_dns_is_governed_for_url_only_and_never_domain_seed_today() -> None:
+    capability = SOURCE_BY_NAME["public_dns_infrastructure"]
+    descriptor = PROVIDER_BY_NAME["public_dns_infrastructure"]
+    binding = source_binding_for("public_dns_infrastructure", kind=LeadKind.URL)
+
+    assert capability.accepts == frozenset({LeadKind.URL, LeadKind.DOMAIN})
+    assert binding.accepts == frozenset({LeadKind.URL})
+    assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
+    assert binding.provider_name == "public_dns_infrastructure"
+    assert descriptor.status == ProviderStatus.DEVELOPMENT.value
+    assert descriptor.contact_risk is ContactRisk.NONE_KNOWN
+    assert descriptor.supported_identifier_kinds == frozenset({"url"})
+
+    with pytest.raises(SourceBindingError, match="not currently bound"):
+        source_binding_for("public_dns_infrastructure", kind=LeadKind.DOMAIN)
+
+
 def test_planned_and_deferred_sources_have_no_executable_binding() -> None:
     for name in (
         "bluesky_public_profile",
@@ -103,17 +117,6 @@ def test_planned_and_deferred_sources_have_no_executable_binding() -> None:
 def test_binding_lookup_rejects_wrong_lead_kind() -> None:
     with pytest.raises(SourceBindingError, match="not currently bound"):
         source_binding_for("github_public_api", kind=LeadKind.EMAIL)
-
-
-def test_public_dns_is_network_migration_debt_and_only_url_is_wired_today() -> None:
-    capability = SOURCE_BY_NAME["public_dns_infrastructure"]
-    binding = source_binding_for("public_dns_infrastructure", kind=LeadKind.URL)
-    assert capability.accepts == frozenset({LeadKind.URL, LeadKind.DOMAIN})
-    assert binding.accepts == frozenset({LeadKind.URL})
-    assert binding.backend is SourceExecutionBackend.LEGACY_RESEARCH
-    assert "network" in binding.migration_note.casefold()
-    with pytest.raises(SourceBindingError, match="not currently bound"):
-        source_binding_for("public_dns_infrastructure", kind=LeadKind.DOMAIN)
 
 
 def test_optional_metered_search_has_binding_but_stays_optional_in_catalog() -> None:

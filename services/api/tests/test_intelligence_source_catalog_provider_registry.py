@@ -45,6 +45,7 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         "github_public_api",
         "gitlab_public_api",
         "codeforces_public_api",
+        "public_dns_infrastructure",
     }
 
 
@@ -68,3 +69,14 @@ def test_codeforces_budget_matches_documented_minimum_request_interval() -> None
     assert descriptor.rate_window_seconds == CODEFORCES_MINIMUM_REQUEST_INTERVAL_SECONDS
     assert descriptor.max_concurrency == 1
     assert descriptor.supported_identifier_kinds == frozenset({"username"})
+
+
+def test_public_dns_policy_is_bounded_and_url_only() -> None:
+    descriptor = PROVIDER_BY_NAME["public_dns_infrastructure"]
+    assert descriptor.supported_identifier_kinds == frozenset({"url"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 16 * 1024
+    assert descriptor.max_concurrency == 2
+    assert descriptor.rate_limit == 30
+    assert descriptor.rate_window_seconds == 60.0

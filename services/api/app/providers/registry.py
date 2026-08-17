@@ -27,6 +27,7 @@ CONSENTED_PURPOSES = frozenset(
 PHONE_ONLY = frozenset({"phone"})
 USERNAME_ONLY = frozenset({"username"})
 USERNAME_EMAIL = frozenset({"username", "email"})
+URL_ONLY = frozenset({"url"})
 
 
 PROVIDERS: tuple[ProviderDescriptor, ...] = (
@@ -169,6 +170,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         max_concurrency=1,
         rate_limit=1,
         rate_window_seconds=2.0,
+    ),
+    ProviderDescriptor(
+        name="public_dns_infrastructure",
+        capability="public_network_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "System DNS resolution for the hostname of an already-normalized public URL; "
+            "globally routable infrastructure addresses only, never subject/device IP evidence."
+        ),
+        version="system-getaddrinfo-v1",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=16 * 1024,
+        max_concurrency=2,
+        rate_limit=30,
+        rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
         name="whatsmyname",

@@ -4,6 +4,7 @@ from __future__ import annotations
 from app.providers.registry import PROVIDER_BY_NAME
 from app.providers.shared_runtime import (
     DEFAULT_CODEFORCES_PROVIDER,
+    DEFAULT_DNS_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
     DEFAULT_PROVIDER_RUNTIME,
@@ -18,11 +19,13 @@ def test_shared_production_runtime_owns_current_governed_quick_research_provider
         "github_public_api",
         "gitlab_public_api",
         "codeforces_public_api",
+        "public_dns_infrastructure",
     }
     assert DEFAULT_PROVIDER_RUNTIME.adapters["sherlock"] is DEFAULT_SHERLOCK_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["github_public_api"] is DEFAULT_GITHUB_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["gitlab_public_api"] is DEFAULT_GITLAB_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["codeforces_public_api"] is DEFAULT_CODEFORCES_PROVIDER
+    assert DEFAULT_PROVIDER_RUNTIME.adapters["public_dns_infrastructure"] is DEFAULT_DNS_PROVIDER
 
 
 def test_shared_runtime_adapters_match_reviewed_registry_descriptors() -> None:
@@ -30,6 +33,7 @@ def test_shared_runtime_adapters_match_reviewed_registry_descriptors() -> None:
     assert DEFAULT_GITHUB_PROVIDER.descriptor is PROVIDER_BY_NAME["github_public_api"]
     assert DEFAULT_GITLAB_PROVIDER.descriptor is PROVIDER_BY_NAME["gitlab_public_api"]
     assert DEFAULT_CODEFORCES_PROVIDER.descriptor is PROVIDER_BY_NAME["codeforces_public_api"]
+    assert DEFAULT_DNS_PROVIDER.descriptor is PROVIDER_BY_NAME["public_dns_infrastructure"]
 
 
 def test_default_provider_returns_process_owned_adapter_without_reinstantiation() -> None:
@@ -37,4 +41,5 @@ def test_default_provider_returns_process_owned_adapter_without_reinstantiation(
     assert default_provider("github_public_api") is DEFAULT_GITHUB_PROVIDER
     assert default_provider("gitlab_public_api") is DEFAULT_GITLAB_PROVIDER
     assert default_provider("codeforces_public_api") is DEFAULT_CODEFORCES_PROVIDER
+    assert default_provider("public_dns_infrastructure") is DEFAULT_DNS_PROVIDER
     assert default_provider("not-registered") is None

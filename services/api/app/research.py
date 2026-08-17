@@ -19,6 +19,7 @@ from .providers.github_public import fetch_github_public_profile
 from .providers.runtime import ProviderRuntime
 from .providers.shared_runtime import (
     DEFAULT_CODEFORCES_PROVIDER,
+    DEFAULT_DNS_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
     DEFAULT_PROVIDER_RUNTIME,
@@ -108,6 +109,15 @@ def _codeforces_observation_from_provider(item: ProviderObservationData) -> Quic
     )
 
 
+def _dns_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    return QuickObservation(
+        source="public_dns_infrastructure",
+        source_locator=item.source_locator,
+        summary="Globally reachable addresses for the public hostname; website infrastructure only.",
+        details=dict(item.payload),
+    )
+
+
 def _public_search_observations(results: tuple[PublicSearchResult, ...]) -> list[QuickObservation]:
     return [
         QuickObservation(
@@ -126,7 +136,10 @@ def _public_search_observations(results: tuple[PublicSearchResult, ...]) -> list
     ]
 
 
-async def _public_search(identifier: str, lookup: PublicSearchLookup) -> tuple[list[QuickObservation], str | None]:
+async def _public_search(
+    identifier: str,
+    lookup: PublicSearchLookup,
+) -> tuple[list[QuickObservation], str | None]:
     try:
         results = await lookup(identifier)
     except RuntimeError:
@@ -145,12 +158,33 @@ def _legacy_github_observation(payload: dict[str, object]) -> QuickObservation |
     if not isinstance(login, str) or not isinstance(html_url, str):
         return None
     allowed_fields = (
-        "login", "id", "avatar_url", "html_url", "name", "company", "blog", "location",
-        "email", "hireable", "bio", "twitter_username", "public_repos", "public_gists",
-        "followers", "following", "created_at", "updated_at",
+        "login",
+        "id",
+        "avatar_url",
+        "html_url",
+        "name",
+        "company",
+        "blog",
+        "location",
+        "email",
+        "hireable",
+        "bio",
+        "twitter_username",
+        "public_repos",
+        "public_gists",
+        "followers",
+        "following",
+        "created_at",
+        "updated_at",
     )
     details = {field: payload.get(field) for field in allowed_fields}
-    details.update({"account_candidate": True, "identity_claim": False, "field_visibility": "public_profile_api"})
+    details.update(
+        {
+            "account_candidate": True,
+            "identity_claim": False,
+            "field_visibility": "public_profile_api",
+        }
+    )
     return QuickObservation(
         source="github_public_api",
         source_locator=html_url,
@@ -193,7 +227,11 @@ async def _github_observations(
     return [_github_observation_from_provider(item) for item in result.observations]
 
 
-def _legacy_gitlab_observation(payload: dict[str, object], *, matched_by: str) -> QuickObservation | None:
+def _legacy_gitlab_observation(
+    payload: dict[str, object],
+    *,
+    matched_by: str,
+) -> QuickObservation | None:
     username = payload.get("username")
     web_url = payload.get("web_url")
     if not isinstance(username, str) or not isinstance(web_url, str):
@@ -229,7 +267,9 @@ async def _gitlab_observations(
         payload = await injected_lookup(normalized_value)
         if payload is None:
             return []
-        matched_by = "username" if identifier_kind is IdentifierKind.USERNAME else "exact_public_email"
+        matched_by = (
+            "username" if identifier_kind is IdentifierKind.USERNAME else "exact_public_email"
+        )
         observation = _legacy_gitlab_observation(payload, matched_by=matched_by)
         return [] if observation is None else [observation]
 
@@ -306,6 +346,58 @@ async def _codeforces_observations(
         ),
     )
     return [_codeforces_observation_from_provider(item) for item in result.observations]
+
+
+async def _dns_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+    injected_lookup: NetworkLookup | None,
+) -> list[QuickObservation]:
+    if injected_lookup is not None:
+        hostname = urlsplit(normalized_value).hostname or ""
+        if not hostname:
+            return []
+        public_ips = await injected_lookup(hostname)
+        if not public_ips:
+            return []
+        return [
+            QuickObservation(
+                source="public_dns_infrastructure",
+                source_locator=f"dns://{hostname}",
+                summary=(
+                    "Globally reachable addresses for the public hostname; "
+                    "website infrastructure only."
+                ),
+                details={
+                    "hostname": hostname,
+                    "public_infrastructure_ips": list(public_ips),
+                    "personal_device_ip_claim": False,
+                    "physical_location_claim": False,
+                },
+            )
+        ]
+
+    request = ExecutionRequest(
+        provider_name=DEFAULT_DNS_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_dns_observation_from_provider(item) for item in result.observations]
 
 
 async def _research_username(
@@ -462,7 +554,9 @@ async def _research_email(
     warnings: list[str] = []
     subject_id = uuid4()
     identifier_id = uuid4()
-    injected_gitlab = None if gitlab_email_lookup is lookup_gitlab_public_email else gitlab_email_lookup
+    injected_gitlab = (
+        None if gitlab_email_lookup is lookup_gitlab_public_email else gitlab_email_lookup
+    )
     try:
         gitlab_observations = await _gitlab_observations(
             normalized_value,
@@ -497,11 +591,12 @@ async def _research_email(
 async def _research_url(
     normalized_value: str,
     *,
+    purpose: Purpose,
+    consent_acknowledged: bool,
     public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
     network_lookup: NetworkLookup = resolve_public_host_ips,
 ) -> QuickResearchReport:
     parts = urlsplit(normalized_value)
-    hostname = parts.hostname or ""
     observations = [
         QuickObservation(
             source="local_normalization",
@@ -516,29 +611,22 @@ async def _research_url(
         )
     ]
     warnings: list[str] = []
-    if hostname:
-        try:
-            public_ips = await network_lookup(hostname)
-        except OSError:
-            public_ips = ()
-            warnings.append("Public DNS infrastructure lookup was temporarily unavailable.")
-        if public_ips:
-            observations.append(
-                QuickObservation(
-                    source="public_dns_infrastructure",
-                    source_locator=f"dns://{hostname}",
-                    summary=(
-                        "Globally reachable addresses for the public hostname; "
-                        "website infrastructure only."
-                    ),
-                    details={
-                        "hostname": hostname,
-                        "public_infrastructure_ips": list(public_ips),
-                        "personal_device_ip_claim": False,
-                        "physical_location_claim": False,
-                    },
-                )
-            )
+    subject_id = uuid4()
+    identifier_id = uuid4()
+    injected_network = None if network_lookup is resolve_public_host_ips else network_lookup
+    try:
+        dns_observations = await _dns_observations(
+            normalized_value,
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
+            injected_lookup=injected_network,
+        )
+    except Exception:
+        dns_observations = []
+        warnings.append("Public DNS infrastructure lookup was temporarily unavailable.")
+    observations.extend(dns_observations)
     search_observations, search_warning = await _public_search(normalized_value, public_search_lookup)
     observations.extend(search_observations)
     if search_warning:
@@ -594,6 +682,8 @@ async def run_quick_research(
     if kind is ResearchKind.URL:
         return await _research_url(
             normalized.normalized_value,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
             public_search_lookup=public_search_lookup,
             network_lookup=network_lookup,
         )
