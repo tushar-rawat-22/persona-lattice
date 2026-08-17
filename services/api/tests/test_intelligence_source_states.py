@@ -67,9 +67,9 @@ def test_optional_not_configured_is_unavailable_without_claiming_execution() -> 
     assert record.terminal_for_automation is True
 
 
-def test_provider_failure_and_remote_rate_limit_record_an_attempt() -> None:
+def test_execution_failure_and_remote_rate_limit_record_an_attempt() -> None:
     for reason in (
-        SourceRunReason.PROVIDER_FAILURE,
+        SourceRunReason.EXECUTION_FAILURE,
         SourceRunReason.REMOTE_RATE_LIMIT,
     ):
         record = SourceRunRecord(
@@ -147,7 +147,7 @@ def test_state_reason_mismatch_fails_closed() -> None:
             source_name="github_public_api",
             lead_kind=LeadKind.USERNAME,
             state=SourceRunState.NOT_FOUND,
-            reason=SourceRunReason.PROVIDER_FAILURE,
+            reason=SourceRunReason.EXECUTION_FAILURE,
         )
 
 
