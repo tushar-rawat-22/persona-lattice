@@ -12,9 +12,9 @@ Do not put API keys, real research identifiers, retained-case data, password has
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #44: `9afa22c470dfdd2a576433332f53f415ce9fd9d3`
-- PR #44 exact tested head: `63dacec40044b7b2fd8ec9327d06fd20fdec4b1e`
-- PR #44 CI run: `32055597248`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #46: `3e0f061d541590ed07044d5506b8042359ff2bc7`
+- PR #46 exact tested head: `4854533175f66b28d6f9c8db54dfcab240658e2b`
+- PR #46 CI run: `32061236295`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
 ## Permanent evidence semantics
@@ -88,7 +88,8 @@ Source-state/report/evaluation sequence completed:
 - PR #38: factual quick-research source-run population; ADR 0025;
 - PR #40: deterministic aggregate/per-source evaluation counters; ADR 0026;
 - PR #42: complete deterministic source state/reason fixture matrix; ADR 0027;
-- PR #44: deterministic graph-growth/duplicate counters plus label-gated wrong-pivot measurement; ADR 0028.
+- PR #44: deterministic graph-growth/duplicate counters plus label-gated wrong-pivot measurement; ADR 0028;
+- PR #46: deterministic labelled graph-limit comparison through the real `LeadFrontier`; ADR 0029.
 
 Current governed production sources: Sherlock, GitHub, GitLab, Codeforces and public DNS. The only remaining legacy network binding is optional metered Brave exact-match search. No new third-party source is authorized during architecture closure.
 
@@ -112,7 +113,11 @@ PR #42 adds a deterministic synthetic matrix that covers every current `SourceRu
 
 PR #44 adds `GraphEvaluationCounters` over canonical converged reports. Structural facts include node/edge growth, maximum observed depth, admitted pivots, duplicate suppression, provider failures, budget stops and review/display/blocked decisions. Evaluation fails closed if edge count, admitted pivots and non-seed node count drift from one another or node depth is invalid.
 
-Wrong-pivot truth is never inferred from usernames, provider agreement, graph shape or M5. It requires an explicit `PivotRelevance` label on an admitted child from a deterministic synthetic fixture or explicitly consented evaluation set. Labels for non-admitted keys fail closed. Unlabelled admitted pivots remain visible and unscored. The labelled-admitted count is the only valid wrong-pivot denominator; no quality percentage is emitted yet.
+Wrong-pivot truth is never inferred from usernames, provider agreement, graph shape or M5. It requires an explicit `PivotRelevance` label on an admitted child from a deterministic synthetic fixture or explicitly consented evaluation set. Labels for non-admitted keys fail closed. Unlabelled admitted pivots remain visible and unscored. The labelled-admitted count is the only valid wrong-pivot denominator; no quality percentage is emitted.
+
+PR #46 adds a network-free limit-comparison harness that runs fixture leads through the real `LeadFrontier`. Production convergence and evaluation now share one `compatibility_frontier_limits()` constructor, preventing policy-shape drift. The regression comparison deliberately shows the tradeoff: allowing depth 3 on one labelled fixture adds two nodes, removes three depth-budget stops, adds one duplicate suppression event, and admits one additional relevant plus one additional wrong pivot. Those counts are contract evidence only; they do not authorize a production limit change.
+
+Two fixture-integrity flaws were corrected before PR #46 merged: malformed result keys can no longer claim a different lead kind, and orphan/typo parent branches now fail closed instead of silently disappearing from an evaluation run. Seed key/kind mismatch also fails closed.
 
 Important interpretation rules:
 
@@ -121,6 +126,7 @@ Important interpretation rules:
 - remote rate limits and proven execution failures are attempted failures;
 - `unclassified_attempt_count` exists so future state drift cannot be silently forced into success/failure buckets;
 - graph growth/duplicate counts are structural facts, but wrong-pivot classification requires external evaluation truth;
+- candidate limit deltas are descriptive counts, not a quality score;
 - no reliability percentage, confidence score or identity-quality score is authorized from these counters yet.
 
 ## Current deliberate limits
@@ -138,14 +144,13 @@ Important interpretation rules:
 
 ## Immediate next gate
 
-1. Build deterministic labelled graph fixtures that compare the current depth-2 / 12-node policy with candidate limits without changing production limits. Measure added nodes, duplicate suppression, budget stops and labelled wrong-pivot exposure with explicit denominators.
-2. Add explicit typed outcomes for pre-execution policy/configuration and malformed-result cases only where the runtime can prove the state; do not guess from warning text.
-3. Migrate the existing optional Brave path behind `ProviderRuntime` only if no-key zero-spend operation remains intact and no new source coverage is activated.
-4. Remove the final legacy network allowance after that migration.
-5. Finish document-candidate-to-reviewed-lead plumbing and operator source-state exposure.
-6. Run final architecture consistency evaluation before activating new third-party sources.
+1. Add explicit typed outcomes for pre-execution policy/configuration and malformed-result cases only where the runtime can prove the state; do not guess from warning text or missing observations.
+2. Migrate the existing optional Brave path behind `ProviderRuntime` only if no-key zero-spend operation remains intact and no new source coverage is activated.
+3. Remove the final legacy network allowance after that migration.
+4. Finish document-candidate-to-reviewed-lead plumbing and operator source-state exposure.
+5. Run final architecture consistency evaluation before activating new third-party sources.
 
-Do not raise recursion limits or activate new third-party sources until labelled graph fixture comparisons exist and their denominators are understood.
+Production recursion remains depth 2 / 12 nodes. Do not raise it from the single regression fixture; representative synthetic/consented labelled evaluation and provider cost/yield implications are still required.
 
 ## Update discipline
 
