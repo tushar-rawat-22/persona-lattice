@@ -12,8 +12,9 @@ Never put API keys, real research identifiers, retained-case data, password hash
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified `main` before PR #38: `35c4428916c9a5d5fe30ca21fbdc2b98fb4bc0a0`
-- PR #38: `v2-quick-source-run-facts`; implementation/docs head before this continuity refresh: `17286fa787e30b98790e3af7a8f5a34399c6cdda`
+- Verified `main`: `39535a8f4fbd6d33ca38f19f1d60eb191b58b422`
+- PR #38 exact head: `bb5c5117f3dabddba75f9750a1ef9b0300c14c52`
+- PR #38 CI: run `32042788240`, success across API 3.11/3.13, Ruff/audits, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
 ## Permanent evidence semantics
@@ -87,7 +88,7 @@ Source-state/report sequence:
 - PR #35: deterministic privacy-bounded source-run report projection; merge `ff876d92b969aa6657ce23f0329d61104d4141eb`; ADR 0022;
 - PR #36: explicit execution outcome mapping; merge `e26158720f78a9db8972235142a900394c8a4b9e`; ADR 0023;
 - PR #37: converged node `source_runs` projection; merge `35c4428916c9a5d5fe30ca21fbdc2b98fb4bc0a0`; ADR 0024; exact PR head CI run `32039578511` succeeded;
-- PR #38: quick-research factual source-run population; ADR 0025; under review at this checkpoint.
+- PR #38: factual quick-research source-run population; merge `39535a8f4fbd6d33ca38f19f1d60eb191b58b422`; ADR 0025; exact head CI run `32042788240` succeeded.
 
 Current governed production sources: Sherlock, GitHub, GitLab, Codeforces and public DNS. The only remaining legacy network binding is optional metered Brave exact-match search. No new third-party source is authorized during architecture closure.
 
@@ -105,7 +106,7 @@ Current typed distinctions:
 - `unavailable / execution_failure`: execution was entered and failed;
 - queued/review/display/blocked states remain available for scheduler/report integration.
 
-PR #38 makes normal quick research populate these facts instead of leaving the converged projection empty. It deliberately refuses to call ambiguous policy/auth/preflight exceptions an attempted provider failure when the execution boundary cannot prove provider contact.
+Normal quick research now emits these records at the point where the outcome is known, so converged reports no longer need an empty compatibility projection for normal execution. The implementation deliberately refuses to call ambiguous policy/auth/preflight exceptions attempted provider failures when the execution boundary cannot prove provider contact.
 
 ## Current deliberate limits
 
@@ -122,13 +123,12 @@ PR #38 makes normal quick research populate these facts instead of leaving the c
 
 ## Immediate next gate
 
-1. Merge PR #38 only after the exact latest head passes API 3.11/3.13, Ruff/audits, web and deployment-image CI.
-2. Add explicit typed outcomes for pre-execution policy/configuration failures and malformed-result cases where the current boundary can prove them; do not guess from warning text.
-3. Add source reliability/budget evaluation counters over the retained source-run projection before changing recursion limits.
-4. Migrate the existing optional Brave path behind `ProviderRuntime` only if the migration preserves no-key zero-spend operation and does not activate any new source coverage.
-5. Remove the final legacy network allowlist after that migration.
-6. Finish document-candidate-to-reviewed-lead plumbing and source-state operator exposure.
-7. Start M10-style failure/growth evaluation before raising recursion limits or activating new network providers.
+1. Add explicit typed outcomes for pre-execution policy/configuration failures and malformed-result cases where the current boundary can prove them; do not guess from warning text.
+2. Add source reliability/budget evaluation counters over the retained source-run projection before changing recursion limits.
+3. Migrate the existing optional Brave path behind `ProviderRuntime` only if the migration preserves no-key zero-spend operation and does not activate any new source coverage.
+4. Remove the final legacy network allowlist after that migration.
+5. Finish document-candidate-to-reviewed-lead plumbing and source-state operator exposure.
+6. Start M10-style failure/growth evaluation before raising recursion limits or activating new network providers.
 
 Brave policy note as of 2026-08-17: existing project review classifies Search as metered/credentialed and therefore optional. Re-check official terms and quotas from primary sources before any later activation or cost-policy change.
 
