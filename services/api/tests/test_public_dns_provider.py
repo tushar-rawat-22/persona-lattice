@@ -71,6 +71,27 @@ async def test_dns_provider_rejects_credentials_non_url_and_credential_bearing_u
 
 
 @pytest.mark.asyncio
+async def test_dns_provider_fails_closed_on_non_global_or_excess_resolver_output() -> None:
+    async def private_resolver(hostname: str) -> tuple[str, ...]:
+        return ("127.0.0.1",)
+
+    with pytest.raises(ProviderValidationError, match="non-global"):
+        await PublicDnsInfrastructureProvider(resolver=private_resolver).execute(
+            _query("url", "https://example.com"),
+            None,
+        )
+
+    async def excessive_resolver(hostname: str) -> tuple[str, ...]:
+        return tuple(f"8.8.8.{index}" for index in range(1, 10))
+
+    with pytest.raises(ProviderValidationError, match="address limit"):
+        await PublicDnsInfrastructureProvider(resolver=excessive_resolver).execute(
+            _query("url", "https://example.com"),
+            None,
+        )
+
+
+@pytest.mark.asyncio
 async def test_dns_provider_maps_resolver_oserror_to_transient_failure() -> None:
     async def resolver(hostname: str) -> tuple[str, ...]:
         raise OSError("resolver unavailable")
