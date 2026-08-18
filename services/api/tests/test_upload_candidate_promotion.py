@@ -66,13 +66,22 @@ def test_claim_candidate_never_becomes_research_lead_even_after_review() -> None
         promote_confirmed_identifier_candidate(confirmed)
 
 
-def test_rejected_candidate_cannot_be_silently_reconfirmed() -> None:
+def test_rejected_candidate_requires_an_explicit_new_review_before_promotion() -> None:
     candidate = extract_identifier_candidates("Email: person@example.test", uuid4())[0]
     rejected = reject_candidate(candidate)
 
     assert rejected.review_status is ReviewStatus.REJECTED
-    with pytest.raises(CandidateReviewError, match="reviewed again"):
-        confirm_candidate(rejected, human_confirmed=True)
+    assert rejected.external_research_authorized is False
+    with pytest.raises(CandidateReviewError, match="not authorized"):
+        promote_confirmed_identifier_candidate(rejected)
+
+    reconfirmed = confirm_candidate(rejected, human_confirmed=True)
+    lead = promote_confirmed_identifier_candidate(reconfirmed)
+
+    assert reconfirmed.review_status is ReviewStatus.CONFIRMED
+    assert reconfirmed.external_research_authorized is True
+    assert lead.kind is LeadKind.EMAIL
+    assert lead.value == "person@example.test"
 
 
 def test_non_executable_identifier_kind_fails_closed() -> None:
