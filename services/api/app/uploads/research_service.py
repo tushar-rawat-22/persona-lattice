@@ -53,21 +53,11 @@ async def run_reviewed_candidate_case(
             purpose=purpose,
             consent_acknowledged=consent_acknowledged,
         )
-        record = case_store.create(
+        return case_store.create(
             seed_kind=report.kind,
             seed_value=report.normalized_value,
             report=report,
-        )
-        # Quick-case persistence owns its canonical report shape. Attach reviewed
-        # seed provenance only by creating the final payload through the public
-        # payload API; do not mutate the already-persisted record.
-        case_store.delete(record.id)
-        payload = dict(record.report)
-        payload["seed_provenance"] = provenance
-        return case_store.create_payload(
-            seed_kind=record.seed_kind,
-            seed_value=record.seed_value,
-            report_payload=payload,
+            report_extensions={"seed_provenance": provenance},
         )
 
     report = await run_converged_research(
