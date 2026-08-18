@@ -12,21 +12,20 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #58: `1e8a8005bff307bd456542a656c81509a5bd1e7f`
-- PR #58 exact tested head: `997544bd10e65ccb272b997093727d173873d585`
-- PR #58 CI run: `32092648629`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #60: `0e0c1df75ffa9c7a3d254386116723563dfffe4b`
+- PR #60 exact tested head: `afd9bf7a1728cba4e3b2c5a97c3fb1dc531b2a81`
+- PR #60 CI run: `32096166715`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #58 closes the PDF page-attribution gap left deliberately open by PR #56. The bounded PDF extractor now returns a `PageTextSpan` for every parsed page using one-based page numbers and half-open global character intervals over the exact flattened `extracted_text`. The page map crosses the process boundary with the extraction result and is returned in `ArtifactPreview`.
+PR #60 closes the server-owned-state prerequisite for document-candidate review. Successful bounded file preview now persists each extracted `ReviewCandidate` in a short-lived SQLite review table keyed by artifact ID and candidate ID. The store uses the existing `PERSONALATTICE_DB_PATH`, so it adds no service or paid dependency.
 
-Candidate page attribution is fail-closed: `source_page` is set only when the candidate's full source interval is contained by exactly one extractor-proven page span. A span crossing a page separator has no page claim. Empty PDF pages remain zero-length spans so later offsets cannot drift. Normalized duplicate identifiers still collapse to one candidate under the existing contract; the first occurrence owns the retained provenance.
+Review persistence is intentionally narrower than the preview response. It keeps the normalized candidate value, identifier kind, review state, artifact/candidate IDs and mechanically derived page/character provenance needed for later authorization. It does not copy uploaded file bytes, filenames, file hashes, surrounding extracted text or the complete extracted document into review state. Default review retention is 24 hours and can be configured only within 1–168 hours through `PERSONALATTICE_UPLOAD_REVIEW_RETENTION_HOURS`.
 
-Two flaws were corrected during the block rather than preserved:
+The stored payload is not trusted blindly: reads verify that candidate/artifact IDs inside the serialized candidate still match the row keys. Tests also prove that raw surrounding document prose and filenames are absent from the SQLite/WAL review persistence. Two weak test assumptions were corrected before CI: a username fixture's end offset was off by one, and the first tamper regression only changed a row key in a way that bypassed the decoder. The corrected tamper test changes serialized provenance so the fail-closed decoder is actually exercised.
 
-1. The previous PDF output limit counted page text but not the newline separators inserted into the returned flattened string. PR #58 makes the limit cover the actual returned text, separators included.
-2. The first boundary regression fixture assumed the phone extractor could match across a newline, which its reviewed regex deliberately cannot. CI exposed that bad fixture. The corrected test exercises the page-span mapper directly instead of changing identifier extraction to satisfy an invalid test assumption.
+ADR 0036 records the decision. `ArtifactPreview.storage_retained=false` still means uploaded artifact bytes are not retained; short-lived candidate review metadata is a separate authorization record.
 
-`ArtifactPreview` now validates that page numbers are contiguous, page spans align with flattened character boundaries, every inter-page separator is actually a newline, and the last span ends at the extracted-text boundary. ADR 0035 records the decision.
+PR #60 deliberately does not expose confirm/reject/promotion HTTP actions. That separation is intentional: adding endpoints before trusted server-owned candidate state existed would have forced the API to accept browser-supplied candidate values/provenance as authority.
 
 ## Permanent evidence semantics
 
@@ -99,9 +98,10 @@ Key source-state/report/evaluation PRs: #34-#48. These establish typed source st
 Document-intake checkpoints:
 
 - PR #56: deterministic candidate character spans plus fail-closed reviewed identifier promotion contract;
-- PR #58: extraction-time PDF page spans plus exact candidate page attribution and corrected flattened-text output bounds.
+- PR #58: extraction-time PDF page spans plus exact candidate page attribution and corrected flattened-text output bounds;
+- PR #60: short-lived server-owned candidate review persistence, bounded retention and stored-provenance integrity checks without raw document retention.
 
-Operator/API review wiring remains incomplete. The current contracts are backend primitives; they do not yet provide a durable private workflow for confirming/rejecting a preview candidate and promoting only server-owned confirmed state.
+Operator/API review mutation wiring remains incomplete. The server now owns the candidate record needed for authorization, but there is no authenticated endpoint yet for confirm, reject, re-review or promotion.
 
 ## Source-run semantics
 
@@ -124,6 +124,9 @@ Critical distinctions:
 ## Document candidate semantics
 
 - file preview remains review-only and temp files are deleted after bounded extraction;
+- successful preview persists only short-lived candidate review metadata, not uploaded file bytes or complete extracted text;
+- candidate review state defaults to 24-hour retention and expires independently of retained research cases;
+- server lookup requires both artifact ID and candidate ID and validates stored payload provenance against row keys;
 - candidate extraction may identify username, email, phone and URL values but does not authorize research;
 - candidates carry artifact ID, candidate ID and deterministic extracted-text offsets where known;
 - PDF candidates may additionally carry a mechanically proven one-based `source_page`;
@@ -156,18 +159,20 @@ The graph-limit harness uses the real `LeadFrontier`. Its regression fixture sho
 
 ## Immediate next gate
 
-Wire the existing reviewed-document candidate contract into the private operator/API flow.
+Expose the server-owned reviewed-document decision path through the private operator/API boundary.
 
 Requirements:
 
-1. candidate state used for confirm/reject/promotion must be server-owned; do not accept browser-supplied authorization flags as authority;
-2. previewed document text remains inert until an explicit authenticated human review action;
-3. confirmed identifier promotion must reuse `promote_confirmed_identifier_candidate()` rather than creating a second promotion path;
-4. artifact ID, candidate ID, character offsets and PR #58 page provenance must survive into the promoted lead without copying raw uploaded text;
-5. claim candidates and unsupported identifier kinds remain non-executable;
-6. rejection remains non-authorizing while later explicit re-review stays possible;
-7. tests must cover authentication/CSRF, stale or unknown candidate IDs, tampered candidate values/provenance, confirm/reject/re-review and successful promotion;
-8. no provider/API, credential, paid dependency, recursion expansion or identity-semantic change.
+1. mutation requests carry artifact/candidate IDs and an explicit human decision, never a browser-supplied candidate value/provenance/authorization flag as authority;
+2. endpoints require the existing authenticated write/CSRF boundary;
+3. unknown or expired artifact/candidate IDs fail closed without echoing candidate values;
+4. confirm/reject/re-review transitions reload and update the PR #60 server-owned record;
+5. confirmed identifier promotion reuses `promote_confirmed_identifier_candidate()` rather than creating a second promotion path;
+6. artifact ID, candidate ID, character offsets and PR #58 page provenance survive into the promoted lead without copying raw uploaded text;
+7. claim candidates and unsupported identifier kinds remain non-executable;
+8. promotion itself does not automatically call any provider;
+9. tests cover authentication/CSRF, stale or unknown IDs, attempted browser tampering, confirm/reject/re-review and successful promotion;
+10. no provider/API, credential, paid dependency, recursion expansion or identity-semantic change.
 
 After operator/API review wiring, expose source-state/evaluation summaries cleanly, then run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after V2-D closure should new third-party providers be reviewed.
 
