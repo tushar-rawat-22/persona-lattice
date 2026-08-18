@@ -30,7 +30,8 @@ def test_quick_case_retains_full_provider_evidence_once() -> None:
     payload = _report_payload(report)
     serialized = json.dumps(payload, sort_keys=True)
 
-    # Full observation details and their locator have one canonical retained owner.
+    # Arbitrary provider details have one retained owner. The selected public email index
+    # deliberately repeats its locator once for direct operator attribution.
     assert serialized.count(unique_payload_marker) == 1
     assert serialized.count("https://github.com/synthetic-user") == 2
 
@@ -53,5 +54,4 @@ def test_structured_report_does_not_copy_seed_value() -> None:
     structured = payload["structured_report"]
 
     assert "seed" not in structured
-    # One copy remains in the quick report contract; StoredCase owns the case-level seed separately.
     assert json.dumps(structured).count(seed) == 0
