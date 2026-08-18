@@ -12,10 +12,10 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #96: `2e36b274a2d87b5c706bad10a4866dddf754395e`
-- PR #96 exact tested head: `277aea3f80f4d0faf3d2bcde3a8fe9fceec1576c`
-- PR #96 exact-head CI: run `32189304220`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
-- PR #96 merge: `43590e00b989a101a70c3fd44fd0c96ec6161e1f`
+- Main before PR #98: `f39a50c78e81b4b1605e0035ca2261e28808e2e3`
+- PR #98 exact tested head: `41e71c35fdb5771c63e5ce589b5f149f59861437`
+- PR #98 exact-head CI: run `32193906435`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
+- PR #98 merge: `720c1d11af92007a6f3f6fc913ea6544d52bb4e3`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend operating runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -31,50 +31,43 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-C source capability registry/planner: complete, PR #22.
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
 - M10: deterministic source-state fixtures, labelled graph evaluation and initial multi-fixture cohort comparison exist. Broader representative cohorts, replay/ablation and defensible threshold analysis remain before any recursion/threshold change.
-- Post-V2-D source expansion: Bluesky admission plus bounded adapter/outcome contract complete; Bluesky execution remains disabled pending atomic activation.
+- Post-V2-D source expansion: Bluesky public profiles are active for valid AT handles through the governed runtime, PR #98 / ADR 0055.
 
-## Latest block — Bluesky bounded adapter + neutral attempted outcomes
+## Latest block — Bluesky governed runtime activation
 
-PR #96 adds:
+PR #98 activates the previously reviewed Bluesky adapter without reopening V2-D:
 
-- `services/api/app/providers/bluesky_public.py`;
-- planned provider descriptor metadata for `bluesky_public_profile`;
-- typed `withheld` source-run state;
-- `public_web_opt_out` and `account_unavailable` reasons;
-- M10 counters that treat withheld responses as completed attempts but not failures;
-- deterministic Bluesky adapter/outcome tests;
-- ADR 0054.
+- `bluesky_public_profile` is now active, source-policy reviewed and recursive-eligible;
+- the provider descriptor is `DEVELOPMENT`, credentialless and bounded to one attempt, 4s timeout, 64 KiB result ceiling, concurrency 2 and a local 30/60s application budget;
+- the exact adapter instance is owned by the process-wide `ProviderRuntime`;
+- the source is bound for `USERNAME`, but actual execution is value-gated by the existing AT-handle admission contract;
+- ordinary usernames, malformed handles and `@handle` UI forms are non-applicable and cause no Bluesky call, source-run record or fabricated failure;
+- valid AT handles use the public `app.bsky.actor.getProfile` route;
+- successful observations retain only DID, normalized handle, optional display name and account-candidate/non-identity/public-visibility flags;
+- profile URL is canonical provenance, not an emitted URL lead;
+- catalog `emits` is therefore `USERNAME + NAME`, correcting the older planned overclaim that included URL/location;
+- `withheld / public_web_opt_out` and `withheld / account_unavailable` remain completed neutral attempts, not provider failures or `not_found`;
+- ADR 0055 records the activation and its latency/concurrency tradeoff.
 
-This block intentionally does **not** activate Bluesky. The source catalog remains `PLANNED`, `source_policy_reviewed=False`, `recursive_eligible=False`; there is no source binding, process-wide runtime owner or quick-research call.
+Fresh official/primary review immediately before activation reconfirmed unauthenticated public AppView access, DNS-style handle semantics, `!no-unauthenticated` public-web opt-out behavior and the public AppView operating model. Bluesky's current Terms of Service and AT Protocol Network Services privacy notice were also reviewed. Public status does not override explicit opt-out or authorize nonpublic collection.
 
-Fresh official/primary-source review on 2026-08-19 reconfirmed:
+### Corrected assumptions during PR #98
 
-- public `app.bsky.actor.getProfile` reads are unauthenticated;
-- the cached public AppView host is `https://public.api.bsky.app` for public-web clients;
-- AT Protocol handles are DNS-hostname-shaped and normalized lowercase;
-- `!no-unauthenticated` is a logged-out/public-web opt-out signal;
-- AppView distinguishes profile absence from account takedown/deactivation;
-- public AppView limits are described as generous, so the planned descriptor keeps a conservative local 30/minute application ceiling rather than claiming a universal upstream quota.
-
-The adapter accepts no credential, fails locally on generic usernames/`@` UI forms/malformed handles, and retains only DID, normalized handle and optional display name plus account-candidate/non-identity/public-visibility flags. Description, avatar, follower/follow/post counts, viewer state and arbitrary response fields are excluded.
-
-### Corrected assumptions during PR #96
-
-1. A successful provider response that refuses public-web visibility is not `not_found` and not a reliability failure. It is now `withheld / public_web_opt_out`, execution attempted = true.
-2. A suspended/deactivated account response is also an attempted neutral outcome, now `withheld / account_unavailable`.
-3. Exact-shape/state-matrix tests failed after the new vocabulary was introduced. The product semantics were kept; stale contracts were updated. The corrected exact head then passed full CI.
-4. The first registry edit produced noisy one-line formatting. That diff was rejected and restored to normal maintainer formatting before merge.
-5. `source_states.py` privacy documentation was preserved rather than allowing a semantic change to delete useful maintainer context.
+1. Generic `USERNAME` does not imply Bluesky applicability. A plain value such as `alice` must not be sprayed into the provider.
+2. The planned source catalog overstated Bluesky outputs. The admitted adapter does not expose location, and source-locator provenance is not an automatic URL lead; `emits` was narrowed to username + display-name context.
+3. CI initially failed with 403 passed / 2 failed because two tests still asserted the intentional pre-activation `PLANNED` state. Those stale tests were updated to assert the new reviewed/governed activation contract; the final exact head then passed full CI.
+4. The first activation keeps Bluesky sequential after the existing parallel GitHub/GitLab/Codeforces enrichment block. This is a deliberate conservative rollout choice; optimize only from measured latency/yield evidence.
+5. No Bluesky test-only injection seam was added to production quick research. Runtime-path tests patch the governed runtime boundary instead.
 
 ## M10 checkpoint
 
-PR #92 established count-only cohort aggregation through the production `LeadFrontier`. The current controlled cohort includes depth-limited, duplicate-heavy and provider-failure shapes.
+PR #92 established count-only cohort aggregation through the production `LeadFrontier`. The controlled cohort includes depth-limited, duplicate-heavy and provider-failure shapes.
 
-In that fixture cohort, moving from depth 2 / 12 nodes to depth 3 / 12 nodes admits one additional node, but the extra pivot is labelled wrong and adds no relevant pivot. That is fixture evidence, not population evidence.
+In that fixture cohort, moving from depth 2 / 12 nodes to depth 3 / 12 nodes admits one additional node, but the extra pivot is labelled wrong and adds no relevant pivot. This is fixture evidence, not population evidence.
 
-Production recursion remains **depth 2 / 12 nodes**.
+Production recursion therefore remains **depth 2 / 12 nodes**.
 
-The new Bluesky withheld state is intentionally separate from provider failure so future source reliability measurements are not contaminated by user visibility choices or account state.
+Bluesky withheld states remain separate from provider failure so future reliability measurements are not contaminated by user visibility choices or account state.
 
 ## Permanent evidence semantics
 
@@ -92,7 +85,7 @@ The new Bluesky withheld state is intentionally separate from provider failure s
 
 Allowed scope is attributable public information and explicitly authorized data. PersonaLattice does not add private-account bypass, login/account-recovery enumeration, password/OTP/session/token collection, CAPTCHA/WAF/proxy/Tor evasion, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking, covert subject contact or regulated eligibility decisioning.
 
-The required baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered; no `BRAVE_SEARCH_API_KEY` means no Brave attempt.
+The required baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered; no `BRAVE_SEARCH_API_KEY` means no Brave attempt. Bluesky requires no credential or paid service and is not a single point of failure for the zero-spend path.
 
 Uploaded content is untrusted data. Extraction is never execution authority. A candidate becomes externally research-authorized only after explicit human confirmation, and only a separate explicit run action may start research.
 
@@ -105,8 +98,9 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - upload-review HTTP boundary: `services/api/app/upload_review_api.py`
 - reviewed-candidate case execution: `services/api/app/uploads/research_service.py`
 - governed provider execution: `services/api/app/providers`
-- Bluesky pre-network admission: `services/api/app/providers/bluesky_admission.py`
-- Bluesky bounded adapter, still non-executable: `services/api/app/providers/bluesky_public.py`
+- Bluesky admission: `services/api/app/providers/bluesky_admission.py`
+- Bluesky governed adapter: `services/api/app/providers/bluesky_public.py`
+- process-wide provider ownership: `services/api/app/providers/shared_runtime.py`
 - deterministic correlation: `services/api/app/correlation`
 - convergence: `services/api/app/convergence.py`
 - retained converged reference validation: `services/api/app/converged_report.py`
@@ -123,9 +117,9 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 
 ### Source execution ownership
 
-Current network execution is governed for Sherlock, GitHub, GitLab, Codeforces, public DNS and optional Brave exact-match search. The executable legacy-network allowance is empty.
+Current network execution is governed for Sherlock, GitHub, GitLab, Codeforces, Bluesky (valid AT handles only), public DNS and optional Brave exact-match search. The executable legacy-network allowance is empty.
 
-Catalog, current executable binding, provider registry and process-wide runtime ownership are checked symmetrically. Planned/review/manual/reference sources remain non-executable. Required active recursive sources must be zero-spend eligible; a non-zero-spend recursive source can only be optional.
+Catalog, executable binding, provider registry and process-wide runtime ownership are checked symmetrically. Planned/review/manual/reference sources remain non-executable. Required active recursive sources must be zero-spend eligible; a non-zero-spend recursive source can only be optional.
 
 ### Source-run semantics
 
@@ -144,7 +138,7 @@ Critical distinctions:
 - returned malformed result → unavailable, attempted only when post-attempt phase is mechanically proven;
 - generic `ProviderValidationError` → no source-run record because its phase is ambiguous.
 
-`source_provider_exception_record()` is the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state. Evaluation counters are descriptive counts, not provider reliability probabilities or identity-quality scores.
+`source_provider_exception_record()` remains the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state. Evaluation counters are descriptive counts, not provider reliability probabilities or identity-quality scores.
 
 ### Retained privacy ownership
 
@@ -152,7 +146,7 @@ Complete provider evidence and provenance have canonical retained owners. Quick 
 
 ### Reviewed-document authority
 
-The chain is server-owned and explicit: extraction creates candidates only; short-lived review state owns authorization; review mutation cannot alter candidate value/provenance; promotion does not call providers; and only a separate authenticated, CSRF-protected explicit case-run action can reload current trusted state and begin research.
+The chain is server-owned and explicit: extraction creates candidates only; short-lived review state owns authorization; review mutation cannot alter candidate value/provenance; promotion does not call providers; only a separate authenticated, CSRF-protected explicit case-run action can reload current trusted state and begin research.
 
 ## Current deliberate limits
 
@@ -162,24 +156,21 @@ The chain is server-owned and explicit: extraction creates candidates only; shor
 - contextual name/organization/location remain non-autonomous;
 - public-search snippets do not become automatic identifier leads;
 - Brave remains optional and excluded from required zero-spend operation;
-- Bluesky remains non-executable after the adapter/outcome pre-activation block;
+- Bluesky is applicable only to syntactically valid AT handles, not arbitrary usernames;
 - no identity probability or universal-account claims.
 
 ## Next gate
 
-Do not reopen V2-D architecture casually.
+Do not reopen V2-D architecture casually and do not activate another provider from an old plan alone.
 
-The next Bluesky block is **atomic activation**, only after another fresh official-source check at execution time:
+Choose one bounded next block:
 
-1. keep `getProfile` on the reviewed unauthenticated public AppView route;
-2. preserve the current handle admission and minimal field allowlist;
-3. move source catalog policy/status, source binding, provider status, process-wide `ProviderRuntime` ownership and quick-research/source-run integration together;
-4. keep success, not-found, public-web opt-out, account-unavailable, malformed, remote-rate-limit and transient/unavailable behavior deterministic and tested;
-5. keep generic username spraying impossible;
-6. keep the zero-spend baseline independent of Bluesky availability;
-7. keep production recursion at depth 2 / 12 nodes.
+1. broaden M10 labelled synthetic/consented cohorts across additional lead kinds and source-yield/cost shapes; or
+2. review exactly one next zero-spend candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md` using fresh official terms, cost, authentication, returned-field, contact-risk and retention review before any activation.
 
-M10 still needs broader labelled synthetic/consented cohorts across more lead kinds and source-yield/cost shapes, deterministic replay/factor ablations, and defensible labelled threshold analysis before any production recursion or M5-threshold change.
+Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions. Paid or metered sources remain optional only.
+
+Before any production recursion or M5-threshold change, M10 still needs broader representative cohorts, deterministic replay/factor ablations and defensible labelled false-positive/false-negative analysis. Production limits remain depth 2 / 12 nodes.
 
 ## Update discipline
 
