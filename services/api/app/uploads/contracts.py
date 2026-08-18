@@ -93,6 +93,10 @@ class ArtifactPreview(BaseModel):
                 raise ValueError("PDF page spans must use contiguous one-based page numbers.")
             if span.source_start != expected_start:
                 raise ValueError("PDF page spans do not match flattened text boundaries.")
+            if span.page_number > 1:
+                separator_index = span.source_start - 1
+                if self.extracted_text[separator_index] != "\n":
+                    raise ValueError("PDF page spans require newline separators between pages.")
             expected_page += 1
             expected_start = span.source_end + 1
 
