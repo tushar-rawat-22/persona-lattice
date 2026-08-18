@@ -77,7 +77,7 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: active; network migration and reviewed-document backend execution complete**
+**Status: active; network migration, reviewed-document backend execution and first cross-layer closure guard complete**
 
 Every currently executable network source is behind the governed runtime. Key migration checkpoints are PRs #24-#32, #50, #52 and #54. The executable legacy network allowance is empty.
 
@@ -98,10 +98,12 @@ The document-review path now has a complete server-owned backend chain:
 
 The PR #66 execution action accepts artifact/candidate IDs plus mode, purpose and consent acknowledgement. It reloads and revalidates current review state immediately before execution, never accepts a browser-supplied reviewed identifier, and preserves the existing `artifact://` page/character provenance in the retained case. Review confirmation and promotion remain non-executing state transitions.
 
+PR #68 adds a cross-layer closure guard derived from live declarations. Governed executable bindings must exactly match process-wide runtime adapter ownership, runtime adapters must use the reviewed registry descriptors, and planned/unreviewed sources cannot silently enter production runtime ownership. The same guard requires every required `ACTIVE` recursive source to stay zero-spend eligible; any current recursive source that is not zero-spend eligible must remain `OPTIONAL`. ADR 0040 records the decision.
+
 Remaining before V2-D closes:
 
 1. expose document review/run controls and existing source-state/evaluation summaries cleanly in the private operator UI;
-2. run a final catalog/binding/runtime/report/privacy/zero-spend consistency review;
+2. finish the remaining report/privacy/compatibility consistency review now that runtime ownership and zero-spend dependency drift are guarded;
 3. close stale compatibility seams only where doing so does not break existing operator behavior or evidence semantics.
 
 No new third-party source should be activated during these closure blocks.
@@ -130,9 +132,11 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-Wire the reviewed-document workflow and the existing source-state/evaluation summaries into the private operator UI. The UI must keep review actions distinct from the explicit `run-case` action, show when provider traffic will begin, avoid treating a promoted lead as proof of identity, and surface retained seed provenance without exposing unnecessary document content.
+The next product-facing block is the private operator workflow: wire reviewed-document state, explicit case execution, source-state/evaluation summaries and retained seed provenance into the UI without re-deriving backend authorization or evidence semantics in the browser.
 
-After the operator workflow is usable, run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after that closure should new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
+Backend closure can continue in parallel through bounded consistency checks. The next backend review should focus on report/privacy boundaries and stale compatibility seams rather than adding another provider. Runtime ownership and zero-spend baseline dependency consistency are now guarded by PR #68.
+
+Only after V2-D closure should new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
 Production recursion remains depth 2 / 12 nodes.
 
