@@ -103,11 +103,13 @@ PR #56 adds the first document-candidate promotion contract. Rule-extracted user
 
 PR #58 closes the PDF page-attribution gap. The bounded extractor now returns one-based half-open page spans over the exact flattened text, including zero-length spans for empty pages. Candidates receive `source_page` only from exact span containment; page numbers are never inferred after flattening. The PDF output-size limit now also counts the newline separators inserted between pages, so the configured character ceiling bounds the actual returned text.
 
-PR #60 adds the server-owned review-state prerequisite for operator actions. Successful file preview now writes each extracted `ReviewCandidate` to the existing local SQLite database under artifact ID + candidate ID, with a 24-hour default retention window. The review store keeps only the normalized candidate value, kind, review state and page/character provenance needed for later authorization; it does not retain uploaded file bytes, filenames, hashes, surrounding extracted text or the complete extracted document. Stored candidate/artifact IDs are revalidated on read so later review endpoints do not need to trust browser-supplied candidate objects.
+PR #60 adds the server-owned review-state prerequisite for operator actions. Successful file preview writes each extracted `ReviewCandidate` to the existing local SQLite database under artifact ID + candidate ID, with a 24-hour default retention window. The review store keeps only the normalized candidate value, kind, review state and page/character provenance needed for later authorization; it does not retain uploaded file bytes, filenames, hashes, surrounding extracted text or the complete extracted document. Stored candidate/artifact IDs are revalidated on read so later review actions do not need to trust browser-supplied candidate objects.
+
+PR #62 adds the server-owned review mutation authority. Confirm, reject and re-review now mutate only the current SQLite record identified by artifact ID + candidate ID. Mutations serialize through an immediate SQLite transaction and may change only review status plus external-research authorization; candidate value, kind, IDs and page/character provenance are immutable at this boundary. Promotion reloads current trusted state and reuses `promote_confirmed_identifier_candidate()` rather than accepting a client candidate object.
 
 Remaining before V2-D closes:
 
-1. expose authenticated/CSRF-protected confirm, reject, re-review and promote actions that reload the PR #60 server-owned record and reuse `promote_confirmed_identifier_candidate()`;
+1. expose authenticated/CSRF-protected confirm, reject, re-review and promote HTTP actions that call the PR #62 service using only artifact/candidate IDs;
 2. expose source-state and evaluation summaries cleanly to the operator;
 3. run a final catalog/binding/runtime/report/privacy/zero-spend consistency review;
 4. close stale compatibility seams only where doing so does not break existing tests or operator behavior.
@@ -138,9 +140,11 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-Expose the reviewed-document decision path through the private operator/API boundary using the PR #60 server-owned review record. The mutation request should carry only the artifact/candidate identifiers plus the requested human decision; the server must reload the candidate, apply confirm/reject/re-review, persist the new review state and call `promote_confirmed_identifier_candidate()` only from the server-owned confirmed record.
+Expose the PR #62 server-owned reviewed-document mutation service through the existing private write boundary.
 
-Tests must cover authentication/CSRF, stale or unknown candidate IDs, attempted browser tampering, confirm/reject/re-review transitions and successful promotion with artifact/page/character provenance unchanged. No provider should be called merely because a candidate is promoted.
+The HTTP request should carry only artifact/candidate identifiers and the requested action. Confirm, reject and re-review must call the service over current server-owned state; promotion must return the typed reviewed lead without automatically executing any provider.
+
+Tests must cover authentication/CSRF, stale or unknown candidate IDs, attempted browser tampering, confirm/reject/re-review transitions and successful promotion with artifact/page/character provenance unchanged. Responses and audit events must not duplicate raw uploaded text or surrounding document prose.
 
 After that, expose the existing source-state/evaluation summaries to the operator and run the final V2-D consistency review. Only then may new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
