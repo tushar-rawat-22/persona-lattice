@@ -19,15 +19,17 @@ from .intelligence.source_outcomes import (
     source_provider_exception_record,
     source_result_record,
 )
-from .intelligence.source_states import SourceRunRecord
+from .intelligence.source_states import SourceRunRecord, SourceRunState
 from .models import Purpose
 from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
+from .providers.bluesky_admission import BlueskyAdmissionError, normalize_bluesky_handle
 from .providers.contracts import ExecutionRequest
 from .providers.errors import ProviderRateBudgetExceeded
 from .providers.github_public import fetch_github_public_profile
 from .providers.runtime import ProviderRuntime
 from .providers.shared_runtime import (
+    DEFAULT_BLUESKY_PROVIDER,
     DEFAULT_BRAVE_PROVIDER,
     DEFAULT_CODEFORCES_PROVIDER,
     DEFAULT_DNS_PROVIDER,
@@ -147,6 +149,16 @@ def _codeforces_observation_from_provider(item: ProviderObservationData) -> Quic
             f"Codeforces public profile for @{handle} matched by {matched_by}; "
             "account candidate only."
         ),
+        details=dict(item.payload),
+    )
+
+
+def _bluesky_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    handle = str(item.payload.get("handle", "public account"))
+    return QuickObservation(
+        source="bluesky_public_profile",
+        source_locator=item.source_locator,
+        summary=f"Bluesky public profile for {handle}; account candidate only.",
         details=dict(item.payload),
     )
 
@@ -484,6 +496,33 @@ async def _codeforces_observations(
     return [_codeforces_observation_from_provider(item) for item in result.observations]
 
 
+async def _bluesky_observations(
+    handle: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_BLUESKY_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.USERNAME.value,
+            identifier_value=handle,
+        ),
+    )
+    return [_bluesky_observation_from_provider(item) for item in result.observations]
+
+
 async def _dns_observations(
     normalized_value: str,
     *,
@@ -646,6 +685,40 @@ async def _research_username(
                 observation_count=len(outcome),
             )
         )
+
+    try:
+        bluesky_handle = normalize_bluesky_handle(normalized_value)
+    except BlueskyAdmissionError:
+        bluesky_handle = None
+    if bluesky_handle is not None:
+        try:
+            bluesky_observations = await _bluesky_observations(
+                bluesky_handle,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            source_run = _source_run_for_exception(
+                source_name="bluesky_public_profile",
+                lead_kind=LeadKind.USERNAME,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+            if source_run is None or source_run.state is not SourceRunState.WITHHELD:
+                warnings.append("Bluesky public profile enrichment was temporarily unavailable.")
+        else:
+            observations.extend(bluesky_observations)
+            source_runs.append(
+                source_result_record(
+                    source_name="bluesky_public_profile",
+                    lead_kind=LeadKind.USERNAME,
+                    observation_count=len(bluesky_observations),
+                )
+            )
+
     search_observations, search_warning, search_run = await _public_search(
         normalized_value,
         public_search_lookup,
