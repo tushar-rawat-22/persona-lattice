@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+from .bluesky_public import BlueskyPublicProfileProvider
 from .brave_search import BravePublicWebSearchProvider
 from .codeforces_public import CodeforcesPublicProfileProvider
 from .github_public import GitHubPublicProfileProvider
@@ -16,6 +17,7 @@ DEFAULT_SHERLOCK_PROVIDER = SherlockProvider()
 DEFAULT_GITHUB_PROVIDER = GitHubPublicProfileProvider()
 DEFAULT_GITLAB_PROVIDER = GitLabPublicProfileProvider()
 DEFAULT_CODEFORCES_PROVIDER = CodeforcesPublicProfileProvider()
+DEFAULT_BLUESKY_PROVIDER = BlueskyPublicProfileProvider()
 DEFAULT_DNS_PROVIDER = PublicDnsInfrastructureProvider()
 DEFAULT_BRAVE_PROVIDER = BravePublicWebSearchProvider()
 DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
@@ -24,6 +26,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_GITHUB_PROVIDER,
         DEFAULT_GITLAB_PROVIDER,
         DEFAULT_CODEFORCES_PROVIDER,
+        DEFAULT_BLUESKY_PROVIDER,
         DEFAULT_DNS_PROVIDER,
         DEFAULT_BRAVE_PROVIDER,
     ]
