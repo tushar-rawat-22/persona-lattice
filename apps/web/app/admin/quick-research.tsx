@@ -37,7 +37,10 @@ type StructuredReport = {
 
 type M5Evaluation = {
   candidate_node: string;
-  candidate_observation_index: number;
+  candidate_observation_index?: number;
+  // Read-only compatibility for retained cases created before ADR 0043.
+  candidate_source?: string;
+  candidate_source_locator?: string;
   outcome: string;
   evidence_score: number;
   calibration_status: "uncalibrated";
@@ -138,9 +141,19 @@ async function request(path: string, init?: RequestInit, csrfToken?: string) {
 }
 
 function resolveM5Candidate(report: ConvergedReport, evaluation: M5Evaluation): Observation | null {
+  if (!Number.isInteger(evaluation.candidate_observation_index) || (evaluation.candidate_observation_index ?? -1) < 0) {
+    return null;
+  }
   const node = report.nodes.find((item) => item.key === evaluation.candidate_node);
   if (!node) return null;
-  return node.observations[evaluation.candidate_observation_index] ?? null;
+  return node.observations[evaluation.candidate_observation_index as number] ?? null;
+}
+
+function m5EvaluationKey(evaluation: M5Evaluation): string {
+  if (Number.isInteger(evaluation.candidate_observation_index)) {
+    return `${evaluation.candidate_node}-${evaluation.candidate_observation_index}`;
+  }
+  return `${evaluation.candidate_node}-${evaluation.candidate_source_locator ?? evaluation.candidate_source ?? "legacy"}`;
 }
 
 export function QuickResearch({ csrfToken }: QuickResearchProps) {
@@ -309,11 +322,12 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                   <div className="connectedGrid">
                     {converged.m5.evaluations.map((evaluation) => {
                       const candidate = resolveM5Candidate(converged, evaluation);
+                      const candidateSource = candidate?.source ?? evaluation.candidate_source ?? "canonical observation unavailable";
                       return (
-                        <div className="connectedField" key={`${evaluation.candidate_node}-${evaluation.candidate_observation_index}`}>
+                        <div className="connectedField" key={m5EvaluationKey(evaluation)}>
                           <span>{evaluation.outcome}</span>
                           <strong>{evaluation.evidence_score} / 100</strong>
-                          <small>{candidate?.source ?? "canonical observation unavailable"} · {evaluation.calibration_status} · not an identity probability</small>
+                          <small>{candidateSource} · {evaluation.calibration_status} · not an identity probability</small>
                           {evaluation.factors.map((factor) => (
                             <small key={`${factor.kind}-${factor.independence_group}`}>
                               {factor.kind}: {factor.applied_weight >= 0 ? "+" : ""}{factor.applied_weight} · {factor.status}
