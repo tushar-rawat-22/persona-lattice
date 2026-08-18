@@ -12,15 +12,15 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main after PR #83: `ddd68497fcd23fbcc2b38dd125aabc7f0e1a97dc`
-- PR #83 exact tested head: `c9c4cda08d12f783ef352b43cd09c727b999c631`
-- PR #83 CI: run `32155475781`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
-- PR #83 decision: ADR 0047, private upload review UI uses server-owned candidate state
+- Verified main after PR #85: `b59fbae779e7279cbf09aeeb02b0f75b97fc332f`
+- PR #85 exact tested head: `a114a33811ca5f41c25daac3f322c4d42028ee0a`
+- PR #85 CI: run `32161073049`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
+- PR #85 decision: ADR 0048, retained quick/converged source visibility uses one typed projection with deterministic evaluation counters
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #83 exposes the existing reviewed-document backend workflow in the private admin console. The browser can confirm, reject, reopen and preview promotion, then start a converged retained case through a separate explicit action.
+PR #85 closes a retained-report consistency gap discovered while preparing the private case-view visibility work. Converged nodes already retained typed source-run state, but ordinary quick cases dropped it and deterministic source-evaluation counters lived behind a separate helper. Quick retained cases now persist the same `build_source_run_report()` projection used by converged nodes. That projection carries evaluation counters derived from the exact same ordered `SourceRunRecord` sequence.
 
-Review and execution requests use artifact ID + candidate ID as the server-owned record identity. The browser-displayed candidate value is not posted back as review or execution authority. Promotion remains non-executing. The explicit run action sends only mode plus the current purpose/consent acknowledgement; the API reloads and revalidates the current server-owned candidate immediately before provider execution.
+The first PR #85 CI run (`32160810789`) failed only two exact-shape regression tests after the intentional addition of the `evaluation` field: 370 tests passed, and the two old expected dictionaries still described the prior source-run projection. Those exact contracts were updated to require the new deterministic zero-evaluation shape; no runtime validation was weakened. The corrected head above passed the full matrix.
 
 ## Permanent evidence semantics
 
@@ -58,6 +58,7 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - quick structured-report references: `services/api/app/reporting.py`
 - quick research: `services/api/app/research.py`
 - retained cases: `services/api/app/cases.py`
+- private case view: `apps/web/app/admin/quick-research.tsx`
 - private upload-review UI: `apps/web/app/admin/upload-review-workflow.tsx`
 - source expansion design: `docs/V2_SOURCE_EXPANSION_PLAN.md`
 
@@ -91,7 +92,7 @@ Current network execution ownership:
 
 Provider/runtime migration is complete for current sources. Key migration PRs: #24-#32, #50, #52, #54.
 
-Source-state/report/evaluation PRs #34-#48 and #70 establish typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement, network-free graph-limit comparison through the real frontier scheduler, and a fail-closed typed source-run convergence contract.
+Source-state/report/evaluation work now includes PRs #34-#48, #70 and #85. The retained projection has typed states/reasons, observation counts, attempt/terminal flags, state/reason counts and deterministic evaluation counters with explicit attempt/failure/no-match/yield semantics. Quick and converged retained paths use the same projection helper. Historical cases created before the projection existed are not backfilled with guessed state.
 
 Document-intake/review backend checkpoints:
 
@@ -112,11 +113,12 @@ Architecture/privacy closure checkpoints:
 - PR #77: converged pivot provenance uses canonical observation/decision references; ADR 0044;
 - PR #79: quick connected fields use canonical observation references; ADR 0045;
 - PR #81: private UI resolves canonical quick/converged references and API response hydration is removed; ADR 0046;
-- PR #83: private upload-review UI preserves server-owned review/execution authority; ADR 0047.
+- PR #83: private upload-review UI preserves server-owned review/execution authority; ADR 0047;
+- PR #85: quick/converged source visibility and evaluation use one retained privacy-bounded projection; ADR 0048.
 
 ## Source-run semantics
 
-Retained source-run records carry logical source name, lead kind, state/reason, observation count and execution/terminal flags. They do not duplicate identifier values, source locators, provider payloads, secrets or exception text.
+Retained source-run projections carry logical source name, lead kind, state/reason, observation count and execution/terminal flags plus deterministic aggregate/per-source counters. They do not duplicate identifier values, source locators, provider payloads, secrets, exception text or timing data.
 
 Critical distinctions:
 
@@ -130,7 +132,7 @@ Critical distinctions:
 - returned malformed result → unavailable, attempted only when post-attempt phase is mechanically proven;
 - generic `ProviderValidationError` → no source-run record because its phase is ambiguous.
 
-`source_provider_exception_record()` is the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state.
+`source_provider_exception_record()` is the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state. Source-evaluation counters are descriptive counts, not provider reliability probabilities or identity-quality scores.
 
 ## Current deliberate limits
 
@@ -146,9 +148,15 @@ Critical distinctions:
 
 ## Immediate next gate
 
-The reviewed-document mutation/execution controls are now visible in the private operator console and preserve the backend authority boundary.
+The retained backend source-visibility contract is now consistent across quick and converged reports.
 
-The remaining operator-visibility block is narrower: expose retained reviewed-document `seed_provenance` plus typed source-state/evaluation summaries in the case view. Resolve and display existing retained fields only; do not duplicate provider payloads, infer source state from warnings, or reimplement authorization/policy in browser code.
+Next bounded block: update the private case view to display existing retained data only:
+
+1. reviewed-document `seed_provenance` when present;
+2. typed source state/reason summaries;
+3. deterministic source-evaluation counters already nested under the retained source-run projection.
+
+Do not parse warnings into state, reconstruct evaluation semantics in TypeScript, copy provider payloads into another UI-owned structure or infer authorization from displayed identifier values. Historical cases without the newer typed source projection must remain readable and should show the missing historical state explicitly rather than fabricating it.
 
 After that, run the final architecture/compatibility/documentation/zero-spend consistency audit. If no material gap remains, explicitly record V2-D closure before activating any new third-party provider/API.
 
