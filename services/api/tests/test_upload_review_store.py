@@ -2,11 +2,13 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 import sqlite3
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
+import pytest
 
 from app.admin_auth import LOGIN_THROTTLE, SESSION_STORE, hash_admin_password
+from app.evidence import IdentifierKind
 from app.main import app
 from app.uploads import (
     UPLOAD_REVIEW_STORE,
@@ -16,7 +18,6 @@ from app.uploads import (
     FileBatchPreview,
     ReviewCandidate,
 )
-from app.evidence import IdentifierKind
 
 
 client = TestClient(app)
@@ -63,8 +64,8 @@ def test_file_preview_persists_server_owned_candidate_without_raw_document_text(
     )
 
     stored = UPLOAD_REVIEW_STORE.get(
-        uuid4() if False else __import__("uuid").UUID(artifact["artifact_id"]),
-        __import__("uuid").UUID(candidate["candidate_id"]),
+        UUID(artifact["artifact_id"]),
+        UUID(candidate["candidate_id"]),
     )
     assert stored is not None
     assert stored.value == "analyst@example.test"
@@ -73,7 +74,9 @@ def test_file_preview_persists_server_owned_candidate_without_raw_document_text(
     assert stored.source_start == candidate["source_start"]
     assert stored.source_end == candidate["source_end"]
 
-    serialized_database = database_path.read_bytes()
+    serialized_database = b"".join(
+        path.read_bytes() for path in tmp_path.glob("personalattice.db*") if path.is_file()
+    )
     assert b"private surrounding prose" not in serialized_database
     assert b"end marker" not in serialized_database
     assert b"synthetic.txt" not in serialized_database
@@ -95,14 +98,14 @@ def test_review_store_requires_matching_artifact_and_expires_candidate(
         identifier_kind=IdentifierKind.USERNAME,
         value="CaseHandle",
         source_start=4,
-        source_end=15,
+        source_end=14,
     )
     preview = FileBatchPreview(
         artifacts=[
             ArtifactPreview(
                 artifact_id=artifact_id,
                 original_name="synthetic.txt",
-                size_bytes=15,
+                size_bytes=14,
                 sha256="0" * 64,
                 detected_media_type="text/plain",
                 extraction_method="text_decode",
@@ -127,7 +130,7 @@ def test_review_store_requires_matching_artifact_and_expires_candidate(
     )
 
 
-def test_store_decode_fails_closed_if_row_artifact_key_is_tampered(
+def test_store_decode_fails_closed_if_candidate_payload_provenance_is_tampered(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
@@ -161,11 +164,13 @@ def test_store_decode_fails_closed_if_row_artifact_key_is_tampered(
     )
     UPLOAD_REVIEW_STORE.save_preview(preview)
 
+    tampered = candidate.model_copy(update={"source_artifact_id": uuid4()})
     with sqlite3.connect(database_path) as connection:
         connection.execute(
-            "UPDATE upload_review_candidates SET artifact_id = ? WHERE candidate_id = ?",
-            (str(uuid4()), str(candidate.candidate_id)),
+            "UPDATE upload_review_candidates SET candidate_json = ? WHERE candidate_id = ?",
+            (tampered.model_dump_json(), str(candidate.candidate_id)),
         )
         connection.commit()
 
-    assert UPLOAD_REVIEW_STORE.get(artifact_id, candidate.candidate_id) is None
+    with pytest.raises(RuntimeError, match="artifact ID"):
+        UPLOAD_REVIEW_STORE.get(artifact_id, candidate.candidate_id)
