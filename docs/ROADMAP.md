@@ -77,44 +77,32 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: active; network runtime migration and document-review HTTP boundary complete**
+**Status: active; network migration and reviewed-document backend execution complete**
 
-Provider/runtime migration is complete for every currently executable network source:
+Every currently executable network source is behind the governed runtime. Key migration checkpoints are PRs #24-#32, #50, #52 and #54. The executable legacy network allowance is empty.
 
-- PR #24: source binding admission;
-- PR #25: storage-independent `ProviderRuntime`;
-- PR #26: Sherlock governed quick research;
-- PR #27/#28: GitHub migration and rate-policy repair;
-- PR #29: one process-wide production runtime;
-- PR #30: GitLab migration;
-- PR #31: Codeforces migration;
-- PR #32: public DNS migration;
-- PR #50: phase-proven provider result validation and shared exception mapping;
-- PR #52: quick research adopts the shared phase-proven mapper;
-- PR #54: optional Brave exact-match search migrates to the shared runtime and the legacy network execution allowance becomes empty.
+Brave remains an optional metered extension. Without `BRAVE_SEARCH_API_KEY`, it is not attempted and the zero-spend research path continues with the remaining sources.
 
-PR #54 does not make Brave part of the zero-spend baseline. With no `BRAVE_SEARCH_API_KEY`, Brave is not attempted and research continues with the remaining sources. The compatibility one-argument Brave helper is not typed production authority; production quick research sends the real lead kind, purpose and consent context directly through `ProviderRuntime`.
+Source-run accounting is phase-proven. Policy/configuration/local-budget stops are non-attempts; completed zero-result calls are `not_found`; remote failures and malformed returned results count as attempts only when that phase is mechanically known. Generic phase-ambiguous validation is left unclassified rather than guessed into a failure count.
 
-Source-run accounting remains phase-proven. Policy/configuration/local-budget stops are non-attempts; completed zero-result calls are `not_found`; remote failures and malformed returned results count as attempts only when that phase is mechanically known. Generic phase-ambiguous provider validation remains unclassified rather than being guessed into a failure count.
+Source-state/report/evaluation work in PRs #34-#48 establishes typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic aggregate/per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement and network-free graph-limit comparison through the real frontier scheduler.
 
-Completed source-state/report/evaluation work includes PRs #34-#48: typed source states and reasons, privacy-bounded projections, factual quick-research population, deterministic aggregate/per-source counters, a complete source-state fixture matrix, graph-growth/duplicate counters, label-gated wrong-pivot measurement and network-free graph-limit comparison through the real frontier scheduler.
+The document-review path now has a complete server-owned backend chain:
 
-PR #56 adds the first document-candidate promotion contract. Rule-extracted username/email/phone/URL candidates retain deterministic extracted-text character spans and can enter the typed lead path only after explicit human review authorization. Claims, pending/rejected candidates and non-executable identifier kinds remain non-executable. Promoted leads carry artifact/candidate/span provenance without copying uploaded text.
+- PR #56: deterministic candidate spans and fail-closed reviewed identifier promotion;
+- PR #58: extraction-time PDF page spans and corrected flattened-text limits;
+- PR #60: short-lived SQLite review state without raw-document retention;
+- PR #62/#63: atomic confirm/reject/re-review/promotion with immutable candidate value/provenance;
+- PR #64: authenticated, CSRF-protected HTTP review actions;
+- PR #66: separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate.
 
-PR #58 closes the PDF page-attribution gap. The bounded extractor now returns one-based half-open page spans over the exact flattened text, including zero-length spans for empty pages. Candidates receive `source_page` only from exact span containment; page numbers are never inferred after flattening. The PDF output-size limit now also counts the newline separators inserted between pages, so the configured character ceiling bounds the actual returned text.
-
-PR #60 adds the server-owned review-state prerequisite for operator actions. Successful file preview writes each extracted `ReviewCandidate` to the existing local SQLite database under artifact ID + candidate ID, with a 24-hour default retention window. The review store keeps only the normalized candidate value, kind, review state and page/character provenance needed for later authorization; it does not retain uploaded file bytes, filenames, hashes, surrounding extracted text or the complete extracted document. Stored candidate/artifact IDs are revalidated on read so later review actions do not need to trust browser-supplied candidate objects.
-
-PR #62/#63 add and harden the server-owned review mutation authority. Confirm, reject and re-review mutate only the current SQLite record identified by artifact ID + candidate ID. Mutations serialize through an immediate SQLite transaction and may change only review status plus external-research authorization; candidate value, kind, IDs and page/character provenance are immutable at this boundary. Promotion reloads current trusted state and reuses `promote_confirmed_identifier_candidate()` rather than accepting a client candidate object.
-
-PR #64 exposes that mutation authority through authenticated, CSRF-protected HTTP actions. Confirm, reject, reopen and promote requests carry only artifact/candidate UUIDs. Review-state responses omit the candidate value; promotion returns a typed reviewed lead with artifact/page/character provenance but does not execute research. Audit events retain only bounded action/type metadata. CI also exposed and repaired an old dashboard test assumption that every FastAPI route-list entry had a `.path`; the runtime was not weakened to preserve that brittle assumption.
+The PR #66 execution action accepts artifact/candidate IDs plus mode, purpose and consent acknowledgement. It reloads and revalidates current review state immediately before execution, never accepts a browser-supplied reviewed identifier, and preserves the existing `artifact://` page/character provenance in the retained case. Review confirmation and promotion remain non-executing state transitions.
 
 Remaining before V2-D closes:
 
-1. define the explicit authenticated backend transition from a currently promoted/authorized document candidate into a chosen research/case run, without making promotion itself execute providers;
-2. expose document review plus source-state/evaluation summaries cleanly to the private operator UI;
-3. run a final catalog/binding/runtime/report/privacy/zero-spend consistency review;
-4. close stale compatibility seams only where doing so does not break existing operator behavior or evidence semantics.
+1. expose document review/run controls and existing source-state/evaluation summaries cleanly in the private operator UI;
+2. run a final catalog/binding/runtime/report/privacy/zero-spend consistency review;
+3. close stale compatibility seams only where doing so does not break existing operator behavior or evidence semantics.
 
 No new third-party source should be activated during these closure blocks.
 
@@ -142,13 +130,9 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-Add a separate private backend action that starts research from a currently confirmed, research-authorized upload candidate.
+Wire the reviewed-document workflow and the existing source-state/evaluation summaries into the private operator UI. The UI must keep review actions distinct from the explicit `run-case` action, show when provider traffic will begin, avoid treating a promoted lead as proof of identity, and surface retained seed provenance without exposing unnecessary document content.
 
-The action must not accept an arbitrary browser-supplied identifier as proof of review. It should reference artifact/candidate IDs, reload current server-owned state immediately before execution, require the existing authenticated write/CSRF boundary, enforce purpose/consent normally, and fail closed if the review record expired or authorization was revoked.
-
-The resulting run/report must preserve reviewed-document artifact/candidate/page/character provenance without creating another raw-document store. Audit metadata must not duplicate identifier values. Confirmation and promotion remain state transitions only; provider traffic starts only through this separate explicit action.
-
-After that, wire the review/run flow and existing source-state/evaluation summaries into the private operator UI, then run the final V2-D consistency review. Only then may new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
+After the operator workflow is usable, run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after that closure should new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
 Production recursion remains depth 2 / 12 nodes.
 
