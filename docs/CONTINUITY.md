@@ -12,9 +12,9 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #81: `616362e261a75fafcc6bdd8bd858a384cb728ae4`
-- PR #81 implementation head verified before documentation tail: `c0c90e34c29956d45fd2a6458c805afd0841e7b5`
-- PR #81 implementation CI: run `32149802521`, success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
+- Verified main after PR #81: `17f2e0f6c79749d5965b819267bb46650fa211ca`
+- PR #81 exact final tested head: `148ca56fc641703ec53615aa59b8efd66186b1e1`
+- PR #81 final CI: run `32150116712`, success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
 - PR #81 decision: ADR 0046, private UI canonical-reference resolution
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
@@ -145,7 +145,7 @@ Critical distinctions:
 
 ## Immediate next gate
 
-After PR #81, the canonical retained-report display contract is closed: new quick connected fields and converged edges are resolved in the private browser from retained references, while historical self-contained cases remain readable without server hydration.
+The canonical retained-report display contract is closed: new quick connected fields and converged edges are resolved in the private browser from retained references, while historical self-contained cases remain readable without server hydration.
 
 The next bounded V2-D block is operator workflow visibility. Expose the already-built reviewed-document state/actions, explicit start-case control, retained seed provenance and typed source-state/evaluation summaries without re-deriving authorization, provider policy or evidence semantics in the browser.
 
