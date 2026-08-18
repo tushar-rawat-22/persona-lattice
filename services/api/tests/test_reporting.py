@@ -3,7 +3,7 @@ from app.reporting import build_structured_report
 from app.research import QuickObservation, QuickResearchReport, ResearchKind
 
 
-def test_structured_username_report_preserves_provenance_by_reference() -> None:
+def test_structured_username_report_keeps_full_evidence_out_of_projection() -> None:
     report = QuickResearchReport(
         kind=ResearchKind.USERNAME,
         normalized_value="synthetic-user",
@@ -41,14 +41,8 @@ def test_structured_username_report_preserves_provenance_by_reference() -> None:
         "location_claim",
         "organization_claim",
     }
-    assert {item["observation_index"] for item in connected} == {0}
-    assert {item["detail_field"] for item in connected} == {
-        "email",
-        "twitter_username",
-        "blog",
-        "location",
-        "company",
-    }
+    assert all(item["source"] == "github_public_api" for item in connected)
+    assert all(item["source_locator"] == "https://github.com/synthetic-user" for item in connected)
     assert result["public_account_candidate_observation_indexes"] == [0]
     assert result["contradiction_observation_indexes"] == []
     assert "source_evidence" not in result
