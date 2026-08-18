@@ -1,24 +1,32 @@
-# PersonaLattice private V1 deployment runbook
+# Optional paid Render deployment reference
 
-This runbook deploys the public product shell and the one-admin private research
-backend defined by `render.yaml`. Do not put passwords, API keys, real research
-identifiers or retained-case data into Git, screenshots or deployment notes.
+PersonaLattice's default operating path is the zero-spend local setup in
+`docs/ZERO_SPEND_RUNBOOK.md`. This document preserves the previously reviewed
+Render topology for an operator who deliberately chooses paid private compute
+and persistent storage.
+
+The reference Blueprint now lives at `deploy/render-paid.yaml`; there is no
+repository-root `render.yaml`. That separation is intentional so a paid topology
+cannot be mistaken for the baseline deployment contract.
+
+Do not put passwords, API keys, real research identifiers or retained-case data
+into Git, screenshots or deployment notes.
 
 ## 1. Pre-deploy repository gate
 
-Deploy only from a green `main` commit. The required checks are:
+Use this optional topology only from a green `main` commit. The required checks
+include:
 
-- API tests on Python 3.11;
-- API tests on Python 3.13;
+- API tests on Python 3.11 and 3.13;
+- Python dependency checks and audit;
 - Ruff;
-- web `npm ci`;
-- web lint;
-- web typecheck;
-- web production build.
+- web `npm ci` and production dependency audit;
+- web lint, typecheck and production build;
+- production API image build.
 
-The Blueprint contract tests also assert that the research API is a Render
-private service, uses port `10001`, retains a persistent data disk, does not
-hardcode deployment secrets and does not trust forwarded proxy headers.
+The deployment contract tests assert that this reference keeps the research API
+private, retains the reviewed port/cookie/proxy-header boundaries, and remains
+outside the repository root.
 
 ## 2. Generate the admin password hash locally
 
@@ -38,35 +46,32 @@ python3 -m venv .venv
 ```
 
 The command asks for the password twice without echoing it and prints only the
-Argon2 hash. Copy that hash directly into the deployment secret field. Do not
-save it in a tracked file.
+Argon2 hash. Copy that hash directly into the deployment secret field.
 
-## 3. Cost and service boundary
+## 3. Cost boundary
 
-The production Blueprint explicitly pins both services to Render's `starter`
-instance type and attaches a 1 GB persistent disk to the private API. This is a
-paid deployment topology. Review the current Render price estimate shown in the
-Dashboard before applying the Blueprint.
+The reference Blueprint pins both services to Render's `starter` instance type
+and attaches a 1 GB persistent disk to the private API. Treat this as a **paid
+optional topology**, not a zero-cost deployment.
 
-This is deliberate: Render does not offer Free instances for private services,
-and persistent disks require paid service instances. A cheaper/free preview
-would need a different storage/security topology and is not equivalent to this
-private V1 production design.
+Before using it, re-check current Render pricing, private-service availability,
+persistent-disk pricing and terms in Render's primary documentation. Do not rely
+on prices or free-tier assumptions recorded in this repository.
 
-Do not silently change the private API into a public Free web service merely to
-reduce cost. That would reopen the network-exposure problem the current
-architecture is designed to remove.
+Do not convert the private API into a public service merely to chase a free tier.
+That would change the reviewed exposure boundary and requires a separate security
+design.
 
-## 4. Create the Render Blueprint
+## 4. Apply the optional Blueprint
 
-In the Render Dashboard:
+If the paid topology is deliberately selected, create a Render Blueprint from:
 
-1. create a new Blueprint;
-2. connect `tushar-rawat-22/persona-lattice`;
-3. use the `main` branch and the repository-root `render.yaml`;
-4. review the resources and cost estimate before applying them.
+```text
+deploy/render-paid.yaml
+```
 
-The expected topology is:
+Review the resources and price estimate before applying it. The expected topology
+is:
 
 ```text
 public internet
@@ -82,92 +87,58 @@ personalattice-api     Render private service, port 10001
 persistent case disk
 ```
 
-`personalattice-api` must be shown as a **private service**, not a web service.
-It should not receive a public `onrender.com` URL.
+The API must remain a private service and must not receive a public backend URL.
 
 ## 5. Enter deployment secrets
 
-Render prompts for Blueprint variables marked `sync: false` during initial
-creation. Enter:
+The reference marks these values `sync: false`:
 
-- `PERSONALATTICE_ADMIN_USERNAME` — choose the private operator username;
-- `PERSONALATTICE_ADMIN_PASSWORD_HASH` — paste the Argon2 hash generated above;
-- `BRAVE_SEARCH_API_KEY` — optional; leave unconfigured if licensed broad
-  public-web discovery is not being enabled yet.
+- `PERSONALATTICE_ADMIN_USERNAME`;
+- `PERSONALATTICE_ADMIN_PASSWORD_HASH`;
+- `BRAVE_SEARCH_API_KEY` — optional; leave unconfigured unless the metered search
+  integration is deliberately enabled.
 
 Do not enter the plaintext admin password as the password-hash value.
 
-The web service receives the API's private `hostport` from the Blueprint. It
-does not need a browser-visible backend URL or backend credential.
+## 6. Public-boundary verification
 
-## 6. First public-boundary verification
-
-After Render reports the public web service deployed, copy only its public HTTPS
-origin, for example `https://your-site.example`, and run:
+After deployment, run the committed verifier against only the public web origin:
 
 ```bash
 python3 scripts/verify_public_boundary.py https://YOUR-PUBLIC-WEB-ORIGIN
 ```
 
-The verifier performs no research and sends no credentials. It checks that:
+The verifier performs no research and sends no credentials. It checks the public
+shell/security headers plus anonymous denial for session, retained-case and audit
+reads. A failure is a deployment blocker.
 
-- the public shell returns HTTP 200;
-- the expected browser security headers are present;
-- anonymous session inspection returns 401;
-- anonymous retained-case listing returns 401;
-- anonymous audit listing returns 401;
-- those denial responses are `Cache-Control: no-store` and contain only the
-  expected authentication error.
-
-A failure is a deployment blocker. Do not run real research until this passes.
-
-## 7. Admin acceptance test
+## 7. Admin acceptance
 
 Use only an operator-controlled identifier for the first live test.
 
-1. open the public web origin;
-2. enter `/admin`;
-3. log in with the configured admin username and plaintext password;
-4. confirm the private console loads;
-5. run one small self-audit with an identifier you control;
-6. confirm every returned fact has an attributable source and that M5 output is
-   labelled uncalibrated/non-identity;
-7. delete the retained test case;
-8. log out;
-9. refresh `/admin` and confirm authentication is required again;
-10. rerun `scripts/verify_public_boundary.py`.
+1. open `/admin` on the public web origin;
+2. authenticate with the configured operator account;
+3. run one small self-audit using an identifier you control;
+4. confirm returned evidence remains attributable and M5 remains
+   uncalibrated/non-identity;
+5. delete the retained test case;
+6. log out and confirm authentication is required again;
+7. rerun the public-boundary verifier.
 
-Do not use another person's identifier for the deployment smoke test. The point
-of this run is to validate infrastructure and authorization, not research
-coverage.
+## 8. Operational invariants
 
-## 8. Production invariants
+The API intentionally uses one worker because authenticated sessions are held in
+process memory. Do not increase worker count or horizontally scale without first
+moving session state behind a reviewed shared server-side store.
 
-The current V1 intentionally has one API worker because authenticated sessions
-are held in process memory. A restart logs the operator out. Do not increase the
-worker count or horizontally scale the private API without first moving session
-state to a shared server-side store.
-
-The private API deliberately runs Uvicorn with `--no-proxy-headers`. Authentication
-must not depend on caller-controlled `X-Forwarded-*` values. Repeated failed
-password checks receive bounded escalating delay instead of a persistent hard
-lockout, avoiding a trivial denial-of-service against the only admin account.
-
-The persistent disk is the retained-case store. Do not scale the current SQLite
-service to multiple instances. Backup/restore policy must be reviewed against
-the actual Render disk and snapshot configuration after the service exists.
+The API runs Uvicorn with `--no-proxy-headers`; authentication must not depend on
+caller-controlled forwarded headers. SQLite with one persistent disk is a
+single-instance design. Backup/restore must be reviewed against the storage
+provider actually selected.
 
 ## 9. Closure record
 
-After the hosted acceptance test passes, record only public-safe operational
-facts in the repository, such as:
-
-- deployed public origin;
-- deployment date;
-- exact `main` commit;
-- public-boundary verifier result;
-- whether Brave discovery was enabled;
-- production-only defects and their fixes.
-
-Never record the admin password/hash, Brave key, session cookie, CSRF token,
-real test identifier or provider payload in the repository.
+If this optional hosted topology is used, record only public-safe facts such as
+deployment date, exact `main` commit and public-boundary verifier result. Never
+record the admin password/hash, optional API key, session cookie, CSRF token,
+real test identifier or provider payload.
