@@ -12,14 +12,14 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #70: `8a8759faf9857d66ecb5f46e06732e9ff0840510`
-- PR #70 exact tested head: `282520795a59f3ca59fb1039e36b8e5bfa8c822a`
-- PR #70 CI run: `32116881516`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #72: `ab7802da1798e48580b666b54f4f8736366dd63f`
+- PR #72 exact tested head: `785e32225bb2e61617f982bf01424b57533b43ce`
+- PR #72 CI run: `32122119045`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #70 closes a stale convergence compatibility seam. `QuickResearchReport.source_runs` is now required directly when building converged source-run projections. A valid report with zero source-run records still produces the explicit empty privacy-bounded projection; a stale/custom report-like object that omits the typed contract now fails instead of being silently treated as "no source state". ADR 0041 records the decision.
+PR #72 closes a retained quick-report duplication gap. Complete provider evidence now has one canonical retained owner: top-level `QuickResearchReport.observations`. `private-evidence-report-v2` no longer copies complete evidence into `source_evidence`, account-candidate objects or contradiction objects, and it no longer repeats the seed object. Account/contradiction classification uses observation indexes. The existing bounded connected-field index remains because the private operator UI uses it for navigation; it may repeat only its reviewed explicit public fields and source locators, not arbitrary provider payloads. ADR 0042 records the decision.
 
-The source-run privacy boundary is unchanged: retained source-state projections do not duplicate identifier values, source locators, provider payloads, credentials or exception text.
+Old retained quick-case JSON is not rewritten in place and remains readable. Converged-report retention is unchanged by PR #72 and remains part of the final privacy/duplication audit.
 
 ## Permanent evidence semantics
 
@@ -100,12 +100,13 @@ Document-intake/review checkpoints:
 - PR #64: authenticated + CSRF-protected HTTP confirm/reject/reopen/promote actions;
 - PR #66: separate authenticated retained-case execution from a currently confirmed, research-authorized server-owned candidate.
 
-Architecture consistency checkpoints:
+Architecture/privacy consistency checkpoints:
 
 - PR #68: cross-layer catalog/binding/registry/shared-runtime ownership and zero-spend invariants; ADR 0040;
-- PR #70: convergence requires canonical typed source-run reports and no longer infers a missing contract as an empty report; ADR 0041.
+- PR #70: convergence requires canonical typed source-run reports and no longer infers a missing contract as an empty report; ADR 0041;
+- PR #72: complete quick-provider payloads have one retained owner; structured quick-report copies are removed; ADR 0042.
 
-The document-review backend now reaches a retained quick or converged case without trusting browser-supplied candidate data and without making review actions trigger provider execution.
+The document-review backend reaches a retained quick or converged case without trusting browser-supplied candidate data and without making review actions trigger provider execution.
 
 ## Source-run semantics
 
@@ -125,8 +126,6 @@ Critical distinctions:
 
 `source_provider_exception_record()` is the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state.
 
-Convergence now requires the typed `QuickResearchReport.source_runs` field. An empty tuple is a valid explicit zero-record state; absence of the contract is not.
-
 ## Current deliberate limits
 
 - convergence max depth: 2;
@@ -143,7 +142,7 @@ Convergence now requires the typed `QuickResearchReport.source_runs` field. An e
 
 The private operator UI remains the next product-facing block: wire document review/run state, explicit provider-start controls, retained seed provenance and existing source-state/evaluation summaries without re-deriving backend semantics in the browser.
 
-For backend architecture closure, continue the final V2-D report/privacy audit. The source-run compatibility fallback is no longer open after PR #70; focus next on other retained-report duplication/privacy invariants and any compatibility seam that can still mask contract drift. Do not activate new third-party providers until V2-D closure is explicitly recorded.
+For backend architecture closure, continue the retained-report privacy audit. Quick-report full-payload duplication is closed after PR #72. Focus next on converged-report ownership/duplication and then decide whether the remaining bounded connected-field value/locator projection should stay as an explicit operator index or be replaced with canonical-observation references. Do not activate new third-party providers until V2-D closure is explicitly recorded.
 
 ## Update discipline
 
