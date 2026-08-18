@@ -42,6 +42,7 @@ class LeadReason(StrEnum):
     PUBLIC_NAME = "public_name"
     PUBLIC_ORGANIZATION = "public_organization"
     PUBLIC_LOCATION = "public_location"
+    REVIEWED_DOCUMENT_IDENTIFIER = "reviewed_document_identifier"
 
 
 _IDENTIFIER_KIND_BY_LEAD_KIND = {
