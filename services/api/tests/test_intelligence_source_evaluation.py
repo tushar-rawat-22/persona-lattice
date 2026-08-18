@@ -68,7 +68,10 @@ def test_evaluation_counters_separate_provider_failure_from_local_stops() -> Non
         "unclassified_attempt_count": 0,
         "result_record_count": 1,
         "no_match_count": 1,
+        "withheld_count": 0,
         "observation_count": 2,
+        "public_web_opt_out_count": 0,
+        "account_unavailable_count": 0,
         "remote_rate_limit_count": 1,
         "execution_failure_count": 1,
         "malformed_result_count": 0,
@@ -117,6 +120,30 @@ def test_evaluation_is_deterministic_and_keeps_per_source_counters() -> None:
     assert forward["by_source"]["github_public_api"]["result_record_count"] == 1
     assert forward["by_source"]["github_public_api"]["remote_rate_limit_count"] == 1
     assert forward["by_source"]["gitlab_public_api"]["no_match_count"] == 1
+
+
+def test_withheld_outcomes_are_attempted_but_not_provider_failures() -> None:
+    records = (
+        _record(
+            "bluesky_public_profile",
+            SourceRunState.WITHHELD,
+            SourceRunReason.PUBLIC_WEB_OPT_OUT,
+        ),
+        _record(
+            "bluesky_public_profile",
+            SourceRunState.WITHHELD,
+            SourceRunReason.ACCOUNT_UNAVAILABLE,
+        ),
+    )
+
+    aggregate = build_source_evaluation_counters(records)["aggregate"]
+
+    assert aggregate["attempt_count"] == 2
+    assert aggregate["completed_attempt_count"] == 2
+    assert aggregate["failed_attempt_count"] == 0
+    assert aggregate["withheld_count"] == 2
+    assert aggregate["public_web_opt_out_count"] == 1
+    assert aggregate["account_unavailable_count"] == 1
 
 
 def test_evaluation_counts_scheduler_states_without_calling_them_attempts() -> None:
