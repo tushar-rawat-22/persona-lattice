@@ -21,6 +21,7 @@ from .policy import (
     validate_filename,
     validate_size,
 )
+from .review_store import UPLOAD_REVIEW_STORE
 
 
 READ_CHUNK_BYTES = 64 * 1024
@@ -181,4 +182,6 @@ async def process_upload_batch(files: list[UploadFile]) -> FileBatchPreview:
         finally:
             staged_path.unlink(missing_ok=True)
 
-    return FileBatchPreview(artifacts=artifacts)
+    preview = FileBatchPreview(artifacts=artifacts)
+    UPLOAD_REVIEW_STORE.save_preview(preview)
+    return preview
