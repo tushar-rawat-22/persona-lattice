@@ -173,6 +173,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=2.0,
     ),
     ProviderDescriptor(
+        name="bluesky_public_profile",
+        capability="public_profile_enrichment",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official unauthenticated Bluesky public AppView profile lookup for valid AT handles; "
+            "minimal public fields only, with public-web opt-out and unavailable accounts neutral."
+        ),
+        version="app.bsky.actor.getProfile",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=USERNAME_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=64 * 1024,
+        max_concurrency=2,
+        rate_limit=30,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="public_dns_infrastructure",
         capability="public_network_metadata",
         status=ProviderStatus.DEVELOPMENT.value,
@@ -212,26 +232,6 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         max_response_bytes=256 * 1024,
         max_concurrency=1,
         rate_limit=10,
-        rate_window_seconds=60.0,
-    ),
-    ProviderDescriptor(
-        name="bluesky_public_profile",
-        capability="public_profile_enrichment",
-        status=ProviderStatus.PLANNED.value,
-        contact_risk=ContactRisk.NONE_KNOWN,
-        reason=(
-            "Reviewed unauthenticated Bluesky public AppView profile adapter; remains "
-            "non-executable until catalog/binding/runtime activation is atomic."
-        ),
-        version="app.bsky.actor.getProfile",
-        source_category=SourceCategory.PUBLIC_WEB,
-        allowed_purposes=SAFE_PURPOSES,
-        supported_identifier_kinds=USERNAME_ONLY,
-        max_attempts=1,
-        timeout_seconds=4.0,
-        max_response_bytes=64 * 1024,
-        max_concurrency=2,
-        rate_limit=30,
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
