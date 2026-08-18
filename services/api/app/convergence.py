@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import StrEnum
 
+from .converged_report import validate_converged_provenance_references
 from .intelligence import (
     FrontierDecision,
     LeadFrontier,
@@ -66,6 +67,7 @@ class ResearchEdge:
     reason: PivotReason
     source: str
     source_locator: str
+    lead_decision_index: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +76,7 @@ class LeadTraversalRecord:
     parent_depth: int
     candidate: LeadCandidate
     decision: FrontierDecision
+    source_observation_index: int
     child_key: str | None = None
 
 
@@ -94,13 +97,13 @@ ResearchRunner = Callable[..., Awaitable[QuickResearchReport]]
 
 def _lead_candidates(
     report: QuickResearchReport,
-) -> tuple[tuple[LeadCandidate, ...], tuple[str, ...]]:
+) -> tuple[tuple[tuple[LeadCandidate, int], ...], tuple[str, ...]]:
     """Extract reviewed lead candidates while preserving distinct provenance origins."""
 
-    candidates: dict[tuple[str, str, str, str], LeadCandidate] = {}
+    candidates: dict[tuple[str, str, str, str], tuple[LeadCandidate, int]] = {}
     blocked_fields: set[str] = set()
 
-    for observation in report.observations:
+    for observation_index, observation in enumerate(report.observations):
         extraction = extract_observation_leads(
             details=observation.details,
             source=observation.source,
@@ -114,17 +117,18 @@ def _lead_candidates(
                 candidate.source_locator,
                 candidate.field_name,
             )
-            candidates.setdefault(origin_key, candidate)
+            candidates.setdefault(origin_key, (candidate, observation_index))
 
     ordered = tuple(
         sorted(
             candidates.values(),
             key=lambda item: (
-                item.kind.value,
-                item.comparison_key,
-                item.source,
-                item.source_locator,
-                item.field_name,
+                item[0].kind.value,
+                item[0].comparison_key,
+                item[0].source,
+                item[0].source_locator,
+                item[0].field_name,
+                item[1],
             ),
         )
     )
@@ -168,8 +172,21 @@ def _node_payload(node: ResearchNode) -> dict[str, object]:
     }
 
 
-def _lead_decision_payload(record: LeadTraversalRecord) -> dict[str, object]:
+def _lead_decision_payload(
+    record: LeadTraversalRecord,
+    nodes_by_key: dict[str, ResearchNode],
+) -> dict[str, object]:
     candidate = record.candidate
+    parent = nodes_by_key.get(record.parent_key)
+    if parent is None:
+        raise ValueError("Lead decision parent_key must reference a retained research node.")
+    if not 0 <= record.source_observation_index < len(parent.report.observations):
+        raise ValueError("Lead decision source_observation_index is out of range.")
+    observation = parent.report.observations[record.source_observation_index]
+    if observation.source != candidate.source or observation.source_locator != candidate.source_locator:
+        raise ValueError("Lead decision provenance does not match its canonical parent observation.")
+    if candidate.field_name not in observation.details:
+        raise ValueError("Lead decision source_field is absent from its canonical parent observation.")
     return {
         "parent_key": record.parent_key,
         "parent_depth": record.parent_depth,
@@ -179,10 +196,32 @@ def _lead_decision_payload(record: LeadTraversalRecord) -> dict[str, object]:
         "reason": candidate.reason.value,
         "disposition": candidate.disposition.value,
         "decision": record.decision.value,
-        "source": candidate.source,
-        "source_locator": candidate.source_locator,
+        "source_observation_index": record.source_observation_index,
         "source_field": candidate.field_name,
         "child_key": record.child_key,
+    }
+
+
+def _edge_payload(
+    edge: ResearchEdge,
+    lead_decisions: tuple[LeadTraversalRecord, ...],
+) -> dict[str, object]:
+    if not 0 <= edge.lead_decision_index < len(lead_decisions):
+        raise ValueError("Edge lead_decision_index is out of range.")
+    record = lead_decisions[edge.lead_decision_index]
+    if record.decision is not FrontierDecision.ADMITTED:
+        raise ValueError("Edge must reference an admitted lead decision.")
+    if record.parent_key != edge.parent_key or record.child_key != edge.child_key:
+        raise ValueError("Edge structure does not match its admitted lead decision.")
+    if _pivot_reason(record.candidate) is not edge.reason:
+        raise ValueError("Edge reason does not match its admitted lead decision.")
+    if record.candidate.source != edge.source or record.candidate.source_locator != edge.source_locator:
+        raise ValueError("Edge provenance does not match its admitted lead decision.")
+    return {
+        "parent_key": edge.parent_key,
+        "child_key": edge.child_key,
+        "reason": edge.reason.value,
+        "lead_decision_index": edge.lead_decision_index,
     }
 
 
@@ -194,6 +233,9 @@ def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object
             for observation in node.report.observations
         }
     )
+    nodes_by_key = {node.key: node for node in report.nodes}
+    if len(nodes_by_key) != len(report.nodes):
+        raise ValueError("Converged report contains duplicate research node keys.")
     decision_counts = Counter(record.decision.value for record in report.lead_decisions)
     payload: dict[str, object] = {
         "report_version": "private-converged-evidence-report-v1",
@@ -216,20 +258,13 @@ def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object
             ),
         },
         "nodes": [_node_payload(node) for node in report.nodes],
-        "edges": [
-            {
-                "parent_key": edge.parent_key,
-                "child_key": edge.child_key,
-                "reason": edge.reason.value,
-                "source": edge.source,
-                "source_locator": edge.source_locator,
-            }
-            for edge in report.edges
-        ],
+        "edges": [_edge_payload(edge, report.lead_decisions) for edge in report.edges],
         "lead_graph": {
             "policy_version": _LEAD_POLICY_VERSION,
             "decision_counts": dict(sorted(decision_counts.items())),
-            "decisions": [_lead_decision_payload(record) for record in report.lead_decisions],
+            "decisions": [
+                _lead_decision_payload(record, nodes_by_key) for record in report.lead_decisions
+            ],
             "blocked_field_names": list(report.blocked_field_names),
         },
         "warnings": list(report.warnings),
@@ -241,10 +276,11 @@ def build_converged_payload(report: ConvergedResearchReport) -> dict[str, object
             "identity_claim": False,
         },
         "provenance_rule": (
-            "Every admitted pivot originates from an allowlisted public field and retains its "
-            "source locator; non-executed lead origins remain visible in lead_graph.decisions."
+            "Canonical node observations own provider source locators. Lead decisions reference "
+            "their source observation, and admitted edges reference the corresponding decision."
         ),
     }
+    validate_converged_provenance_references(payload)
 
     # Local import intentionally avoids coupling the research graph construction to
     # the correlation module at import time. M5 receives an ephemeral canonical
@@ -307,7 +343,7 @@ async def run_converged_research(
                 f"Blocked lead field {field_name!r} was not admitted to recursive research."
             )
 
-        for lead in candidates:
+        for lead, source_observation_index in candidates:
             evaluation = frontier.consider(
                 lead,
                 parent_key=parent.key,
@@ -320,6 +356,7 @@ async def run_converged_research(
                         parent_depth=parent.depth,
                         candidate=lead,
                         decision=evaluation.decision,
+                        source_observation_index=source_observation_index,
                     )
                 )
                 if evaluation.decision in _BUDGET_STOP_DECISIONS:
@@ -342,6 +379,7 @@ async def run_converged_research(
                         parent_depth=parent.depth,
                         candidate=lead,
                         decision=failure_decision,
+                        source_observation_index=source_observation_index,
                     )
                 )
                 warnings.append(
@@ -369,9 +407,11 @@ async def run_converged_research(
                     parent_depth=parent.depth,
                     candidate=lead,
                     decision=admission,
+                    source_observation_index=source_observation_index,
                     child_key=candidate.key,
                 )
             )
+            lead_decision_index = len(lead_decisions) - 1
             if admission is not FrontierDecision.ADMITTED:
                 if admission in _BUDGET_STOP_DECISIONS:
                     truncated = True
@@ -385,6 +425,7 @@ async def run_converged_research(
                     reason=_pivot_reason(lead),
                     source=lead.source,
                     source_locator=lead.source_locator,
+                    lead_decision_index=lead_decision_index,
                 )
             )
             warnings.extend(pivot_report.warnings)

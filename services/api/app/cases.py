@@ -9,6 +9,7 @@ from pathlib import Path
 import sqlite3
 from uuid import UUID, uuid4
 
+from .converged_report import hydrate_case_report_edge_provenance
 from .reporting import build_structured_report
 from .research import QuickResearchReport, ResearchKind
 
@@ -96,13 +97,14 @@ def _report_payload(
 
 
 def _decode_row(row: sqlite3.Row) -> StoredCase:
+    report = json.loads(row["report_json"])
     return StoredCase(
         id=UUID(row["id"]),
         created_at=datetime.fromisoformat(row["created_at"]),
         expires_at=datetime.fromisoformat(row["expires_at"]),
         seed_kind=ResearchKind(row["seed_kind"]),
         seed_value=row["seed_value"],
-        report=json.loads(row["report_json"]),
+        report=hydrate_case_report_edge_provenance(report),
     )
 
 
@@ -155,7 +157,14 @@ class CaseStore:
                 ),
             )
             connection.commit()
-        return record
+        return StoredCase(
+            id=record.id,
+            created_at=record.created_at,
+            expires_at=record.expires_at,
+            seed_kind=record.seed_kind,
+            seed_value=record.seed_value,
+            report=hydrate_case_report_edge_provenance(record.report),
+        )
 
     def create(
         self,
