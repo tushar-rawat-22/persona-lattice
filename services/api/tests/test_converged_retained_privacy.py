@@ -3,13 +3,14 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
+from pathlib import Path
 
 import pytest
 
 from app.converged_report import (
     ConvergedReportReferenceError,
-    hydrate_case_report_edge_provenance,
     resolve_edge_decision,
+    validate_converged_provenance_references,
 )
 from app.convergence import (
     ConvergedResearchReport,
@@ -20,6 +21,9 @@ from app.convergence import (
 )
 from app.models import Purpose
 from app.research import QuickObservation, QuickResearchReport, ResearchKind
+
+
+_WEB_QUICK_RESEARCH = Path(__file__).parents[3] / "apps" / "web" / "app" / "admin" / "quick-research.tsx"
 
 
 def test_converged_m5_references_canonical_node_observation() -> None:
@@ -104,17 +108,12 @@ async def test_admitted_pivot_provenance_has_one_retained_owner_and_resolves_by_
     edge = payload["edges"][0]
     assert "source" not in edge
     assert "source_locator" not in edge
+    assert edge["lead_decision_index"] == 0
     decision = resolve_edge_decision(payload, edge)
     assert decision["decision"] == "admitted"
     assert decision["source_observation_index"] == 0
     assert "source" not in decision
     assert "source_locator" not in decision
-
-    hydrated = hydrate_case_report_edge_provenance({"converged_report": payload})
-    hydrated_edge = hydrated["converged_report"]["edges"][0]
-    assert hydrated_edge["source"] == "synthetic_public_source"
-    assert hydrated_edge["source_locator"] == locator
-    assert json.dumps(payload, sort_keys=True).count(locator) == 1
 
 
 @pytest.mark.asyncio
@@ -161,7 +160,7 @@ async def test_duplicate_and_nonexecuted_lead_origins_keep_distinct_observation_
 
 
 @pytest.mark.asyncio
-async def test_new_edge_reference_reader_fails_closed_on_malformed_reference() -> None:
+async def test_new_edge_reference_validator_fails_closed_on_malformed_reference() -> None:
     async def runner(*, kind, value, purpose, consent_acknowledged):
         if kind is ResearchKind.USERNAME:
             return QuickResearchReport(
@@ -190,28 +189,19 @@ async def test_new_edge_reference_reader_fails_closed_on_malformed_reference() -
     malformed = deepcopy(payload)
     malformed["edges"][0]["lead_decision_index"] = 999
     with pytest.raises(ConvergedReportReferenceError, match="out of range"):
-        hydrate_case_report_edge_provenance({"converged_report": malformed})
+        validate_converged_provenance_references(malformed)
 
     malformed = deepcopy(payload)
     malformed["lead_graph"]["decisions"][0]["source_observation_index"] = 999
     with pytest.raises(ConvergedReportReferenceError, match="out of range"):
-        hydrate_case_report_edge_provenance({"converged_report": malformed})
+        validate_converged_provenance_references(malformed)
 
 
-def test_legacy_retained_edge_provenance_remains_readable() -> None:
-    legacy = {
-        "converged_report": {
-            "edges": [
-                {
-                    "parent_key": "username:seed",
-                    "child_key": "email:pivot@example.test",
-                    "reason": "public_email",
-                    "source": "legacy_source",
-                    "source_locator": "https://legacy.example.test",
-                }
-            ]
-        }
-    }
+def test_private_ui_resolves_converged_edge_references_and_keeps_legacy_shape() -> None:
+    source = _WEB_QUICK_RESEARCH.read_text(encoding="utf-8")
 
-    hydrated = hydrate_case_report_edge_provenance(legacy)
-    assert hydrated == legacy
+    assert "resolveEdgeProvenance" in source
+    assert "edge.lead_decision_index" in source
+    assert "decision.source_observation_index" in source
+    assert "Canonical pivot provenance could not be resolved safely." in source
+    assert "Read-only compatibility for cases retained before ADR 0044." in source
