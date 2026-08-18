@@ -105,7 +105,7 @@ V2-D closure does **not** authorize another provider, larger recursion, paid bas
 
 ## M10 — evaluation and calibration laboratory
 
-**Status: deterministic evaluation contracts established; representative labelled evaluation remains**
+**Status: labelled cohort comparison established; broader representative evaluation remains**
 
 Established:
 
@@ -113,11 +113,14 @@ Established:
 - provider attempt/failure/no-match/yield counters with explicit denominators;
 - graph growth, depth, duplicate and budget-stop counters;
 - label-gated wrong-pivot measurement;
-- controlled graph-limit comparison through the production frontier policy.
+- controlled graph-limit comparison through the production frontier policy;
+- count-only cohort aggregation across independent labelled graph fixtures, without reliability/probability claims.
+
+The initial M10 cohort deliberately mixes depth-limited, duplicate-heavy and provider-failure graph shapes. It is enough to stop one fixture from being mistaken for representative evidence, but it is not broad enough to authorize a production-policy change.
 
 Still required before increasing recursion or changing correlation thresholds:
 
-- multiple defensible synthetic/consented labelled fixture families;
+- broaden labelled synthetic/consented cohorts across additional lead kinds and source-yield/cost conditions;
 - deterministic replay/factor ablations;
 - labelled false-positive/false-negative and threshold analysis where defensible labels exist;
 - provider cost/yield implications for larger frontier policies;
@@ -138,6 +141,8 @@ The next product phase is **reviewed source expansion**, one provider at a time.
 5. execute only through the existing governed runtime and typed source-run contract;
 6. preserve canonical evidence/provenance ownership and the existing privacy boundary;
 7. keep the product functional at zero spend when the new source is absent.
+
+Bluesky's current public AppView remains a promising zero-direct-cost candidate, but its public-web opt-out semantics must be enforced fail-closed before activation. It remains planned, not executable, until that adapter contract and fixtures exist.
 
 Potential source candidates remain those already recorded in `docs/V2_SOURCE_EXPANSION_PLAN.md`; their presence there is not activation permission.
 
