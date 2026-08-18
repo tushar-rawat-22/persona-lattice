@@ -12,14 +12,16 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #72: `ab7802da1798e48580b666b54f4f8736366dd63f`
-- PR #72 exact tested head: `785e32225bb2e61617f982bf01424b57533b43ce`
-- PR #72 CI run: `32122119045`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #74: `bea58d7a6a832e10bf4304234be0b7d43efaa7c3`
+- PR #74 exact tested head: `8e8a2b4686e80d2d4c69d7e47d416ce0c2d2ecdd`
+- PR #74 CI run: `32127790638`, success across API 3.11/3.13, dependency audits, Ruff, web lint/typecheck/build and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #72 closes a retained quick-report duplication gap. Complete provider evidence now has one canonical retained owner: top-level `QuickResearchReport.observations`. `private-evidence-report-v2` no longer copies complete evidence into `source_evidence`, account-candidate objects or contradiction objects, and it no longer repeats the seed object. Account/contradiction classification uses observation indexes. The existing bounded connected-field index remains because the private operator UI uses it for navigation; it may repeat only its reviewed explicit public fields and source locators, not arbitrary provider payloads. ADR 0042 records the decision.
+PR #74 closes a retained converged-M5 provenance duplication gap. Canonical converged node observations remain the retained owner of complete provider source/locator/details. New live-M5 evaluation records no longer copy `candidate_source` or `candidate_source_locator`; they reference the canonical observation by `candidate_node` plus zero-based `candidate_observation_index`. ADR 0043 records the decision.
 
-Old retained quick-case JSON is not rewritten in place and remains readable. Converged-report retention is unchanged by PR #72 and remains part of the final privacy/duplication audit.
+A cross-layer review caught a compatibility defect before merge: the private admin UI still consumed the removed M5 fields. The UI now resolves new M5 evaluations through the canonical node observation. It retains read-only support for older retained cases that still contain the legacy M5 source/source-locator fields, so historical case JSON does not need migration or rewriting.
+
+Regression coverage proves an arbitrary provider detail and candidate locator occur only once in a new retained converged payload while M5 score/outcome semantics remain unchanged.
 
 ## Permanent evidence semantics
 
@@ -104,7 +106,8 @@ Architecture/privacy consistency checkpoints:
 
 - PR #68: cross-layer catalog/binding/registry/shared-runtime ownership and zero-spend invariants; ADR 0040;
 - PR #70: convergence requires canonical typed source-run reports and no longer infers a missing contract as an empty report; ADR 0041;
-- PR #72: complete quick-provider payloads have one retained owner; structured quick-report copies are removed; ADR 0042.
+- PR #72: complete quick-provider payloads have one retained owner; structured quick-report copies are removed; ADR 0042;
+- PR #74: converged M5 candidate provenance references canonical node observations instead of copying source/locator fields; ADR 0043.
 
 The document-review backend reaches a retained quick or converged case without trusting browser-supplied candidate data and without making review actions trigger provider execution.
 
@@ -142,7 +145,9 @@ Critical distinctions:
 
 The private operator UI remains the next product-facing block: wire document review/run state, explicit provider-start controls, retained seed provenance and existing source-state/evaluation summaries without re-deriving backend semantics in the browser.
 
-For backend architecture closure, continue the retained-report privacy audit. Quick-report full-payload duplication is closed after PR #72. Focus next on converged-report ownership/duplication and then decide whether the remaining bounded connected-field value/locator projection should stay as an explicit operator index or be replaced with canonical-observation references. Do not activate new third-party providers until V2-D closure is explicitly recorded.
+For backend architecture closure, quick full-payload duplication and converged M5 candidate-provenance duplication are closed after PRs #72 and #74. Next inspect converged node/edge/lead-decision provenance ownership. Do not remove edge or lead provenance merely because values repeat: those records may need their own source to explain traversal or non-executed decisions. Remove only duplication with no independent explanatory owner. After that, decide whether the bounded quick connected-field value/source-locator projection remains an intentional operator index or moves to canonical-observation references.
+
+Do not activate new third-party providers until V2-D closure is explicitly recorded.
 
 ## Update discipline
 
