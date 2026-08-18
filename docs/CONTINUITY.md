@@ -12,10 +12,10 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #98: `f39a50c78e81b4b1605e0035ca2261e28808e2e3`
-- PR #98 exact tested head: `41e71c35fdb5771c63e5ce589b5f149f59861437`
-- PR #98 exact-head CI: run `32193906435`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
-- PR #98 merge: `720c1d11af92007a6f3f6fc913ea6544d52bb4e3`
+- Main before PR #100: `f73cf61813045b84ade6d5d378bf2078609169ce`
+- PR #100 exact tested head: `3bbfdf9afbee752417eaa64ec3c4af102c0b69ed`
+- PR #100 exact-head CI: run `32197849901`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
+- PR #100 merge: `e7807fca1908eba420cd1a88e44136cf34d6c59d`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend operating runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -30,44 +30,58 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-B deterministic frontier: complete, PR #21.
 - V2-C source capability registry/planner: complete, PR #22.
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
-- M10: deterministic source-state fixtures, labelled graph evaluation and initial multi-fixture cohort comparison exist. Broader representative cohorts, replay/ablation and defensible threshold analysis remain before any recursion/threshold change.
+- M10: source-state fixtures, graph-limit comparison and multi-kind labelled synthetic cohort support exist. Source-attempt/yield cost modelling, consented/representative cohorts, replay/ablation and threshold analysis remain before any recursion/threshold change.
 - Post-V2-D source expansion: Bluesky public profiles are active for valid AT handles through the governed runtime, PR #98 / ADR 0055.
 
-## Latest block — Bluesky governed runtime activation
+## Latest block — broadened M10 labelled cohort
 
-PR #98 activates the previously reviewed Bluesky adapter without reopening V2-D:
+PR #100 expands the deterministic M10 cohort without adding a provider or changing production policy.
 
-- `bluesky_public_profile` is now active, source-policy reviewed and recursive-eligible;
-- the provider descriptor is `DEVELOPMENT`, credentialless and bounded to one attempt, 4s timeout, 64 KiB result ceiling, concurrency 2 and a local 30/60s application budget;
-- the exact adapter instance is owned by the process-wide `ProviderRuntime`;
-- the source is bound for `USERNAME`, but actual execution is value-gated by the existing AT-handle admission contract;
-- ordinary usernames, malformed handles and `@handle` UI forms are non-applicable and cause no Bluesky call, source-run record or fabricated failure;
-- valid AT handles use the public `app.bsky.actor.getProfile` route;
-- successful observations retain only DID, normalized handle, optional display name and account-candidate/non-identity/public-visibility flags;
-- profile URL is canonical provenance, not an emitted URL lead;
-- catalog `emits` is therefore `USERNAME + NAME`, correcting the older planned overclaim that included URL/location;
-- `withheld / public_web_opt_out` and `withheld / account_unavailable` remain completed neutral attempts, not provider failures or `not_found`;
-- ADR 0055 records the activation and its latency/concurrency tradeoff.
+The reusable fixture library now spans four executable seed kinds:
 
-Fresh official/primary review immediately before activation reconfirmed unauthenticated public AppView access, DNS-style handle semantics, `!no-unauthenticated` public-web opt-out behavior and the public AppView operating model. Bluesky's current Terms of Service and AT Protocol Network Services privacy notice were also reviewed. Public status does not override explicit opt-out or authorize nonpublic collection.
+- username;
+- email;
+- URL;
+- reviewed phone.
 
-### Corrected assumptions during PR #98
+Six fixture families cover depth-limited traversal, duplicate suppression, provider failure, email → URL → username traversal, URL traversal with a review-only phone clue, and a reviewed-phone seed path. M10 cohort aggregation now also retains `review_required`, `display_only` and `blocked` counts instead of dropping those non-executing policy outcomes.
 
-1. Generic `USERNAME` does not imply Bluesky applicability. A plain value such as `alice` must not be sprayed into the provider.
-2. The planned source catalog overstated Bluesky outputs. The admitted adapter does not expose location, and source-locator provenance is not an automatic URL lead; `emits` was narrowed to username + display-name context.
-3. CI initially failed with 403 passed / 2 failed because two tests still asserted the intentional pre-activation `PLANNED` state. Those stale tests were updated to assert the new reviewed/governed activation contract; the final exact head then passed full CI.
-4. The first activation keeps Bluesky sequential after the existing parallel GitHub/GitLab/Codeforces enrichment block. This is a deliberate conservative rollout choice; optimize only from measured latency/yield evidence.
-5. No Bluesky test-only injection seam was added to production quick research. Runtime-path tests patch the governed runtime boundary instead.
+### Controlled comparison
 
-## M10 checkpoint
+Using the real `LeadFrontier` through `compatibility_frontier_limits`:
 
-PR #92 established count-only cohort aggregation through the production `LeadFrontier`. The controlled cohort includes depth-limited, duplicate-heavy and provider-failure shapes.
+Current policy — depth 2 / 12 nodes:
 
-In that fixture cohort, moving from depth 2 / 12 nodes to depth 3 / 12 nodes admits one additional node, but the extra pivot is labelled wrong and adds no relevant pivot. This is fixture evidence, not population evidence.
+- 6 fixtures;
+- 15 total nodes / 9 added nodes;
+- 9 labelled admitted pivots;
+- 8 relevant pivots;
+- 1 wrong pivot;
+- 2 duplicate suppressions;
+- 2 provider failures;
+- 3 budget stops;
+- 1 review-required decision.
 
-Production recursion therefore remains **depth 2 / 12 nodes**.
+Candidate policy — depth 3 / 12 nodes:
 
-Bluesky withheld states remain separate from provider failure so future reliability measurements are not contaminated by user visibility choices or account state.
+- 18 total nodes / 12 added nodes;
+- 12 labelled admitted pivots;
+- 8 relevant pivots;
+- 4 wrong pivots;
+- the three extra admitted pivots are all labelled wrong in this synthetic cohort;
+- no additional relevant pivot is gained;
+- the three depth budget stops disappear.
+
+This is deterministic fixture evidence, not population evidence. It strengthens the case for leaving production at depth 2 / 12 nodes, but it does not establish an optimal recursion policy.
+
+### Corrected assumptions during PR #100
+
+1. The earlier cohort was too username-heavy to support broader product conclusions. M10 now includes email, URL and reviewed-phone seed shapes.
+2. Cohort aggregation previously omitted review/display/blocked states even though the production frontier tracks them. Those counts now survive aggregation.
+3. More graph reach is not automatically more useful. In this controlled cohort, depth 3 adds three pivots and all three are wrong-labelled while relevant-pivot count stays flat.
+4. The cohort still does not model provider request-cost units or money. It must not be used to claim that a larger frontier is operationally cheap or expensive yet.
+
+ADR 0056 records the decision and limits.
 
 ## Permanent evidence semantics
 
@@ -98,14 +112,13 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - upload-review HTTP boundary: `services/api/app/upload_review_api.py`
 - reviewed-candidate case execution: `services/api/app/uploads/research_service.py`
 - governed provider execution: `services/api/app/providers`
-- Bluesky admission: `services/api/app/providers/bluesky_admission.py`
-- Bluesky governed adapter: `services/api/app/providers/bluesky_public.py`
 - process-wide provider ownership: `services/api/app/providers/shared_runtime.py`
 - deterministic correlation: `services/api/app/correlation`
 - convergence: `services/api/app/convergence.py`
 - retained converged reference validation: `services/api/app/converged_report.py`
 - typed leads/frontier/source planning/reporting/evaluation: `services/api/app/intelligence`
-- M10 labelled cohort comparison: `services/api/app/intelligence/m10_cohort.py`
+- M10 cohort aggregation: `services/api/app/intelligence/m10_cohort.py`
+- M10 reusable multi-kind fixture library: `services/api/app/intelligence/m10_fixture_library.py`
 - quick structured-report references: `services/api/app/reporting.py`
 - quick research: `services/api/app/research.py`
 - retained cases: `services/api/app/cases.py`
@@ -138,7 +151,7 @@ Critical distinctions:
 - returned malformed result → unavailable, attempted only when post-attempt phase is mechanically proven;
 - generic `ProviderValidationError` → no source-run record because its phase is ambiguous.
 
-`source_provider_exception_record()` remains the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state. Evaluation counters are descriptive counts, not provider reliability probabilities or identity-quality scores.
+Warnings are human context only and are never parsed into source state. Evaluation counters are descriptive counts, not provider reliability probabilities or identity-quality scores.
 
 ### Retained privacy ownership
 
@@ -146,7 +159,7 @@ Complete provider evidence and provenance have canonical retained owners. Quick 
 
 ### Reviewed-document authority
 
-The chain is server-owned and explicit: extraction creates candidates only; short-lived review state owns authorization; review mutation cannot alter candidate value/provenance; promotion does not call providers; only a separate authenticated, CSRF-protected explicit case-run action can reload current trusted state and begin research.
+Extraction creates candidates only; short-lived server-owned review state owns authorization; review mutation cannot alter candidate value/provenance; promotion does not call providers; only a separate authenticated, CSRF-protected explicit case-run action can reload current trusted state and begin research.
 
 ## Current deliberate limits
 
@@ -161,16 +174,13 @@ The chain is server-owned and explicit: extraction creates candidates only; shor
 
 ## Next gate
 
-Do not reopen V2-D architecture casually and do not activate another provider from an old plan alone.
+Do not reopen V2-D architecture casually and do not change recursion because a synthetic cohort looks convenient.
 
-Choose one bounded next block:
+The highest-value next M10 block is explicit source-attempt / observation-yield / request-cost-unit accounting for fixtures. Keep monetary cost separate unless an actual provider has a reviewed price model. This is needed before comparing the operational burden of larger frontier policies.
 
-1. broaden M10 labelled synthetic/consented cohorts across additional lead kinds and source-yield/cost shapes; or
-2. review exactly one next zero-spend candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md` using fresh official terms, cost, authentication, returned-field, contact-risk and retention review before any activation.
+A separate acceptable track is fresh review of exactly one zero-spend candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions; fresh official terms, cost, authentication, fields, contact risk and retention review are required before activation.
 
-Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions. Paid or metered sources remain optional only.
-
-Before any production recursion or M5-threshold change, M10 still needs broader representative cohorts, deterministic replay/factor ablations and defensible labelled false-positive/false-negative analysis. Production limits remain depth 2 / 12 nodes.
+Before any production recursion or M5-threshold change, M10 still needs broader consented/representative cohorts, deterministic replay/factor ablations and defensible labelled false-positive/false-negative analysis. Production limits remain depth 2 / 12 nodes.
 
 ## Update discipline
 
