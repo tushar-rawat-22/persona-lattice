@@ -90,6 +90,85 @@ def test_case_store_accepts_converged_payload_and_delete_all(monkeypatch, tmp_pa
     assert CASE_STORE.list_recent() == []
 
 
+def test_case_store_returns_new_reference_payload_without_response_hydration(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    payload = {
+        "observations": [
+            {
+                "source": "synthetic_source",
+                "source_locator": "https://source.example.test/profile",
+                "details": {"email": "public@example.test"},
+            }
+        ],
+        "structured_report": {
+            "report_version": "private-evidence-report-v2",
+            "connected_identifiers": [
+                {
+                    "kind": "email",
+                    "observation_index": 0,
+                    "detail_field": "email",
+                    "status": "observed_public_field",
+                }
+            ],
+        },
+    }
+
+    created = CASE_STORE.create_payload(
+        seed_kind=ResearchKind.EMAIL,
+        seed_value="public@example.test",
+        report_payload=payload,
+    )
+    loaded = CASE_STORE.get(created.id)
+
+    assert created.report == payload
+    assert loaded is not None
+    assert loaded.report == payload
+    item = loaded.report["structured_report"]["connected_identifiers"][0]
+    assert "value" not in item
+    assert "source" not in item
+    assert "source_locator" not in item
+
+
+def test_case_store_keeps_historical_self_contained_shapes_readable(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    legacy = {
+        "structured_report": {
+            "report_version": "private-evidence-report-v2",
+            "connected_identifiers": [
+                {
+                    "kind": "email",
+                    "value": "legacy@example.test",
+                    "source": "legacy_source",
+                    "source_locator": "https://legacy.example.test/profile",
+                    "status": "observed_public_field",
+                }
+            ],
+        },
+        "converged_report": {
+            "edges": [
+                {
+                    "parent_key": "username:seed",
+                    "child_key": "email:legacy@example.test",
+                    "reason": "public_email",
+                    "source": "legacy_source",
+                    "source_locator": "https://legacy.example.test/profile",
+                }
+            ]
+        },
+    }
+
+    created = CASE_STORE.create_payload(
+        seed_kind=ResearchKind.USERNAME,
+        seed_value="seed",
+        report_payload=legacy,
+    )
+    loaded = CASE_STORE.get(created.id)
+
+    assert created.report == legacy
+    assert loaded is not None
+    assert loaded.report == legacy
+
+
 def test_case_store_expires_and_purges(monkeypatch, tmp_path) -> None:
     _configure(monkeypatch, tmp_path)
     now = datetime(2026, 1, 1, tzinfo=UTC)
