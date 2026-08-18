@@ -26,7 +26,9 @@ The adapter keeps the existing behavior:
 - snippets remain discovery evidence with `identity_claim=false` and `content_fetched=false`;
 - result pages are not fetched and snippets do not emit recursive leads.
 
-Quick research passes the actual typed seed kind and caller purpose/consent context into `ProviderRuntime`. Injected `public_search_lookup` callables remain test compatibility only.
+Quick research passes the actual typed seed kind and caller purpose/consent context into `ProviderRuntime`. Injected `public_search_lookup` callables remain test compatibility only. The older one-argument search helper keeps username/public-research defaults solely for compatibility; new typed callers must use the runtime with their real execution context.
+
+Source-run accounting follows the shared phase-proven outcome contract. Typed policy, configuration, budget, remote-rate, execution and malformed-result failures are recorded only when their execution phase is known. A phase-ambiguous validation failure produces a warning but no source-run record rather than being guessed into an attempted provider failure.
 
 ## Zero-spend behavior
 
