@@ -39,6 +39,9 @@ class M10CohortCounters:
     duplicate_suppression_count: int
     provider_failure_count: int
     budget_stop_count: int
+    review_required_count: int
+    display_only_count: int
+    blocked_count: int
     labelled_admitted_pivot_count: int
     wrong_pivot_count: int
     relevant_pivot_count: int
@@ -60,6 +63,9 @@ class M10CohortDelta:
     duplicate_suppression_delta: int
     provider_failure_delta: int
     budget_stop_delta: int
+    review_required_delta: int
+    display_only_delta: int
+    blocked_delta: int
     labelled_admitted_pivot_delta: int
     wrong_pivot_delta: int
     relevant_pivot_delta: int
@@ -99,6 +105,9 @@ def _evaluate_scenario(
             ),
             provider_failure_count=sum(item.provider_failure_count for item in results),
             budget_stop_count=sum(item.budget_stop_count for item in results),
+            review_required_count=sum(item.review_required_count for item in results),
+            display_only_count=sum(item.display_only_count for item in results),
+            blocked_count=sum(item.blocked_count for item in results),
             labelled_admitted_pivot_count=sum(
                 item.labelled_admitted_pivot_count for item in results
             ),
@@ -157,6 +166,13 @@ def compare_m10_graph_fixture_cohort(
                 result.counters.provider_failure_count - base.provider_failure_count
             ),
             budget_stop_delta=result.counters.budget_stop_count - base.budget_stop_count,
+            review_required_delta=(
+                result.counters.review_required_count - base.review_required_count
+            ),
+            display_only_delta=(
+                result.counters.display_only_count - base.display_only_count
+            ),
+            blocked_delta=result.counters.blocked_count - base.blocked_count,
             labelled_admitted_pivot_delta=(
                 result.counters.labelled_admitted_pivot_count
                 - base.labelled_admitted_pivot_count
