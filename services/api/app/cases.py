@@ -9,8 +9,7 @@ from pathlib import Path
 import sqlite3
 from uuid import UUID, uuid4
 
-from .converged_report import hydrate_case_report_edge_provenance
-from .reporting import CONNECTED_IDENTIFIER_FIELD_BY_KIND, build_structured_report
+from .reporting import build_structured_report
 from .research import QuickResearchReport, ResearchKind
 
 
@@ -96,124 +95,14 @@ def _report_payload(
     return payload
 
 
-def _text(value: object) -> str | None:
-    if value is None or isinstance(value, bool):
-        return None
-    text = str(value).strip()
-    return text or None
-
-
-def hydrate_case_report_connected_identifiers(report: dict[str, object]) -> dict[str, object]:
-    """Hydrate canonical quick connected-field references for API/UI compatibility.
-
-    New retained quick reports store only observation/field references. Older reports that already
-    contain value/source/source-locator copies remain readable without migration. Hydration never
-    mutates or writes back the retained payload.
-    """
-
-    structured = report.get("structured_report")
-    if not isinstance(structured, dict):
-        return report
-    if structured.get("report_version") != "private-evidence-report-v2":
-        return report
-
-    observations = report.get("observations")
-    connected = structured.get("connected_identifiers")
-    if not isinstance(observations, list):
-        raise ValueError("Structured quick reports require canonical observations.")
-    if not isinstance(connected, list):
-        raise ValueError("Structured quick reports require a connected identifier list.")
-
-    hydrated: list[dict[str, object]] = []
-    changed = False
-    for item in connected:
-        if not isinstance(item, dict):
-            raise ValueError("Connected identifier entries must be objects.")
-
-        kind = item.get("kind")
-        if not isinstance(kind, str) or kind not in CONNECTED_IDENTIFIER_FIELD_BY_KIND:
-            raise ValueError("Connected identifier kind is invalid.")
-
-        legacy_keys = {"value", "source", "source_locator"}
-        reference_keys = {"observation_index", "detail_field"}
-        has_legacy = any(key in item for key in legacy_keys)
-        has_reference = any(key in item for key in reference_keys)
-        if has_legacy and has_reference:
-            raise ValueError("Connected identifier entries cannot mix legacy values with canonical references.")
-
-        status = item.get("status")
-        if not isinstance(status, str) or not status:
-            raise ValueError("Connected identifier status is invalid.")
-
-        # Cases written before ADR 0045 retain the old bounded compatibility projection. Validate
-        # that historical shape before returning it; malformed lookalikes must not bypass decoding.
-        if has_legacy:
-            if not all(key in item for key in legacy_keys):
-                raise ValueError("Legacy connected identifier entries are incomplete.")
-            value = _text(item.get("value"))
-            source = _text(item.get("source"))
-            source_locator = _text(item.get("source_locator"))
-            if value is None or source is None or source_locator is None:
-                raise ValueError("Legacy connected identifier fields are invalid.")
-            hydrated.append(dict(item))
-            continue
-
-        detail_field = item.get("detail_field")
-        observation_index = item.get("observation_index")
-        if CONNECTED_IDENTIFIER_FIELD_BY_KIND[kind] != detail_field:
-            raise ValueError("Connected identifier kind/detail reference is invalid.")
-        if isinstance(observation_index, bool) or not isinstance(observation_index, int):
-            raise ValueError("Connected identifier observation index is invalid.")
-        if not 0 <= observation_index < len(observations):
-            raise ValueError("Connected identifier observation index is out of range.")
-
-        observation = observations[observation_index]
-        if not isinstance(observation, dict):
-            raise ValueError("Connected identifier observation reference is invalid.")
-        details = observation.get("details")
-        source = observation.get("source")
-        source_locator = observation.get("source_locator")
-        if not isinstance(details, dict) or _text(source) is None or _text(source_locator) is None:
-            raise ValueError("Connected identifier observation provenance is invalid.")
-        value = _text(details.get(detail_field))
-        if value is None:
-            raise ValueError("Connected identifier field is missing from its canonical observation.")
-
-        hydrated.append(
-            {
-                "kind": kind,
-                "value": value,
-                "source": source,
-                "source_locator": source_locator,
-                "status": status,
-                "observation_index": observation_index,
-                "detail_field": detail_field,
-            }
-        )
-        changed = True
-
-    if not changed:
-        return report
-    hydrated_structured = dict(structured)
-    hydrated_structured["connected_identifiers"] = hydrated
-    hydrated_report = dict(report)
-    hydrated_report["structured_report"] = hydrated_structured
-    return hydrated_report
-
-
-def _hydrate_case_report(report: dict[str, object]) -> dict[str, object]:
-    return hydrate_case_report_connected_identifiers(hydrate_case_report_edge_provenance(report))
-
-
 def _decode_row(row: sqlite3.Row) -> StoredCase:
-    report = json.loads(row["report_json"])
     return StoredCase(
         id=UUID(row["id"]),
         created_at=datetime.fromisoformat(row["created_at"]),
         expires_at=datetime.fromisoformat(row["expires_at"]),
         seed_kind=ResearchKind(row["seed_kind"]),
         seed_value=row["seed_value"],
-        report=_hydrate_case_report(report),
+        report=json.loads(row["report_json"]),
     )
 
 
@@ -266,14 +155,7 @@ class CaseStore:
                 ),
             )
             connection.commit()
-        return StoredCase(
-            id=record.id,
-            created_at=record.created_at,
-            expires_at=record.expires_at,
-            seed_kind=record.seed_kind,
-            seed_value=record.seed_value,
-            report=_hydrate_case_report(record.report),
-        )
+        return record
 
     def create(
         self,
