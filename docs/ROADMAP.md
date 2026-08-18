@@ -77,26 +77,28 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: active; implementation closure is nearly complete**
+**Status: implementation complete enough for final closure audit**
 
 Every currently executable network source is behind the governed runtime. The executable legacy network allowance is empty. Brave remains optional/metered; without `BRAVE_SEARCH_API_KEY` it is not attempted and the zero-spend path remains usable.
 
 Source-run accounting is phase-proven. Policy/configuration/local-budget stops are non-attempts; completed zero-result calls are `not_found`; remote failures and malformed returned results count as attempts only when that phase is mechanically known. Generic phase-ambiguous validation remains unclassified rather than being guessed into failure metrics.
 
-PR #85 closes a retained-report consistency gap: quick retained cases now persist the same typed source-run projection used by converged nodes, and that projection carries the deterministic source-evaluation counters derived from the same records. The projection remains metadata-only and does not copy identifier values, source locators, provider payloads, credentials, exception text or timing data. Historical cases are not backfilled with guessed source state. ADR 0048 records the decision.
+PR #85 closed the retained-report consistency gap: quick retained cases persist the same typed source-run projection used by converged nodes, and that projection carries deterministic source-evaluation counters derived from the same records. The projection remains metadata-only and does not copy identifier values, source locators, provider payloads, credentials, exception text or timing data. Historical cases are not backfilled with guessed source state. ADR 0048 records the decision.
+
+PR #87 closed the corresponding private operator visibility gap. Reviewed-upload cases show retained `seed_provenance`; quick cases show their top-level retained source-run state/evaluation projection; converged cases show the same projection per research node. Historical cases that predate typed source-run retention show source execution state as unavailable. The browser consumes retained state/reason/attempt/counter fields directly and does not parse warnings or reimplement provider policy. ADR 0049 records the decision.
 
 Retained-report ownership has been tightened across PRs #70, #72, #74, #77 and #79. Complete provider evidence and provenance have canonical retained owners; connected fields, M5 candidates and converged edges use validated references rather than copying values/locators into parallel structures. PR #81 moved those reference resolutions into the private UI and removed temporary server-side response hydration for new retained formats while keeping explicit read-only compatibility for historical self-contained cases.
 
-The reviewed-document backend chain is complete:
+The reviewed-document chain is complete:
 
 - PR #56: deterministic candidate spans and fail-closed reviewed identifier promotion;
 - PR #58: PDF page-span provenance and corrected flattened-text limits;
 - PR #60: short-lived server-owned review state without raw-document retention;
 - PR #62/#63: atomic confirm/reject/re-review/promotion with immutable candidate value/provenance;
 - PR #64: authenticated, CSRF-protected HTTP review actions;
-- PR #66: separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate.
-
-PR #83 exposes that backend chain in the private admin UI. The browser can confirm, reject, reopen and preview promotion, then start a converged case through a separate explicit action. Review/execution requests identify the server-owned record by artifact ID + candidate ID; the reviewed identifier itself is never posted back as authorization state. Promotion still does not execute a provider. ADR 0047 records the decision.
+- PR #66: separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate;
+- PR #83: private operator controls for confirm/reject/re-review/promotion preview and separate explicit converged-case execution;
+- PR #87: reviewed-document seed provenance and source execution/evaluation state are visible in retained private cases without moving authorization into the browser.
 
 Cross-layer closure guards from PR #68 keep catalog, binding, registry and process-wide runtime ownership aligned and enforce the zero-spend baseline for required recursive sources.
 
@@ -124,15 +126,18 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-The retained backend contract is now consistent enough for the final operator-visibility block. Update the private case view to display:
+Run the final V2-D closure audit. Do not add another provider during the audit.
 
-- reviewed-document `seed_provenance` when present;
-- typed source-run state/reason summaries;
-- deterministic source-evaluation counters already retained with those records.
+The audit must prove that these layers still agree and fail closed together:
 
-The browser must consume the retained contract directly. It must not parse warnings into state, rebuild source-evaluation rules, copy provider payloads into another structure or infer authorization from displayed values. Historical cases without the newer typed projection should remain readable and should show the absence explicitly rather than fabricating state.
+1. source catalog, executable bindings, provider registry and process-wide runtime ownership;
+2. retained-report ownership, canonical provenance references and read-only historical compatibility;
+3. upload candidate review → promotion → separate explicit case execution authority;
+4. typed source-state/evaluation semantics and private UI consumption without warning inference;
+5. required zero-spend operation, with optional/metered Brave remaining non-required;
+6. roadmap, ADR and continuity documentation matching executable behavior and verified CI.
 
-After that, run the final architecture/compatibility/documentation/zero-spend consistency audit. If no material gap remains, explicitly close V2-D before reviewing any new third-party API/source.
+If no material gap remains, record V2-D as closed before reviewing or activating any new third-party API/source. If the audit finds a real inconsistency, fix that inconsistency first rather than closing the milestone administratively.
 
 Production recursion remains depth 2 / 12 nodes.
 
