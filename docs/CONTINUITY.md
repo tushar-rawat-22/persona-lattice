@@ -12,17 +12,21 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #56: `1b1d2066cc1c980578685b5ea4374468f61da819`
-- PR #56 exact tested head: `915ccbf5286a7c5afdf4e6ab3ea961fde416552f`
-- PR #56 CI run: `32088736604`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #58: `1e8a8005bff307bd456542a656c81509a5bd1e7f`
+- PR #58 exact tested head: `997544bd10e65ccb272b997093727d173873d585`
+- PR #58 CI run: `32092648629`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #56 adds the first fail-closed bridge from inert uploaded-document candidates into the typed lead path. Rule-extracted username/email/phone/URL candidates now retain character offsets into extracted text. `promote_confirmed_identifier_candidate()` accepts only candidates already confirmed and externally research-authorized by the human-review contract, reuses typed/M1 canonicalization and emits `REVIEWED_DOCUMENT_IDENTIFIER` provenance. It performs no provider call and does not itself enqueue work. ADR 0034 records the decision.
+PR #58 closes the PDF page-attribution gap left deliberately open by PR #56. The bounded PDF extractor now returns a `PageTextSpan` for every parsed page using one-based page numbers and half-open global character intervals over the exact flattened `extracted_text`. The page map crosses the process boundary with the extraction result and is returned in `ArtifactPreview`.
 
-Two design flaws were corrected during the block rather than hidden:
+Candidate page attribution is fail-closed: `source_page` is set only when the candidate's full source interval is contained by exactly one extractor-proven page span. A span crossing a page separator has no page claim. Empty PDF pages remain zero-length spans so later offsets cannot drift. Normalized duplicate identifiers still collapse to one candidate under the existing contract; the first occurrence owns the retained provenance.
 
-1. PDF extraction currently flattens pages into one text string, so page provenance cannot be proved. PR #56 deliberately does not invent page numbers; `source_page` stays unset until the extractor emits structured page spans.
-2. An early branch revision made rejection effectively irreversible. That was unnecessary state-machine policy. Final behavior is narrower: a rejected candidate is non-authorized and cannot promote, while a later explicit human review may change the decision.
+Two flaws were corrected during the block rather than preserved:
+
+1. The previous PDF output limit counted page text but not the newline separators inserted into the returned flattened string. PR #58 makes the limit cover the actual returned text, separators included.
+2. The first boundary regression fixture assumed the phone extractor could match across a newline, which its reviewed regex deliberately cannot. CI exposed that bad fixture. The corrected test exercises the page-span mapper directly instead of changing identifier extraction to satisfy an invalid test assumption.
+
+`ArtifactPreview` now validates that page numbers are contiguous, page spans align with flattened character boundaries, every inter-page separator is actually a newline, and the last span ends at the extracted-text boundary. ADR 0035 records the decision.
 
 ## Permanent evidence semantics
 
@@ -92,7 +96,12 @@ Key provider/runtime PRs: #24-#32, #50, #52, #54.
 
 Key source-state/report/evaluation PRs: #34-#48. These establish typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement and network-free graph-limit comparison through the real frontier scheduler.
 
-Document-intake checkpoint: PR #56. Character-span provenance and reviewed identifier promotion contract are implemented; PDF page-span provenance and operator/API wiring remain.
+Document-intake checkpoints:
+
+- PR #56: deterministic candidate character spans plus fail-closed reviewed identifier promotion contract;
+- PR #58: extraction-time PDF page spans plus exact candidate page attribution and corrected flattened-text output bounds.
+
+Operator/API review wiring remains incomplete. The current contracts are backend primitives; they do not yet provide a durable private workflow for confirming/rejecting a preview candidate and promoting only server-owned confirmed state.
 
 ## Source-run semantics
 
@@ -117,12 +126,15 @@ Critical distinctions:
 - file preview remains review-only and temp files are deleted after bounded extraction;
 - candidate extraction may identify username, email, phone and URL values but does not authorize research;
 - candidates carry artifact ID, candidate ID and deterministic extracted-text offsets where known;
+- PDF candidates may additionally carry a mechanically proven one-based `source_page`;
+- PDF page spans are half-open intervals over the exact returned flattened text; separators belong to neither page;
+- empty PDF pages are retained as zero-length spans in the page map;
+- a candidate receives no page claim unless its full source interval belongs to exactly one page;
 - claims cannot become external-research leads;
 - pending and rejected candidates cannot promote;
 - a later explicit human review may reconfirm a previously rejected identifier;
 - supported confirmed identifiers use the existing typed lead/M1 normalization path;
-- names/organizations are not silently upgraded to executable research seeds;
-- PDF page numbers are **not yet available** because the extractor flattens pages. Do not infer or fabricate them.
+- names/organizations are not silently upgraded to executable research seeds.
 
 ## Graph-evaluation semantics
 
@@ -144,19 +156,20 @@ The graph-limit harness uses the real `LeadFrontier`. Its regression fixture sho
 
 ## Immediate next gate
 
-Add trustworthy PDF page-span provenance to bounded extraction before exposing the reviewed-document path as a complete operator workflow.
+Wire the existing reviewed-document candidate contract into the private operator/API flow.
 
 Requirements:
 
-1. PDF extraction must return mechanically derived page boundaries/spans rather than inferred page numbers;
-2. candidate character offsets and page attribution must remain consistent after page concatenation;
-3. TXT and image metadata behavior must remain compatible;
-4. page provenance must survive candidate review/promotion without copying raw document text into lead state;
-5. uploaded text remains inert until explicit human review;
-6. tests cover multi-page candidates, page boundaries, duplicate values across pages and malformed/empty-page behavior;
-7. no new provider/API, credential, paid dependency, recursion expansion or identity-semantic change.
+1. candidate state used for confirm/reject/promotion must be server-owned; do not accept browser-supplied authorization flags as authority;
+2. previewed document text remains inert until an explicit authenticated human review action;
+3. confirmed identifier promotion must reuse `promote_confirmed_identifier_candidate()` rather than creating a second promotion path;
+4. artifact ID, candidate ID, character offsets and PR #58 page provenance must survive into the promoted lead without copying raw uploaded text;
+5. claim candidates and unsupported identifier kinds remain non-executable;
+6. rejection remains non-authorizing while later explicit re-review stays possible;
+7. tests must cover authentication/CSRF, stale or unknown candidate IDs, tampered candidate values/provenance, confirm/reject/re-review and successful promotion;
+8. no provider/API, credential, paid dependency, recursion expansion or identity-semantic change.
 
-After page provenance, wire the explicit review/promotion action into the private operator/API flow, expose source-state/evaluation summaries cleanly, then run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after V2-D closure should new third-party providers be reviewed.
+After operator/API review wiring, expose source-state/evaluation summaries cleanly, then run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after V2-D closure should new third-party providers be reviewed.
 
 ## Update discipline
 

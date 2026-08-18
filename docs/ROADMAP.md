@@ -99,13 +99,13 @@ Source-run accounting remains phase-proven. Policy/configuration/local-budget st
 
 Completed source-state/report/evaluation work includes PRs #34-#48: typed source states and reasons, privacy-bounded projections, factual quick-research population, deterministic aggregate/per-source counters, a complete source-state fixture matrix, graph-growth/duplicate counters, label-gated wrong-pivot measurement and network-free graph-limit comparison through the real frontier scheduler.
 
-PR #56 adds the first document-candidate promotion contract. Rule-extracted username/email/phone/URL candidates now retain deterministic extracted-text character spans and can enter the typed lead path only after the existing explicit human-review authorization. Claims, pending/rejected candidates and non-executable identifier kinds remain non-executable. Promoted leads carry artifact/candidate/span provenance without copying uploaded text.
+PR #56 adds the first document-candidate promotion contract. Rule-extracted username/email/phone/URL candidates retain deterministic extracted-text character spans and can enter the typed lead path only after explicit human review authorization. Claims, pending/rejected candidates and non-executable identifier kinds remain non-executable. Promoted leads carry artifact/candidate/span provenance without copying uploaded text.
 
-The document path is not closed yet: PDF extraction currently flattens pages into one text string, so the system cannot truthfully claim page-level provenance. Page-span extraction must be implemented before a complete operator/API promotion workflow is exposed.
+PR #58 closes the PDF page-attribution gap. The bounded extractor now returns one-based half-open page spans over the exact flattened text, including zero-length spans for empty pages. Candidates receive `source_page` only from exact span containment; page numbers are never inferred after flattening. The PDF output-size limit now also counts the newline separators inserted between pages, so the configured character ceiling bounds the actual returned text.
 
 Remaining before V2-D closes:
 
-1. add trustworthy PDF page-span provenance and finish reviewed-document operator/API wiring;
+1. expose the reviewed-document confirm/reject/promote action through the private operator/API flow using server-owned candidate state;
 2. expose source-state and evaluation summaries cleanly to the operator;
 3. run a final catalog/binding/runtime/report/privacy/zero-spend consistency review;
 4. close stale compatibility seams only where doing so does not break existing tests or operator behavior.
@@ -136,7 +136,7 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-Add structured PDF page-span provenance to the bounded extractor and carry it into review candidates. Do not infer a page number from flattened text. Once page/offset provenance is mechanically known, expose the explicit reviewed-candidate promotion action to the operator without allowing uploaded text to become execution authority.
+Wire the existing reviewed-document candidate contract into the private operator/API flow. The server—not the browser and never uploaded text—must own candidate state and enforce confirm/reject/promotion authorization. Page and character provenance from PR #58 must survive that workflow without copying raw document text into executable lead state.
 
 After that, expose the existing source-state/evaluation summaries to the operator and run the final V2-D consistency review. Only then may new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
