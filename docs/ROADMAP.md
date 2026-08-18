@@ -77,7 +77,7 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: active; network runtime migration complete**
+**Status: active; network runtime migration and document-review HTTP boundary complete**
 
 Provider/runtime migration is complete for every currently executable network source:
 
@@ -105,14 +105,16 @@ PR #58 closes the PDF page-attribution gap. The bounded extractor now returns on
 
 PR #60 adds the server-owned review-state prerequisite for operator actions. Successful file preview writes each extracted `ReviewCandidate` to the existing local SQLite database under artifact ID + candidate ID, with a 24-hour default retention window. The review store keeps only the normalized candidate value, kind, review state and page/character provenance needed for later authorization; it does not retain uploaded file bytes, filenames, hashes, surrounding extracted text or the complete extracted document. Stored candidate/artifact IDs are revalidated on read so later review actions do not need to trust browser-supplied candidate objects.
 
-PR #62 adds the server-owned review mutation authority. Confirm, reject and re-review now mutate only the current SQLite record identified by artifact ID + candidate ID. Mutations serialize through an immediate SQLite transaction and may change only review status plus external-research authorization; candidate value, kind, IDs and page/character provenance are immutable at this boundary. Promotion reloads current trusted state and reuses `promote_confirmed_identifier_candidate()` rather than accepting a client candidate object.
+PR #62/#63 add and harden the server-owned review mutation authority. Confirm, reject and re-review mutate only the current SQLite record identified by artifact ID + candidate ID. Mutations serialize through an immediate SQLite transaction and may change only review status plus external-research authorization; candidate value, kind, IDs and page/character provenance are immutable at this boundary. Promotion reloads current trusted state and reuses `promote_confirmed_identifier_candidate()` rather than accepting a client candidate object.
+
+PR #64 exposes that mutation authority through authenticated, CSRF-protected HTTP actions. Confirm, reject, reopen and promote requests carry only artifact/candidate UUIDs. Review-state responses omit the candidate value; promotion returns a typed reviewed lead with artifact/page/character provenance but does not execute research. Audit events retain only bounded action/type metadata. CI also exposed and repaired an old dashboard test assumption that every FastAPI route-list entry had a `.path`; the runtime was not weakened to preserve that brittle assumption.
 
 Remaining before V2-D closes:
 
-1. expose authenticated/CSRF-protected confirm, reject, re-review and promote HTTP actions that call the PR #62 service using only artifact/candidate IDs;
-2. expose source-state and evaluation summaries cleanly to the operator;
+1. define the explicit authenticated backend transition from a currently promoted/authorized document candidate into a chosen research/case run, without making promotion itself execute providers;
+2. expose document review plus source-state/evaluation summaries cleanly to the private operator UI;
 3. run a final catalog/binding/runtime/report/privacy/zero-spend consistency review;
-4. close stale compatibility seams only where doing so does not break existing tests or operator behavior.
+4. close stale compatibility seams only where doing so does not break existing operator behavior or evidence semantics.
 
 No new third-party source should be activated during these closure blocks.
 
@@ -140,13 +142,13 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-Expose the PR #62 server-owned reviewed-document mutation service through the existing private write boundary.
+Add a separate private backend action that starts research from a currently confirmed, research-authorized upload candidate.
 
-The HTTP request should carry only artifact/candidate identifiers and the requested action. Confirm, reject and re-review must call the service over current server-owned state; promotion must return the typed reviewed lead without automatically executing any provider.
+The action must not accept an arbitrary browser-supplied identifier as proof of review. It should reference artifact/candidate IDs, reload current server-owned state immediately before execution, require the existing authenticated write/CSRF boundary, enforce purpose/consent normally, and fail closed if the review record expired or authorization was revoked.
 
-Tests must cover authentication/CSRF, stale or unknown candidate IDs, attempted browser tampering, confirm/reject/re-review transitions and successful promotion with artifact/page/character provenance unchanged. Responses and audit events must not duplicate raw uploaded text or surrounding document prose.
+The resulting run/report must preserve reviewed-document artifact/candidate/page/character provenance without creating another raw-document store. Audit metadata must not duplicate identifier values. Confirmation and promotion remain state transitions only; provider traffic starts only through this separate explicit action.
 
-After that, expose the existing source-state/evaluation summaries to the operator and run the final V2-D consistency review. Only then may new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
+After that, wire the review/run flow and existing source-state/evaluation summaries into the private operator UI, then run the final V2-D consistency review. Only then may new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
 Production recursion remains depth 2 / 12 nodes.
 
