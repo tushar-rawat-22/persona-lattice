@@ -12,17 +12,15 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main after PR #81: `17f2e0f6c79749d5965b819267bb46650fa211ca`
-- PR #81 exact final tested head: `148ca56fc641703ec53615aa59b8efd66186b1e1`
-- PR #81 final CI: run `32150116712`, success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
-- PR #81 decision: ADR 0046, private UI canonical-reference resolution
+- Verified main after PR #83: `ddd68497fcd23fbcc2b38dd125aabc7f0e1a97dc`
+- PR #83 exact tested head: `c9c4cda08d12f783ef352b43cd09c727b999c631`
+- PR #83 CI: run `32155475781`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
+- PR #83 decision: ADR 0047, private upload review UI uses server-owned candidate state
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #81 closes the temporary response-hydration seam left after PRs #77/#79. New retained reports already used canonical references; the API had been rebuilding copied connected-field values and edge source locators solely because the admin UI expected the old display shape. The browser now resolves those references directly, and `CaseStore` returns the retained report JSON unchanged.
+PR #83 exposes the existing reviewed-document backend workflow in the private admin console. The browser can confirm, reject, reopen and preview promotion, then start a converged retained case through a separate explicit action.
 
-Quick connected-field resolution uses `observation_index + detail_field` and checks the reviewed kind/field mapping plus canonical observation provenance. Converged edge resolution uses `lead_decision_index -> source_observation_index`, verifies an admitted decision, parent/child/reason agreement, exactly one parent node, source-field presence and canonical observation provenance. Mixed legacy/reference shapes or unprovable references are not synthesized; the UI displays an unavailable-reference message.
-
-Historical retained cases created before ADRs 0044/0045 remain readable through explicit read-only browser compatibility branches for their original self-contained fields. There is no database migration or compatibility write-back.
+Review and execution requests use artifact ID + candidate ID as the server-owned record identity. The browser-displayed candidate value is not posted back as review or execution authority. Promotion remains non-executing. The explicit run action sends only mode plus the current purpose/consent acknowledgement; the API reloads and revalidates the current server-owned candidate immediately before provider execution.
 
 ## Permanent evidence semantics
 
@@ -42,7 +40,7 @@ Allowed scope is attributable public information and explicitly authorized data.
 
 The baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered; no `BRAVE_SEARCH_API_KEY` means no Brave attempt.
 
-Uploaded content is untrusted data. Extraction is never execution authority. A candidate becomes executable only after explicit human review/authorization, and only a separate explicit run action may start research.
+Uploaded content is untrusted data. Extraction is never execution authority. A candidate becomes externally research-authorized only after explicit human confirmation, and only a separate explicit run action may start research.
 
 ## Stable architecture
 
@@ -60,6 +58,7 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - quick structured-report references: `services/api/app/reporting.py`
 - quick research: `services/api/app/research.py`
 - retained cases: `services/api/app/cases.py`
+- private upload-review UI: `apps/web/app/admin/upload-review-workflow.tsx`
 - source expansion design: `docs/V2_SOURCE_EXPANSION_PLAN.md`
 
 M0-M6 are complete. Private V1 one-admin research, retention/deletion, audit, local HTTPS-tunnel acceptance and the ephemeral canonical evidence graph are implemented.
@@ -78,7 +77,7 @@ PR #21. Reservation-safe frontier, duplicate/cycle suppression, reason-coded out
 
 PR #22. Capability, lifecycle/cost/configuration/review state and zero-spend planning are separated from execution authority.
 
-### V2-D — runtime consistency and architecture closure — active
+### V2-D — runtime consistency and architecture closure — active, near closure
 
 Current network execution ownership:
 
@@ -90,9 +89,9 @@ Current network execution ownership:
 - optional Brave exact-match search — governed runtime
 - executable legacy network allowance — **empty**
 
-Key provider/runtime PRs: #24-#32, #50, #52, #54.
+Provider/runtime migration is complete for current sources. Key migration PRs: #24-#32, #50, #52, #54.
 
-Key source-state/report/evaluation PRs: #34-#48 and #70. These establish typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement, network-free graph-limit comparison through the real frontier scheduler, and a fail-closed convergence contract for typed source-run state.
+Source-state/report/evaluation PRs #34-#48 and #70 establish typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement, network-free graph-limit comparison through the real frontier scheduler, and a fail-closed typed source-run convergence contract.
 
 Document-intake/review backend checkpoints:
 
@@ -101,7 +100,8 @@ Document-intake/review backend checkpoints:
 - PR #60: short-lived server-owned candidate review state without raw-document retention;
 - PR #62/#63: atomic confirm/reject/re-review/promotion with immutable candidate value/provenance;
 - PR #64: authenticated + CSRF-protected HTTP review actions;
-- PR #66: separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate.
+- PR #66: separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate;
+- PR #83: private operator controls for confirm/reject/re-review/promotion preview and separate explicit converged-case execution.
 
 Architecture/privacy closure checkpoints:
 
@@ -111,7 +111,8 @@ Architecture/privacy closure checkpoints:
 - PR #74: M5 candidate provenance references canonical node observations; ADR 0043;
 - PR #77: converged pivot provenance uses canonical observation/decision references; ADR 0044;
 - PR #79: quick connected fields use canonical observation references; ADR 0045;
-- PR #81: private UI resolves those canonical quick/converged references and API response hydration is removed; ADR 0046.
+- PR #81: private UI resolves canonical quick/converged references and API response hydration is removed; ADR 0046;
+- PR #83: private upload-review UI preserves server-owned review/execution authority; ADR 0047.
 
 ## Source-run semantics
 
@@ -145,11 +146,11 @@ Critical distinctions:
 
 ## Immediate next gate
 
-The canonical retained-report display contract is closed: new quick connected fields and converged edges are resolved in the private browser from retained references, while historical self-contained cases remain readable without server hydration.
+The reviewed-document mutation/execution controls are now visible in the private operator console and preserve the backend authority boundary.
 
-The next bounded V2-D block is operator workflow visibility. Expose the already-built reviewed-document state/actions, explicit start-case control, retained seed provenance and typed source-state/evaluation summaries without re-deriving authorization, provider policy or evidence semantics in the browser.
+The remaining operator-visibility block is narrower: expose retained reviewed-document `seed_provenance` plus typed source-state/evaluation summaries in the case view. Resolve and display existing retained fields only; do not duplicate provider payloads, infer source state from warnings, or reimplement authorization/policy in browser code.
 
-After that, run a final architecture/compatibility/documentation/zero-spend consistency audit and explicitly record V2-D closure if no material gap remains. Do not activate new third-party providers before that closure.
+After that, run the final architecture/compatibility/documentation/zero-spend consistency audit. If no material gap remains, explicitly record V2-D closure before activating any new third-party provider/API.
 
 ## Update discipline
 
