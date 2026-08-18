@@ -3,8 +3,18 @@ from __future__ import annotations
 
 from app.intelligence.source_bindings import SOURCE_BINDING_BY_NAME, SourceExecutionBackend
 from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
+from app.providers.base import ProviderStatus
 from app.providers.registry import PROVIDER_BY_NAME
 from app.providers.shared_runtime import DEFAULT_PROVIDER_RUNTIME
+
+
+def _governed_provider_names() -> set[str]:
+    return {
+        binding.provider_name
+        for binding in SOURCE_BINDING_BY_NAME.values()
+        if binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
+        and binding.provider_name is not None
+    }
 
 
 def test_governed_bindings_have_exactly_one_process_runtime_owner() -> None:
@@ -28,6 +38,17 @@ def test_governed_bindings_have_exactly_one_process_runtime_owner() -> None:
         assert capability.status in {SourceStatus.ACTIVE, SourceStatus.OPTIONAL}
         assert capability.source_policy_reviewed is True
         assert capability.recursive_eligible is True
+
+
+def test_every_development_provider_has_a_current_governed_runtime_owner() -> None:
+    development_provider_names = {
+        name
+        for name, descriptor in PROVIDER_BY_NAME.items()
+        if descriptor.status == ProviderStatus.DEVELOPMENT.value
+    }
+
+    assert development_provider_names == _governed_provider_names()
+    assert development_provider_names == set(DEFAULT_PROVIDER_RUNTIME.adapters)
 
 
 def test_zero_spend_baseline_never_depends_on_a_nonzero_spend_active_source() -> None:

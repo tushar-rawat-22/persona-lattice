@@ -1,3 +1,9 @@
+# Optional paid deployment reference.
+#
+# This file is not part of PersonaLattice's zero-spend baseline. It preserves the
+# previously reviewed Render topology for operators who deliberately choose paid
+# private compute and persistent storage. Review current Render pricing and terms
+# before use.
 services:
   - type: pserv
     name: personalattice-api
