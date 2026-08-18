@@ -262,25 +262,17 @@ class UploadReviewStore:
         *,
         now: datetime | None = None,
     ) -> bool:
-        updated_at = now or datetime.now(UTC)
-        with _connect() as connection:
-            _initialize(connection)
-            cursor = connection.execute(
-                """
-                UPDATE upload_review_candidates
-                SET updated_at = ?, candidate_json = ?
-                WHERE candidate_id = ? AND artifact_id = ? AND expires_at > ?
-                """,
-                (
-                    updated_at.isoformat(),
-                    candidate.model_dump_json(),
-                    str(candidate.candidate_id),
-                    str(candidate.source_artifact_id),
-                    updated_at.isoformat(),
-                ),
+        """Persist review-only changes through the same immutable-field guard."""
+
+        return (
+            self.mutate(
+                candidate.source_artifact_id,
+                candidate.candidate_id,
+                lambda _current: candidate,
+                now=now,
             )
-            connection.commit()
-            return cursor.rowcount == 1
+            is not None
+        )
 
     def delete_all(self) -> int:
         with _connect() as connection:
