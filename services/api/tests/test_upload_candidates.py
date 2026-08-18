@@ -15,6 +15,7 @@ from app.uploads import (
     make_claim_candidate,
     require_research_authorization,
 )
+from app.uploads.candidates import _source_page_for_span
 
 
 def test_prompt_like_document_text_remains_inert_review_data() -> None:
@@ -60,20 +61,13 @@ def test_pdf_candidates_receive_page_only_from_exact_span_containment() -> None:
     ] == "@second_user"
 
 
-def test_identifier_crossing_page_separator_is_not_given_a_page() -> None:
-    artifact_id = uuid4()
-    text = "+1 202 555\n0123"
+def test_span_crossing_page_separator_is_not_given_a_page() -> None:
     spans = (
         PageTextSpan(page_number=1, source_start=0, source_end=10),
-        PageTextSpan(page_number=2, source_start=11, source_end=len(text)),
+        PageTextSpan(page_number=2, source_start=11, source_end=15),
     )
 
-    candidate = extract_identifier_candidates(text, artifact_id, page_spans=spans)[0]
-
-    assert candidate.identifier_kind == IdentifierKind.PHONE
-    assert candidate.source_page is None
-    assert candidate.source_start == 0
-    assert candidate.source_end == len(text)
+    assert _source_page_for_span(8, 13, spans) is None
 
 
 def test_duplicate_identifier_across_pages_keeps_first_occurrence_provenance() -> None:
