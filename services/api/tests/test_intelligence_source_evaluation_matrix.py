@@ -8,19 +8,97 @@ from app.intelligence.source_states import SourceRunReason, SourceRunRecord, Sou
 
 def _matrix() -> tuple[SourceRunRecord, ...]:
     return (
-        SourceRunRecord("fixture_profile", LeadKind.USERNAME, SourceRunState.EXECUTED, SourceRunReason.RESULTS_RETURNED, 3),
-        SourceRunRecord("fixture_profile", LeadKind.USERNAME, SourceRunState.NOT_FOUND, SourceRunReason.NO_MATCH),
-        SourceRunRecord("fixture_scheduler", LeadKind.EMAIL, SourceRunState.QUEUED, SourceRunReason.ELIGIBLE_QUEUED),
-        SourceRunRecord("fixture_scheduler", LeadKind.PHONE, SourceRunState.REVIEW_REQUIRED, SourceRunReason.REVIEW_GATE),
-        SourceRunRecord("fixture_scheduler", LeadKind.NAME, SourceRunState.DISPLAY_ONLY, SourceRunReason.DISPLAY_ONLY_POLICY),
-        SourceRunRecord("fixture_scheduler", LeadKind.LOCATION, SourceRunState.BLOCKED, SourceRunReason.BLOCKED_POLICY),
-        SourceRunRecord("fixture_policy", LeadKind.USERNAME, SourceRunState.BLOCKED, SourceRunReason.PROVIDER_POLICY),
-        SourceRunRecord("fixture_optional", LeadKind.URL, SourceRunState.UNAVAILABLE, SourceRunReason.OPTIONAL_NOT_CONFIGURED),
-        SourceRunRecord("fixture_config", LeadKind.EMAIL, SourceRunState.UNAVAILABLE, SourceRunReason.CREDENTIAL_NOT_CONFIGURED),
-        SourceRunRecord("fixture_remote", LeadKind.USERNAME, SourceRunState.UNAVAILABLE, SourceRunReason.EXECUTION_FAILURE),
-        SourceRunRecord("fixture_remote", LeadKind.USERNAME, SourceRunState.UNAVAILABLE, SourceRunReason.REMOTE_RATE_LIMIT),
-        SourceRunRecord("fixture_remote", LeadKind.USERNAME, SourceRunState.UNAVAILABLE, SourceRunReason.MALFORMED_RESULT),
-        SourceRunRecord("fixture_budget", LeadKind.DOMAIN, SourceRunState.BUDGET_STOPPED, SourceRunReason.LOCAL_BUDGET),
+        SourceRunRecord(
+            "fixture_profile",
+            LeadKind.USERNAME,
+            SourceRunState.EXECUTED,
+            SourceRunReason.RESULTS_RETURNED,
+            3,
+        ),
+        SourceRunRecord(
+            "fixture_profile",
+            LeadKind.USERNAME,
+            SourceRunState.NOT_FOUND,
+            SourceRunReason.NO_MATCH,
+        ),
+        SourceRunRecord(
+            "fixture_withheld",
+            LeadKind.USERNAME,
+            SourceRunState.WITHHELD,
+            SourceRunReason.PUBLIC_WEB_OPT_OUT,
+        ),
+        SourceRunRecord(
+            "fixture_withheld",
+            LeadKind.USERNAME,
+            SourceRunState.WITHHELD,
+            SourceRunReason.ACCOUNT_UNAVAILABLE,
+        ),
+        SourceRunRecord(
+            "fixture_scheduler",
+            LeadKind.EMAIL,
+            SourceRunState.QUEUED,
+            SourceRunReason.ELIGIBLE_QUEUED,
+        ),
+        SourceRunRecord(
+            "fixture_scheduler",
+            LeadKind.PHONE,
+            SourceRunState.REVIEW_REQUIRED,
+            SourceRunReason.REVIEW_GATE,
+        ),
+        SourceRunRecord(
+            "fixture_scheduler",
+            LeadKind.NAME,
+            SourceRunState.DISPLAY_ONLY,
+            SourceRunReason.DISPLAY_ONLY_POLICY,
+        ),
+        SourceRunRecord(
+            "fixture_scheduler",
+            LeadKind.LOCATION,
+            SourceRunState.BLOCKED,
+            SourceRunReason.BLOCKED_POLICY,
+        ),
+        SourceRunRecord(
+            "fixture_policy",
+            LeadKind.USERNAME,
+            SourceRunState.BLOCKED,
+            SourceRunReason.PROVIDER_POLICY,
+        ),
+        SourceRunRecord(
+            "fixture_optional",
+            LeadKind.URL,
+            SourceRunState.UNAVAILABLE,
+            SourceRunReason.OPTIONAL_NOT_CONFIGURED,
+        ),
+        SourceRunRecord(
+            "fixture_config",
+            LeadKind.EMAIL,
+            SourceRunState.UNAVAILABLE,
+            SourceRunReason.CREDENTIAL_NOT_CONFIGURED,
+        ),
+        SourceRunRecord(
+            "fixture_remote",
+            LeadKind.USERNAME,
+            SourceRunState.UNAVAILABLE,
+            SourceRunReason.EXECUTION_FAILURE,
+        ),
+        SourceRunRecord(
+            "fixture_remote",
+            LeadKind.USERNAME,
+            SourceRunState.UNAVAILABLE,
+            SourceRunReason.REMOTE_RATE_LIMIT,
+        ),
+        SourceRunRecord(
+            "fixture_remote",
+            LeadKind.USERNAME,
+            SourceRunState.UNAVAILABLE,
+            SourceRunReason.MALFORMED_RESULT,
+        ),
+        SourceRunRecord(
+            "fixture_budget",
+            LeadKind.DOMAIN,
+            SourceRunState.BUDGET_STOPPED,
+            SourceRunReason.LOCAL_BUDGET,
+        ),
     )
 
 
@@ -33,14 +111,17 @@ def test_fixture_matrix_covers_the_entire_current_state_and_reason_vocabulary() 
 def test_fixture_matrix_locks_attempt_failure_and_no_match_semantics() -> None:
     aggregate = build_source_evaluation_counters(_matrix())["aggregate"]
     assert aggregate == {
-        "record_count": 13,
-        "attempt_count": 5,
-        "completed_attempt_count": 2,
+        "record_count": 15,
+        "attempt_count": 7,
+        "completed_attempt_count": 4,
         "failed_attempt_count": 3,
         "unclassified_attempt_count": 0,
         "result_record_count": 1,
         "no_match_count": 1,
+        "withheld_count": 2,
         "observation_count": 3,
+        "public_web_opt_out_count": 1,
+        "account_unavailable_count": 1,
         "remote_rate_limit_count": 1,
         "execution_failure_count": 1,
         "malformed_result_count": 1,
@@ -86,3 +167,7 @@ def test_fixture_matrix_keeps_preflight_budget_and_remote_outcomes_separate() ->
     assert by_source["fixture_profile"]["failed_attempt_count"] == 0
     assert by_source["fixture_profile"]["no_match_count"] == 1
     assert by_source["fixture_profile"]["observation_count"] == 3
+    assert by_source["fixture_withheld"]["attempt_count"] == 2
+    assert by_source["fixture_withheld"]["completed_attempt_count"] == 2
+    assert by_source["fixture_withheld"]["failed_attempt_count"] == 0
+    assert by_source["fixture_withheld"]["withheld_count"] == 2
