@@ -61,8 +61,8 @@ def test_quick_case_retains_full_provider_evidence_once() -> None:
     assert "value" not in payload["structured_report"]["connected_identifiers"][0]
 
 
-def test_connected_identifier_hydration_fails_closed_on_bad_reference() -> None:
-    payload = {
+def _synthetic_connected_payload(item: dict[str, object]) -> dict[str, object]:
+    return {
         "observations": [
             {
                 "source": "github_public_api",
@@ -71,16 +71,21 @@ def test_connected_identifier_hydration_fails_closed_on_bad_reference() -> None:
             }
         ],
         "structured_report": {
-            "connected_identifiers": [
-                {
-                    "kind": "email",
-                    "observation_index": 9,
-                    "detail_field": "email",
-                    "status": "observed_public_field",
-                }
-            ]
+            "report_version": "private-evidence-report-v2",
+            "connected_identifiers": [item],
         },
     }
+
+
+def test_connected_identifier_hydration_fails_closed_on_bad_reference() -> None:
+    payload = _synthetic_connected_payload(
+        {
+            "kind": "email",
+            "observation_index": 9,
+            "detail_field": "email",
+            "status": "observed_public_field",
+        }
+    )
 
     try:
         hydrate_case_report_connected_identifiers(payload)
@@ -88,6 +93,46 @@ def test_connected_identifier_hydration_fails_closed_on_bad_reference() -> None:
         assert "out of range" in str(exc)
     else:
         raise AssertionError("Malformed connected-field references must fail closed.")
+
+
+def test_connected_identifier_hydration_rejects_mixed_legacy_and_reference_shape() -> None:
+    payload = _synthetic_connected_payload(
+        {
+            "kind": "email",
+            "value": "public@example.test",
+            "source": "github_public_api",
+            "source_locator": "https://github.com/synthetic-user",
+            "observation_index": 0,
+            "detail_field": "email",
+            "status": "observed_public_field",
+        }
+    )
+
+    try:
+        hydrate_case_report_connected_identifiers(payload)
+    except ValueError as exc:
+        assert "cannot mix" in str(exc)
+    else:
+        raise AssertionError("Mixed legacy/reference connected fields must fail closed.")
+
+
+def test_connected_identifier_hydration_validates_legacy_shape() -> None:
+    payload = _synthetic_connected_payload(
+        {
+            "kind": "email",
+            "value": "public@example.test",
+            "source": "",
+            "source_locator": "https://github.com/synthetic-user",
+            "status": "observed_public_field",
+        }
+    )
+
+    try:
+        hydrate_case_report_connected_identifiers(payload)
+    except ValueError as exc:
+        assert "legacy" in str(exc).lower()
+    else:
+        raise AssertionError("Malformed legacy connected fields must fail closed.")
 
 
 def test_structured_report_does_not_copy_seed_value() -> None:
