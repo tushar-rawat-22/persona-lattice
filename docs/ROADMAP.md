@@ -83,6 +83,8 @@ Every currently executable network source is behind the governed runtime. The ex
 
 Source-run accounting is phase-proven. Policy/configuration/local-budget stops are non-attempts; completed zero-result calls are `not_found`; remote failures and malformed returned results count as attempts only when that phase is mechanically known. Generic phase-ambiguous validation remains unclassified rather than being guessed into failure metrics.
 
+PR #85 closes a retained-report consistency gap: quick retained cases now persist the same typed source-run projection used by converged nodes, and that projection carries the deterministic source-evaluation counters derived from the same records. The projection remains metadata-only and does not copy identifier values, source locators, provider payloads, credentials, exception text or timing data. Historical cases are not backfilled with guessed source state. ADR 0048 records the decision.
+
 Retained-report ownership has been tightened across PRs #70, #72, #74, #77 and #79. Complete provider evidence and provenance have canonical retained owners; connected fields, M5 candidates and converged edges use validated references rather than copying values/locators into parallel structures. PR #81 moved those reference resolutions into the private UI and removed temporary server-side response hydration for new retained formats while keeping explicit read-only compatibility for historical self-contained cases.
 
 The reviewed-document backend chain is complete:
@@ -122,7 +124,13 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-The reviewed-document operator controls are now visible and retain the existing backend authorization boundary. The remaining V2-D visibility work is narrower: surface retained reviewed-document seed provenance plus typed source-state/evaluation summaries in the private case view without copying provider payloads or re-deriving policy in browser code.
+The retained backend contract is now consistent enough for the final operator-visibility block. Update the private case view to display:
+
+- reviewed-document `seed_provenance` when present;
+- typed source-run state/reason summaries;
+- deterministic source-evaluation counters already retained with those records.
+
+The browser must consume the retained contract directly. It must not parse warnings into state, rebuild source-evaluation rules, copy provider payloads into another structure or infer authorization from displayed values. Historical cases without the newer typed projection should remain readable and should show the absence explicitly rather than fabricating state.
 
 After that, run the final architecture/compatibility/documentation/zero-spend consistency audit. If no material gap remains, explicitly close V2-D before reviewing any new third-party API/source.
 
