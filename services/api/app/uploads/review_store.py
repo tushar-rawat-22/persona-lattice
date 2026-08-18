@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 import os
 from pathlib import Path
@@ -12,6 +13,7 @@ from .contracts import FileBatchPreview, ReviewCandidate
 
 _DEFAULT_RETENTION_HOURS = 24
 _MAX_RETENTION_HOURS = 168
+_MUTABLE_REVIEW_FIELDS = frozenset({"review_status", "external_research_authorized"})
 
 
 def _database_path() -> Path:
@@ -77,6 +79,10 @@ def _decode_candidate(row: sqlite3.Row) -> ReviewCandidate:
     if str(candidate.source_artifact_id) != row["artifact_id"]:
         raise RuntimeError("Stored upload-review artifact ID does not match its row key.")
     return candidate
+
+
+def _immutable_payload(candidate: ReviewCandidate) -> dict[str, object]:
+    return candidate.model_dump(exclude=_MUTABLE_REVIEW_FIELDS)
 
 
 class UploadReviewStore:
@@ -186,6 +192,69 @@ class UploadReviewStore:
                 (str(artifact_id),),
             ).fetchall()
         return [_decode_candidate(row) for row in rows]
+
+    def mutate(
+        self,
+        artifact_id: UUID,
+        candidate_id: UUID,
+        transform: Callable[[ReviewCandidate], ReviewCandidate],
+        *,
+        now: datetime | None = None,
+    ) -> ReviewCandidate | None:
+        """Atomically mutate review authorization fields on server-owned state.
+
+        The transaction serializes concurrent operator mutations for the same
+        SQLite database. Candidate value, kind and provenance are immutable here;
+        only review status and external-research authorization may change.
+        """
+
+        updated_at = now or datetime.now(UTC)
+        with _connect() as connection:
+            _initialize(connection)
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                """
+                SELECT * FROM upload_review_candidates
+                WHERE artifact_id = ? AND candidate_id = ?
+                """,
+                (str(artifact_id), str(candidate_id)),
+            ).fetchone()
+            if row is None:
+                connection.commit()
+                return None
+            if datetime.fromisoformat(row["expires_at"]) <= updated_at:
+                connection.execute(
+                    "DELETE FROM upload_review_candidates WHERE candidate_id = ?",
+                    (str(candidate_id),),
+                )
+                connection.commit()
+                return None
+
+            current = _decode_candidate(row)
+            candidate = transform(current)
+            if not isinstance(candidate, ReviewCandidate):
+                raise TypeError("Upload review transform must return ReviewCandidate.")
+            if _immutable_payload(candidate) != _immutable_payload(current):
+                raise RuntimeError("Upload review mutation cannot alter candidate value or provenance.")
+
+            cursor = connection.execute(
+                """
+                UPDATE upload_review_candidates
+                SET updated_at = ?, candidate_json = ?
+                WHERE candidate_id = ? AND artifact_id = ? AND expires_at > ?
+                """,
+                (
+                    updated_at.isoformat(),
+                    candidate.model_dump_json(),
+                    str(candidate_id),
+                    str(artifact_id),
+                    updated_at.isoformat(),
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("Upload review candidate changed during mutation.")
+            connection.commit()
+            return candidate
 
     def update(
         self,
