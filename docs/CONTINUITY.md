@@ -12,15 +12,14 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #68: `e3a22e2d48789cf4a9957cf5ca34abb52d4222ac`
-- PR #68 exact tested head: `2c14304017983a47b3baebecc0ddf566fb10c600`
-- PR #68 CI run: `32112042910`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
-- PR #68 API suite: 356 passed on Python 3.11; Python 3.13 also passed
+- Verified implementation main after PR #70: `8a8759faf9857d66ecb5f46e06732e9ff0840510`
+- PR #70 exact tested head: `282520795a59f3ca59fb1039e36b8e5bfa8c822a`
+- PR #70 CI run: `32116881516`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #68 closes a cross-layer V2-D consistency gap. Source catalog, executable bindings, provider descriptors and the process-wide `ProviderRuntime` were each tested before, but no derived invariant proved that the layers agreed. CI now requires the governed binding provider set to equal the shared runtime adapter set exactly, requires each runtime adapter to use its reviewed descriptor, and prevents planned/unreviewed sources from entering production runtime ownership without crossing catalog and binding admission first. ADR 0040 records the decision.
+PR #70 closes a stale convergence compatibility seam. `QuickResearchReport.source_runs` is now required directly when building converged source-run projections. A valid report with zero source-run records still produces the explicit empty privacy-bounded projection; a stale/custom report-like object that omits the typed contract now fails instead of being silently treated as "no source state". ADR 0041 records the decision.
 
-The same guard now locks the zero-spend baseline generically: every required `ACTIVE` recursive source must remain zero-spend eligible. A current recursive source that is not zero-spend eligible may exist only as `OPTIONAL`. Brave therefore remains an optional metered extension rather than a required product dependency.
+The source-run privacy boundary is unchanged: retained source-state projections do not duplicate identifier values, source locators, provider payloads, credentials or exception text.
 
 ## Permanent evidence semantics
 
@@ -90,7 +89,7 @@ Current network execution ownership:
 
 Key provider/runtime PRs: #24-#32, #50, #52, #54.
 
-Key source-state/report/evaluation PRs: #34-#48. These establish typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement and network-free graph-limit comparison through the real frontier scheduler.
+Key source-state/report/evaluation PRs: #34-#48 and #70. These establish typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement, network-free graph-limit comparison through the real frontier scheduler, and a fail-closed convergence contract for typed source-run state.
 
 Document-intake/review checkpoints:
 
@@ -101,9 +100,10 @@ Document-intake/review checkpoints:
 - PR #64: authenticated + CSRF-protected HTTP confirm/reject/reopen/promote actions;
 - PR #66: separate authenticated retained-case execution from a currently confirmed, research-authorized server-owned candidate.
 
-Architecture consistency checkpoint:
+Architecture consistency checkpoints:
 
-- PR #68: cross-layer catalog/binding/registry/shared-runtime ownership and zero-spend invariants; ADR 0040.
+- PR #68: cross-layer catalog/binding/registry/shared-runtime ownership and zero-spend invariants; ADR 0040;
+- PR #70: convergence requires canonical typed source-run reports and no longer infers a missing contract as an empty report; ADR 0041.
 
 The document-review backend now reaches a retained quick or converged case without trusting browser-supplied candidate data and without making review actions trigger provider execution.
 
@@ -125,6 +125,8 @@ Critical distinctions:
 
 `source_provider_exception_record()` is the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state.
 
+Convergence now requires the typed `QuickResearchReport.source_runs` field. An empty tuple is a valid explicit zero-record state; absence of the contract is not.
+
 ## Current deliberate limits
 
 - convergence max depth: 2;
@@ -141,7 +143,7 @@ Critical distinctions:
 
 The private operator UI remains the next product-facing block: wire document review/run state, explicit provider-start controls, retained seed provenance and existing source-state/evaluation summaries without re-deriving backend semantics in the browser.
 
-For backend architecture closure, continue the final V2-D consistency audit over report/privacy boundaries and stale compatibility seams. PR #68 means runtime ownership and the zero-spend dependency invariant are no longer open questions. Do not activate new third-party providers until V2-D closure is explicitly recorded.
+For backend architecture closure, continue the final V2-D report/privacy audit. The source-run compatibility fallback is no longer open after PR #70; focus next on other retained-report duplication/privacy invariants and any compatibility seam that can still mask contract drift. Do not activate new third-party providers until V2-D closure is explicitly recorded.
 
 ## Update discipline
 
