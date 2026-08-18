@@ -10,7 +10,7 @@ import sqlite3
 from uuid import UUID, uuid4
 
 from .converged_report import hydrate_case_report_edge_provenance
-from .reporting import build_structured_report
+from .reporting import CONNECTED_IDENTIFIER_FIELD_BY_KIND, build_structured_report
 from .research import QuickResearchReport, ResearchKind
 
 
@@ -96,6 +96,91 @@ def _report_payload(
     return payload
 
 
+def _text(value: object) -> str | None:
+    if value is None or isinstance(value, bool):
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def hydrate_case_report_connected_identifiers(report: dict[str, object]) -> dict[str, object]:
+    """Hydrate canonical quick connected-field references for API/UI compatibility.
+
+    New retained quick reports store only observation/field references. Older reports that already
+    contain value/source/source-locator copies remain readable without migration. Hydration never
+    mutates or writes back the retained payload.
+    """
+
+    structured = report.get("structured_report")
+    observations = report.get("observations")
+    if not isinstance(structured, dict) or not isinstance(observations, list):
+        return report
+    connected = structured.get("connected_identifiers")
+    if not isinstance(connected, list):
+        return report
+
+    hydrated: list[dict[str, object]] = []
+    changed = False
+    for item in connected:
+        if not isinstance(item, dict):
+            raise ValueError("Connected identifier entries must be objects.")
+
+        # Cases written before ADR 0045 retain the old bounded compatibility projection.
+        if all(key in item for key in ("value", "source", "source_locator")):
+            hydrated.append(dict(item))
+            continue
+
+        kind = item.get("kind")
+        detail_field = item.get("detail_field")
+        observation_index = item.get("observation_index")
+        status = item.get("status")
+        if not isinstance(kind, str) or CONNECTED_IDENTIFIER_FIELD_BY_KIND.get(kind) != detail_field:
+            raise ValueError("Connected identifier kind/detail reference is invalid.")
+        if isinstance(observation_index, bool) or not isinstance(observation_index, int):
+            raise ValueError("Connected identifier observation index is invalid.")
+        if not 0 <= observation_index < len(observations):
+            raise ValueError("Connected identifier observation index is out of range.")
+        if not isinstance(status, str) or not status:
+            raise ValueError("Connected identifier status is invalid.")
+
+        observation = observations[observation_index]
+        if not isinstance(observation, dict):
+            raise ValueError("Connected identifier observation reference is invalid.")
+        details = observation.get("details")
+        source = observation.get("source")
+        source_locator = observation.get("source_locator")
+        if not isinstance(details, dict) or not isinstance(source, str) or not isinstance(source_locator, str):
+            raise ValueError("Connected identifier observation provenance is invalid.")
+        value = _text(details.get(detail_field))
+        if value is None:
+            raise ValueError("Connected identifier field is missing from its canonical observation.")
+
+        hydrated.append(
+            {
+                "kind": kind,
+                "value": value,
+                "source": source,
+                "source_locator": source_locator,
+                "status": status,
+                "observation_index": observation_index,
+                "detail_field": detail_field,
+            }
+        )
+        changed = True
+
+    if not changed:
+        return report
+    hydrated_structured = dict(structured)
+    hydrated_structured["connected_identifiers"] = hydrated
+    hydrated_report = dict(report)
+    hydrated_report["structured_report"] = hydrated_structured
+    return hydrated_report
+
+
+def _hydrate_case_report(report: dict[str, object]) -> dict[str, object]:
+    return hydrate_case_report_connected_identifiers(hydrate_case_report_edge_provenance(report))
+
+
 def _decode_row(row: sqlite3.Row) -> StoredCase:
     report = json.loads(row["report_json"])
     return StoredCase(
@@ -104,7 +189,7 @@ def _decode_row(row: sqlite3.Row) -> StoredCase:
         expires_at=datetime.fromisoformat(row["expires_at"]),
         seed_kind=ResearchKind(row["seed_kind"]),
         seed_value=row["seed_value"],
-        report=hydrate_case_report_edge_provenance(report),
+        report=_hydrate_case_report(report),
     )
 
 
@@ -163,7 +248,7 @@ class CaseStore:
             expires_at=record.expires_at,
             seed_kind=record.seed_kind,
             seed_value=record.seed_value,
-            report=hydrate_case_report_edge_provenance(record.report),
+            report=_hydrate_case_report(record.report),
         )
 
     def create(
