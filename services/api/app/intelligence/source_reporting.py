@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable
 
+from .source_evaluation import build_source_evaluation_counters
 from .source_states import SourceRunRecord
 
 
@@ -26,7 +27,8 @@ def build_source_run_report(records: Iterable[SourceRunRecord]) -> dict[str, obj
 
     The projection deliberately has no identifier value, source locator, provider payload,
     credential state or exception text. Canonical observations and lead records remain the
-    only owners of those details.
+    only owners of those details. Deterministic evaluation counters are derived from the
+    same typed records so callers do not need to reconstruct outcome semantics.
     """
 
     ordered = tuple(
@@ -51,4 +53,5 @@ def build_source_run_report(records: Iterable[SourceRunRecord]) -> dict[str, obj
         "state_counts": dict(sorted(state_counts.items())),
         "reason_counts": dict(sorted(reason_counts.items())),
         "records": [source_run_payload(item) for item in ordered],
+        "evaluation": build_source_evaluation_counters(ordered),
     }

@@ -92,6 +92,30 @@ def test_quick_report_without_source_runs_gets_explicit_empty_projection() -> No
         "state_counts": {},
         "reason_counts": {},
         "records": [],
+        "evaluation": {
+            "aggregate": {
+                "record_count": 0,
+                "attempt_count": 0,
+                "completed_attempt_count": 0,
+                "failed_attempt_count": 0,
+                "unclassified_attempt_count": 0,
+                "result_record_count": 0,
+                "no_match_count": 0,
+                "observation_count": 0,
+                "remote_rate_limit_count": 0,
+                "execution_failure_count": 0,
+                "malformed_result_count": 0,
+                "local_budget_stop_count": 0,
+                "optional_not_configured_count": 0,
+                "missing_secret_config_count": 0,
+                "provider_policy_block_count": 0,
+                "queued_count": 0,
+                "review_required_count": 0,
+                "display_only_count": 0,
+                "blocked_count": 0,
+            },
+            "by_source": {},
+        },
     }
 
 

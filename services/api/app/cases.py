@@ -9,6 +9,7 @@ from pathlib import Path
 import sqlite3
 from uuid import UUID, uuid4
 
+from .intelligence.source_reporting import build_source_run_report
 from .reporting import build_structured_report
 from .research import QuickResearchReport, ResearchKind
 
@@ -88,6 +89,7 @@ def _report_payload(
         "normalized_value": report.normalized_value,
         "observations": [asdict(item) for item in report.observations],
         "warnings": list(report.warnings),
+        "source_runs": build_source_run_report(report.source_runs),
         "structured_report": build_structured_report(report),
     }
     if seed_provenance is not None:
