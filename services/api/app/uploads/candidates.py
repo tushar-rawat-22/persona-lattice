@@ -22,6 +22,10 @@ def _candidate(
     artifact_id: UUID,
     kind: IdentifierKind,
     raw_value: str,
+    *,
+    source_start: int,
+    source_end: int,
+    source_page: int | None = None,
 ) -> tuple[str, ReviewCandidate] | None:
     try:
         normalized = normalize_identifier(kind, raw_value)
@@ -38,26 +42,52 @@ def _candidate(
             source_artifact_id=artifact_id,
             identifier_kind=kind,
             value=normalized.normalized_value,
+            source_page=source_page,
+            source_start=source_start,
+            source_end=source_end,
         ),
     )
 
 
 def extract_identifier_candidates(text: str, artifact_id: UUID) -> list[ReviewCandidate]:
     found: dict[str, ReviewCandidate] = {}
+    raw_matches: list[tuple[IdentifierKind, str, int, int]] = []
 
-    raw_matches: list[tuple[IdentifierKind, str]] = []
-    raw_matches.extend((IdentifierKind.EMAIL, value) for value in _EMAIL_RE.findall(text))
-    raw_matches.extend(
-        (IdentifierKind.URL, value.rstrip(".,;:!?"))
-        for value in _URL_RE.findall(text)
-    )
-    raw_matches.extend(
-        (IdentifierKind.USERNAME, f"@{value}") for value in _USERNAME_RE.findall(text)
-    )
-    raw_matches.extend((IdentifierKind.PHONE, value) for value in _PHONE_RE.findall(text))
+    for match in _EMAIL_RE.finditer(text):
+        raw_matches.append((IdentifierKind.EMAIL, match.group(1), *match.span(1)))
 
-    for kind, raw_value in raw_matches:
-        result = _candidate(artifact_id, kind, raw_value)
+    for match in _URL_RE.finditer(text):
+        raw_value = match.group(0).rstrip(".,;:!?")
+        raw_matches.append(
+            (
+                IdentifierKind.URL,
+                raw_value,
+                match.start(),
+                match.start() + len(raw_value),
+            )
+        )
+
+    for match in _USERNAME_RE.finditer(text):
+        raw_matches.append(
+            (
+                IdentifierKind.USERNAME,
+                f"@{match.group(1)}",
+                match.start(),
+                match.end(),
+            )
+        )
+
+    for match in _PHONE_RE.finditer(text):
+        raw_matches.append((IdentifierKind.PHONE, match.group(1), *match.span(1)))
+
+    for kind, raw_value, source_start, source_end in raw_matches:
+        result = _candidate(
+            artifact_id,
+            kind,
+            raw_value,
+            source_start=source_start,
+            source_end=source_end,
+        )
         if result is None:
             continue
         key, candidate = result

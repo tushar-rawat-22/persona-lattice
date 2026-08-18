@@ -24,6 +24,7 @@ from .policy import (
     MAX_TOTAL_BYTES,
     UploadPolicyError,
 )
+from .promotion import promote_confirmed_identifier_candidate
 from .service import UploadBatchError, process_upload_batch
 
 __all__ = [
@@ -48,6 +49,7 @@ __all__ = [
     "extract_text_safely",
     "make_claim_candidate",
     "process_upload_batch",
+    "promote_confirmed_identifier_candidate",
     "record_upload_observation",
     "reject_candidate",
     "require_research_authorization",
