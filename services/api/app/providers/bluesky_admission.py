@@ -15,7 +15,11 @@ _DISALLOWED_REAL_WORLD_TLDS = frozenset(
 
 
 class BlueskyAdmissionError(ValueError):
-    """Local fail-closed rejection before any Bluesky network call."""
+    """Fail-closed rejection at the reviewed Bluesky admission boundary."""
+
+
+class BlueskyPublicWebOptOut(BlueskyAdmissionError):
+    """Returned profile is marked unavailable to unauthenticated public-web clients."""
 
 
 def normalize_bluesky_handle(value: str) -> str:
@@ -83,7 +87,9 @@ def admitted_bluesky_profile_fields(
     if not did.startswith("did:") or len(did) > 2048:
         raise BlueskyAdmissionError("Returned Bluesky DID is malformed.")
     if bluesky_public_web_visibility(payload) != "allowed":
-        raise BlueskyAdmissionError("Bluesky profile opted out of unauthenticated public-web use.")
+        raise BlueskyPublicWebOptOut(
+            "Bluesky profile opted out of unauthenticated public-web use."
+        )
 
     result: dict[str, object] = {
         "did": did,
