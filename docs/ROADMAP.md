@@ -77,7 +77,7 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: active; network migration, reviewed-document backend execution, cross-layer ownership/zero-spend guard, source-run contract closure and the main converged provenance-ownership defects are complete**
+**Status: active; network migration, reviewed-document backend execution, cross-layer ownership/zero-spend guard, source-run contract closure and retained provider-provenance ownership are complete**
 
 Every currently executable network source is behind the governed runtime. Key migration checkpoints are PRs #24-#32, #50, #52 and #54. The executable legacy network allowance is empty.
 
@@ -89,11 +89,13 @@ Source-state/report/evaluation work in PRs #34-#48 establishes typed source stat
 
 PR #70 closes the stale convergence compatibility shim that treated a missing `source_runs` contract as an empty report. Converged reports now require the canonical `QuickResearchReport.source_runs` field directly; a valid zero-record tuple still yields the same privacy-bounded empty projection. ADR 0041 records the decision.
 
-PR #72 closes a retained quick-report privacy defect. Complete provider evidence now has one canonical retained owner in top-level quick observations. `private-evidence-report-v2` removes copied full-evidence sections and the duplicate structured seed, while account-candidate/contradiction classification refers back to canonical observations by index. The bounded connected-field index remains because it is the current private UI navigation contract; arbitrary provider details cannot flow through that projection. ADR 0042 records the decision.
+PR #72 closes retained quick-report full-evidence duplication. Complete provider evidence has one canonical retained owner in top-level quick observations. Account-candidate and contradiction classification refer back to observations by index. ADR 0042 records the decision.
 
-PR #74 closes converged M5 candidate-provenance duplication. Live M5 evaluations no longer copy candidate source names or source locators already owned by canonical node observations. New evaluations retain `candidate_node` plus `candidate_observation_index`; the private UI resolves those references while retaining read-only compatibility for older retained cases. ADR 0043 records the decision.
+PR #74 closes converged M5 candidate-provenance duplication. New evaluations retain `candidate_node` plus `candidate_observation_index`; the private UI resolves those references while retaining read-only compatibility for older retained cases. ADR 0043 records the decision.
 
-PR #77 closes the next converged provenance duplication defect and strengthens the ownership model beyond Issue #76's initial proposal. Canonical node observations are now the sole retained owner of provider source/locator for graph traversal provenance. Lead decisions reference the source observation by `source_observation_index`; admitted edges reference the decision by `lead_decision_index`. New reference readers fail closed on missing, malformed, out-of-range or structurally inconsistent references. In-memory traversal provenance is unchanged. `CaseStore` transiently hydrates legacy edge display fields for the current admin UI without writing those copies back to SQLite. ADR 0044 records the decision.
+PR #77 closes converged pivot-provenance duplication. Canonical node observations own provider source/locator; lead decisions use `source_observation_index`; admitted edges use `lead_decision_index`. New reference readers fail closed on missing, malformed, out-of-range or structurally inconsistent references. `CaseStore` temporarily hydrates legacy edge display fields for the current admin UI without writing those copies back to SQLite. ADR 0044 records the decision.
+
+PR #79 closes the remaining quick structured-report value/provenance duplication. New `connected_identifiers` entries retain only connected-field kind, canonical observation index, reviewed detail-field name and status. The canonical quick observation is now the sole retained owner of the selected value, provider source and source locator. `CaseStore` hydrates the old display shape only in returned responses so the current UI and historical cases remain readable. Mixed, malformed or out-of-range references fail closed. ADR 0045 records the decision.
 
 The document-review path has a complete server-owned backend chain:
 
@@ -111,9 +113,9 @@ PR #68 adds a cross-layer closure guard derived from live declarations. Governed
 Remaining before V2-D closes:
 
 1. expose document review/run controls and existing source-state/evaluation summaries cleanly in the private operator UI;
-2. decide whether the remaining bounded quick structured-report `connected_identifiers` value/source-locator projection should stay as an explicit operator index or be replaced by canonical-observation references;
-3. migrate the private converged-edge UI to the new decision/observation references, then remove the temporary CaseStore edge-hydration compatibility projection;
-4. close any remaining compatibility seam only where doing so does not break existing operator behavior or evidence semantics.
+2. migrate the private quick connected-field UI to canonical observation references and remove the temporary connected-field response hydration for new reports;
+3. migrate the private converged-edge UI to decision/observation references and remove the temporary edge response hydration for new reports;
+4. close any remaining compatibility seam only where doing so does not break historical retained cases, operator behavior or evidence semantics.
 
 No new third-party source should be activated during these closure blocks.
 
@@ -141,9 +143,9 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-The next backend privacy review is the bounded quick structured-report `connected_identifiers` projection. It currently duplicates selected values and source locators for operator navigation. Either prove that duplication is necessary, narrow and covered by regression tests, or replace it with canonical observation references while preserving the private UI. Do not remove it merely because it repeats data; remove it only if the canonical reference model can serve the operator equally well.
+The retained backend ownership audit is now closed for quick complete provider payloads, quick connected-field values/provenance, converged M5 candidates and converged pivot provenance. The next useful V2-D block is the private operator UI contract migration: resolve quick connected fields and converged edges from canonical references in the browser, then remove the corresponding temporary response-hydration paths for new reports while keeping historical retained cases readable.
 
-The next product-facing block is the private operator workflow: wire reviewed-document state, explicit case execution, source-state/evaluation summaries and retained seed provenance into the UI without re-deriving backend authorization or evidence semantics in the browser. When the converged-edge UI is touched, consume the new references directly and retire the temporary response hydration layer.
+The same operator block should begin exposing reviewed-document state, explicit case execution, source-state/evaluation summaries and retained seed provenance without re-deriving backend authorization or evidence semantics in the browser.
 
 Only after V2-D closure should new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
