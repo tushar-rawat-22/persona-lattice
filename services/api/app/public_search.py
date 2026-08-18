@@ -103,11 +103,15 @@ def _decode_results(payload: object) -> tuple[PublicSearchResult, ...]:
 
 
 async def search_exact_public_mentions(identifier: str) -> tuple[PublicSearchResult, ...]:
-    """Run the existing optional exact-match search through ProviderRuntime.
+    """Run the legacy one-argument exact-match helper through ProviderRuntime.
 
-    The helper keeps the private-V1 callable surface for quick research and tests.
+    This compatibility surface predates typed quick-research execution, so it
+    intentionally supplies username/public-research defaults. Production quick
+    research does not use those defaults: it calls ProviderRuntime directly with
+    the real lead kind, purpose and consent context. New typed callers must do the
+    same rather than treating this wrapper as execution authority.
+
     Missing configuration remains a no-op so the default product stays zero-spend.
-    Production execution itself is owned by the process-wide governed runtime.
     """
 
     if not public_search_configured():
