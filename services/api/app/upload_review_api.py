@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -9,9 +10,17 @@ from pydantic import BaseModel
 from .admin_auth import require_admin_write
 from .audit import AUDIT_STORE
 from .authz import AuthenticatedPrincipal
-from .evidence import IdentifierKind
+from .evidence import IdentifierKind, InvalidIdentifier
 from .intelligence import LeadDisposition, LeadKind, LeadReason
+from .models import Purpose
+from .providers.errors import (
+    ProviderExecutionError,
+    ProviderPolicyError,
+    ProviderRateBudgetExceeded,
+)
+from .research import ResearchKind
 from .uploads import CandidateReviewError, CandidateType, ReviewCandidate, ReviewStatus
+from .uploads.research_service import ReviewedCandidateCaseMode, run_reviewed_candidate_case
 from .uploads.review_service import (
     UploadReviewCandidateNotFoundError,
     confirm_stored_candidate,
@@ -44,6 +53,20 @@ class PromotedUploadLeadResponse(BaseModel):
     reason: LeadReason
     disposition: LeadDisposition
     source_locator: str
+
+
+class ReviewedCandidateCaseRequest(BaseModel):
+    mode: ReviewedCandidateCaseMode = ReviewedCandidateCaseMode.CONVERGED
+    purpose: Purpose = Purpose.PUBLIC_SOURCE_RESEARCH
+    consent_acknowledged: bool = False
+
+
+class ReviewedCandidateCaseResponse(BaseModel):
+    case_id: UUID
+    mode: ReviewedCandidateCaseMode
+    seed_kind: ResearchKind
+    created_at: datetime
+    expires_at: datetime
 
 
 def _state_response(candidate: ReviewCandidate) -> UploadReviewStateResponse:
@@ -156,4 +179,66 @@ def promote_upload_review_candidate(
         reason=lead.reason,
         disposition=lead.disposition,
         source_locator=lead.source_locator,
+    )
+
+
+@router.post(
+    "/{artifact_id}/{candidate_id}/run-case",
+    response_model=ReviewedCandidateCaseResponse,
+)
+async def run_upload_review_candidate_case(
+    artifact_id: UUID,
+    candidate_id: UUID,
+    payload: ReviewedCandidateCaseRequest,
+    _principal: AuthenticatedPrincipal = Depends(require_admin_write),
+) -> ReviewedCandidateCaseResponse:
+    """Explicitly execute a retained case from current server-owned review state."""
+
+    try:
+        record = await run_reviewed_candidate_case(
+            artifact_id,
+            candidate_id,
+            mode=payload.mode,
+            purpose=payload.purpose,
+            consent_acknowledged=payload.consent_acknowledged,
+        )
+    except UploadReviewCandidateNotFoundError as exc:
+        raise _candidate_not_found() from exc
+    except CandidateReviewError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Upload review candidate is not currently authorized for research.",
+        ) from exc
+    except InvalidIdentifier as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    except ProviderPolicyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Research provider policy blocked this request.",
+        ) from exc
+    except ProviderRateBudgetExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Local research rate budget is exhausted. Try again shortly.",
+        ) from exc
+    except ProviderExecutionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="A public-source provider failed to complete the request.",
+        ) from exc
+
+    AUDIT_STORE.record(
+        "file.review.research_case",
+        case_id=record.id,
+        details={"mode": payload.mode.value, "kind": record.seed_kind.value},
+    )
+    return ReviewedCandidateCaseResponse(
+        case_id=record.id,
+        mode=payload.mode,
+        seed_kind=record.seed_kind,
+        created_at=record.created_at,
+        expires_at=record.expires_at,
     )

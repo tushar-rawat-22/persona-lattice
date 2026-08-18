@@ -78,14 +78,21 @@ def _initialize(connection: sqlite3.Connection) -> None:
     connection.commit()
 
 
-def _report_payload(report: QuickResearchReport) -> dict[str, object]:
-    return {
+def _report_payload(
+    report: QuickResearchReport,
+    *,
+    seed_provenance: dict[str, object] | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
         "kind": report.kind.value,
         "normalized_value": report.normalized_value,
         "observations": [asdict(item) for item in report.observations],
         "warnings": list(report.warnings),
         "structured_report": build_structured_report(report),
     }
+    if seed_provenance is not None:
+        payload["seed_provenance"] = dict(seed_provenance)
+    return payload
 
 
 def _decode_row(row: sqlite3.Row) -> StoredCase:
@@ -156,12 +163,13 @@ class CaseStore:
         seed_kind: ResearchKind,
         seed_value: str,
         report: QuickResearchReport,
+        seed_provenance: dict[str, object] | None = None,
         now: datetime | None = None,
     ) -> StoredCase:
         return self.create_payload(
             seed_kind=seed_kind,
             seed_value=seed_value,
-            report_payload=_report_payload(report),
+            report_payload=_report_payload(report, seed_provenance=seed_provenance),
             now=now,
         )
 
