@@ -59,6 +59,10 @@ def test_live_m5_same_username_candidate_remains_uncalibrated_weak_triage() -> N
     assert evaluation["outcome"] == "insufficient_evidence"
     assert evaluation["calibration_status"] == "uncalibrated"
     assert evaluation["is_identity_claim"] is False
+    assert evaluation["candidate_node"] == "username:public-user"
+    assert evaluation["candidate_observation_index"] == 0
+    assert "candidate_source" not in evaluation
+    assert "candidate_source_locator" not in evaluation
 
 
 def test_live_m5_exact_original_email_overlap_is_possible_not_identity_claim() -> None:
