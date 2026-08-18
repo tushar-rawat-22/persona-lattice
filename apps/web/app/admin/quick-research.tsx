@@ -4,6 +4,14 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+const CONNECTED_IDENTIFIER_FIELD_BY_KIND: Record<string, string> = {
+  email: "email",
+  username: "twitter_username",
+  url: "blog",
+  location_claim: "location",
+  organization_claim: "company",
+};
+
 type ResearchKind = "username" | "phone" | "email" | "url";
 
 type Observation = {
@@ -11,6 +19,17 @@ type Observation = {
   source_locator: string;
   summary: string;
   details: Record<string, unknown>;
+};
+
+type ConnectedIdentifier = {
+  kind: string;
+  status: string;
+  observation_index?: number;
+  detail_field?: string;
+  // Read-only compatibility for cases retained before ADR 0045.
+  value?: string;
+  source?: string;
+  source_locator?: string;
 };
 
 type StructuredReport = {
@@ -24,13 +43,7 @@ type StructuredReport = {
     identity_claim: false;
     interpretation: string;
   };
-  connected_identifiers: Array<{
-    kind: string;
-    value: string;
-    source: string;
-    source_locator: string;
-    status: string;
-  }>;
+  connected_identifiers: ConnectedIdentifier[];
   coverage_gaps: string[];
   provenance_rule: string;
 };
@@ -60,6 +73,25 @@ type M5Evaluation = {
   }>;
 };
 
+type LeadDecision = {
+  parent_key: string;
+  child_key: string | null;
+  reason: string;
+  decision: string;
+  source_observation_index?: number;
+  source_field?: string;
+};
+
+type ConvergedEdge = {
+  parent_key: string;
+  child_key: string;
+  reason: string;
+  lead_decision_index?: number;
+  // Read-only compatibility for cases retained before ADR 0044.
+  source?: string;
+  source_locator?: string;
+};
+
 type ConvergedReport = {
   report_version: string;
   seed: { kind: ResearchKind; normalized_value: string };
@@ -83,13 +115,10 @@ type ConvergedReport = {
     warnings: string[];
     observations: Observation[];
   }>;
-  edges: Array<{
-    parent_key: string;
-    child_key: string;
-    reason: string;
-    source: string;
-    source_locator: string;
-  }>;
+  edges: ConvergedEdge[];
+  lead_graph?: {
+    decisions: LeadDecision[];
+  };
   warnings: string[];
   provenance_rule: string;
   m5: {
@@ -127,6 +156,15 @@ type QuickResearchProps = {
   csrfToken: string;
 };
 
+type ResolvedProvenance = {
+  source: string;
+  source_locator: string;
+};
+
+type ResolvedConnectedIdentifier = ResolvedProvenance & {
+  value: string;
+};
+
 async function request(path: string, init?: RequestInit, csrfToken?: string) {
   const method = (init?.method ?? "GET").toUpperCase();
   const unsafe = !["GET", "HEAD", "OPTIONS"].includes(method);
@@ -138,6 +176,43 @@ async function request(path: string, init?: RequestInit, csrfToken?: string) {
       ...(unsafe && csrfToken ? { "X-PersonaLattice-CSRF": csrfToken } : {}),
     },
   });
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function resolveConnectedIdentifier(
+  report: QuickReport,
+  item: ConnectedIdentifier,
+): ResolvedConnectedIdentifier | null {
+  const hasLegacy = item.value !== undefined || item.source !== undefined || item.source_locator !== undefined;
+  const hasReference = item.observation_index !== undefined || item.detail_field !== undefined;
+
+  if (hasLegacy && hasReference) return null;
+  if (hasLegacy) {
+    if (!nonEmptyString(item.value) || !nonEmptyString(item.source) || !nonEmptyString(item.source_locator)) {
+      return null;
+    }
+    return { value: item.value, source: item.source, source_locator: item.source_locator };
+  }
+
+  if (!Number.isInteger(item.observation_index) || (item.observation_index ?? -1) < 0) return null;
+  if (!nonEmptyString(item.detail_field)) return null;
+  if (CONNECTED_IDENTIFIER_FIELD_BY_KIND[item.kind] !== item.detail_field) return null;
+
+  const observation = (report.observations ?? [])[item.observation_index as number];
+  if (!observation || !nonEmptyString(observation.source) || !nonEmptyString(observation.source_locator)) {
+    return null;
+  }
+  const value = observation.details[item.detail_field];
+  if (!nonEmptyString(value)) return null;
+
+  return {
+    value,
+    source: observation.source,
+    source_locator: observation.source_locator,
+  };
 }
 
 function resolveM5Candidate(report: ConvergedReport, evaluation: M5Evaluation): Observation | null {
@@ -154,6 +229,42 @@ function m5EvaluationKey(evaluation: M5Evaluation): string {
     return `${evaluation.candidate_node}-${evaluation.candidate_observation_index}`;
   }
   return `${evaluation.candidate_node}-${evaluation.candidate_source_locator ?? evaluation.candidate_source ?? "legacy"}`;
+}
+
+function resolveEdgeProvenance(report: ConvergedReport, edge: ConvergedEdge): ResolvedProvenance | null {
+  const hasLegacy = edge.source !== undefined || edge.source_locator !== undefined;
+  const hasReference = edge.lead_decision_index !== undefined;
+
+  if (hasLegacy && hasReference) return null;
+  if (hasLegacy) {
+    if (!nonEmptyString(edge.source) || !nonEmptyString(edge.source_locator)) return null;
+    return { source: edge.source, source_locator: edge.source_locator };
+  }
+
+  if (!Number.isInteger(edge.lead_decision_index) || (edge.lead_decision_index ?? -1) < 0) return null;
+  const decision = report.lead_graph?.decisions[edge.lead_decision_index as number];
+  if (!decision || decision.decision !== "admitted") return null;
+  if (
+    decision.parent_key !== edge.parent_key ||
+    decision.child_key !== edge.child_key ||
+    decision.reason !== edge.reason
+  ) {
+    return null;
+  }
+  if (!Number.isInteger(decision.source_observation_index) || (decision.source_observation_index ?? -1) < 0) {
+    return null;
+  }
+  if (!nonEmptyString(decision.source_field)) return null;
+
+  const parentMatches = report.nodes.filter((node) => node.key === decision.parent_key);
+  if (parentMatches.length !== 1) return null;
+  const observation = parentMatches[0].observations[decision.source_observation_index as number];
+  if (!observation || !nonEmptyString(observation.source) || !nonEmptyString(observation.source_locator)) {
+    return null;
+  }
+  if (!(decision.source_field in observation.details)) return null;
+
+  return { source: observation.source, source_locator: observation.source_locator };
 }
 
 export function QuickResearch({ csrfToken }: QuickResearchProps) {
@@ -344,13 +455,20 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                 <div className="reportSection">
                   <h3>Evidence pivots</h3>
                   <div className="connectedGrid">
-                    {converged.edges.map((edge) => (
-                      <div className="connectedField" key={`${edge.parent_key}-${edge.child_key}`}>
-                        <span>{edge.reason}</span>
-                        <strong>{edge.child_key}</strong>
-                        <small>{edge.source} · {edge.source_locator}</small>
-                      </div>
-                    ))}
+                    {converged.edges.map((edge, index) => {
+                      const provenance = resolveEdgeProvenance(converged, edge);
+                      return (
+                        <div className="connectedField" key={`${edge.parent_key}-${edge.child_key}-${index}`}>
+                          <span>{edge.reason}</span>
+                          <strong>{edge.child_key}</strong>
+                          <small>
+                            {provenance
+                              ? `${provenance.source} · ${provenance.source_locator}`
+                              : "Canonical pivot provenance could not be resolved safely."}
+                          </small>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -401,13 +519,20 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                 <div className="reportSection">
                   <h3>Connected public fields</h3>
                   <div className="connectedGrid">
-                    {structured.connected_identifiers.map((item) => (
-                      <div className="connectedField" key={`${item.kind}-${item.value}-${item.source}`}>
-                        <span>{item.kind}</span>
-                        <strong>{item.value}</strong>
-                        <small>{item.source} · {item.source_locator}</small>
-                      </div>
-                    ))}
+                    {structured.connected_identifiers.map((item, index) => {
+                      const resolved = resolveConnectedIdentifier(report, item);
+                      return (
+                        <div className="connectedField" key={`${item.kind}-${index}`}>
+                          <span>{item.kind}</span>
+                          <strong>{resolved?.value ?? "Reference unavailable"}</strong>
+                          <small>
+                            {resolved
+                              ? `${resolved.source} · ${resolved.source_locator}`
+                              : "Stored connected-field reference could not be resolved safely."}
+                          </small>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
