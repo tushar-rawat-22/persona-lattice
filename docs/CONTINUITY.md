@@ -12,18 +12,15 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #66: `58c582b1db7ef62254ea8bcabc732ed0514c567d`
-- PR #66 exact tested head: `7d51fb28e331de9c388e0dc1ab393f281d5b685b`
-- PR #66 CI run: `32107499455`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #68: `e3a22e2d48789cf4a9957cf5ca34abb52d4222ac`
+- PR #68 exact tested head: `2c14304017983a47b3baebecc0ddf566fb10c600`
+- PR #68 CI run: `32112042910`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- PR #68 API suite: 356 passed on Python 3.11; Python 3.13 also passed
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #66 closes the backend transition from reviewed upload evidence into an explicit retained research case. The new `/v1/files/review/{artifact_id}/{candidate_id}/run-case` action uses the existing authenticated write/CSRF boundary, accepts only mode/purpose/consent in the body, reloads the current server-owned candidate immediately before execution and reuses the existing promotion contract. Browser-supplied identifier values or provenance never become reviewed-document authorization state.
+PR #68 closes a cross-layer V2-D consistency gap. Source catalog, executable bindings, provider descriptors and the process-wide `ProviderRuntime` were each tested before, but no derived invariant proved that the layers agreed. CI now requires the governed binding provider set to equal the shared runtime adapter set exactly, requires each runtime adapter to use its reviewed descriptor, and prevents planned/unreviewed sources from entering production runtime ownership without crossing catalog and binding admission first. ADR 0040 records the decision.
 
-Purpose/consent is enforced before provider execution. Pending, rejected, reopened, expired, mismatched or unsupported candidates fail closed. Confirmation and promotion remain non-executing state transitions; provider traffic begins only through the separate `run-case` action.
-
-Retained quick and converged cases now carry bounded `seed_provenance` for reviewed-document seeds. It stores only the existing `reviewed_upload_candidate` source and `artifact://` locator, which contains artifact/candidate identity plus mechanically derived page/character location when available. It does not retain file bytes, surrounding extracted prose or complete extracted text. The HTTP response returns case metadata without echoing the identifier value. Audit metadata records case ID, mode and seed kind only. ADR 0039 records this boundary.
-
-Two implementation ideas were rejected during review before merge. First, creating a quick case and then deleting/recreating it merely to attach provenance would have introduced a transient retained record and broken single-write semantics. Second, a generic report-extension hook was broader than this block required and would have created a future schema escape hatch. The final implementation uses one write and one dedicated optional `seed_provenance` field.
+The same guard now locks the zero-spend baseline generically: every required `ACTIVE` recursive source must remain zero-spend eligible. A current recursive source that is not zero-spend eligible may exist only as `OPTIONAL`. Brave therefore remains an optional metered extension rather than a required product dependency.
 
 ## Permanent evidence semantics
 
@@ -104,6 +101,10 @@ Document-intake/review checkpoints:
 - PR #64: authenticated + CSRF-protected HTTP confirm/reject/reopen/promote actions;
 - PR #66: separate authenticated retained-case execution from a currently confirmed, research-authorized server-owned candidate.
 
+Architecture consistency checkpoint:
+
+- PR #68: cross-layer catalog/binding/registry/shared-runtime ownership and zero-spend invariants; ADR 0040.
+
 The document-review backend now reaches a retained quick or converged case without trusting browser-supplied candidate data and without making review actions trigger provider execution.
 
 ## Source-run semantics
@@ -124,32 +125,6 @@ Critical distinctions:
 
 `source_provider_exception_record()` is the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state.
 
-## Document candidate semantics
-
-- file preview remains review-only and temp files are deleted after bounded extraction;
-- successful preview persists only short-lived candidate review metadata, not uploaded file bytes or complete extracted text;
-- candidate review state defaults to 24-hour retention and expires independently of retained research cases;
-- server lookup and mutation require both artifact ID and candidate ID;
-- stored payload IDs are revalidated against SQLite row keys;
-- atomic review mutation may change only review status and external-research authorization;
-- candidate value, kind, IDs, origin, type and page/character provenance are immutable during review mutation;
-- confirm authorizes supported identifier candidates; reject/re-review revoke authorization;
-- HTTP review and execution routes use `require_admin_write`;
-- review-state responses omit the candidate value;
-- promotion reloads current server-owned state, returns a typed reviewed lead and does not call providers;
-- `run-case` reloads that same current state immediately before execution and does not accept an identifier value in the request body;
-- blocked purpose or missing required consent stops before provider execution;
-- retained reviewed-document cases carry bounded `seed_provenance` using the existing `artifact://` locator;
-- PDF candidate page attribution is mechanically derived from extraction-time page spans;
-- claims and unsupported identifier kinds remain non-executable;
-- names/organizations are not silently upgraded to executable research seeds.
-
-## Graph-evaluation semantics
-
-Graph evaluation records growth, maximum depth, admitted pivots, duplicate suppression, provider failures and budget stops. Wrong-pivot truth requires explicit synthetic or consented relevance labels. Production pivots without labels remain unscored.
-
-The graph-limit harness uses the real `LeadFrontier`. Its regression fixture shows that extra depth can admit both useful and wrong pivots; it is not authorization to raise production limits.
-
 ## Current deliberate limits
 
 - convergence max depth: 2;
@@ -164,18 +139,9 @@ The graph-limit harness uses the real `LeadFrontier`. Its regression fixture sho
 
 ## Immediate next gate
 
-Wire the document review/run workflow and existing source-state/evaluation summaries into the private operator UI.
+The private operator UI remains the next product-facing block: wire document review/run state, explicit provider-start controls, retained seed provenance and existing source-state/evaluation summaries without re-deriving backend semantics in the browser.
 
-Requirements:
-
-1. keep confirm/promote and `run-case` visually and behaviorally distinct;
-2. make it explicit that provider traffic begins only when the operator starts the case;
-3. do not present a promoted lead as proof of identity;
-4. show review state and page/character provenance without duplicating unnecessary document content;
-5. surface source execution states and evaluation summaries from the existing backend contracts rather than re-deriving them in the browser;
-6. keep the same authenticated private boundary and zero-spend local operation.
-
-After the operator workflow is usable, run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after V2-D closure should new third-party providers be reviewed.
+For backend architecture closure, continue the final V2-D consistency audit over report/privacy boundaries and stale compatibility seams. PR #68 means runtime ownership and the zero-spend dependency invariant are no longer open questions. Do not activate new third-party providers until V2-D closure is explicitly recorded.
 
 ## Update discipline
 
