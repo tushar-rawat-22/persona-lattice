@@ -12,15 +12,13 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main after PR #85: `b59fbae779e7279cbf09aeeb02b0f75b97fc332f`
-- PR #85 exact tested head: `a114a33811ca5f41c25daac3f322c4d42028ee0a`
-- PR #85 CI: run `32161073049`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
-- PR #85 decision: ADR 0048, retained quick/converged source visibility uses one typed projection with deterministic evaluation counters
+- Verified main after PR #87: `f859c99083a87504357fcaa000dbfff2e35af443`
+- PR #87 exact tested head: `3c2d35761c29eed0e7e506205eaf800dd3edeba1`
+- PR #87 CI: run `32166209900`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
+- PR #87 decision: ADR 0049, private case views consume retained reviewed-upload provenance and typed source state/evaluation directly
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #85 closes a retained-report consistency gap discovered while preparing the private case-view visibility work. Converged nodes already retained typed source-run state, but ordinary quick cases dropped it and deterministic source-evaluation counters lived behind a separate helper. Quick retained cases now persist the same `build_source_run_report()` projection used by converged nodes. That projection carries evaluation counters derived from the exact same ordered `SourceRunRecord` sequence.
-
-The first PR #85 CI run (`32160810789`) failed only two exact-shape regression tests after the intentional addition of the `evaluation` field: 370 tests passed, and the two old expected dictionaries still described the prior source-run projection. Those exact contracts were updated to require the new deterministic zero-evaluation shape; no runtime validation was weakened. The corrected head above passed the full matrix.
+PR #87 closes the private operator visibility gap left after PR #85. Quick retained cases show their top-level `source_runs` projection; converged cases show the same projection per research node; reviewed-upload cases show retained `seed_provenance`. Historical cases that predate typed source-run retention show source execution state as unavailable instead of receiving guessed backfill. The case UI reads retained state, reason, attempt flags and counters directly; it does not parse warnings or reconstruct provider policy in TypeScript.
 
 ## Permanent evidence semantics
 
@@ -78,7 +76,7 @@ PR #21. Reservation-safe frontier, duplicate/cycle suppression, reason-coded out
 
 PR #22. Capability, lifecycle/cost/configuration/review state and zero-spend planning are separated from execution authority.
 
-### V2-D — runtime consistency and architecture closure — active, near closure
+### V2-D — runtime consistency and architecture closure — final audit next
 
 Current network execution ownership:
 
@@ -92,9 +90,9 @@ Current network execution ownership:
 
 Provider/runtime migration is complete for current sources. Key migration PRs: #24-#32, #50, #52, #54.
 
-Source-state/report/evaluation work now includes PRs #34-#48, #70 and #85. The retained projection has typed states/reasons, observation counts, attempt/terminal flags, state/reason counts and deterministic evaluation counters with explicit attempt/failure/no-match/yield semantics. Quick and converged retained paths use the same projection helper. Historical cases created before the projection existed are not backfilled with guessed state.
+Source-state/report/evaluation work includes PRs #34-#48, #70, #85 and #87. The retained projection has typed states/reasons, observation counts, attempt/terminal flags, state/reason counts and deterministic evaluation counters with explicit attempt/failure/no-match/yield semantics. Quick and converged retained paths use the same projection helper. The private case UI consumes those retained fields directly. Historical cases created before the projection existed are not backfilled with guessed state.
 
-Document-intake/review backend checkpoints:
+Document-intake/review checkpoints:
 
 - PR #56: deterministic candidate character spans and fail-closed reviewed identifier promotion;
 - PR #58: extraction-time PDF page spans and corrected flattened-text limits;
@@ -102,7 +100,8 @@ Document-intake/review backend checkpoints:
 - PR #62/#63: atomic confirm/reject/re-review/promotion with immutable candidate value/provenance;
 - PR #64: authenticated + CSRF-protected HTTP review actions;
 - PR #66: separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate;
-- PR #83: private operator controls for confirm/reject/re-review/promotion preview and separate explicit converged-case execution.
+- PR #83: private operator controls for confirm/reject/re-review/promotion preview and separate explicit converged-case execution;
+- PR #87: retained reviewed-document seed provenance and source execution/evaluation state are visible in private case views without moving authorization into the browser.
 
 Architecture/privacy closure checkpoints:
 
@@ -114,7 +113,8 @@ Architecture/privacy closure checkpoints:
 - PR #79: quick connected fields use canonical observation references; ADR 0045;
 - PR #81: private UI resolves canonical quick/converged references and API response hydration is removed; ADR 0046;
 - PR #83: private upload-review UI preserves server-owned review/execution authority; ADR 0047;
-- PR #85: quick/converged source visibility and evaluation use one retained privacy-bounded projection; ADR 0048.
+- PR #85: quick/converged source visibility and evaluation use one retained privacy-bounded projection; ADR 0048;
+- PR #87: private case UI consumes retained seed provenance/source state/evaluation directly and treats missing historical state as unavailable; ADR 0049.
 
 ## Source-run semantics
 
@@ -148,17 +148,18 @@ Critical distinctions:
 
 ## Immediate next gate
 
-The retained backend source-visibility contract is now consistent across quick and converged reports.
+Run the final V2-D architecture/compatibility/privacy/documentation/zero-spend closure audit. Do not add another provider during this audit.
 
-Next bounded block: update the private case view to display existing retained data only:
+The audit must verify, from executable code and regression tests rather than documentation claims alone:
 
-1. reviewed-document `seed_provenance` when present;
-2. typed source state/reason summaries;
-3. deterministic source-evaluation counters already nested under the retained source-run projection.
+1. source catalog ↔ executable binding ↔ provider registry ↔ process-wide runtime ownership consistency;
+2. retained-report single ownership, canonical provenance references and explicit read-only historical compatibility;
+3. upload candidate extraction → human review → promotion → separate explicit case execution authority;
+4. typed source-state/evaluation semantics, phase-proven attempt accounting and private UI consumption without warning inference;
+5. required baseline functionality with zero paid APIs/hosting/database/proxy/enrichment, while optional Brave remains non-required;
+6. roadmap, ADR numbering, continuity checkpoint and tests matching current executable behavior with no stale compatibility seam that can bypass the newer contracts.
 
-Do not parse warnings into state, reconstruct evaluation semantics in TypeScript, copy provider payloads into another UI-owned structure or infer authorization from displayed identifier values. Historical cases without the newer typed source projection must remain readable and should show the missing historical state explicitly rather than fabricating it.
-
-After that, run the final architecture/compatibility/documentation/zero-spend consistency audit. If no material gap remains, explicitly record V2-D closure before activating any new third-party provider/API.
+If the audit finds a material inconsistency, fix it before declaring closure. If the audit is clean, record an explicit V2-D closure checkpoint before reviewing or activating any new third-party provider/API.
 
 ## Update discipline
 
