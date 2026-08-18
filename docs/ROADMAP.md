@@ -77,7 +77,7 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: active; network migration, reviewed-document backend execution, cross-layer ownership/zero-spend guard, source-run contract closure and quick-report full-payload deduplication complete**
+**Status: active; network migration, reviewed-document backend execution, cross-layer ownership/zero-spend guard, source-run contract closure, quick-report full-payload deduplication and converged M5 candidate-provenance deduplication complete**
 
 Every currently executable network source is behind the governed runtime. Key migration checkpoints are PRs #24-#32, #50, #52 and #54. The executable legacy network allowance is empty.
 
@@ -90,6 +90,8 @@ Source-state/report/evaluation work in PRs #34-#48 establishes typed source stat
 PR #70 closes the stale convergence compatibility shim that treated a missing `source_runs` contract as an empty report. Converged reports now require the canonical `QuickResearchReport.source_runs` field directly; a valid zero-record tuple still yields the same privacy-bounded empty projection. ADR 0041 records the decision.
 
 PR #72 closes a retained quick-report privacy defect. Complete provider evidence now has one canonical retained owner in top-level quick observations. `private-evidence-report-v2` removes copied full-evidence sections and the duplicate structured seed, while account-candidate/contradiction classification refers back to canonical observations by index. The bounded connected-field index remains because it is the current private UI navigation contract; arbitrary provider details cannot flow through that projection. ADR 0042 records the decision.
+
+PR #74 closes the next converged-report duplication defect. Live M5 evaluations no longer copy candidate source names or source locators already owned by canonical node observations. New evaluations retain `candidate_node` plus `candidate_observation_index`; the private UI resolves those references while retaining read-only compatibility for older retained cases. ADR 0043 records the decision.
 
 The document-review path has a complete server-owned backend chain:
 
@@ -107,7 +109,7 @@ PR #68 adds a cross-layer closure guard derived from live declarations. Governed
 Remaining before V2-D closes:
 
 1. expose document review/run controls and existing source-state/evaluation summaries cleanly in the private operator UI;
-2. audit converged-report retention for unjustified payload/provenance duplication;
+2. continue the converged-report retention audit for duplicated node/edge/lead provenance, removing only copies that have no independent explanatory owner;
 3. decide whether the remaining bounded quick connected-field value/source-locator index should stay as an explicit operator projection or be replaced by canonical-observation references;
 4. close any remaining compatibility seam only where doing so does not break existing operator behavior or evidence semantics.
 
@@ -139,7 +141,7 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 The next product-facing block is the private operator workflow: wire reviewed-document state, explicit case execution, source-state/evaluation summaries and retained seed provenance into the UI without re-deriving backend authorization or evidence semantics in the browser.
 
-Backend closure can continue in bounded checks. Quick-report complete-payload duplication is closed after PR #72; the next backend review should focus on converged-report ownership/duplication, then the remaining bounded connected-field projection. Runtime ownership, zero-spend dependency consistency and the typed convergence source-run contract are already guarded.
+Backend closure can continue in bounded checks. Quick-report complete-payload duplication and converged M5 candidate-provenance duplication are closed after PRs #72 and #74. The next backend review should inspect node/edge/lead-decision provenance ownership and then the remaining bounded quick connected-field projection. Runtime ownership, zero-spend dependency consistency and the typed convergence source-run contract are already guarded.
 
 Only after V2-D closure should new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
