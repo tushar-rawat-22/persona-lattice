@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 from enum import Enum
-from typing import Literal
+from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ..evidence import IdentifierKind
 
@@ -31,8 +31,22 @@ class ReviewCandidate(BaseModel):
     source_artifact_id: UUID
     identifier_kind: IdentifierKind | None = None
     value: str
+    source_page: int | None = Field(default=None, ge=1)
+    source_start: int | None = Field(default=None, ge=0)
+    source_end: int | None = Field(default=None, ge=0)
     review_status: ReviewStatus = ReviewStatus.PENDING
     external_research_authorized: bool = False
+
+    @model_validator(mode="after")
+    def validate_source_span(self) -> Self:
+        if (self.source_start is None) != (self.source_end is None):
+            raise ValueError("Candidate source offsets must be supplied together.")
+        if self.source_start is not None and self.source_end is not None:
+            if self.source_end <= self.source_start:
+                raise ValueError("Candidate source_end must be greater than source_start.")
+        if self.source_page is not None and self.source_start is None:
+            raise ValueError("Candidate source_page requires source offsets.")
+        return self
 
 
 class ArtifactPreview(BaseModel):
