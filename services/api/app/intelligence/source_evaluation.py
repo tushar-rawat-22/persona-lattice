@@ -16,7 +16,11 @@ def _counter_payload(records: tuple[SourceRunRecord, ...]) -> dict[str, int]:
     completed = tuple(
         item
         for item in attempted
-        if item.state in {SourceRunState.EXECUTED, SourceRunState.NOT_FOUND}
+        if item.state in {
+            SourceRunState.EXECUTED,
+            SourceRunState.NOT_FOUND,
+            SourceRunState.WITHHELD,
+        }
     )
     failed = tuple(item for item in attempted if item.state is SourceRunState.UNAVAILABLE)
     unclassified_attempted = len(attempted) - len(completed) - len(failed)
@@ -29,7 +33,10 @@ def _counter_payload(records: tuple[SourceRunRecord, ...]) -> dict[str, int]:
         "unclassified_attempt_count": unclassified_attempted,
         "result_record_count": state_counts[SourceRunState.EXECUTED],
         "no_match_count": state_counts[SourceRunState.NOT_FOUND],
+        "withheld_count": state_counts[SourceRunState.WITHHELD],
         "observation_count": sum(item.observation_count for item in records),
+        "public_web_opt_out_count": reason_counts[SourceRunReason.PUBLIC_WEB_OPT_OUT],
+        "account_unavailable_count": reason_counts[SourceRunReason.ACCOUNT_UNAVAILABLE],
         "remote_rate_limit_count": reason_counts[SourceRunReason.REMOTE_RATE_LIMIT],
         "execution_failure_count": reason_counts[SourceRunReason.EXECUTION_FAILURE],
         "malformed_result_count": reason_counts[SourceRunReason.MALFORMED_RESULT],

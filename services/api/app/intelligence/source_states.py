@@ -12,6 +12,7 @@ class SourceRunState(StrEnum):
 
     EXECUTED = "executed"
     NOT_FOUND = "not_found"
+    WITHHELD = "withheld"
     QUEUED = "queued"
     REVIEW_REQUIRED = "review_required"
     DISPLAY_ONLY = "display_only"
@@ -25,6 +26,8 @@ class SourceRunReason(StrEnum):
 
     RESULTS_RETURNED = "results_returned"
     NO_MATCH = "no_match"
+    PUBLIC_WEB_OPT_OUT = "public_web_opt_out"
+    ACCOUNT_UNAVAILABLE = "account_unavailable"
     ELIGIBLE_QUEUED = "eligible_queued"
     REVIEW_GATE = "review_gate"
     DISPLAY_ONLY_POLICY = "display_only_policy"
@@ -41,6 +44,12 @@ class SourceRunReason(StrEnum):
 _ALLOWED_REASONS: dict[SourceRunState, frozenset[SourceRunReason]] = {
     SourceRunState.EXECUTED: frozenset({SourceRunReason.RESULTS_RETURNED}),
     SourceRunState.NOT_FOUND: frozenset({SourceRunReason.NO_MATCH}),
+    SourceRunState.WITHHELD: frozenset(
+        {
+            SourceRunReason.PUBLIC_WEB_OPT_OUT,
+            SourceRunReason.ACCOUNT_UNAVAILABLE,
+        }
+    ),
     SourceRunState.QUEUED: frozenset({SourceRunReason.ELIGIBLE_QUEUED}),
     SourceRunState.REVIEW_REQUIRED: frozenset({SourceRunReason.REVIEW_GATE}),
     SourceRunState.DISPLAY_ONLY: frozenset({SourceRunReason.DISPLAY_ONLY_POLICY}),
@@ -96,7 +105,11 @@ class SourceRunRecord:
     def execution_attempted(self) -> bool:
         """Whether the state proves that source execution reached an attempt."""
 
-        if self.state in {SourceRunState.EXECUTED, SourceRunState.NOT_FOUND}:
+        if self.state in {
+            SourceRunState.EXECUTED,
+            SourceRunState.NOT_FOUND,
+            SourceRunState.WITHHELD,
+        }:
             return True
         return self.reason in {
             SourceRunReason.EXECUTION_FAILURE,

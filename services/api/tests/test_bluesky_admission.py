@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
+from app.providers.base import ProviderStatus
 from app.providers.bluesky_admission import (
     BlueskyAdmissionError,
     BlueskyPublicWebOptOut,
@@ -86,9 +87,11 @@ def test_returned_handle_must_match_requested_handle() -> None:
         )
 
 
-def test_bluesky_stays_non_executable_until_the_network_adapter_is_reviewed() -> None:
+def test_bluesky_stays_non_executable_until_atomic_activation() -> None:
     source = SOURCE_BY_NAME["bluesky_public_profile"]
+    descriptor = PROVIDER_BY_NAME["bluesky_public_profile"]
+
     assert source.status is SourceStatus.PLANNED
     assert source.source_policy_reviewed is False
     assert source.recursive_eligible is False
-    assert "bluesky_public_profile" not in PROVIDER_BY_NAME
+    assert descriptor.status == ProviderStatus.PLANNED.value

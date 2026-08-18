@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from ..providers.errors import (
+    ProviderAccountUnavailableError,
     ProviderAuthError,
     ProviderExecutionError,
     ProviderPolicyError,
+    ProviderPublicWebOptOutError,
     ProviderRateBudgetExceeded,
     ProviderRemoteRateLimitError,
     ProviderResponseTooLarge,
@@ -65,6 +67,27 @@ def source_execution_failure_record(
             if remote_rate_limited
             else SourceRunReason.EXECUTION_FAILURE
         ),
+    )
+
+
+def source_withheld_record(
+    *,
+    source_name: str,
+    lead_kind: LeadKind,
+    reason: SourceRunReason,
+) -> SourceRunRecord:
+    """Record a completed provider attempt that intentionally yields no evidence."""
+
+    if reason not in {
+        SourceRunReason.PUBLIC_WEB_OPT_OUT,
+        SourceRunReason.ACCOUNT_UNAVAILABLE,
+    }:
+        raise ValueError("Withheld source runs require a neutral withheld reason.")
+    return SourceRunRecord(
+        source_name=source_name,
+        lead_kind=lead_kind,
+        state=SourceRunState.WITHHELD,
+        reason=reason,
     )
 
 
@@ -169,6 +192,18 @@ def source_provider_exception_record(
         return source_credential_not_configured_record(
             source_name=source_name,
             lead_kind=lead_kind,
+        )
+    if isinstance(exc, ProviderPublicWebOptOutError):
+        return source_withheld_record(
+            source_name=source_name,
+            lead_kind=lead_kind,
+            reason=SourceRunReason.PUBLIC_WEB_OPT_OUT,
+        )
+    if isinstance(exc, ProviderAccountUnavailableError):
+        return source_withheld_record(
+            source_name=source_name,
+            lead_kind=lead_kind,
+            reason=SourceRunReason.ACCOUNT_UNAVAILABLE,
         )
     if isinstance(exc, ProviderResultValidationError):
         return source_malformed_result_record(source_name=source_name, lead_kind=lead_kind)

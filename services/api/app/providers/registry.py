@@ -215,6 +215,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="bluesky_public_profile",
+        capability="public_profile_enrichment",
+        status=ProviderStatus.PLANNED.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Reviewed unauthenticated Bluesky public AppView profile adapter; remains "
+            "non-executable until catalog/binding/runtime activation is atomic."
+        ),
+        version="app.bsky.actor.getProfile",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=USERNAME_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=64 * 1024,
+        max_concurrency=2,
+        rate_limit=30,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="whatsmyname",
         capability="username_dataset",
         status=ProviderStatus.REVIEW_REQUIRED.value,
