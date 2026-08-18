@@ -19,6 +19,8 @@ They no longer copy `candidate_source` or `candidate_source_locator`.
 
 The ephemeral M1-M5 graph may still use the full source and locator while evaluating evidence. This decision changes only retained report ownership; it does not change provider execution or correlation semantics.
 
+The private operator UI resolves new evaluations through the canonical node observation. It keeps read-only support for the legacy source/source-locator fields so already-retained cases remain readable until they expire or are deleted; new backend reports do not emit those duplicate fields.
+
 ## Consequences
 
 Positive:
@@ -26,12 +28,14 @@ Positive:
 - complete provider provenance has one retained owner in the canonical node observation;
 - M5 retains a deterministic reference without copying the locator;
 - an arbitrary provider detail and a candidate locator can be regression-tested as single-copy retained values;
-- deletion/redaction ownership is clearer.
+- deletion/redaction ownership is clearer;
+- old retained cases remain usable without rewriting historical JSON.
 
 Costs:
 
 - consumers that want the candidate source or locator must resolve `candidate_node` plus `candidate_observation_index` against the canonical node observation;
-- observation order within a retained node is therefore part of the report reference contract.
+- observation order within a retained node is therefore part of the report reference contract;
+- the UI temporarily understands both the new reference form and the older retained representation.
 
 ## Boundaries
 
