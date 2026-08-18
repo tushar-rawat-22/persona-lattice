@@ -9,9 +9,8 @@ from .research import QuickResearchReport
 @dataclass(frozen=True, slots=True)
 class ConnectedIdentifier:
     kind: str
-    value: str
-    source: str
-    source_locator: str
+    observation_index: int
+    detail_field: str
     status: str = "observed_public_field"
 
 
@@ -24,21 +23,21 @@ def _text(value: object) -> str | None:
     return text or None
 
 
-def _connected_identifiers(report: QuickResearchReport) -> list[dict[str, str]]:
+def _connected_identifiers(report: QuickResearchReport) -> list[dict[str, object]]:
     connected: list[ConnectedIdentifier] = []
     seen: set[tuple[str, str]] = set()
 
-    for observation in report.observations:
+    for observation_index, observation in enumerate(report.observations):
         details = observation.details
         candidates = (
-            ("email", details.get("email")),
-            ("username", details.get("twitter_username")),
-            ("url", details.get("blog")),
-            ("location_claim", details.get("location")),
-            ("organization_claim", details.get("company")),
+            ("email", "email"),
+            ("username", "twitter_username"),
+            ("url", "blog"),
+            ("location_claim", "location"),
+            ("organization_claim", "company"),
         )
-        for kind, raw in candidates:
-            value = _text(raw)
+        for kind, detail_field in candidates:
+            value = _text(details.get(detail_field))
             if value is None:
                 continue
             key = (kind, value.casefold())
@@ -48,18 +47,16 @@ def _connected_identifiers(report: QuickResearchReport) -> list[dict[str, str]]:
             connected.append(
                 ConnectedIdentifier(
                     kind=kind,
-                    value=value,
-                    source=observation.source,
-                    source_locator=observation.source_locator,
+                    observation_index=observation_index,
+                    detail_field=detail_field,
                 )
             )
 
     return [
         {
             "kind": item.kind,
-            "value": item.value,
-            "source": item.source,
-            "source_locator": item.source_locator,
+            "observation_index": item.observation_index,
+            "detail_field": item.detail_field,
             "status": item.status,
         }
         for item in connected
@@ -100,50 +97,35 @@ def _coverage_gaps(report: QuickResearchReport) -> list[str]:
 
 
 def build_structured_report(report: QuickResearchReport) -> dict[str, object]:
-    source_evidence = [
-        {
-            "source": observation.source,
-            "source_locator": observation.source_locator,
-            "summary": observation.summary,
-            "details": dict(observation.details),
-        }
-        for observation in report.observations
-    ]
-    public_accounts = [
-        item
-        for item in source_evidence
-        if item["details"].get("account_candidate") is True
-    ]
-    contradictions = [
-        item
-        for item in source_evidence
-        if item["details"].get("contradiction") is True
-        or item["details"].get("account_state") == "illegal"
-    ]
     connected = _connected_identifiers(report)
+    public_account_indexes = [
+        index
+        for index, observation in enumerate(report.observations)
+        if observation.details.get("account_candidate") is True
+    ]
+    contradiction_indexes = [
+        index
+        for index, observation in enumerate(report.observations)
+        if observation.details.get("contradiction") is True
+        or observation.details.get("account_state") == "illegal"
+    ]
     source_names = sorted({observation.source for observation in report.observations})
 
     return {
-        "report_version": "private-evidence-report-v1",
-        "seed": {
-            "kind": report.kind.value,
-            "normalized_value": report.normalized_value,
-        },
+        "report_version": "private-evidence-report-v2",
         "executive_summary": {
             "observation_count": len(report.observations),
             "source_count": len(source_names),
             "sources": source_names,
             "connected_identifier_count": len(connected),
-            "public_account_candidate_count": len(public_accounts),
+            "public_account_candidate_count": len(public_account_indexes),
             "identity_probability": None,
             "identity_claim": False,
             "interpretation": "Evidence report only. PersonaLattice does not assert that candidate accounts belong to the same person without corroborating evidence.",
         },
         "connected_identifiers": connected,
-        "public_account_candidates": public_accounts,
-        "contradictions": contradictions,
-        "source_evidence": source_evidence,
-        "warnings": list(report.warnings),
+        "public_account_candidate_observation_indexes": public_account_indexes,
+        "contradiction_observation_indexes": contradiction_indexes,
         "coverage_gaps": _coverage_gaps(report),
-        "provenance_rule": "Every displayed fact must remain attributable to its source locator; absent evidence is reported as unknown rather than inferred.",
+        "provenance_rule": "Provider observations are the canonical retained evidence. Structured report sections reference those observations instead of copying evidence payloads or source locators.",
     }
