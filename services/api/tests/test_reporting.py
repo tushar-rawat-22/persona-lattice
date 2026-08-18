@@ -41,8 +41,18 @@ def test_structured_username_report_keeps_full_evidence_out_of_projection() -> N
         "location_claim",
         "organization_claim",
     }
-    assert all(item["source"] == "github_public_api" for item in connected)
-    assert all(item["source_locator"] == "https://github.com/synthetic-user" for item in connected)
+    assert {item["observation_index"] for item in connected} == {0}
+    assert {item["detail_field"] for item in connected} == {
+        "email",
+        "twitter_username",
+        "blog",
+        "location",
+        "company",
+    }
+    assert all(item["status"] == "observed_public_field" for item in connected)
+    assert all("value" not in item for item in connected)
+    assert all("source" not in item for item in connected)
+    assert all("source_locator" not in item for item in connected)
     assert result["public_account_candidate_observation_indexes"] == [0]
     assert result["contradiction_observation_indexes"] == []
     assert "source_evidence" not in result
