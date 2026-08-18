@@ -45,13 +45,19 @@ _ALLOWED_REASONS: dict[SourceRunState, frozenset[SourceRunReason]] = {
     SourceRunState.EXECUTED: frozenset({SourceRunReason.RESULTS_RETURNED}),
     SourceRunState.NOT_FOUND: frozenset({SourceRunReason.NO_MATCH}),
     SourceRunState.WITHHELD: frozenset(
-        {SourceRunReason.PUBLIC_WEB_OPT_OUT, SourceRunReason.ACCOUNT_UNAVAILABLE}
+        {
+            SourceRunReason.PUBLIC_WEB_OPT_OUT,
+            SourceRunReason.ACCOUNT_UNAVAILABLE,
+        }
     ),
     SourceRunState.QUEUED: frozenset({SourceRunReason.ELIGIBLE_QUEUED}),
     SourceRunState.REVIEW_REQUIRED: frozenset({SourceRunReason.REVIEW_GATE}),
     SourceRunState.DISPLAY_ONLY: frozenset({SourceRunReason.DISPLAY_ONLY_POLICY}),
     SourceRunState.BLOCKED: frozenset(
-        {SourceRunReason.BLOCKED_POLICY, SourceRunReason.PROVIDER_POLICY}
+        {
+            SourceRunReason.BLOCKED_POLICY,
+            SourceRunReason.PROVIDER_POLICY,
+        }
     ),
     SourceRunState.UNAVAILABLE: frozenset(
         {
@@ -68,7 +74,12 @@ _ALLOWED_REASONS: dict[SourceRunState, frozenset[SourceRunReason]] = {
 
 @dataclass(frozen=True, slots=True)
 class SourceRunRecord:
-    """Privacy-bounded report record for source scheduling/execution state."""
+    """Privacy-bounded report record for source scheduling/execution state.
+
+    This contract stores state metadata only. Lead values and exact source
+    locators remain in their existing lead/Observation records so the report does
+    not create another copy of personal identifiers or provenance URLs.
+    """
 
     source_name: str
     lead_kind: LeadKind
@@ -83,6 +94,7 @@ class SourceRunRecord:
             raise ValueError("Source run reason is inconsistent with its state.")
         if self.observation_count < 0:
             raise ValueError("Source run observation_count cannot be negative.")
+
         if self.state is SourceRunState.EXECUTED:
             if self.observation_count < 1:
                 raise ValueError("Executed source runs require at least one observation.")
@@ -93,7 +105,11 @@ class SourceRunRecord:
     def execution_attempted(self) -> bool:
         """Whether the state proves that source execution reached an attempt."""
 
-        if self.state in {SourceRunState.EXECUTED, SourceRunState.NOT_FOUND, SourceRunState.WITHHELD}:
+        if self.state in {
+            SourceRunState.EXECUTED,
+            SourceRunState.NOT_FOUND,
+            SourceRunState.WITHHELD,
+        }:
             return True
         return self.reason in {
             SourceRunReason.EXECUTION_FAILURE,
