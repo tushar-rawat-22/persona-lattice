@@ -5,6 +5,7 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+PAID_RENDER_REFERENCE = REPO_ROOT / "deploy" / "render-paid.yaml"
 
 
 def _service_by_name(blueprint: dict[str, object], name: str) -> dict[str, object]:
@@ -23,8 +24,13 @@ def _env_by_key(service: dict[str, object], key: str) -> dict[str, object]:
     return matches[0]
 
 
-def test_render_blueprint_keeps_research_api_private() -> None:
-    blueprint = yaml.safe_load((REPO_ROOT / "render.yaml").read_text(encoding="utf-8"))
+def test_zero_spend_baseline_has_no_default_paid_render_blueprint() -> None:
+    assert not (REPO_ROOT / "render.yaml").exists()
+    assert PAID_RENDER_REFERENCE.is_file()
+
+
+def test_optional_paid_render_reference_keeps_research_api_private() -> None:
+    blueprint = yaml.safe_load(PAID_RENDER_REFERENCE.read_text(encoding="utf-8"))
     assert isinstance(blueprint, dict)
 
     api = _service_by_name(blueprint, "personalattice-api")
