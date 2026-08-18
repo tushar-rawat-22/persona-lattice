@@ -68,8 +68,8 @@ The private V1 implementation includes:
   research seeds, provider payloads or session secrets;
 - GitHub CI on Python 3.11 and 3.13 plus Ruff, `npm ci`, lint, strict TypeScript
   and production Next.js build;
-- a Render Blueprint for the API, persistent case disk and public Next.js web
-  service, with secrets supplied outside Git.
+- a zero-spend local operating path that requires no paid hosting or database;
+- an optional paid Render reference topology kept outside the repository root.
 
 ## Evidence and safety rules
 
@@ -87,15 +87,20 @@ The private V1 implementation includes:
 - Regulated employment, housing, credit and insurance eligibility decisions are
   outside the product boundary.
 
-## Optional public-web discovery
+## Zero-spend baseline
 
-Broad exact-match public web discovery is optional. Set `BRAVE_SEARCH_API_KEY`
-server-side to enable the reviewed Brave Search API adapter. Search result pages
-are not automatically fetched; returned index metadata remains discovery
-evidence and never becomes an identity claim by itself.
+PersonaLattice's default operating path is local and does not require paid APIs,
+hosting, databases, proxies or enrichment. See `docs/ZERO_SPEND_RUNBOOK.md` for
+the exact setup.
 
-Without this secret, PersonaLattice still runs the local/public-profile/provider
-research paths and simply omits licensed web-index discovery.
+Broad exact-match public web discovery through Brave is optional. Set
+`BRAVE_SEARCH_API_KEY` server-side only if that metered integration is
+deliberately enabled. Without it, PersonaLattice continues to run its other
+local and public-source research paths.
+
+The old paid Render topology is retained only as an explicit reference at
+`deploy/render-paid.yaml`. It is not the default deployment contract and is not
+required for the product to function.
 
 ## Repository map
 
@@ -107,8 +112,8 @@ services/api/app/correlation/     deterministic M5 evidence-strength engine
 services/api/app/convergence.py   bounded public-evidence pivot graph
 services/api/app/live_m5.py       live evidence admission into M5 semantics
 services/api/app/public_search.py optional licensed public-index discovery
-docs/                             architecture, roadmap and decisions
-render.yaml                       Render API + web deployment Blueprint
+docs/                             architecture, runbooks, roadmap and decisions
+deploy/render-paid.yaml           optional paid Render reference topology
 THIRD_PARTY.md                    license/integration boundary
 SECURITY.md                       sensitive-data handling rules
 ```
@@ -134,14 +139,16 @@ npm run dev
 
 Open `http://127.0.0.1:3000`.
 
-## Deployment secrets
+For the private one-admin workflow, follow `docs/ZERO_SPEND_RUNBOOK.md`; it covers
+the local admin hash, cookie mode and data paths without putting secrets in Git.
 
-The Render Blueprint prompts for sensitive values instead of storing them in the
-repository:
+## Optional deployment secrets
+
+Hosted or optional integrations may require server-side configuration such as:
 
 - `PERSONALATTICE_ADMIN_USERNAME`
 - `PERSONALATTICE_ADMIN_PASSWORD_HASH`
-- `BRAVE_SEARCH_API_KEY` (optional)
+- `BRAVE_SEARCH_API_KEY` (optional and not part of the zero-spend baseline)
 
 The password itself is never stored in Git; the API expects an Argon2 password
 hash.
