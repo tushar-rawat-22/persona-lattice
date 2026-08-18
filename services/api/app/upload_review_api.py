@@ -61,13 +61,16 @@ def _state_response(candidate: ReviewCandidate) -> UploadReviewStateResponse:
 
 
 def _audit_details(candidate: ReviewCandidate) -> dict[str, object]:
+    identifier_kind = (
+        candidate.identifier_kind.value if candidate.identifier_kind is not None else None
+    )
     return {
         "candidate_type": candidate.candidate_type.value,
-        "identifier_kind": candidate.identifier_kind.value if candidate.identifier_kind else None,
+        "identifier_kind": identifier_kind,
     }
 
 
-def _candidate_not_found(exc: UploadReviewCandidateNotFoundError) -> HTTPException:
+def _candidate_not_found() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Upload review candidate was not found or has expired.",
@@ -86,7 +89,7 @@ def confirm_upload_review_candidate(
     try:
         candidate = confirm_stored_candidate(artifact_id, candidate_id)
     except UploadReviewCandidateNotFoundError as exc:
-        raise _candidate_not_found(exc) from exc
+        raise _candidate_not_found() from exc
     AUDIT_STORE.record("file.review.confirm", details=_audit_details(candidate))
     return _state_response(candidate)
 
@@ -103,7 +106,7 @@ def reject_upload_review_candidate(
     try:
         candidate = reject_stored_candidate(artifact_id, candidate_id)
     except UploadReviewCandidateNotFoundError as exc:
-        raise _candidate_not_found(exc) from exc
+        raise _candidate_not_found() from exc
     AUDIT_STORE.record("file.review.reject", details=_audit_details(candidate))
     return _state_response(candidate)
 
@@ -120,7 +123,7 @@ def reopen_upload_review_candidate(
     try:
         candidate = reopen_stored_candidate(artifact_id, candidate_id)
     except UploadReviewCandidateNotFoundError as exc:
-        raise _candidate_not_found(exc) from exc
+        raise _candidate_not_found() from exc
     AUDIT_STORE.record("file.review.reopen", details=_audit_details(candidate))
     return _state_response(candidate)
 
@@ -137,7 +140,7 @@ def promote_upload_review_candidate(
     try:
         lead = promote_stored_candidate(artifact_id, candidate_id)
     except UploadReviewCandidateNotFoundError as exc:
-        raise _candidate_not_found(exc) from exc
+        raise _candidate_not_found() from exc
     except CandidateReviewError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
