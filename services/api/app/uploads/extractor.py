@@ -8,6 +8,7 @@ from multiprocessing import get_context
 from multiprocessing.connection import Connection
 import warnings
 
+from .contracts import PageTextSpan
 from .policy import (
     EXTRACTION_CPU_SECONDS,
     EXTRACTION_MEMORY_BYTES,
@@ -41,6 +42,31 @@ class ExtractionLimits:
 class ExtractionResult:
     text: str
     method: str
+    page_spans: tuple[PageTextSpan, ...] = ()
+
+
+def _flatten_pdf_page_texts(page_texts: list[str]) -> tuple[str, tuple[PageTextSpan, ...]]:
+    """Flatten PDF pages with one separator while preserving exact page intervals."""
+    pieces: list[str] = []
+    spans: list[PageTextSpan] = []
+    cursor = 0
+
+    for page_number, page_text in enumerate(page_texts, start=1):
+        if page_number > 1:
+            pieces.append("\n")
+            cursor += 1
+        start = cursor
+        pieces.append(page_text)
+        cursor += len(page_text)
+        spans.append(
+            PageTextSpan(
+                page_number=page_number,
+                source_start=start,
+                source_end=cursor,
+            )
+        )
+
+    return "".join(pieces), tuple(spans)
 
 
 def _apply_resource_limits(limits: ExtractionLimits) -> None:
@@ -214,8 +240,8 @@ def _extract_text(data: bytes, extension: str, limits: ExtractionLimits) -> Extr
                 "The PDF has too many pages for this extraction boundary.",
             )
 
-        pieces: list[str] = []
-        total_chars = 0
+        page_texts: list[str] = []
+        flattened_chars = 0
 
         for page in reader.pages:
             contents = page.get_contents()
@@ -228,15 +254,16 @@ def _extract_text(data: bytes, extension: str, limits: ExtractionLimits) -> Extr
                     )
 
             page_text = page.extract_text() or ""
-            total_chars += len(page_text)
-            if total_chars > limits.max_chars:
+            flattened_chars += len(page_text) + (1 if page_texts else 0)
+            if flattened_chars > limits.max_chars:
                 raise ExtractionError(
                     "text_output_limit",
                     "Extracted text exceeds the configured output limit.",
                 )
-            pieces.append(page_text)
+            page_texts.append(page_text)
 
-        return ExtractionResult(text="\n".join(pieces), method="pypdf_text")
+        text, page_spans = _flatten_pdf_page_texts(page_texts)
+        return ExtractionResult(text=text, method="pypdf_text", page_spans=page_spans)
 
     if extension in {".jpg", ".jpeg", ".png"}:
         metadata = _image_metadata(data, limits)
@@ -260,7 +287,16 @@ def _worker(
     _apply_resource_limits(limits)
     try:
         result = _extract_text(data, extension, limits)
-        connection.send(("ok", {"text": result.text, "method": result.method}))
+        connection.send(
+            (
+                "ok",
+                {
+                    "text": result.text,
+                    "method": result.method,
+                    "page_spans": [span.model_dump() for span in result.page_spans],
+                },
+            )
+        )
     except ExtractionError as exc:
         connection.send(("error", {"code": exc.code, "message": exc.public_message}))
     except Exception:
@@ -320,7 +356,11 @@ def extract_text_safely(
                 "extractor_failure",
                 "The evidence extractor returned an invalid result.",
             )
-        return ExtractionResult(text=payload["text"], method=payload["method"])
+        return ExtractionResult(
+            text=payload["text"],
+            method=payload["method"],
+            page_spans=tuple(PageTextSpan(**item) for item in payload.get("page_spans", [])),
+        )
     finally:
         parent_connection.close()
         if process.is_alive():
