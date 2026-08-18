@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { QuickResearch } from "./quick-research";
+import { UploadReviewWorkflow } from "./upload-review-workflow";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -278,27 +279,14 @@ export default function AdminConsole() {
           <form className="loginForm" onSubmit={login}>
             <label>
               Admin username
-              <input
-                autoComplete="username"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                required
-              />
+              <input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required />
             </label>
             <label>
               Password
-              <input
-                autoComplete="current-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-              />
+              <input autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
             </label>
             {authError && <p className="error">{authError}</p>}
-            <button type="submit" disabled={authBusy}>
-              {authBusy ? "Authenticating…" : "Unlock operator console"}
-            </button>
+            <button type="submit" disabled={authBusy}>{authBusy ? "Authenticating…" : "Unlock operator console"}</button>
           </form>
           <Link className="textLink" href="/">Return to public preview</Link>
         </section>
@@ -394,17 +382,25 @@ export default function AdminConsole() {
                   ))}
                 </div>
                 {fileResult && (
-                  <div className="providerList">
-                    {fileResult.artifacts.map((artifact) => (
-                      <div className="provider" key={artifact.artifact_id}>
-                        <div>
-                          <strong>{artifact.original_name}</strong>
-                          <span>{artifact.detected_media_type} · {artifact.extraction_method} · {artifact.extracted_chars} metadata/text chars · {artifact.candidates.length} review candidates</span>
+                  <>
+                    <div className="providerList">
+                      {fileResult.artifacts.map((artifact) => (
+                        <div className="provider" key={artifact.artifact_id}>
+                          <div>
+                            <strong>{artifact.original_name}</strong>
+                            <span>{artifact.detected_media_type} · {artifact.extraction_method} · {artifact.extracted_chars} metadata/text chars · {artifact.candidates.length} review candidates</span>
+                          </div>
+                          <div className="tags"><em>untrusted content</em><em>no automatic external query</em></div>
                         </div>
-                        <div className="tags"><em>untrusted content</em><em>no automatic external query</em></div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                    <UploadReviewWorkflow
+                      artifacts={fileResult.artifacts}
+                      csrfToken={csrfToken}
+                      purpose={purpose}
+                      consentAcknowledged={consent}
+                    />
+                  </>
                 )}
               </>
             )}
