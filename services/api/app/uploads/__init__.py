@@ -12,6 +12,7 @@ from .contracts import (
     CandidateOrigin,
     CandidateType,
     FileBatchPreview,
+    PageTextSpan,
     ReviewCandidate,
     ReviewStatus,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "MAX_FILES",
     "MAX_REQUEST_BYTES",
     "MAX_TOTAL_BYTES",
+    "PageTextSpan",
     "ReviewCandidate",
     "ReviewStatus",
     "UploadBatchError",
