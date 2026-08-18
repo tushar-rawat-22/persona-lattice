@@ -12,10 +12,10 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main before the M10 cohort block: `f38743a021ce02c21c859036d14745bc3e6f46a9`
-- PR #92 exact tested implementation head: `ff76e7328b94429940fc15a508fa497b3213c6f0`
-- PR #92 CI: run `32177268786`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
-- PR #92 merge: `68cc880fbe26a092bd590b06da7d22b2d412367f`
+- Main before the Bluesky admission block: `b15fb8f9cc9f450e8fb5b82ba74414c4b4e7618f`
+- PR #94 exact tested head: `da52f06d15926000f287691d5342a98e5b265ffd`
+- PR #94 CI: run `32182933798`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
+- PR #94 merge: `2dc1b84fb50808168d52b76c1a9530e0be378ac1`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend operating runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -30,35 +30,31 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-B deterministic frontier: complete, PR #21.
 - V2-C source capability registry/planner: complete, PR #22.
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
-- M10: deterministic single-fixture evaluation plus labelled cohort comparison now exist; broader representative cohorts, replay/ablation and defensible threshold analysis remain before any recursion/threshold change.
+- M10: deterministic single-fixture evaluation plus labelled cohort comparison exist; broader representative cohorts, replay/ablation and defensible threshold analysis remain before any recursion/threshold change.
+- Post-V2-D source expansion: Bluesky admission preflight complete; Bluesky network execution remains disabled.
 
-## Latest block — M10 labelled cohort foundation
+## Latest block — Bluesky public-web admission preflight
 
-PR #92 adds `services/api/app/intelligence/m10_cohort.py`, regression coverage in `services/api/tests/test_m10_labelled_cohort.py`, ADR 0052 and the matching roadmap update.
+PR #94 adds `services/api/app/providers/bluesky_admission.py`, regression coverage in `services/api/tests/test_bluesky_admission.py`, and ADR 0053.
 
-The cohort layer does not implement another scheduler. Every fixture still runs through `evaluate_graph_limit_fixture()`, which uses the production `LeadFrontier`. It aggregates deterministic counts across independent fixtures and reports candidate-minus-baseline deltas for graph size/depth, duplicate suppression, provider failures, budget stops and labelled relevant/wrong pivots.
+This block intentionally does **not** register, bind or execute a Bluesky provider. `bluesky_public_profile` remains `PLANNED`, `source_policy_reviewed=False` and `recursive_eligible=False`.
 
-The initial regression cohort has three intentionally different graph shapes:
+The admission contract closes two source-specific gaps before activation:
 
-1. a depth-limited chain;
-2. duplicate-heavy output;
-3. a provider-failure path.
+1. PersonaLattice's generic `username` lead is broader than an AT Protocol handle. Only real-world DNS-shaped AT handles are admissible for a future Bluesky call. Generic usernames, `@`-prefixed UI forms, malformed handles and reserved/non-public TLDs fail locally before network execution.
+2. Bluesky's `!no-unauthenticated` label is a public-web opt-out. It is now represented by a distinct local `BlueskyPublicWebOptOut` decision in the admission layer. It must not later be collapsed into `not_found` or provider failure.
 
-Under that controlled cohort, moving from depth 2 / 12 nodes to depth 3 / 12 nodes removes one depth budget stop and admits one extra node, but the extra admitted pivot is labelled wrong and adds no relevant pivot. This is a regression fixture result, not population evidence; it reinforces that larger recursion is not automatically better.
+The reviewed future retained field set is intentionally small: DID, normalized handle and optional display name, plus explicit account-candidate/non-identity/public-visibility flags. Description, avatar, follower/follow/post counts, viewer state and arbitrary response fields are excluded.
 
-The cohort layer is deliberately count-only. It does not publish reliability percentages, confidence intervals, identity probability or a production-limit recommendation. Empty cohorts, duplicate fixture names and duplicate scenario names fail closed, and underlying fixture-truth validation remains authoritative.
+Official Bluesky/AT Protocol material was rechecked on 2026-08-19: `app.bsky.actor.getProfile` is public/unauthenticated; public AppView calls should prefer `https://public.api.bsky.app`; AT handles use DNS-hostname syntax and lowercase normalization; `!no-unauthenticated` means content is unavailable to logged-out clients that respect the label; current Bluesky terms remain the governing service terms. Recheck again at activation rather than treating this checkpoint as permanent policy authority.
 
-Production recursion remains **depth 2 / 12 nodes**.
+## M10 labelled cohort checkpoint
 
-## Source expansion review checkpoint
+PR #92 added `services/api/app/intelligence/m10_cohort.py` and ADR 0052. Cohort fixtures run through the production `LeadFrontier` rather than a second scheduler and aggregate deterministic graph-growth, duplicate, provider-failure, budget-stop and labelled relevant/wrong-pivot counts.
 
-Bluesky was re-reviewed from current official sources during the PR #92 block but was **not activated**.
+The current controlled cohort contains a depth-limited chain, duplicate-heavy output and a provider-failure path. Moving that fixture cohort from depth 2 / 12 nodes to depth 3 / 12 nodes admits one extra node, but the extra admitted pivot is labelled wrong and adds no relevant pivot. This is regression-fixture evidence, not population evidence.
 
-Current official behavior supports a public unauthenticated AppView profile lookup and makes the public AppView suitable for public-web clients. However, Bluesky's public-web guidance also requires respecting the profile `!no-unauthenticated` self-label. A naive adapter that accepts every returned public profile would therefore violate the intended public-web boundary.
-
-Bluesky remains `PLANNED`, `source_policy_reviewed=False`, `recursive_eligible=False` until an adapter explicitly enforces that opt-out and has deterministic success/not-found/malformed/rate-limit/unavailable/opt-out fixtures. Do not change catalog/binding/registry/runtime membership merely because the endpoint is public.
-
-Recheck official Bluesky documentation/terms again at activation time rather than treating this checkpoint as permanent pricing/policy authority.
+Production recursion therefore remains **depth 2 / 12 nodes**.
 
 ## Permanent evidence semantics
 
@@ -89,6 +85,7 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - upload-review HTTP boundary: `services/api/app/upload_review_api.py`
 - reviewed-candidate case execution: `services/api/app/uploads/research_service.py`
 - governed provider execution: `services/api/app/providers`
+- Bluesky pre-network admission: `services/api/app/providers/bluesky_admission.py`
 - deterministic correlation: `services/api/app/correlation`
 - convergence: `services/api/app/convergence.py`
 - retained converged reference validation: `services/api/app/converged_report.py`
@@ -113,7 +110,7 @@ Catalog, current executable binding, provider registry and process-wide runtime 
 
 Retained source-run projections carry logical source name, lead kind, typed state/reason, observation count and execution/terminal flags plus deterministic aggregate/per-source counters. They do not duplicate identifier values, source locators, provider payloads, secrets, exception text or timing data.
 
-Critical distinctions:
+Critical current distinctions:
 
 - completed call with results → `executed / results_returned`;
 - completed call with zero results → `not_found / no_match`;
@@ -124,6 +121,8 @@ Critical distinctions:
 - remote rate limit / proven execution failure → unavailable, attempted;
 - returned malformed result → unavailable, attempted only when post-attempt phase is mechanically proven;
 - generic `ProviderValidationError` → no source-run record because its phase is ambiguous.
+
+Bluesky activation will require one additional truthful distinction: a returned `!no-unauthenticated` profile is an **attempted public-web opt-out**. The local admission type exists after PR #94, but the shared typed source-run vocabulary has not yet been extended. Do not fake this as not-found or provider failure to make activation easier.
 
 `source_provider_exception_record()` is the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state. Evaluation counters are descriptive counts, not provider reliability probabilities or identity-quality scores.
 
@@ -152,15 +151,24 @@ The chain is server-owned and explicit:
 - contextual name/organization/location remain non-autonomous;
 - public-search snippets do not become automatic identifier leads;
 - Brave remains optional and excluded from required zero-spend operation;
+- Bluesky remains non-executable after the admission preflight;
 - no identity probability or universal-account claims.
 
 ## Next gate
 
 Do not reopen V2-D architecture casually.
 
-The next source-expansion block can return to Bluesky, but activation must first make `!no-unauthenticated` enforcement a tested fail-closed adapter rule and recheck current official terms/quota/cost at that time. It still must enter through catalog + binding + registry + shared `ProviderRuntime` + typed source-state reporting + canonical evidence ownership. No hard-coded bypass in `research.py` is acceptable.
+The next bounded source-expansion block can implement the Bluesky network adapter, but it must do all activation work atomically:
 
-In parallel, M10 still needs broader labelled synthetic/consented cohorts across more lead kinds and source-yield/cost shapes, deterministic replay/factor ablations, and defensible labelled threshold analysis before any production recursion or M5-threshold change.
+1. call only the unauthenticated public `app.bsky.actor.getProfile` route on the reviewed public AppView host;
+2. preserve the PR #94 handle and field-admission contract;
+3. distinguish profile-not-found from suspension/deactivation, malformed output, remote rate limit and transient failure;
+4. extend the typed source-outcome vocabulary so `!no-unauthenticated` is an attempted public-web opt-out, not not-found and not a provider reliability failure;
+5. add deterministic success/not-found/opt-out/malformed/rate-limit/unavailable fixtures;
+6. move Bluesky from PLANNED to current execution only when catalog + binding + registry + process-wide `ProviderRuntime` + quick-research integration agree in the same PR;
+7. recheck current official terms/quota/cost immediately before activation.
+
+M10 still needs broader labelled synthetic/consented cohorts across more lead kinds and source-yield/cost shapes, deterministic replay/factor ablations, and defensible labelled threshold analysis before any production recursion or M5-threshold change.
 
 Production stays depth 2 / 12 nodes until that evidence exists.
 
