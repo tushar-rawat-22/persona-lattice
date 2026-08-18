@@ -85,6 +85,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         migration_note="Public user.info lookup executes through the shared ProviderRuntime.",
     ),
     SourceBinding(
+        source_name="bluesky_public_profile",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="bluesky_public_profile",
+        accepts=frozenset({LeadKind.USERNAME}),
+        migration_note=(
+            "Valid AT handles execute through the shared ProviderRuntime; ordinary usernames are "
+            "filtered as not applicable before provider execution."
+        ),
+    ),
+    SourceBinding(
         source_name="public_dns_infrastructure",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="public_dns_infrastructure",
