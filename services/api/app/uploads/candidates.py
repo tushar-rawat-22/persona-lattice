@@ -121,8 +121,6 @@ def confirm_candidate(
 ) -> ReviewCandidate:
     if not human_confirmed:
         raise CandidateReviewError("Human confirmation is required.")
-    if candidate.review_status is ReviewStatus.REJECTED:
-        raise CandidateReviewError("A rejected candidate must be reviewed again before confirmation.")
     return candidate.model_copy(
         update={
             "review_status": ReviewStatus.CONFIRMED,
