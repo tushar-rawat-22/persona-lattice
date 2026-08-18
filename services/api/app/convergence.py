@@ -141,15 +141,9 @@ def _pivot_reason(candidate: LeadCandidate) -> PivotReason:
 
 
 def _node_source_run_report(report: QuickResearchReport) -> dict[str, object]:
-    """Project typed source state when present without breaking legacy runners.
+    """Project the canonical typed source-run contract without compatibility inference."""
 
-    QuickResearchReport source-state population is being wired source-by-source.
-    Custom/test runners created before that contract may not expose `source_runs`;
-    those nodes receive an explicit empty projection rather than inferred states.
-    """
-
-    source_runs = getattr(report, "source_runs", ())
-    return build_source_run_report(source_runs)
+    return build_source_run_report(report.source_runs)
 
 
 def _node_payload(node: ResearchNode) -> dict[str, object]:
