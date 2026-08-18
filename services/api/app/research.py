@@ -199,7 +199,7 @@ async def _public_search(
     lead_kind: LeadKind,
     purpose: Purpose,
     consent_acknowledged: bool,
-) -> tuple[list[QuickObservation], str | None, SourceRunRecord]:
+) -> tuple[list[QuickObservation], str | None, SourceRunRecord | None]:
     if lookup is search_exact_public_mentions:
         if not public_search_configured():
             return (
@@ -235,11 +235,6 @@ async def _public_search(
                 lead_kind=lead_kind,
                 exc=exc,
             )
-            if source_run is None:
-                source_run = source_execution_failure_record(
-                    source_name="brave_public_web_index",
-                    lead_kind=lead_kind,
-                )
             warning = "Licensed public-web exact-match search was temporarily unavailable."
             if isinstance(exc, ProviderRateBudgetExceeded):
                 warning = "Licensed public-web exact-match search hit its local request budget."
@@ -659,7 +654,8 @@ async def _research_username(
         consent_acknowledged=consent_acknowledged,
     )
     observations.extend(search_observations)
-    source_runs.append(search_run)
+    if search_run is not None:
+        source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     return QuickResearchReport(
@@ -718,7 +714,8 @@ async def _research_phone(
         consent_acknowledged=consent_acknowledged,
     )
     observations.extend(search_observations)
-    source_runs.append(search_run)
+    if search_run is not None:
+        source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     return QuickResearchReport(
@@ -802,7 +799,8 @@ async def _research_email(
         consent_acknowledged=consent_acknowledged,
     )
     observations.extend(search_observations)
-    source_runs.append(search_run)
+    if search_run is not None:
+        source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     if len(observations) == 1:
@@ -889,7 +887,8 @@ async def _research_url(
         consent_acknowledged=consent_acknowledged,
     )
     observations.extend(search_observations)
-    source_runs.append(search_run)
+    if search_run is not None:
+        source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     return QuickResearchReport(
