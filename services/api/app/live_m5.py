@@ -28,6 +28,7 @@ from .research import QuickObservation, ResearchKind
 @dataclass(frozen=True, slots=True)
 class _Candidate:
     node: ResearchNode
+    observation_index: int
     quick: QuickObservation
     stored_observation_id: Any
     source_kind: ObservationSourceKind
@@ -47,9 +48,8 @@ def _source_kind(source: str) -> ObservationSourceKind:
 
 def _result_payload(result, *, candidate: _Candidate) -> dict[str, object]:
     return {
-        "candidate_source": candidate.quick.source,
-        "candidate_source_locator": candidate.quick.source_locator,
         "candidate_node": candidate.node.key,
+        "candidate_observation_index": candidate.observation_index,
         "outcome": result.outcome.value,
         "evidence_score": result.evidence_score,
         "calibration_status": result.calibration_status.value,
@@ -104,7 +104,7 @@ def evaluate_live_m5(report: ConvergedResearchReport) -> dict[str, object]:
         observation_count = 0
         for node in report.nodes:
             identifier = identifier_by_node[node.key]
-            for quick in node.report.observations:
+            for observation_index, quick in enumerate(node.report.observations):
                 payload = dict(quick.details)
                 payload.update(
                     {
@@ -132,6 +132,7 @@ def evaluate_live_m5(report: ConvergedResearchReport) -> dict[str, object]:
                     candidates.append(
                         _Candidate(
                             node=node,
+                            observation_index=observation_index,
                             quick=quick,
                             stored_observation_id=stored.id,
                             source_kind=source_kind,
