@@ -99,9 +99,13 @@ Source-run accounting remains phase-proven. Policy/configuration/local-budget st
 
 Completed source-state/report/evaluation work includes PRs #34-#48: typed source states and reasons, privacy-bounded projections, factual quick-research population, deterministic aggregate/per-source counters, a complete source-state fixture matrix, graph-growth/duplicate counters, label-gated wrong-pivot measurement and network-free graph-limit comparison through the real frontier scheduler.
 
+PR #56 adds the first document-candidate promotion contract. Rule-extracted username/email/phone/URL candidates now retain deterministic extracted-text character spans and can enter the typed lead path only after the existing explicit human-review authorization. Claims, pending/rejected candidates and non-executable identifier kinds remain non-executable. Promoted leads carry artifact/candidate/span provenance without copying uploaded text.
+
+The document path is not closed yet: PDF extraction currently flattens pages into one text string, so the system cannot truthfully claim page-level provenance. Page-span extraction must be implemented before a complete operator/API promotion workflow is exposed.
+
 Remaining before V2-D closes:
 
-1. finish document-candidate-to-reviewed-lead plumbing;
+1. add trustworthy PDF page-span provenance and finish reviewed-document operator/API wiring;
 2. expose source-state and evaluation summaries cleanly to the operator;
 3. run a final catalog/binding/runtime/report/privacy/zero-spend consistency review;
 4. close stale compatibility seams only where doing so does not break existing tests or operator behavior.
@@ -132,7 +136,7 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-Build the document-candidate-to-reviewed-lead boundary. Extracted document candidates must remain inert until an explicit review action promotes a supported candidate into the typed research-lead path, preserving file/page/offset provenance and preventing uploaded text from becoming execution authority.
+Add structured PDF page-span provenance to the bounded extractor and carry it into review candidates. Do not infer a page number from flattened text. Once page/offset provenance is mechanically known, expose the explicit reviewed-candidate promotion action to the operator without allowing uploaded text to become execution authority.
 
 After that, expose the existing source-state/evaluation summaries to the operator and run the final V2-D consistency review. Only then may new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
