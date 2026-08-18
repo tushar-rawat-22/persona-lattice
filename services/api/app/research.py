@@ -28,6 +28,7 @@ from .providers.errors import ProviderRateBudgetExceeded
 from .providers.github_public import fetch_github_public_profile
 from .providers.runtime import ProviderRuntime
 from .providers.shared_runtime import (
+    DEFAULT_BRAVE_PROVIDER,
     DEFAULT_CODEFORCES_PROVIDER,
     DEFAULT_DNS_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
@@ -177,21 +178,79 @@ def _public_search_observations(results: tuple[PublicSearchResult, ...]) -> list
     ]
 
 
+def _public_search_observations_from_provider(
+    items: tuple[ProviderObservationData, ...],
+) -> list[QuickObservation]:
+    return [
+        QuickObservation(
+            source="brave_public_web_index",
+            source_locator=item.source_locator,
+            summary=str(item.payload.get("title") or "Exact identifier mention in the public web index."),
+            details=dict(item.payload),
+        )
+        for item in items
+    ]
+
+
 async def _public_search(
     identifier: str,
     lookup: PublicSearchLookup,
     *,
     lead_kind: LeadKind,
-) -> tuple[list[QuickObservation], str | None, SourceRunRecord]:
-    if lookup is search_exact_public_mentions and not public_search_configured():
-        return (
-            [],
-            None,
-            source_optional_not_configured_record(
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> tuple[list[QuickObservation], str | None, SourceRunRecord | None]:
+    if lookup is search_exact_public_mentions:
+        if not public_search_configured():
+            return (
+                [],
+                None,
+                source_optional_not_configured_record(
+                    source_name="brave_public_web_index",
+                    lead_kind=lead_kind,
+                ),
+            )
+        subject_id = uuid4()
+        identifier_id = uuid4()
+        request = ExecutionRequest(
+            provider_name=DEFAULT_BRAVE_PROVIDER.descriptor.name,
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
+        )
+        try:
+            result = await DEFAULT_PROVIDER_RUNTIME.execute(
+                request=request,
+                query=ProviderQuery(
+                    subject_id=subject_id,
+                    identifier_id=identifier_id,
+                    identifier_kind=lead_kind.value,
+                    identifier_value=identifier,
+                ),
+            )
+        except Exception as exc:
+            source_run = _source_run_for_exception(
                 source_name="brave_public_web_index",
                 lead_kind=lead_kind,
+                exc=exc,
+            )
+            warning = "Licensed public-web exact-match search was temporarily unavailable."
+            if isinstance(exc, ProviderRateBudgetExceeded):
+                warning = "Licensed public-web exact-match search hit its local request budget."
+            return [], warning, source_run
+
+        observations = _public_search_observations_from_provider(result.observations)
+        return (
+            observations,
+            None,
+            source_result_record(
+                source_name="brave_public_web_index",
+                lead_kind=lead_kind,
+                observation_count=len(observations),
             ),
         )
+
     try:
         results = await lookup(identifier)
     except ProviderRateBudgetExceeded:
@@ -591,9 +650,12 @@ async def _research_username(
         normalized_value,
         public_search_lookup,
         lead_kind=LeadKind.USERNAME,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
     )
     observations.extend(search_observations)
-    source_runs.append(search_run)
+    if search_run is not None:
+        source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     return QuickResearchReport(
@@ -608,6 +670,8 @@ async def _research_username(
 async def _research_phone(
     normalized_value: str,
     *,
+    purpose: Purpose,
+    consent_acknowledged: bool,
     public_search_lookup: PublicSearchLookup = search_exact_public_mentions,
 ) -> QuickResearchReport:
     import phonenumbers
@@ -646,9 +710,12 @@ async def _research_phone(
         normalized_value,
         public_search_lookup,
         lead_kind=LeadKind.PHONE,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
     )
     observations.extend(search_observations)
-    source_runs.append(search_run)
+    if search_run is not None:
+        source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     return QuickResearchReport(
@@ -728,9 +795,12 @@ async def _research_email(
         normalized_value,
         public_search_lookup,
         lead_kind=LeadKind.EMAIL,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
     )
     observations.extend(search_observations)
-    source_runs.append(search_run)
+    if search_run is not None:
+        source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     if len(observations) == 1:
@@ -813,9 +883,12 @@ async def _research_url(
         normalized_value,
         public_search_lookup,
         lead_kind=LeadKind.URL,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
     )
     observations.extend(search_observations)
-    source_runs.append(search_run)
+    if search_run is not None:
+        source_runs.append(search_run)
     if search_warning:
         warnings.append(search_warning)
     return QuickResearchReport(
@@ -857,6 +930,8 @@ async def run_quick_research(
     if kind is ResearchKind.PHONE:
         return await _research_phone(
             normalized.normalized_value,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
             public_search_lookup=public_search_lookup,
         )
     if kind is ResearchKind.EMAIL:

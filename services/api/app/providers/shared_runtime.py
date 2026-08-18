@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+from .brave_search import BravePublicWebSearchProvider
 from .codeforces_public import CodeforcesPublicProfileProvider
 from .github_public import GitHubPublicProfileProvider
 from .gitlab_public import GitLabPublicProfileProvider
@@ -10,13 +11,13 @@ from .sherlock import SherlockProvider
 
 
 # Production quick-research providers share one process-wide runtime so provider
-# rate/concurrency state cannot fragment as individual sources migrate off the
-# frozen legacy research boundary.
+# rate/concurrency state cannot fragment across request paths.
 DEFAULT_SHERLOCK_PROVIDER = SherlockProvider()
 DEFAULT_GITHUB_PROVIDER = GitHubPublicProfileProvider()
 DEFAULT_GITLAB_PROVIDER = GitLabPublicProfileProvider()
 DEFAULT_CODEFORCES_PROVIDER = CodeforcesPublicProfileProvider()
 DEFAULT_DNS_PROVIDER = PublicDnsInfrastructureProvider()
+DEFAULT_BRAVE_PROVIDER = BravePublicWebSearchProvider()
 DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
     adapters=[
         DEFAULT_SHERLOCK_PROVIDER,
@@ -24,6 +25,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_GITLAB_PROVIDER,
         DEFAULT_CODEFORCES_PROVIDER,
         DEFAULT_DNS_PROVIDER,
+        DEFAULT_BRAVE_PROVIDER,
     ]
 )
 

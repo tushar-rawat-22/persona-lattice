@@ -28,6 +28,7 @@ PHONE_ONLY = frozenset({"phone"})
 USERNAME_ONLY = frozenset({"username"})
 USERNAME_EMAIL = frozenset({"username", "email"})
 URL_ONLY = frozenset({"url"})
+PUBLIC_SEARCH_IDENTIFIERS = frozenset({"username", "email", "phone", "url"})
 
 
 PROVIDERS: tuple[ProviderDescriptor, ...] = (
@@ -189,6 +190,28 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         max_response_bytes=16 * 1024,
         max_concurrency=2,
         rate_limit=30,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
+        name="brave_public_web_index",
+        capability="exact_public_web_search",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Optional metered Brave Web Search path for exact-identifier discovery only; "
+            "snippets remain discovery evidence and never become identity claims."
+        ),
+        version="web-search-v1",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=PUBLIC_SEARCH_IDENTIFIERS,
+        auth_mode=AuthMode.API_KEY,
+        secret_env="BRAVE_SEARCH_API_KEY",
+        max_attempts=1,
+        timeout_seconds=5.0,
+        max_response_bytes=256 * 1024,
+        max_concurrency=1,
+        rate_limit=10,
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(

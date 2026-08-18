@@ -39,7 +39,9 @@ class SourceBinding:
             raise ValueError("Only M3 governed-adapter bindings may declare provider_name.")
 
 
-_LEGACY_RESEARCH_ALLOWLIST = frozenset({"brave_public_web_index"})
+# V2-D has migrated every current network source behind ProviderRuntime. New code
+# must not reopen a legacy network execution path.
+_LEGACY_RESEARCH_ALLOWLIST = frozenset()
 _LOCAL_DETERMINISTIC_ALLOWLIST = frozenset({"local_normalization", "libphonenumber_metadata"})
 
 
@@ -91,11 +93,10 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
     ),
     SourceBinding(
         source_name="brave_public_web_index",
-        backend=SourceExecutionBackend.LEGACY_RESEARCH,
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="brave_public_web_index",
         accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.PHONE, LeadKind.URL}),
-        migration_note=(
-            "Keep optional metered search behind one governed runtime before adding more search sources."
-        ),
+        migration_note="Optional exact-match search executes through ProviderRuntime when configured.",
     ),
 )
 
