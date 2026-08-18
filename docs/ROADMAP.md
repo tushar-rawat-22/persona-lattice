@@ -33,7 +33,7 @@ The private product has one deployment-configured admin, Argon2 password verific
 
 Current live research sources include reviewed Sherlock, GitHub, GitLab, Codeforces, phone numbering-plan metadata and public DNS infrastructure metadata. Brave exact public-web search is optional when configured.
 
-Local HTTPS-tunnel acceptance proves the operator path. It is not a requirement to buy durable hosting; local/self-hosted operation remains the zero-spend baseline.
+Local HTTPS-tunnel acceptance proves the operator path. Local operation is the zero-spend baseline; paid hosting is optional and not required for the product to work. The previously reviewed paid Render topology is retained only at `deploy/render-paid.yaml`.
 
 ## M8 — privacy lifecycle and operations
 
@@ -47,7 +47,7 @@ Implemented:
 - secrets outside Git;
 - bounded request, concurrency, timeout and response limits.
 
-Remaining operational work is limited to backup/restore design if a persistent production store is introduced, plus provider behavior measurement before any optional metered dependency is treated as operationally important.
+Remaining operational work is limited to backup/restore design if a persistent hosted production store is introduced, plus provider behavior measurement before any optional metered dependency is treated as operationally important.
 
 ## M9 — evidence graph and report convergence
 
@@ -77,30 +77,31 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: implementation complete enough for final closure audit**
+**Status: complete — final audit closed after PR #89**
 
-Every currently executable network source is behind the governed runtime. The executable legacy network allowance is empty. Brave remains optional/metered; without `BRAVE_SEARCH_API_KEY` it is not attempted and the zero-spend path remains usable.
+Every currently executable network source is behind the governed runtime. The executable legacy-network allowance is empty. Brave remains optional/metered; without `BRAVE_SEARCH_API_KEY` it is not attempted and the zero-spend path remains usable.
+
+The final audit did not pass on first inspection. It found that the repository-root `render.yaml` still prescribed paid Render `starter` services and persistent storage even though the roadmap required a zero-spend baseline. PR #89 moved that topology to `deploy/render-paid.yaml`, established `docs/ZERO_SPEND_RUNBOOK.md` as the default operating contract, and added CI coverage preventing a paid root Blueprint from silently becoming the baseline again.
+
+PR #89 also closed an ownership-symmetry gap: every `ProviderStatus.DEVELOPMENT` provider must now correspond exactly to a current governed binding and process-wide runtime owner. ADR numbering is additionally checked for uniqueness and continuity. ADR 0050 records the deployment-authority correction; ADR 0051 records V2-D closure.
 
 Source-run accounting is phase-proven. Policy/configuration/local-budget stops are non-attempts; completed zero-result calls are `not_found`; remote failures and malformed returned results count as attempts only when that phase is mechanically known. Generic phase-ambiguous validation remains unclassified rather than being guessed into failure metrics.
 
-PR #85 closed the retained-report consistency gap: quick retained cases persist the same typed source-run projection used by converged nodes, and that projection carries deterministic source-evaluation counters derived from the same records. The projection remains metadata-only and does not copy identifier values, source locators, provider payloads, credentials, exception text or timing data. Historical cases are not backfilled with guessed source state. ADR 0048 records the decision.
-
-PR #87 closed the corresponding private operator visibility gap. Reviewed-upload cases show retained `seed_provenance`; quick cases show their top-level retained source-run state/evaluation projection; converged cases show the same projection per research node. Historical cases that predate typed source-run retention show source execution state as unavailable. The browser consumes retained state/reason/attempt/counter fields directly and does not parse warnings or reimplement provider policy. ADR 0049 records the decision.
-
-Retained-report ownership has been tightened across PRs #70, #72, #74, #77 and #79. Complete provider evidence and provenance have canonical retained owners; connected fields, M5 candidates and converged edges use validated references rather than copying values/locators into parallel structures. PR #81 moved those reference resolutions into the private UI and removed temporary server-side response hydration for new retained formats while keeping explicit read-only compatibility for historical self-contained cases.
+Retained-report ownership is canonicalized. Complete provider evidence and provenance have single retained owners; connected fields, M5 candidates and converged pivot/edge structures use validated references rather than duplicating values or locators. Historical self-contained retained formats remain readable through explicit read-only compatibility paths.
 
 The reviewed-document chain is complete:
 
-- PR #56: deterministic candidate spans and fail-closed reviewed identifier promotion;
-- PR #58: PDF page-span provenance and corrected flattened-text limits;
-- PR #60: short-lived server-owned review state without raw-document retention;
-- PR #62/#63: atomic confirm/reject/re-review/promotion with immutable candidate value/provenance;
-- PR #64: authenticated, CSRF-protected HTTP review actions;
-- PR #66: separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate;
-- PR #83: private operator controls for confirm/reject/re-review/promotion preview and separate explicit converged-case execution;
-- PR #87: reviewed-document seed provenance and source execution/evaluation state are visible in retained private cases without moving authorization into the browser.
+- deterministic candidate character spans and PDF page-span provenance;
+- short-lived server-owned review state without raw-document retention;
+- atomic confirm/reject/re-review/promotion with immutable candidate value/provenance;
+- authenticated and CSRF-protected HTTP review actions;
+- separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate;
+- private operator controls for review, promotion preview and separate case execution;
+- retained seed provenance plus typed source execution/evaluation visibility in private case views.
 
-Cross-layer closure guards from PR #68 keep catalog, binding, registry and process-wide runtime ownership aligned and enforce the zero-spend baseline for required recursive sources.
+Cross-layer closure guards keep catalog, binding, provider registry and process runtime ownership aligned. Required active recursive sources remain zero-spend eligible, and optional metered sources cannot silently become required baseline dependencies.
+
+V2-D closure does **not** authorize another provider, larger recursion, paid baseline dependencies, wider retention or identity-probability claims. New source activation begins only after a fresh review of current official documentation, terms, quotas, cost, authentication, returned fields, contact risk and retention implications.
 
 ## M10 — evaluation and calibration laboratory
 
@@ -126,20 +127,21 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-Run the final V2-D closure audit. Do not add another provider during the audit.
+V2-D is closed. Do not reopen its architecture casually when adding sources.
 
-The audit must prove that these layers still agree and fail closed together:
+The next product phase is **reviewed source expansion**, one provider at a time. For each candidate source:
 
-1. source catalog, executable bindings, provider registry and process-wide runtime ownership;
-2. retained-report ownership, canonical provenance references and read-only historical compatibility;
-3. upload candidate review → promotion → separate explicit case execution authority;
-4. typed source-state/evaluation semantics and private UI consumption without warning inference;
-5. required zero-spend operation, with optional/metered Brave remaining non-required;
-6. roadmap, ADR and continuity documentation matching executable behavior and verified CI.
+1. re-check current official API/standard documentation, terms, quota and cost;
+2. prove the source can remain optional if it is metered or credentialed;
+3. declare catalog capability, accepted/emitted lead kinds and source-policy state before execution;
+4. add deterministic success/not-found/malformed/rate-limit/unavailable fixtures;
+5. execute only through the existing governed runtime and typed source-run contract;
+6. preserve canonical evidence/provenance ownership and the existing privacy boundary;
+7. keep the product functional at zero spend when the new source is absent.
 
-If no material gap remains, record V2-D as closed before reviewing or activating any new third-party API/source. If the audit finds a real inconsistency, fix that inconsistency first rather than closing the milestone administratively.
+Potential source candidates remain those already recorded in `docs/V2_SOURCE_EXPANSION_PLAN.md`; their presence there is not activation permission.
 
-Production recursion remains depth 2 / 12 nodes.
+Production recursion remains depth 2 / 12 nodes. M10 evidence, not feature pressure, decides whether those limits change.
 
 Success means the operator can answer for every hop:
 
