@@ -9,7 +9,7 @@ from app.intelligence.contracts import LeadKind
 from app.intelligence.source_evaluation import build_source_evaluation_counters
 from app.intelligence.source_outcomes import source_provider_exception_record
 from app.intelligence.source_states import SourceRunReason, SourceRunState
-from app.providers.base import ProviderQuery, ProviderStatus
+from app.providers.base import AuthMode, ProviderQuery, ProviderStatus
 from app.providers.bluesky_public import BlueskyPublicProfileProvider
 from app.providers.errors import (
     ProviderAccountUnavailableError,
@@ -140,7 +140,16 @@ async def test_bluesky_rejects_generic_username_and_credentials_before_fetch() -
     assert called is False
 
 
-def test_bluesky_descriptor_remains_planned_until_atomic_activation() -> None:
+def test_bluesky_descriptor_is_active_without_credentials_and_remains_bounded() -> None:
     descriptor = PROVIDER_BY_NAME["bluesky_public_profile"]
-    assert descriptor.status == ProviderStatus.PLANNED.value
+
+    assert descriptor.status == ProviderStatus.DEVELOPMENT.value
+    assert descriptor.auth_mode is AuthMode.NONE
+    assert descriptor.secret_env is None
     assert descriptor.supported_identifier_kinds == frozenset({"username"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 64 * 1024
+    assert descriptor.max_concurrency == 2
+    assert descriptor.rate_limit == 30
+    assert descriptor.rate_window_seconds == 60.0

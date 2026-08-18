@@ -17,10 +17,11 @@ def test_username_plan_separates_current_optional_deferred_and_future_sources() 
     assert "github_public_api" in _names(plan.active)
     assert "gitlab_public_api" in _names(plan.active)
     assert "codeforces_public_api" in _names(plan.active)
+    assert "bluesky_public_profile" in _names(plan.active)
     assert "brave_public_web_index" in _names(plan.optional)
     assert "whatsmyname" in _names(plan.deferred)
     assert "maigret" in _names(plan.planned)
-    assert "bluesky_public_profile" in _names(plan.planned)
+    assert "bluesky_public_profile" not in _names(plan.planned)
     assert all(source.status is SourceStatus.PLANNED for source in plan.planned)
 
 
@@ -38,6 +39,7 @@ def test_phone_plan_exposes_review_and_manual_sources_without_execution_authorit
 def test_zero_spend_plan_moves_metered_sources_out_of_current_plan() -> None:
     plan = build_source_plan(LeadKind.USERNAME, zero_spend_only=True)
 
+    assert "bluesky_public_profile" in _names(plan.active)
     assert "brave_public_web_index" not in _names(plan.optional)
     assert "brave_public_web_index" in _names(plan.excluded_by_budget)
     assert plan.has_zero_spend_current_coverage is True

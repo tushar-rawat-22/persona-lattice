@@ -225,6 +225,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         note="Public profile fields only.",
     ),
     SourceCapability(
+        name="bluesky_public_profile",
+        accepts=frozenset({LeadKind.USERNAME}),
+        emits=frozenset({LeadKind.USERNAME, LeadKind.NAME}),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=37,
+        note=(
+            "Unauthenticated public AppView profile lookup for syntactically valid AT handles only; "
+            "public-web opt-out and unavailable-account states are neutral completed outcomes."
+        ),
+    ),
+    SourceCapability(
         name="public_dns_infrastructure",
         accepts=frozenset({LeadKind.URL, LeadKind.DOMAIN}),
         emits=frozenset(),
@@ -342,24 +358,6 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         recursive_eligible=False,
         priority=130,
         note="Reference-only; not executable through the Apache core.",
-    ),
-    SourceCapability(
-        name="bluesky_public_profile",
-        accepts=frozenset({LeadKind.USERNAME}),
-        emits=frozenset(
-            {LeadKind.USERNAME, LeadKind.URL, LeadKind.NAME, LeadKind.LOCATION}
-        ),
-        status=SourceStatus.PLANNED,
-        mode=SourceMode.PUBLIC_API,
-        cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        credential_class=SourceCredentialClass.NONE,
-        source_policy_reviewed=False,
-        recursive_eligible=False,
-        priority=140,
-        note=(
-            "Adapter target: Bluesky public AppView profile lookup by reviewed handle/DID "
-            "semantics; no activation until a current source-policy review."
-        ),
     ),
     SourceCapability(
         name="gravatar_public_profile",

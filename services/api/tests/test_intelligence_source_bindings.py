@@ -54,7 +54,7 @@ def test_no_current_source_uses_legacy_research_execution() -> None:
 
 @pytest.mark.parametrize(
     "name",
-    ["sherlock", "github_public_api", "codeforces_public_api"],
+    ["sherlock", "github_public_api", "codeforces_public_api", "bluesky_public_profile"],
 )
 def test_username_only_governed_sources_match_provider_descriptors(name: str) -> None:
     binding = source_binding_for(name, kind=LeadKind.USERNAME)
@@ -96,7 +96,6 @@ def test_public_dns_is_governed_for_url_only_and_never_domain_seed_today() -> No
 
 def test_planned_and_deferred_sources_have_no_executable_binding() -> None:
     for name in (
-        "bluesky_public_profile",
         "gravatar_public_profile",
         "webfinger_activitypub",
         "rdap_domain_registry",

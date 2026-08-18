@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.intelligence.source_bindings import SourceExecutionBackend, source_binding_for
 from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
 from app.providers.base import ProviderStatus
 from app.providers.bluesky_admission import (
@@ -87,11 +88,14 @@ def test_returned_handle_must_match_requested_handle() -> None:
         )
 
 
-def test_bluesky_stays_non_executable_until_atomic_activation() -> None:
+def test_bluesky_activation_is_reviewed_and_governed() -> None:
     source = SOURCE_BY_NAME["bluesky_public_profile"]
     descriptor = PROVIDER_BY_NAME["bluesky_public_profile"]
+    binding = source_binding_for("bluesky_public_profile")
 
-    assert source.status is SourceStatus.PLANNED
-    assert source.source_policy_reviewed is False
-    assert source.recursive_eligible is False
-    assert descriptor.status == ProviderStatus.PLANNED.value
+    assert source.status is SourceStatus.ACTIVE
+    assert source.source_policy_reviewed is True
+    assert source.recursive_eligible is True
+    assert descriptor.status == ProviderStatus.DEVELOPMENT.value
+    assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
+    assert binding.provider_name == "bluesky_public_profile"

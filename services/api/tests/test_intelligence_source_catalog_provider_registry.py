@@ -46,6 +46,7 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         "github_public_api",
         "gitlab_public_api",
         "codeforces_public_api",
+        "bluesky_public_profile",
         "public_dns_infrastructure",
         "brave_public_web_index",
     }
@@ -71,6 +72,22 @@ def test_codeforces_budget_matches_documented_minimum_request_interval() -> None
     assert descriptor.rate_window_seconds == CODEFORCES_MINIMUM_REQUEST_INTERVAL_SECONDS
     assert descriptor.max_concurrency == 1
     assert descriptor.supported_identifier_kinds == frozenset({"username"})
+
+
+def test_bluesky_is_zero_spend_credentialless_and_locally_bounded() -> None:
+    descriptor = PROVIDER_BY_NAME["bluesky_public_profile"]
+    capability = SOURCE_BY_NAME["bluesky_public_profile"]
+
+    assert capability.status is SourceStatus.ACTIVE
+    assert capability.zero_spend_eligible is True
+    assert descriptor.auth_mode is AuthMode.NONE
+    assert descriptor.supported_identifier_kinds == frozenset({"username"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 64 * 1024
+    assert descriptor.max_concurrency == 2
+    assert descriptor.rate_limit == 30
+    assert descriptor.rate_window_seconds == 60.0
 
 
 def test_public_dns_policy_is_bounded_and_url_only() -> None:
