@@ -8,6 +8,8 @@ PersonaLattice already had a bounded Bluesky public-profile adapter and a pre-ne
 
 Bluesky's official public AppView exposes `app.bsky.actor.getProfile` without authentication. For public-web clients, Bluesky recommends the cached `https://public.api.bsky.app` host. AT handles are DNS-style identifiers, and the `!no-unauthenticated` label is an explicit public-web/logged-out opt-out signal.
 
+The source review also checked Bluesky's current general Terms of Service and AT Protocol Network Services privacy notice. The terms were last updated August 14, 2025; the network-services privacy notice describes profiles and user content as publicly available in the decentralized network. That public status does not override explicit public-web opt-out or authorize collection of nonpublic data, so PersonaLattice keeps the narrower AppView/visibility contract below.
+
 A PersonaLattice `username` is broader than an AT handle. Treating a plain value such as `alice` as Bluesky-applicable would manufacture provider traffic and misleading source outcomes for a source that was never sufficiently scoped.
 
 ## Decision
