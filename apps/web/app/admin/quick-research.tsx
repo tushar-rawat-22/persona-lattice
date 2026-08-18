@@ -21,6 +21,58 @@ type Observation = {
   details: Record<string, unknown>;
 };
 
+type SourceRunRecord = {
+  source: string;
+  lead_kind: string;
+  state: string;
+  reason: string;
+  observation_count: number;
+  execution_attempted: boolean;
+  terminal: boolean;
+};
+
+type SourceEvaluationAggregate = {
+  record_count: number;
+  attempt_count: number;
+  completed_attempt_count: number;
+  failed_attempt_count: number;
+  unclassified_attempt_count: number;
+  result_record_count: number;
+  no_match_count: number;
+  observation_count: number;
+  remote_rate_limit_count: number;
+  execution_failure_count: number;
+  malformed_result_count: number;
+  local_budget_stop_count: number;
+  optional_not_configured_count: number;
+  missing_secret_config_count: number;
+  provider_policy_block_count: number;
+  queued_count: number;
+  review_required_count: number;
+  display_only_count: number;
+  blocked_count: number;
+};
+
+type SourceRunReport = {
+  record_count: number;
+  execution_attempted_count: number;
+  terminal_count: number;
+  state_counts: Record<string, number>;
+  reason_counts: Record<string, number>;
+  records: SourceRunRecord[];
+  evaluation?: {
+    aggregate: SourceEvaluationAggregate;
+    by_source: Record<string, SourceEvaluationAggregate>;
+  };
+};
+
+type SeedProvenance = {
+  source: string;
+  source_locator: string;
+  review_required: boolean;
+  human_reviewed: boolean;
+};
+
 type ConnectedIdentifier = {
   kind: string;
   status: string;
@@ -113,6 +165,7 @@ type ConvergedReport = {
     parent_key: string | null;
     pivot_reason: string;
     warnings: string[];
+    source_runs?: SourceRunReport;
     observations: Observation[];
   }>;
   edges: ConvergedEdge[];
@@ -139,6 +192,8 @@ type QuickReport = {
   normalized_value: string;
   observations?: Observation[];
   warnings?: string[];
+  source_runs?: SourceRunReport;
+  seed_provenance?: SeedProvenance;
   structured_report?: StructuredReport;
   converged_report?: ConvergedReport;
 };
@@ -265,6 +320,49 @@ function resolveEdgeProvenance(report: ConvergedReport, edge: ConvergedEdge): Re
   if (!(decision.source_field in observation.details)) return null;
 
   return { source: observation.source, source_locator: observation.source_locator };
+}
+
+function SourceRunSummary({ sourceRuns, title }: { sourceRuns?: SourceRunReport; title: string }) {
+  if (!sourceRuns) {
+    return (
+      <div className="reportSection">
+        <h3>{title}</h3>
+        <p className="muted">Source execution state is unavailable for this historical case.</p>
+      </div>
+    );
+  }
+
+  const aggregate = sourceRuns.evaluation?.aggregate;
+  return (
+    <div className="reportSection">
+      <h3>{title}</h3>
+      <div className="reportMetricGrid">
+        <div><strong>{sourceRuns.record_count}</strong><span>source records</span></div>
+        <div><strong>{aggregate?.attempt_count ?? sourceRuns.execution_attempted_count}</strong><span>attempts</span></div>
+        <div><strong>{aggregate?.completed_attempt_count ?? "—"}</strong><span>completed</span></div>
+        <div><strong>{aggregate?.failed_attempt_count ?? "—"}</strong><span>failed attempts</span></div>
+      </div>
+      {aggregate && (
+        <p className="muted">
+          {aggregate.observation_count} observations · {aggregate.no_match_count} no-match results · {aggregate.local_budget_stop_count} local budget stops · {aggregate.optional_not_configured_count} optional sources not configured
+        </p>
+      )}
+      {sourceRuns.records.length === 0 ? (
+        <p className="muted">No typed source-run records were retained for this scope.</p>
+      ) : (
+        <div className="connectedGrid">
+          {sourceRuns.records.map((item, index) => (
+            <div className="connectedField" key={`${item.source}-${item.lead_kind}-${index}`}>
+              <span>{item.state}</span>
+              <strong>{item.source}</strong>
+              <small>{item.lead_kind} · {item.reason}</small>
+              <small>{item.execution_attempted ? "execution attempted" : "no execution attempt"} · {item.observation_count} observations</small>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function QuickResearch({ csrfToken }: QuickResearchProps) {
@@ -414,6 +512,17 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
           <div className="caseId">CASE {activeCase.id.slice(0, 8)} · {activeCase.seed_kind.toUpperCase()} · {activeCase.seed_value}</div>
           <p className="muted">Stored until {new Date(activeCase.expires_at).toLocaleString()} unless deleted earlier.</p>
 
+          {report.seed_provenance && (
+            <div className="reportSection">
+              <h3>Reviewed document seed</h3>
+              <div className="connectedField">
+                <span>{report.seed_provenance.human_reviewed ? "human reviewed" : "review state unavailable"}</span>
+                <strong>{report.seed_provenance.source}</strong>
+                <small>{report.seed_provenance.source_locator}</small>
+              </div>
+            </div>
+          )}
+
           {converged && (
             <div className="reportSummary">
               <div className="reportMetricGrid">
@@ -485,6 +594,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                           {node.parent_key && <span>from {node.parent_key}</span>}
                         </div>
                       </div>
+                      <SourceRunSummary sourceRuns={node.source_runs} title="Source execution" />
                       {node.warnings.map((warning) => <p className="muted" key={warning}>{warning}</p>)}
                       {node.observations.length === 0 ? (
                         <p className="muted">No attributable observation returned for this pivot.</p>
@@ -515,6 +625,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                 <div><strong>{structured.executive_summary.public_account_candidate_count}</strong><span>account candidates</span></div>
               </div>
               <p className="reportBoundary">{structured.executive_summary.interpretation}</p>
+              <SourceRunSummary sourceRuns={report.source_runs} title="Source execution" />
               {structured.connected_identifiers.length > 0 && (
                 <div className="reportSection">
                   <h3>Connected public fields</h3>
@@ -547,6 +658,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
             </div>
           )}
 
+          {!converged && !structured && <SourceRunSummary sourceRuns={report.source_runs} title="Source execution" />}
           {!converged && (report.warnings ?? []).map((warning) => <p className="muted" key={warning}>{warning}</p>)}
           {!converged && (report.observations ?? []).length > 0 && (
             <div className="providerList">
