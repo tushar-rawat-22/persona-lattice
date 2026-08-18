@@ -21,6 +21,7 @@ def _seed_provenance(source_locator: str) -> dict[str, object]:
     return {
         "source": "reviewed_upload_candidate",
         "source_locator": source_locator,
+        "review_required": True,
         "human_reviewed": True,
     }
 
