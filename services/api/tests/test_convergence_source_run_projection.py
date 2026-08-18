@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import pytest
+
 from app.convergence import PivotReason, ResearchNode, _node_payload
 from app.intelligence.contracts import LeadKind
 from app.intelligence.source_outcomes import (
@@ -14,14 +16,13 @@ from app.research import QuickResearchReport, ResearchKind
 
 
 @dataclass(frozen=True, slots=True)
-class _ReportWithSourceRuns:
+class _LegacyReportWithoutSourceRuns:
     normalized_value: str
     observations: tuple = ()
     warnings: tuple[str, ...] = ()
-    source_runs: tuple = ()
 
 
-def _node(report) -> ResearchNode:
+def _node(report: QuickResearchReport) -> ResearchNode:
     return ResearchNode(
         kind=ResearchKind.USERNAME,
         value="alice",
@@ -33,8 +34,10 @@ def _node(report) -> ResearchNode:
 
 
 def test_node_payload_projects_typed_source_runs_without_identifiers() -> None:
-    report = _ReportWithSourceRuns(
+    report = QuickResearchReport(
+        kind=ResearchKind.USERNAME,
         normalized_value="alice",
+        observations=(),
         source_runs=(
             source_result_record(
                 source_name="github_public_api",
@@ -73,7 +76,7 @@ def test_node_payload_projects_typed_source_runs_without_identifiers() -> None:
     assert "details" not in repr(source_runs)
 
 
-def test_legacy_quick_report_gets_explicit_empty_source_run_projection() -> None:
+def test_quick_report_without_source_runs_gets_explicit_empty_projection() -> None:
     report = QuickResearchReport(
         kind=ResearchKind.USERNAME,
         normalized_value="alice",
@@ -90,3 +93,18 @@ def test_legacy_quick_report_gets_explicit_empty_source_run_projection() -> None
         "reason_counts": {},
         "records": [],
     }
+
+
+def test_node_payload_rejects_report_without_typed_source_run_contract() -> None:
+    legacy_report = _LegacyReportWithoutSourceRuns(normalized_value="alice")
+    node = ResearchNode(
+        kind=ResearchKind.USERNAME,
+        value="alice",
+        depth=0,
+        parent_key=None,
+        pivot_reason=PivotReason.SEED,
+        report=legacy_report,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(AttributeError, match="source_runs"):
+        _node_payload(node)
