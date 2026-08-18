@@ -77,7 +77,7 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: active; network migration, reviewed-document backend execution and first cross-layer closure guard complete**
+**Status: active; network migration, reviewed-document backend execution, cross-layer ownership/zero-spend guard and source-run report contract closure complete**
 
 Every currently executable network source is behind the governed runtime. Key migration checkpoints are PRs #24-#32, #50, #52 and #54. The executable legacy network allowance is empty.
 
@@ -86,6 +86,8 @@ Brave remains an optional metered extension. Without `BRAVE_SEARCH_API_KEY`, it 
 Source-run accounting is phase-proven. Policy/configuration/local-budget stops are non-attempts; completed zero-result calls are `not_found`; remote failures and malformed returned results count as attempts only when that phase is mechanically known. Generic phase-ambiguous validation is left unclassified rather than guessed into a failure count.
 
 Source-state/report/evaluation work in PRs #34-#48 establishes typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic aggregate/per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement and network-free graph-limit comparison through the real frontier scheduler.
+
+PR #70 closes the stale convergence compatibility shim that treated a missing `source_runs` contract as an empty report. Converged reports now require the canonical `QuickResearchReport.source_runs` field directly; a valid zero-record tuple still yields the same privacy-bounded empty projection. ADR 0041 records the decision.
 
 The document-review path now has a complete server-owned backend chain:
 
@@ -103,8 +105,8 @@ PR #68 adds a cross-layer closure guard derived from live declarations. Governed
 Remaining before V2-D closes:
 
 1. expose document review/run controls and existing source-state/evaluation summaries cleanly in the private operator UI;
-2. finish the remaining report/privacy/compatibility consistency review now that runtime ownership and zero-spend dependency drift are guarded;
-3. close stale compatibility seams only where doing so does not break existing operator behavior or evidence semantics.
+2. finish the remaining retained-report/privacy consistency review now that runtime ownership, zero-spend dependency drift and missing source-run contracts are guarded;
+3. close any remaining compatibility seam only where doing so does not break existing operator behavior or evidence semantics.
 
 No new third-party source should be activated during these closure blocks.
 
@@ -134,7 +136,7 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 The next product-facing block is the private operator workflow: wire reviewed-document state, explicit case execution, source-state/evaluation summaries and retained seed provenance into the UI without re-deriving backend authorization or evidence semantics in the browser.
 
-Backend closure can continue in parallel through bounded consistency checks. The next backend review should focus on report/privacy boundaries and stale compatibility seams rather than adding another provider. Runtime ownership and zero-spend baseline dependency consistency are now guarded by PR #68.
+Backend closure can continue in parallel through bounded consistency checks. The next backend review should focus on retained-report privacy/duplication invariants and any remaining compatibility seam that can mask contract drift. Runtime ownership, zero-spend baseline dependency consistency and the typed convergence source-run contract are now guarded.
 
 Only after V2-D closure should new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
