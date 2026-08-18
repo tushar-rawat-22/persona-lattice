@@ -112,12 +112,17 @@ def hydrate_case_report_connected_identifiers(report: dict[str, object]) -> dict
     """
 
     structured = report.get("structured_report")
+    if not isinstance(structured, dict):
+        return report
+    if structured.get("report_version") != "private-evidence-report-v2":
+        return report
+
     observations = report.get("observations")
-    if not isinstance(structured, dict) or not isinstance(observations, list):
-        return report
     connected = structured.get("connected_identifiers")
+    if not isinstance(observations, list):
+        raise ValueError("Structured quick reports require canonical observations.")
     if not isinstance(connected, list):
-        return report
+        raise ValueError("Structured quick reports require a connected identifier list.")
 
     hydrated: list[dict[str, object]] = []
     changed = False
@@ -125,23 +130,42 @@ def hydrate_case_report_connected_identifiers(report: dict[str, object]) -> dict
         if not isinstance(item, dict):
             raise ValueError("Connected identifier entries must be objects.")
 
-        # Cases written before ADR 0045 retain the old bounded compatibility projection.
-        if all(key in item for key in ("value", "source", "source_locator")):
+        kind = item.get("kind")
+        if not isinstance(kind, str) or kind not in CONNECTED_IDENTIFIER_FIELD_BY_KIND:
+            raise ValueError("Connected identifier kind is invalid.")
+
+        legacy_keys = {"value", "source", "source_locator"}
+        reference_keys = {"observation_index", "detail_field"}
+        has_legacy = any(key in item for key in legacy_keys)
+        has_reference = any(key in item for key in reference_keys)
+        if has_legacy and has_reference:
+            raise ValueError("Connected identifier entries cannot mix legacy values with canonical references.")
+
+        status = item.get("status")
+        if not isinstance(status, str) or not status:
+            raise ValueError("Connected identifier status is invalid.")
+
+        # Cases written before ADR 0045 retain the old bounded compatibility projection. Validate
+        # that historical shape before returning it; malformed lookalikes must not bypass decoding.
+        if has_legacy:
+            if not all(key in item for key in legacy_keys):
+                raise ValueError("Legacy connected identifier entries are incomplete.")
+            value = _text(item.get("value"))
+            source = _text(item.get("source"))
+            source_locator = _text(item.get("source_locator"))
+            if value is None or source is None or source_locator is None:
+                raise ValueError("Legacy connected identifier fields are invalid.")
             hydrated.append(dict(item))
             continue
 
-        kind = item.get("kind")
         detail_field = item.get("detail_field")
         observation_index = item.get("observation_index")
-        status = item.get("status")
-        if not isinstance(kind, str) or CONNECTED_IDENTIFIER_FIELD_BY_KIND.get(kind) != detail_field:
+        if CONNECTED_IDENTIFIER_FIELD_BY_KIND[kind] != detail_field:
             raise ValueError("Connected identifier kind/detail reference is invalid.")
         if isinstance(observation_index, bool) or not isinstance(observation_index, int):
             raise ValueError("Connected identifier observation index is invalid.")
         if not 0 <= observation_index < len(observations):
             raise ValueError("Connected identifier observation index is out of range.")
-        if not isinstance(status, str) or not status:
-            raise ValueError("Connected identifier status is invalid.")
 
         observation = observations[observation_index]
         if not isinstance(observation, dict):
@@ -149,7 +173,7 @@ def hydrate_case_report_connected_identifiers(report: dict[str, object]) -> dict
         details = observation.get("details")
         source = observation.get("source")
         source_locator = observation.get("source_locator")
-        if not isinstance(details, dict) or not isinstance(source, str) or not isinstance(source_locator, str):
+        if not isinstance(details, dict) or _text(source) is None or _text(source_locator) is None:
             raise ValueError("Connected identifier observation provenance is invalid.")
         value = _text(details.get(detail_field))
         if value is None:
