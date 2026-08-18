@@ -31,7 +31,7 @@ M5 permanent outputs remain:
 
 The private product has one deployment-configured admin, Argon2 password verification, HttpOnly sessions, CSRF protection, a private `/admin` route, same-origin API proxying, retained cases, delete/expiry controls and live bounded research.
 
-Current live research sources include reviewed Sherlock, GitHub, GitLab, Codeforces, phone numbering-plan metadata and public DNS infrastructure metadata. Brave exact public-web search is optional when configured.
+Current live research sources include reviewed Sherlock, GitHub, GitLab, Codeforces, Bluesky public profiles for valid AT handles, phone numbering-plan metadata and public DNS infrastructure metadata. Brave exact public-web search is optional when configured.
 
 Local HTTPS-tunnel acceptance proves the operator path. Local operation is the zero-spend baseline; paid hosting is optional and not required for the product to work. The previously reviewed paid Render topology is retained only at `deploy/render-paid.yaml`.
 
@@ -128,25 +128,34 @@ Still required before increasing recursion or changing correlation thresholds:
 
 Observation count is evidence yield, not evidence quality. Reliability percentages should not be published without controlled sample size and denominator semantics.
 
+## Reviewed source expansion
+
+V2-D is closed. New sources use the existing catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run → canonical evidence path rather than adding parallel execution branches.
+
+### Bluesky public profiles
+
+**Status: active — PR #98**
+
+Bluesky activation reuses the pre-reviewed public AppView adapter and admission contract. The source is credentialless and zero-direct-cost, with one attempt, a four-second timeout, 64 KiB result ceiling, concurrency two and a local 30/minute application budget.
+
+Applicability is narrower than the generic `username` kind. Only normalized values that pass the AT-handle admission contract can trigger a Bluesky request. Plain usernames and malformed/`@` UI forms are skipped before ProviderRuntime with no fabricated source-run state.
+
+Retained fields remain minimal: DID, normalized handle and optional display name plus account-candidate/non-identity/public-visibility flags. The source catalog emits only username and display-name context. Profile URL stays provenance rather than becoming an automatic URL lead.
+
+Public-web opt-out and suspended/deactivated accounts remain neutral attempted `withheld` outcomes. They are not `not_found` and do not count as provider failures. The source remains an account-candidate source, never proof of identity.
+
+The first activation keeps the Bluesky call sequential after the existing public-profile enrichment block. That is a deliberate latency/concurrency tradeoff for the initial rollout; optimize only after measurements show it matters.
+
 ## Immediate next gate
 
-V2-D is closed. Do not reopen its architecture casually when adding sources.
+Do not reopen V2-D architecture casually.
 
-The next product phase is **reviewed source expansion**, one provider at a time. For each candidate source:
+After Bluesky activation, the next bounded work should be chosen from two evidence-driven tracks:
 
-1. re-check current official API/standard documentation, terms, quota and cost;
-2. prove the source can remain optional if it is metered or credentialed;
-3. declare catalog capability, accepted/emitted lead kinds and source-policy state before execution;
-4. add deterministic success/not-found/malformed/rate-limit/unavailable fixtures;
-5. execute only through the existing governed runtime and typed source-run contract;
-6. preserve canonical evidence/provenance ownership and the existing privacy boundary;
-7. keep the product functional at zero spend when the new source is absent.
+1. broaden M10 labelled synthetic/consented cohorts across more lead kinds and source-yield/cost shapes; or
+2. review exactly one additional zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md` using current official terms, cost, authentication, returned-field, contact-risk and retention review before any activation.
 
-Bluesky admission and the bounded public-profile adapter now exist. PR #96 also adds an explicit attempted-but-neutral `withheld` source state so public-web opt-out and suspended/deactivated account responses do not pollute not-found or provider-failure metrics. Bluesky still remains `PLANNED`, unbound and absent from the process-wide runtime and quick-research path.
-
-The next Bluesky block is atomic activation: recheck current official policy/cost, then move catalog review/status, source binding, provider status, shared `ProviderRuntime` ownership and quick-research/source-run integration together. Activation must keep generic username spraying impossible, preserve the minimal field allowlist, and retain deterministic success/not-found/opt-out/account-unavailable/malformed/rate-limit/transient fixtures.
-
-Potential source candidates remain those already recorded in `docs/V2_SOURCE_EXPANSION_PLAN.md`; their presence there is not activation permission.
+Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions. A catalog entry or old plan is never enough to activate them. Any paid or metered candidate must remain optional and cannot become a required baseline dependency.
 
 Production recursion remains depth 2 / 12 nodes. M10 evidence, not feature pressure, decides whether those limits change.
 
