@@ -12,16 +12,18 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #64: `89969e3747ebe1a9cd6f12274738cae1123ec629`
-- PR #64 exact tested head: `8fb664bc31ae09a4b506ae308744e88e17412a7e`
-- PR #64 CI run: `32103737982`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #66: `58c582b1db7ef62254ea8bcabc732ed0514c567d`
+- PR #66 exact tested head: `7d51fb28e331de9c388e0dc1ab393f281d5b685b`
+- PR #66 CI run: `32107499455`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #64 closes the private HTTP boundary for document review. Confirm, reject, reopen and promote are exposed under `/v1/files/review/{artifact_id}/{candidate_id}` and all use the existing authenticated write/CSRF boundary. Requests carry only artifact and candidate UUIDs; value, identifier kind, review authorization and provenance are reloaded from server-owned SQLite state.
+PR #66 closes the backend transition from reviewed upload evidence into an explicit retained research case. The new `/v1/files/review/{artifact_id}/{candidate_id}/run-case` action uses the existing authenticated write/CSRF boundary, accepts only mode/purpose/consent in the body, reloads the current server-owned candidate immediately before execution and reuses the existing promotion contract. Browser-supplied identifier values or provenance never become reviewed-document authorization state.
 
-Review-state responses deliberately omit the candidate value. Promotion returns the typed reviewed lead with its normalized value and `artifact://` provenance locator, but it does not schedule or execute provider research. Successful review actions emit bounded audit metadata without identifier values, artifact/candidate IDs, source locators or document text. ADR 0038 records the boundary.
+Purpose/consent is enforced before provider execution. Pending, rejected, reopened, expired, mismatched or unsupported candidates fail closed. Confirmation and promotion remain non-executing state transitions; provider traffic begins only through the separate `run-case` action.
 
-CI exposed one stale test assumption: `test_m6_keeps_no_browser_facing_dashboard_http_endpoint` assumed every `app.routes` item had a `.path`. FastAPI router inclusion introduced an internal non-path entry. The test was narrowed to path-bearing routes only; runtime behavior was not changed to satisfy the brittle assertion. An intermediate over-broad test-file edit was caught before merge and restored; the final diff changes that test by one line only.
+Retained quick and converged cases now carry bounded `seed_provenance` for reviewed-document seeds. It stores only the existing `reviewed_upload_candidate` source and `artifact://` locator, which contains artifact/candidate identity plus mechanically derived page/character location when available. It does not retain file bytes, surrounding extracted prose or complete extracted text. The HTTP response returns case metadata without echoing the identifier value. Audit metadata records case ID, mode and seed kind only. ADR 0039 records this boundary.
+
+Two implementation ideas were rejected during review before merge. First, creating a quick case and then deleting/recreating it merely to attach provenance would have introduced a transient retained record and broken single-write semantics. Second, a generic report-extension hook was broader than this block required and would have created a future schema escape hatch. The final implementation uses one write and one dedicated optional `seed_provenance` field.
 
 ## Permanent evidence semantics
 
@@ -52,6 +54,7 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - evidence/persistence/normalization: `services/api/app/evidence`
 - bounded file intake + review: `services/api/app/uploads`
 - upload-review HTTP boundary: `services/api/app/upload_review_api.py`
+- reviewed-candidate case execution: `services/api/app/uploads/research_service.py`
 - governed provider execution: `services/api/app/providers`
 - deterministic correlation: `services/api/app/correlation`
 - convergence: `services/api/app/convergence.py`
@@ -92,15 +95,16 @@ Key provider/runtime PRs: #24-#32, #50, #52, #54.
 
 Key source-state/report/evaluation PRs: #34-#48. These establish typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement and network-free graph-limit comparison through the real frontier scheduler.
 
-Document-intake checkpoints:
+Document-intake/review checkpoints:
 
 - PR #56: deterministic candidate character spans plus fail-closed reviewed identifier promotion contract;
 - PR #58: extraction-time PDF page spans, exact page attribution and corrected flattened-text bounds;
 - PR #60: short-lived server-owned candidate review persistence without raw document retention;
 - PR #62/#63: atomic server-owned confirm/reject/re-review/promotion service with immutable candidate value/provenance and a hardened generic update seam;
-- PR #64: authenticated + CSRF-protected HTTP confirm/reject/reopen/promote actions over the server-owned review record.
+- PR #64: authenticated + CSRF-protected HTTP confirm/reject/reopen/promote actions;
+- PR #66: separate authenticated retained-case execution from a currently confirmed, research-authorized server-owned candidate.
 
-The document-review backend now reaches a typed promoted lead without trusting browser-supplied candidate data. It intentionally stops before provider execution.
+The document-review backend now reaches a retained quick or converged case without trusting browser-supplied candidate data and without making review actions trigger provider execution.
 
 ## Source-run semantics
 
@@ -130,9 +134,12 @@ Critical distinctions:
 - atomic review mutation may change only review status and external-research authorization;
 - candidate value, kind, IDs, origin, type and page/character provenance are immutable during review mutation;
 - confirm authorizes supported identifier candidates; reject/re-review revoke authorization;
-- HTTP mutation requests carry only artifact/candidate UUIDs and use `require_admin_write`;
+- HTTP review and execution routes use `require_admin_write`;
 - review-state responses omit the candidate value;
-- promotion reloads current server-owned state, returns a typed reviewed lead and does not automatically call a provider;
+- promotion reloads current server-owned state, returns a typed reviewed lead and does not call providers;
+- `run-case` reloads that same current state immediately before execution and does not accept an identifier value in the request body;
+- blocked purpose or missing required consent stops before provider execution;
+- retained reviewed-document cases carry bounded `seed_provenance` using the existing `artifact://` locator;
 - PDF candidate page attribution is mechanically derived from extraction-time page spans;
 - claims and unsupported identifier kinds remain non-executable;
 - names/organizations are not silently upgraded to executable research seeds.
@@ -157,20 +164,18 @@ The graph-limit harness uses the real `LeadFrontier`. Its regression fixture sho
 
 ## Immediate next gate
 
-Define the explicit backend transition from a promoted reviewed document lead into a chosen research/case run before wiring UI controls around it.
+Wire the document review/run workflow and existing source-state/evaluation summaries into the private operator UI.
 
 Requirements:
 
-1. keep candidate confirmation/promotion separate from research execution; no review action may trigger provider traffic;
-2. the execution action should reference server-owned artifact/candidate state rather than accept an arbitrary browser-supplied identifier as a reviewed-document authorization claim;
-3. reload and revalidate current confirmed/research-authorized state immediately before constructing the research request;
-4. require the existing authenticated write/CSRF boundary and normal purpose/consent enforcement;
-5. preserve the promoted lead's artifact/candidate/page/character provenance in the resulting run/report without creating a second raw-document store;
-6. fail closed if the short-lived review candidate expired, was reopened/rejected, or is not an executable identifier kind;
-7. emit privacy-bounded audit metadata without copying identifier values;
-8. remain a zero-spend local capability and do not activate any new provider/source.
+1. keep confirm/promote and `run-case` visually and behaviorally distinct;
+2. make it explicit that provider traffic begins only when the operator starts the case;
+3. do not present a promoted lead as proof of identity;
+4. show review state and page/character provenance without duplicating unnecessary document content;
+5. surface source execution states and evaluation summaries from the existing backend contracts rather than re-deriving them in the browser;
+6. keep the same authenticated private boundary and zero-spend local operation.
 
-After that backend transition, expose the document-review flow and existing source-state/evaluation summaries cleanly to the private operator UI, then run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after V2-D closure should new third-party providers be reviewed.
+After the operator workflow is usable, run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after V2-D closure should new third-party providers be reviewed.
 
 ## Update discipline
 
