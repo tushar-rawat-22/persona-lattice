@@ -51,3 +51,15 @@ class ProviderRemoteRateLimitError(ProviderExecutionError):
 
 class ProviderRateBudgetExceeded(ProviderExecutionError):
     code = "provider_local_rate_budget"
+
+
+class ProviderPublicWebOptOutError(ProviderExecutionError):
+    """Provider returned an explicit public-web visibility opt-out after contact."""
+
+    code = "provider_public_web_opt_out"
+
+
+class ProviderAccountUnavailableError(ProviderExecutionError):
+    """Requested public account exists but is suspended/deactivated or otherwise withheld."""
+
+    code = "provider_account_unavailable"
