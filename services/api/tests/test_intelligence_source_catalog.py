@@ -61,6 +61,18 @@ def test_zero_spend_username_plan_excludes_metered_public_search() -> None:
     assert "brave_public_web_index" not in names
 
 
+def test_active_bluesky_capability_matches_minimal_admitted_fields() -> None:
+    bluesky = SOURCE_BY_NAME["bluesky_public_profile"]
+
+    assert bluesky.status is SourceStatus.ACTIVE
+    assert bluesky.source_policy_reviewed is True
+    assert bluesky.recursive_eligible is True
+    assert bluesky.zero_spend_eligible is True
+    assert bluesky.accepts == frozenset({LeadKind.USERNAME})
+    assert bluesky.emits == frozenset({LeadKind.USERNAME, LeadKind.NAME})
+    assert "valid AT handles only" in bluesky.note
+
+
 def test_optional_metered_search_requires_metered_api_credential() -> None:
     brave = SOURCE_BY_NAME["brave_public_web_index"]
 
