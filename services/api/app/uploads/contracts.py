@@ -24,6 +24,20 @@ class ReviewStatus(str, Enum):
     REJECTED = "rejected"
 
 
+class PageTextSpan(BaseModel):
+    """One PDF page's exact character interval inside flattened extracted text."""
+
+    page_number: int = Field(ge=1)
+    source_start: int = Field(ge=0)
+    source_end: int = Field(ge=0)
+
+    @model_validator(mode="after")
+    def validate_span(self) -> Self:
+        if self.source_end < self.source_start:
+            raise ValueError("Page source_end cannot be before source_start.")
+        return self
+
+
 class ReviewCandidate(BaseModel):
     candidate_id: UUID
     candidate_type: CandidateType
@@ -58,9 +72,37 @@ class ArtifactPreview(BaseModel):
     extraction_method: str
     extracted_text: str
     extracted_chars: int
+    page_spans: list[PageTextSpan] = Field(default_factory=list)
     trust_boundary: Literal["untrusted_uploaded_content"] = "untrusted_uploaded_content"
     storage_retained: Literal[False] = False
     candidates: list[ReviewCandidate] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_page_spans(self) -> Self:
+        if self.extracted_chars != len(self.extracted_text):
+            raise ValueError("Artifact extracted_chars must match extracted_text length.")
+        if not self.page_spans:
+            return self
+        if self.extraction_method != "pypdf_text":
+            raise ValueError("Page spans are only valid for PDF text extraction.")
+
+        expected_page = 1
+        expected_start = 0
+        for span in self.page_spans:
+            if span.page_number != expected_page:
+                raise ValueError("PDF page spans must use contiguous one-based page numbers.")
+            if span.source_start != expected_start:
+                raise ValueError("PDF page spans do not match flattened text boundaries.")
+            if span.page_number > 1:
+                separator_index = span.source_start - 1
+                if self.extracted_text[separator_index] != "\n":
+                    raise ValueError("PDF page spans require newline separators between pages.")
+            expected_page += 1
+            expected_start = span.source_end + 1
+
+        if self.page_spans[-1].source_end != self.extracted_chars:
+            raise ValueError("Final PDF page span must end at the extracted text boundary.")
+        return self
 
 
 class FileBatchPreview(BaseModel):

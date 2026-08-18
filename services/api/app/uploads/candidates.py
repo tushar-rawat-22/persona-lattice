@@ -1,9 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 import re
+from collections.abc import Sequence
 from uuid import UUID, uuid4
 
 from ..evidence import IdentifierKind, InvalidIdentifier, normalize_identifier
-from .contracts import CandidateOrigin, CandidateType, ReviewCandidate, ReviewStatus
+from .contracts import (
+    CandidateOrigin,
+    CandidateType,
+    PageTextSpan,
+    ReviewCandidate,
+    ReviewStatus,
+)
 
 
 _EMAIL_RE = re.compile(
@@ -16,6 +23,19 @@ _PHONE_RE = re.compile(r"(?<!\d)(\+\d[\d\s().-]{7,20}\d)(?!\d)")
 
 class CandidateReviewError(ValueError):
     pass
+
+
+def _source_page_for_span(
+    source_start: int,
+    source_end: int,
+    page_spans: Sequence[PageTextSpan],
+) -> int | None:
+    matches = [
+        span.page_number
+        for span in page_spans
+        if source_start >= span.source_start and source_end <= span.source_end
+    ]
+    return matches[0] if len(matches) == 1 else None
 
 
 def _candidate(
@@ -49,7 +69,12 @@ def _candidate(
     )
 
 
-def extract_identifier_candidates(text: str, artifact_id: UUID) -> list[ReviewCandidate]:
+def extract_identifier_candidates(
+    text: str,
+    artifact_id: UUID,
+    *,
+    page_spans: Sequence[PageTextSpan] = (),
+) -> list[ReviewCandidate]:
     found: dict[str, ReviewCandidate] = {}
     raw_matches: list[tuple[IdentifierKind, str, int, int]] = []
 
@@ -87,6 +112,7 @@ def extract_identifier_candidates(text: str, artifact_id: UUID) -> list[ReviewCa
             raw_value,
             source_start=source_start,
             source_end=source_end,
+            source_page=_source_page_for_span(source_start, source_end, page_spans),
         )
         if result is None:
             continue

@@ -8,12 +8,14 @@ from app.uploads import (
     CandidateOrigin,
     CandidateReviewError,
     CandidateType,
+    PageTextSpan,
     ReviewStatus,
     confirm_candidate,
     extract_identifier_candidates,
     make_claim_candidate,
     require_research_authorization,
 )
+from app.uploads.candidates import _source_page_for_span
 
 
 def test_prompt_like_document_text_remains_inert_review_data() -> None:
@@ -39,6 +41,55 @@ def test_prompt_like_document_text_remains_inert_review_data() -> None:
         IdentifierKind.URL,
         "https://example.test/profile/demo",
     ) in observed
+
+
+def test_pdf_candidates_receive_page_only_from_exact_span_containment() -> None:
+    artifact_id = uuid4()
+    text = "first@example.test\nProfile @second_user"
+    spans = (
+        PageTextSpan(page_number=1, source_start=0, source_end=18),
+        PageTextSpan(page_number=2, source_start=19, source_end=len(text)),
+    )
+
+    candidates = extract_identifier_candidates(text, artifact_id, page_spans=spans)
+    by_value = {item.value: item for item in candidates}
+
+    assert by_value["first@example.test"].source_page == 1
+    assert by_value["second_user"].source_page == 2
+    assert text[
+        by_value["second_user"].source_start : by_value["second_user"].source_end
+    ] == "@second_user"
+
+
+def test_span_crossing_page_separator_is_not_given_a_page() -> None:
+    spans = (
+        PageTextSpan(page_number=1, source_start=0, source_end=10),
+        PageTextSpan(page_number=2, source_start=11, source_end=15),
+    )
+
+    assert _source_page_for_span(8, 13, spans) is None
+
+
+def test_duplicate_identifier_across_pages_keeps_first_occurrence_provenance() -> None:
+    artifact_id = uuid4()
+    value = "same@example.test"
+    text = f"{value}\n{value}"
+    spans = (
+        PageTextSpan(page_number=1, source_start=0, source_end=len(value)),
+        PageTextSpan(
+            page_number=2,
+            source_start=len(value) + 1,
+            source_end=len(text),
+        ),
+    )
+
+    candidates = extract_identifier_candidates(text, artifact_id, page_spans=spans)
+
+    assert len(candidates) == 1
+    assert candidates[0].value == value
+    assert candidates[0].source_page == 1
+    assert candidates[0].source_start == 0
+    assert candidates[0].source_end == len(value)
 
 
 def test_identifier_requires_explicit_human_confirmation_for_research() -> None:

@@ -159,7 +159,11 @@ async def process_upload_batch(files: list[UploadFile]) -> FileBatchPreview:
                     file_index=index,
                 ) from exc
 
-            candidates = extract_identifier_candidates(extracted.text, artifact_id)
+            candidates = extract_identifier_candidates(
+                extracted.text,
+                artifact_id,
+                page_spans=extracted.page_spans,
+            )
             artifacts.append(
                 ArtifactPreview(
                     artifact_id=artifact_id,
@@ -170,6 +174,7 @@ async def process_upload_batch(files: list[UploadFile]) -> FileBatchPreview:
                     extraction_method=extracted.method,
                     extracted_text=extracted.text,
                     extracted_chars=len(extracted.text),
+                    page_spans=list(extracted.page_spans),
                     candidates=candidates,
                 )
             )
