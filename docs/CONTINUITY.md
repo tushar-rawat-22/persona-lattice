@@ -12,13 +12,10 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main after PR #90: `716be3e042a3b3e3d1216297ffed4f576034a7cf`
-- PR #89 exact tested head: `f4e5ceb70bde7867cfcb07bc57459da19e023b3a`
-- PR #89 CI: run `32171892313`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
-- PR #89 merge: `bde651cb4249410b543b5c4accb283edfc262bab`
-- PR #90 exact tested head: `d7bd2c802417e56584fad15602bd420733f077ea`
-- PR #90 CI: run `32172134510`, full success across the same matrix
-- PR #90 merge / verified main: `716be3e042a3b3e3d1216297ffed4f576034a7cf`
+- Verified main before the M10 cohort block: `f38743a021ce02c21c859036d14745bc3e6f46a9`
+- PR #92 exact tested implementation head: `ff76e7328b94429940fc15a508fa497b3213c6f0`
+- PR #92 CI: run `32177268786`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
+- PR #92 merge: `68cc880fbe26a092bd590b06da7d22b2d412367f`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend operating runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -27,26 +24,41 @@ Never place API keys, real research identifiers, retained-case data, password ha
 
 - M0-M6: complete.
 - M7 private one-admin product: implemented and manually accepted locally.
-- M8 privacy lifecycle/operations: substantially implemented; hosted backup/restore is intentionally deferred until a persistent hosted store is actually selected.
+- M8 privacy lifecycle/operations: substantially implemented; hosted backup/restore remains deferred until a persistent hosted store is selected.
 - M9 private convergence: implemented.
 - V2-A typed lead graph: complete, PR #20.
 - V2-B deterministic frontier: complete, PR #21.
 - V2-C source capability registry/planner: complete, PR #22.
-- **V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.**
-- M10: deterministic evaluation contracts exist; representative labelled evaluation remains before any recursion/threshold change.
+- V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
+- M10: deterministic single-fixture evaluation plus labelled cohort comparison now exist; broader representative cohorts, replay/ablation and defensible threshold analysis remain before any recursion/threshold change.
 
-## V2-D closure findings
+## Latest block — M10 labelled cohort foundation
 
-The final audit did not pass on first inspection. Two real defects were fixed before closure:
+PR #92 adds `services/api/app/intelligence/m10_cohort.py`, regression coverage in `services/api/tests/test_m10_labelled_cohort.py`, ADR 0052 and the matching roadmap update.
 
-1. the repository-root `render.yaml` still made a paid Render `starter` + persistent-disk topology look like the default deployment contract even though the product rule requires a zero-spend baseline;
-2. runtime consistency tests proved governed binding → runtime ownership, but did not prove the reverse direction that every `ProviderStatus.DEVELOPMENT` provider is a current governed binding/runtime member.
+The cohort layer does not implement another scheduler. Every fixture still runs through `evaluate_graph_limit_fixture()`, which uses the production `LeadFrontier`. It aggregates deterministic counts across independent fixtures and reports candidate-minus-baseline deltas for graph size/depth, duplicate suppression, provider failures, budget stops and labelled relevant/wrong pivots.
 
-PR #89 repaired both. Local one-admin operation is now the default zero-spend authority, the paid Render design is an explicit optional reference under `deploy/`, CI forbids a root paid Blueprint, and development provider membership must exactly match current governed binding/runtime membership. PR #89 also added an objective unique/contiguous ADR-numbering guard after an earlier duplicate-ADR incident exposed that documentation weakness.
+The initial regression cohort has three intentionally different graph shapes:
 
-Render's current official Blueprint documentation was rechecked during the audit: custom Blueprint filenames/paths are supported, so keeping the optional paid reference at `deploy/render-paid.yaml` is a valid deliberate separation rather than a dead file. Recheck current hosting cost/terms again before any future deployment.
+1. a depth-limited chain;
+2. duplicate-heavy output;
+3. a provider-failure path.
 
-ADR 0050 records zero-spend deployment authority. ADR 0051 records V2-D closure and its non-authorizations.
+Under that controlled cohort, moving from depth 2 / 12 nodes to depth 3 / 12 nodes removes one depth budget stop and admits one extra node, but the extra admitted pivot is labelled wrong and adds no relevant pivot. This is a regression fixture result, not population evidence; it reinforces that larger recursion is not automatically better.
+
+The cohort layer is deliberately count-only. It does not publish reliability percentages, confidence intervals, identity probability or a production-limit recommendation. Empty cohorts, duplicate fixture names and duplicate scenario names fail closed, and underlying fixture-truth validation remains authoritative.
+
+Production recursion remains **depth 2 / 12 nodes**.
+
+## Source expansion review checkpoint
+
+Bluesky was re-reviewed from current official sources during the PR #92 block but was **not activated**.
+
+Current official behavior supports a public unauthenticated AppView profile lookup and makes the public AppView suitable for public-web clients. However, Bluesky's public-web guidance also requires respecting the profile `!no-unauthenticated` self-label. A naive adapter that accepts every returned public profile would therefore violate the intended public-web boundary.
+
+Bluesky remains `PLANNED`, `source_policy_reviewed=False`, `recursive_eligible=False` until an adapter explicitly enforces that opt-out and has deterministic success/not-found/malformed/rate-limit/unavailable/opt-out fixtures. Do not change catalog/binding/registry/runtime membership merely because the endpoint is public.
+
+Recheck official Bluesky documentation/terms again at activation time rather than treating this checkpoint as permanent pricing/policy authority.
 
 ## Permanent evidence semantics
 
@@ -81,6 +93,7 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - convergence: `services/api/app/convergence.py`
 - retained converged reference validation: `services/api/app/converged_report.py`
 - typed leads/frontier/source planning/reporting/evaluation: `services/api/app/intelligence`
+- M10 labelled cohort comparison: `services/api/app/intelligence/m10_cohort.py`
 - quick structured-report references: `services/api/app/reporting.py`
 - quick research: `services/api/app/research.py`
 - retained cases: `services/api/app/cases.py`
@@ -141,15 +154,15 @@ The chain is server-owned and explicit:
 - Brave remains optional and excluded from required zero-spend operation;
 - no identity probability or universal-account claims.
 
-## Next phase
+## Next gate
 
-V2-D is closed. Do not add another hard-coded source branch or reopen its architecture casually.
+Do not reopen V2-D architecture casually.
 
-The next phase is reviewed source expansion, but provider activation must remain one bounded source at a time. Before activation, re-check current primary documentation, terms, quotas, cost, authentication, returned fields, contact risk and retention implications. A source appearing in `V2_SOURCE_EXPANSION_PLAN.md` is not permission to execute it.
+The next source-expansion block can return to Bluesky, but activation must first make `!no-unauthenticated` enforcement a tested fail-closed adapter rule and recheck current official terms/quota/cost at that time. It still must enter through catalog + binding + registry + shared `ProviderRuntime` + typed source-state reporting + canonical evidence ownership. No hard-coded bypass in `research.py` is acceptable.
 
-For each future source, require catalog + policy + governed adapter + deterministic fixtures + typed source-state reporting + canonical evidence ownership. Metered/credentialed sources must remain optional, and PersonaLattice must keep working when they are absent.
+In parallel, M10 still needs broader labelled synthetic/consented cohorts across more lead kinds and source-yield/cost shapes, deterministic replay/factor ablations, and defensible labelled threshold analysis before any production recursion or M5-threshold change.
 
-M10 remains the gate for raising production recursion or changing correlation thresholds. Production stays depth 2 / 12 nodes until labelled evaluation supports a change.
+Production stays depth 2 / 12 nodes until that evidence exists.
 
 ## Update discipline
 
