@@ -9,7 +9,7 @@ This runbook is the default operating path. `docs/DEPLOYMENT_RUNBOOK.md` describ
 - Python 3.11 or newer;
 - Node.js 24;
 - the repository checkout;
-- local disk space for the SQLite case store and temporary upload staging.
+- local disk space for the SQLite case store and bounded temporary file processing.
 
 No external database or hosted service is required.
 
@@ -39,12 +39,11 @@ Generate an Argon2 password hash without writing the plaintext password to disk:
 Set the local operator configuration in the shell that will start the API. Replace the example username and hash with your own values. Do not commit them.
 
 ```bash
+mkdir -p "$PWD/.local"
 export PERSONALATTICE_ADMIN_USERNAME='admin'
 export PERSONALATTICE_ADMIN_PASSWORD_HASH='<argon2-hash>'
 export PERSONALATTICE_COOKIE_SECURE='false'
 export PERSONALATTICE_DB_PATH="$PWD/.local/personalattice.db"
-export PERSONALATTICE_UPLOAD_DIR="$PWD/.local/uploads"
-mkdir -p "$PWD/.local/uploads"
 ```
 
 `BRAVE_SEARCH_API_KEY` is deliberately omitted. Brave is optional and metered; without the key the rest of PersonaLattice remains usable.
@@ -82,7 +81,7 @@ Use `/admin` for the private operator workflow.
 
 ## Local data and cleanup
 
-The SQLite database and upload-review staging path in the commands above live under `.local/`. Keep that directory out of backups or sync tools unless you deliberately want retained research data copied elsewhere.
+The SQLite database in the commands above lives under `.local/` and is excluded from Git by the repository's `*.db` rule. Keep local research data out of cloud-sync or backup tools unless you deliberately want that data copied elsewhere.
 
 Cases use the configured retention policy and explicit deletion controls. Upload review state is short-lived. Uploaded content remains untrusted input and does not authorize research until a candidate is explicitly confirmed and a separate run action is performed.
 
