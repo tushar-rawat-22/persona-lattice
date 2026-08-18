@@ -78,14 +78,27 @@ def _initialize(connection: sqlite3.Connection) -> None:
     connection.commit()
 
 
-def _report_payload(report: QuickResearchReport) -> dict[str, object]:
-    return {
+def _report_payload(
+    report: QuickResearchReport,
+    *,
+    extensions: dict[str, object] | None = None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
         "kind": report.kind.value,
         "normalized_value": report.normalized_value,
         "observations": [asdict(item) for item in report.observations],
         "warnings": list(report.warnings),
         "structured_report": build_structured_report(report),
     }
+    if extensions:
+        overlap = payload.keys() & extensions.keys()
+        if overlap:
+            raise ValueError(
+                "Case report extensions cannot replace canonical report fields: "
+                f"{sorted(overlap)!r}."
+            )
+        payload.update(extensions)
+    return payload
 
 
 def _decode_row(row: sqlite3.Row) -> StoredCase:
@@ -156,12 +169,13 @@ class CaseStore:
         seed_kind: ResearchKind,
         seed_value: str,
         report: QuickResearchReport,
+        report_extensions: dict[str, object] | None = None,
         now: datetime | None = None,
     ) -> StoredCase:
         return self.create_payload(
             seed_kind=seed_kind,
             seed_value=seed_value,
-            report_payload=_report_payload(report),
+            report_payload=_report_payload(report, extensions=report_extensions),
             now=now,
         )
 
