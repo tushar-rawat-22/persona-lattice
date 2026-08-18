@@ -12,16 +12,16 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #62: `d6341658667d6e5205ab74d85227566cd5da7400`
-- PR #62 exact tested head: `358fcd7b6e28f6ca4023f7758fbd18ab80957908`
-- PR #62 CI run: `32099610956`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
+- Verified implementation main after PR #64: `89969e3747ebe1a9cd6f12274738cae1123ec629`
+- PR #64 exact tested head: `8fb664bc31ae09a4b506ae308744e88e17412a7e`
+- PR #64 CI run: `32103737982`, success across API 3.11/3.13, dependency audits, Ruff, web and deployment image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #62 closes the server-owned mutation-authority layer for document review. `UploadReviewStore.mutate()` reloads the current candidate inside a SQLite `BEGIN IMMEDIATE` transaction and permits changes only to `review_status` and `external_research_authorized`. Value, identifier kind, candidate/artifact IDs, type, origin, page number and character provenance are immutable at this boundary. Invalid transforms raise and roll back rather than persisting a partial decision.
+PR #64 closes the private HTTP boundary for document review. Confirm, reject, reopen and promote are exposed under `/v1/files/review/{artifact_id}/{candidate_id}` and all use the existing authenticated write/CSRF boundary. Requests carry only artifact and candidate UUIDs; value, identifier kind, review authorization and provenance are reloaded from server-owned SQLite state.
 
-`review_service.py` now provides confirm, reject, re-review and promote operations that accept only artifact ID + candidate ID. Confirm authorizes supported identifier candidates, reject/re-review revoke authorization, and promotion reloads current trusted state before reusing `promote_confirmed_identifier_candidate()`. No browser-supplied `ReviewCandidate` is accepted as mutation authority.
+Review-state responses deliberately omit the candidate value. Promotion returns the typed reviewed lead with its normalized value and `artifact://` provenance locator, but it does not schedule or execute provider research. Successful review actions emit bounded audit metadata without identifier values, artifact/candidate IDs, source locators or document text. ADR 0038 records the boundary.
 
-ADR 0037 records the decision. PR #62 deliberately does **not** expose HTTP routes yet; authentication, CSRF, response contracts and audit events remain the next boundary.
+CI exposed one stale test assumption: `test_m6_keeps_no_browser_facing_dashboard_http_endpoint` assumed every `app.routes` item had a `.path`. FastAPI router inclusion introduced an internal non-path entry. The test was narrowed to path-bearing routes only; runtime behavior was not changed to satisfy the brittle assertion. An intermediate over-broad test-file edit was caught before merge and restored; the final diff changes that test by one line only.
 
 ## Permanent evidence semantics
 
@@ -51,6 +51,7 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - FastAPI API: `services/api`
 - evidence/persistence/normalization: `services/api/app/evidence`
 - bounded file intake + review: `services/api/app/uploads`
+- upload-review HTTP boundary: `services/api/app/upload_review_api.py`
 - governed provider execution: `services/api/app/providers`
 - deterministic correlation: `services/api/app/correlation`
 - convergence: `services/api/app/convergence.py`
@@ -96,9 +97,10 @@ Document-intake checkpoints:
 - PR #56: deterministic candidate character spans plus fail-closed reviewed identifier promotion contract;
 - PR #58: extraction-time PDF page spans, exact page attribution and corrected flattened-text bounds;
 - PR #60: short-lived server-owned candidate review persistence without raw document retention;
-- PR #62: atomic server-owned confirm/reject/re-review/promotion service with immutable candidate value/provenance.
+- PR #62/#63: atomic server-owned confirm/reject/re-review/promotion service with immutable candidate value/provenance and a hardened generic update seam;
+- PR #64: authenticated + CSRF-protected HTTP confirm/reject/reopen/promote actions over the server-owned review record.
 
-The remaining document-review gap is HTTP exposure. There is still no browser-accessible confirm/reject/re-review/promote route.
+The document-review backend now reaches a typed promoted lead without trusting browser-supplied candidate data. It intentionally stops before provider execution.
 
 ## Source-run semantics
 
@@ -128,7 +130,9 @@ Critical distinctions:
 - atomic review mutation may change only review status and external-research authorization;
 - candidate value, kind, IDs, origin, type and page/character provenance are immutable during review mutation;
 - confirm authorizes supported identifier candidates; reject/re-review revoke authorization;
-- promotion reloads current server-owned state and does not automatically call a provider;
+- HTTP mutation requests carry only artifact/candidate UUIDs and use `require_admin_write`;
+- review-state responses omit the candidate value;
+- promotion reloads current server-owned state, returns a typed reviewed lead and does not automatically call a provider;
 - PDF candidate page attribution is mechanically derived from extraction-time page spans;
 - claims and unsupported identifier kinds remain non-executable;
 - names/organizations are not silently upgraded to executable research seeds.
@@ -153,20 +157,20 @@ The graph-limit harness uses the real `LeadFrontier`. Its regression fixture sho
 
 ## Immediate next gate
 
-Expose the PR #62 review service through authenticated, CSRF-protected private API routes.
+Define the explicit backend transition from a promoted reviewed document lead into a chosen research/case run before wiring UI controls around it.
 
 Requirements:
 
-1. requests carry only artifact/candidate IDs plus the requested action; browser-supplied candidate values/provenance/authorization flags are never accepted as authority;
-2. routes use the existing `require_admin_write` boundary;
-3. unknown/expired identifiers fail closed without echoing candidate values;
-4. confirm/reject/re-review call the PR #62 service and return the resulting bounded review state;
-5. promotion returns the typed reviewed lead with artifact/candidate/page/character provenance and does not execute a provider;
-6. audit events record action/result metadata without raw uploaded text or candidate values;
-7. tests cover authentication, CSRF, stale IDs, browser-tampering attempts, state transitions and promotion;
-8. no new provider/API, credential, paid dependency, recursion expansion or identity-semantic change.
+1. keep candidate confirmation/promotion separate from research execution; no review action may trigger provider traffic;
+2. the execution action should reference server-owned artifact/candidate state rather than accept an arbitrary browser-supplied identifier as a reviewed-document authorization claim;
+3. reload and revalidate current confirmed/research-authorized state immediately before constructing the research request;
+4. require the existing authenticated write/CSRF boundary and normal purpose/consent enforcement;
+5. preserve the promoted lead's artifact/candidate/page/character provenance in the resulting run/report without creating a second raw-document store;
+6. fail closed if the short-lived review candidate expired, was reopened/rejected, or is not an executable identifier kind;
+7. emit privacy-bounded audit metadata without copying identifier values;
+8. remain a zero-spend local capability and do not activate any new provider/source.
 
-After the HTTP boundary, expose source-state/evaluation summaries cleanly, then run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after V2-D closure should new third-party providers be reviewed.
+After that backend transition, expose the document-review flow and existing source-state/evaluation summaries cleanly to the private operator UI, then run the final V2-D catalog/binding/runtime/report/privacy/zero-spend consistency review. Only after V2-D closure should new third-party providers be reviewed.
 
 ## Update discipline
 
