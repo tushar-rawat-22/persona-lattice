@@ -1,12 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
 
 from app.admin_auth import LOGIN_THROTTLE, SESSION_STORE, hash_admin_password
 from app.audit import AUDIT_STORE
+from app.cases import CASE_STORE
 from app.main import app
+from app.models import Purpose
+from app.research import QuickResearchReport, ResearchKind
+from app.uploads import research_service
 
 
 client = TestClient(app)
@@ -144,6 +148,115 @@ def test_upload_review_confirm_promote_reopen_and_reject_flow(monkeypatch, tmp_p
     assert rejected.status_code == 200, rejected.text
     assert rejected.json()["review_status"] == "rejected"
     assert rejected.json()["external_research_authorized"] is False
+
+
+def test_reviewed_candidate_case_requires_current_authorization_and_preserves_provenance(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    csrf = _configure_and_login(monkeypatch, tmp_path)
+    artifact_id, candidate_id, candidate_value = _preview_email_candidate(csrf)
+    calls: list[dict[str, object]] = []
+
+    async def fake_quick_research(**kwargs):
+        calls.append(kwargs)
+        return QuickResearchReport(
+            kind=ResearchKind.EMAIL,
+            normalized_value=str(kwargs["value"]),
+            observations=(),
+        )
+
+    monkeypatch.setattr(research_service, "run_quick_research", fake_quick_research)
+    body = {
+        "mode": "quick",
+        "purpose": "self_audit",
+        "consent_acknowledged": True,
+    }
+
+    before_confirm = client.post(
+        _route(artifact_id, candidate_id, "run-case"),
+        headers=_headers(csrf),
+        json=body,
+    )
+    assert before_confirm.status_code == 409
+    assert calls == []
+
+    confirmed = client.post(
+        _route(artifact_id, candidate_id, "confirm"),
+        headers=_headers(csrf),
+    )
+    assert confirmed.status_code == 200
+
+    executed = client.post(
+        _route(artifact_id, candidate_id, "run-case"),
+        headers=_headers(csrf),
+        json=body,
+    )
+    assert executed.status_code == 200, executed.text
+    response_body = executed.json()
+    assert response_body["mode"] == "quick"
+    assert response_body["seed_kind"] == "email"
+    assert "value" not in response_body
+    assert len(calls) == 1
+    assert calls[0]["kind"] is ResearchKind.EMAIL
+    assert calls[0]["value"] == candidate_value
+    assert calls[0]["purpose"] is Purpose.SELF_AUDIT
+    assert calls[0]["consent_acknowledged"] is True
+
+    record = CASE_STORE.get(UUID(response_body["case_id"]))
+    assert record is not None
+    provenance = record.report["seed_provenance"]
+    assert provenance["source"] == "reviewed_upload_candidate"
+    assert provenance["review_required"] is True
+    assert artifact_id in provenance["source_locator"]
+    assert candidate_id in provenance["source_locator"]
+
+    reopened = client.post(
+        _route(artifact_id, candidate_id, "reopen"),
+        headers=_headers(csrf),
+    )
+    assert reopened.status_code == 200
+    after_reopen = client.post(
+        _route(artifact_id, candidate_id, "run-case"),
+        headers=_headers(csrf),
+        json=body,
+    )
+    assert after_reopen.status_code == 409
+    assert len(calls) == 1
+
+
+def test_reviewed_candidate_case_rechecks_purpose_before_provider_execution(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    csrf = _configure_and_login(monkeypatch, tmp_path)
+    artifact_id, candidate_id, _candidate_value = _preview_email_candidate(csrf)
+    confirmed = client.post(
+        _route(artifact_id, candidate_id, "confirm"),
+        headers=_headers(csrf),
+    )
+    assert confirmed.status_code == 200
+
+    called = False
+
+    async def fake_quick_research(**_kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("provider runner must not execute before purpose enforcement")
+
+    monkeypatch.setattr(research_service, "run_quick_research", fake_quick_research)
+    response = client.post(
+        _route(artifact_id, candidate_id, "run-case"),
+        headers=_headers(csrf),
+        json={
+            "mode": "quick",
+            "purpose": "self_audit",
+            "consent_acknowledged": False,
+        },
+    )
+
+    assert response.status_code == 422
+    assert called is False
 
 
 def test_upload_review_route_fails_closed_on_artifact_candidate_mismatch(
