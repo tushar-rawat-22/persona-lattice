@@ -85,6 +85,26 @@ async def test_unconfigured_optional_search_is_not_reported_as_not_found(monkeyp
 
 
 @pytest.mark.asyncio
+async def test_configured_brave_ambiguous_validation_remains_unclassified(monkeypatch) -> None:
+    monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "test-only-secret")
+
+    async def fail_runtime(*args, **kwargs):
+        raise ProviderValidationError("phase is deliberately unknown")
+
+    monkeypatch.setattr("app.research.DEFAULT_PROVIDER_RUNTIME.execute", fail_runtime)
+
+    report = await run_quick_research(
+        kind=ResearchKind.PHONE,
+        value="+14155552671",
+        purpose=Purpose.SELF_AUDIT,
+        consent_acknowledged=True,
+    )
+
+    assert all(record.source_name != "brave_public_web_index" for record in report.source_runs)
+    assert "Licensed public-web exact-match search was temporarily unavailable." in report.warnings
+
+
+@pytest.mark.asyncio
 async def test_injected_local_budget_stop_is_preserved_as_pre_call_state() -> None:
     async def local_budget(_value: str):
         raise ProviderRateBudgetExceeded("test budget")
