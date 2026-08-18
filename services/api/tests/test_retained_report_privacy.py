@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from app.cases import _report_payload
+from app.cases import _report_payload, hydrate_case_report_connected_identifiers
 from app.research import QuickObservation, QuickResearchReport, ResearchKind
 
 
@@ -30,16 +30,64 @@ def test_quick_case_retains_full_provider_evidence_once() -> None:
     payload = _report_payload(report)
     serialized = json.dumps(payload, sort_keys=True)
 
-    # Arbitrary provider details have one retained owner. The selected public email index
-    # deliberately repeats its locator once for direct operator attribution.
+    # Provider details, selected connected values and provider provenance each have one retained
+    # owner: the canonical observation. The structured report stores references only.
     assert serialized.count(unique_payload_marker) == 1
-    assert serialized.count("https://github.com/synthetic-user") == 2
+    assert serialized.count("public@example.test") == 1
+    assert serialized.count("https://github.com/synthetic-user") == 1
 
     structured = payload["structured_report"]
+    connected = structured["connected_identifiers"]
+    assert connected == [
+        {
+            "kind": "email",
+            "observation_index": 0,
+            "detail_field": "email",
+            "status": "observed_public_field",
+        }
+    ]
     assert "source_evidence" not in structured
     assert "public_account_candidates" not in structured
     assert "contradictions" not in structured
     assert structured["public_account_candidate_observation_indexes"] == [0]
+
+    hydrated = hydrate_case_report_connected_identifiers(payload)
+    hydrated_item = hydrated["structured_report"]["connected_identifiers"][0]
+    assert hydrated_item["value"] == "public@example.test"
+    assert hydrated_item["source"] == "github_public_api"
+    assert hydrated_item["source_locator"] == "https://github.com/synthetic-user"
+
+    # Response hydration is transient and does not mutate the retained payload.
+    assert "value" not in payload["structured_report"]["connected_identifiers"][0]
+
+
+def test_connected_identifier_hydration_fails_closed_on_bad_reference() -> None:
+    payload = {
+        "observations": [
+            {
+                "source": "github_public_api",
+                "source_locator": "https://github.com/synthetic-user",
+                "details": {"email": "public@example.test"},
+            }
+        ],
+        "structured_report": {
+            "connected_identifiers": [
+                {
+                    "kind": "email",
+                    "observation_index": 9,
+                    "detail_field": "email",
+                    "status": "observed_public_field",
+                }
+            ]
+        },
+    }
+
+    try:
+        hydrate_case_report_connected_identifiers(payload)
+    except ValueError as exc:
+        assert "out of range" in str(exc)
+    else:
+        raise AssertionError("Malformed connected-field references must fail closed.")
 
 
 def test_structured_report_does_not_copy_seed_value() -> None:
