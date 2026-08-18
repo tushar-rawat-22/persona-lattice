@@ -12,16 +12,23 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified implementation main after PR #74: `bea58d7a6a832e10bf4304234be0b7d43efaa7c3`
-- PR #74 exact tested head: `8e8a2b4686e80d2d4c69d7e47d416ce0c2d2ecdd`
-- PR #74 CI run: `32127790638`, success across API 3.11/3.13, dependency audits, Ruff, web lint/typecheck/build and deployment image
+- Verified implementation main after PR #77: `1e2848b195a84fa49302913ec276e05930786fd3`
+- PR #77 exact tested head: `57aaa7017fae5fca94e6aee4629705f818e28b6a`
+- PR #77 CI run: `32137724162`, success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
+- Issue #76: closed by PR #77
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 
-PR #74 closes a retained converged-M5 provenance duplication gap. Canonical converged node observations remain the retained owner of complete provider source/locator/details. New live-M5 evaluation records no longer copy `candidate_source` or `candidate_source_locator`; they reference the canonical observation by `candidate_node` plus zero-based `candidate_observation_index`. ADR 0043 records the decision.
+PR #77 closes the converged edge/lead-decision provenance duplication identified in Issue #76. Review found the issue's first proposed ownership model was still too weak: the parent node observation already owned provider source/locator, so retaining another copy in the lead decision would still duplicate the locator. ADR 0044 records the stronger contract.
 
-A cross-layer review caught a compatibility defect before merge: the private admin UI still consumed the removed M5 fields. The UI now resolves new M5 evaluations through the canonical node observation. It retains read-only support for older retained cases that still contain the legacy M5 source/source-locator fields, so historical case JSON does not need migration or rewriting.
+New retained converged reports now use one ownership chain:
 
-Regression coverage proves an arbitrary provider detail and candidate locator occur only once in a new retained converged payload while M5 score/outcome semantics remain unchanged.
+`canonical parent observation -> lead decision source_observation_index -> admitted edge lead_decision_index`
+
+Canonical node observations are the sole retained owner of provider `source` and `source_locator`. Lead decisions retain lead semantics and source field but reference the parent observation. Admitted edges retain graph structure and reference the admitted decision. Writer and reader validation fail closed on missing, malformed, out-of-range or structurally inconsistent references.
+
+In-memory traversal records still keep full candidate provenance for graph evaluation. Provider calls, frontier behavior, recursion limits and M5 semantics did not change.
+
+The current admin UI still reads legacy edge source/locator fields. `CaseStore` therefore keeps de-duplicated JSON in SQLite and hydrates those two fields only in the returned in-memory/API case response. Cases retained before ADR 0044 remain readable without migration. The compatibility projection is not written back to retained storage.
 
 ## Permanent evidence semantics
 
@@ -41,7 +48,7 @@ Allowed scope is attributable public information and explicitly authorized data.
 
 The baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Missing optional configuration must degrade explicitly rather than breaking baseline research.
 
-Brave remains optional/metered. No `BRAVE_SEARCH_API_KEY` means no Brave attempt. Do not make it mandatory or expand its query scope during architecture closure.
+Brave remains optional/metered. No `BRAVE_SEARCH_API_KEY` means no Brave attempt.
 
 Uploaded content is untrusted data. Extraction is never execution authority. A candidate enters the executable lead path only after explicit human review/authorization, and only for supported identifier kinds.
 
@@ -56,6 +63,7 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - governed provider execution: `services/api/app/providers`
 - deterministic correlation: `services/api/app/correlation`
 - convergence: `services/api/app/convergence.py`
+- retained converged-report reference validation/compatibility: `services/api/app/converged_report.py`
 - typed leads/frontier/source planning/reporting/evaluation: `services/api/app/intelligence`
 - quick research: `services/api/app/research.py`
 - retained cases: `services/api/app/cases.py`
@@ -107,7 +115,8 @@ Architecture/privacy consistency checkpoints:
 - PR #68: cross-layer catalog/binding/registry/shared-runtime ownership and zero-spend invariants; ADR 0040;
 - PR #70: convergence requires canonical typed source-run reports and no longer infers a missing contract as an empty report; ADR 0041;
 - PR #72: complete quick-provider payloads have one retained owner; structured quick-report copies are removed; ADR 0042;
-- PR #74: converged M5 candidate provenance references canonical node observations instead of copying source/locator fields; ADR 0043.
+- PR #74: converged M5 candidate provenance references canonical node observations instead of copying source/locator fields; ADR 0043;
+- PR #77: canonical node observations own converged pivot provider provenance; lead decisions and admitted edges use validated references; ADR 0044.
 
 The document-review backend reaches a retained quick or converged case without trusting browser-supplied candidate data and without making review actions trigger provider execution.
 
@@ -143,9 +152,9 @@ Critical distinctions:
 
 ## Immediate next gate
 
-The private operator UI remains the next product-facing block: wire document review/run state, explicit provider-start controls, retained seed provenance and existing source-state/evaluation summaries without re-deriving backend semantics in the browser.
+Backend convergence provenance ownership is now closed for complete provider observations, M5 candidate references, lead decisions and admitted edges after PRs #72, #74 and #77. The next bounded privacy decision is the remaining quick structured-report `connected_identifiers` value/source-locator projection: prove that it is an intentional operator index with bounded fields, or replace its duplicated value/locator fields with canonical observation references while preserving the private UI.
 
-For backend architecture closure, quick full-payload duplication and converged M5 candidate-provenance duplication are closed after PRs #72 and #74. Next inspect converged node/edge/lead-decision provenance ownership. Do not remove edge or lead provenance merely because values repeat: those records may need their own source to explain traversal or non-executed decisions. Remove only duplication with no independent explanatory owner. After that, decide whether the bounded quick connected-field value/source-locator projection remains an intentional operator index or moves to canonical-observation references.
+The private operator UI also remains a product-facing block: wire document review/run state, explicit provider-start controls, retained seed provenance and existing source-state/evaluation summaries without re-deriving backend semantics in the browser. When touching converged edge display, migrate the UI to the new references and remove the temporary CaseStore edge-hydration compatibility projection.
 
 Do not activate new third-party providers until V2-D closure is explicitly recorded.
 

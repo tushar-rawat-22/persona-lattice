@@ -77,7 +77,7 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: active; network migration, reviewed-document backend execution, cross-layer ownership/zero-spend guard, source-run contract closure, quick-report full-payload deduplication and converged M5 candidate-provenance deduplication complete**
+**Status: active; network migration, reviewed-document backend execution, cross-layer ownership/zero-spend guard, source-run contract closure and the main converged provenance-ownership defects are complete**
 
 Every currently executable network source is behind the governed runtime. Key migration checkpoints are PRs #24-#32, #50, #52 and #54. The executable legacy network allowance is empty.
 
@@ -91,7 +91,9 @@ PR #70 closes the stale convergence compatibility shim that treated a missing `s
 
 PR #72 closes a retained quick-report privacy defect. Complete provider evidence now has one canonical retained owner in top-level quick observations. `private-evidence-report-v2` removes copied full-evidence sections and the duplicate structured seed, while account-candidate/contradiction classification refers back to canonical observations by index. The bounded connected-field index remains because it is the current private UI navigation contract; arbitrary provider details cannot flow through that projection. ADR 0042 records the decision.
 
-PR #74 closes the next converged-report duplication defect. Live M5 evaluations no longer copy candidate source names or source locators already owned by canonical node observations. New evaluations retain `candidate_node` plus `candidate_observation_index`; the private UI resolves those references while retaining read-only compatibility for older retained cases. ADR 0043 records the decision.
+PR #74 closes converged M5 candidate-provenance duplication. Live M5 evaluations no longer copy candidate source names or source locators already owned by canonical node observations. New evaluations retain `candidate_node` plus `candidate_observation_index`; the private UI resolves those references while retaining read-only compatibility for older retained cases. ADR 0043 records the decision.
+
+PR #77 closes the next converged provenance duplication defect and strengthens the ownership model beyond Issue #76's initial proposal. Canonical node observations are now the sole retained owner of provider source/locator for graph traversal provenance. Lead decisions reference the source observation by `source_observation_index`; admitted edges reference the decision by `lead_decision_index`. New reference readers fail closed on missing, malformed, out-of-range or structurally inconsistent references. In-memory traversal provenance is unchanged. `CaseStore` transiently hydrates legacy edge display fields for the current admin UI without writing those copies back to SQLite. ADR 0044 records the decision.
 
 The document-review path has a complete server-owned backend chain:
 
@@ -109,8 +111,8 @@ PR #68 adds a cross-layer closure guard derived from live declarations. Governed
 Remaining before V2-D closes:
 
 1. expose document review/run controls and existing source-state/evaluation summaries cleanly in the private operator UI;
-2. continue the converged-report retention audit for duplicated node/edge/lead provenance, removing only copies that have no independent explanatory owner;
-3. decide whether the remaining bounded quick connected-field value/source-locator index should stay as an explicit operator projection or be replaced by canonical-observation references;
+2. decide whether the remaining bounded quick structured-report `connected_identifiers` value/source-locator projection should stay as an explicit operator index or be replaced by canonical-observation references;
+3. migrate the private converged-edge UI to the new decision/observation references, then remove the temporary CaseStore edge-hydration compatibility projection;
 4. close any remaining compatibility seam only where doing so does not break existing operator behavior or evidence semantics.
 
 No new third-party source should be activated during these closure blocks.
@@ -139,9 +141,9 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-The next product-facing block is the private operator workflow: wire reviewed-document state, explicit case execution, source-state/evaluation summaries and retained seed provenance into the UI without re-deriving backend authorization or evidence semantics in the browser.
+The next backend privacy review is the bounded quick structured-report `connected_identifiers` projection. It currently duplicates selected values and source locators for operator navigation. Either prove that duplication is necessary, narrow and covered by regression tests, or replace it with canonical observation references while preserving the private UI. Do not remove it merely because it repeats data; remove it only if the canonical reference model can serve the operator equally well.
 
-Backend closure can continue in bounded checks. Quick-report complete-payload duplication and converged M5 candidate-provenance duplication are closed after PRs #72 and #74. The next backend review should inspect node/edge/lead-decision provenance ownership and then the remaining bounded quick connected-field projection. Runtime ownership, zero-spend dependency consistency and the typed convergence source-run contract are already guarded.
+The next product-facing block is the private operator workflow: wire reviewed-document state, explicit case execution, source-state/evaluation summaries and retained seed provenance into the UI without re-deriving backend authorization or evidence semantics in the browser. When the converged-edge UI is touched, consume the new references directly and retire the temporary response hydration layer.
 
 Only after V2-D closure should new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
 
