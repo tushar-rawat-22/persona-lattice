@@ -9,7 +9,7 @@ PersonaLattice is a private, evidence-first research workbench. The public route
 - A lead is a research direction, not proof of identity.
 - Same-handle reuse alone remains insufficient evidence.
 - M5 remains uncalibrated evidence-strength triage, not identity probability.
-- Contradictions/vetoes and stale evidence remain visible.
+- Contradictions, vetoes and stale evidence remain visible.
 - No AI/ML/embedding/biometric identity decision is authorized by the current roadmap.
 - No private-account bypass, credential/account-recovery enumeration, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking or regulated eligibility decisioning is a product capability.
 - The default product must remain usable without paid APIs, paid hosting, paid databases, paid proxies or paid enrichment.
@@ -77,48 +77,26 @@ Capability, execution authority, lifecycle state, cost class, credential class, 
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: active; network migration, reviewed-document backend execution, cross-layer ownership/zero-spend guard, source-run contract closure and retained provider-provenance ownership are complete**
+**Status: active; implementation closure is nearly complete**
 
-Every currently executable network source is behind the governed runtime. Key migration checkpoints are PRs #24-#32, #50, #52 and #54. The executable legacy network allowance is empty.
+Every currently executable network source is behind the governed runtime. The executable legacy network allowance is empty. Brave remains optional/metered; without `BRAVE_SEARCH_API_KEY` it is not attempted and the zero-spend path remains usable.
 
-Brave remains an optional metered extension. Without `BRAVE_SEARCH_API_KEY`, it is not attempted and the zero-spend research path continues with the remaining sources.
+Source-run accounting is phase-proven. Policy/configuration/local-budget stops are non-attempts; completed zero-result calls are `not_found`; remote failures and malformed returned results count as attempts only when that phase is mechanically known. Generic phase-ambiguous validation remains unclassified rather than being guessed into failure metrics.
 
-Source-run accounting is phase-proven. Policy/configuration/local-budget stops are non-attempts; completed zero-result calls are `not_found`; remote failures and malformed returned results count as attempts only when that phase is mechanically known. Generic phase-ambiguous validation is left unclassified rather than guessed into a failure count.
+Retained-report ownership has been tightened across PRs #70, #72, #74, #77 and #79. Complete provider evidence and provenance have canonical retained owners; connected fields, M5 candidates and converged edges use validated references rather than copying values/locators into parallel structures. PR #81 moved those reference resolutions into the private UI and removed temporary server-side response hydration for new retained formats while keeping explicit read-only compatibility for historical self-contained cases.
 
-Source-state/report/evaluation work in PRs #34-#48 establishes typed source states/reasons, privacy-bounded projections, factual quick-research population, deterministic aggregate/per-source counters, full-vocabulary fixture coverage, graph-growth/duplicate counters, label-gated wrong-pivot measurement and network-free graph-limit comparison through the real frontier scheduler.
-
-PR #70 closes the stale convergence compatibility shim that treated a missing `source_runs` contract as an empty report. Converged reports now require the canonical `QuickResearchReport.source_runs` field directly; a valid zero-record tuple still yields the same privacy-bounded empty projection. ADR 0041 records the decision.
-
-PR #72 closes retained quick-report full-evidence duplication. Complete provider evidence has one canonical retained owner in top-level quick observations. Account-candidate and contradiction classification refer back to observations by index. ADR 0042 records the decision.
-
-PR #74 closes converged M5 candidate-provenance duplication. New evaluations retain `candidate_node` plus `candidate_observation_index`; the private UI resolves those references while retaining read-only compatibility for older retained cases. ADR 0043 records the decision.
-
-PR #77 closes converged pivot-provenance duplication. Canonical node observations own provider source/locator; lead decisions use `source_observation_index`; admitted edges use `lead_decision_index`. New reference readers fail closed on missing, malformed, out-of-range or structurally inconsistent references. ADR 0044 records the decision.
-
-PR #79 closes the remaining quick structured-report value/provenance duplication. New `connected_identifiers` entries retain only connected-field kind, canonical observation index, reviewed detail-field name and status. The canonical quick observation is now the sole retained owner of the selected value, provider source and source locator. Mixed, malformed or out-of-range references fail closed. ADR 0045 records the decision.
-
-PR #81 closes the temporary API response-hydration seam left after those retention changes. The private admin UI resolves quick connected fields and converged edge provenance directly from canonical references, validates legacy versus reference shapes, and degrades visibly when a reference cannot be proven. `CaseStore` now returns retained report JSON unchanged. Historical self-contained cases remain readable through explicit read-only browser compatibility paths without database migration or write-back. ADR 0046 records the decision.
-
-The document-review path has a complete server-owned backend chain:
+The reviewed-document backend chain is complete:
 
 - PR #56: deterministic candidate spans and fail-closed reviewed identifier promotion;
-- PR #58: extraction-time PDF page spans and corrected flattened-text limits;
-- PR #60: short-lived SQLite review state without raw-document retention;
+- PR #58: PDF page-span provenance and corrected flattened-text limits;
+- PR #60: short-lived server-owned review state without raw-document retention;
 - PR #62/#63: atomic confirm/reject/re-review/promotion with immutable candidate value/provenance;
 - PR #64: authenticated, CSRF-protected HTTP review actions;
 - PR #66: separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate.
 
-The PR #66 execution action accepts artifact/candidate IDs plus mode, purpose and consent acknowledgement. It reloads and revalidates current review state immediately before execution, never accepts a browser-supplied reviewed identifier, and preserves the existing `artifact://` page/character provenance in the retained case. Review confirmation and promotion remain non-executing state transitions.
+PR #83 exposes that backend chain in the private admin UI. The browser can confirm, reject, reopen and preview promotion, then start a converged case through a separate explicit action. Review/execution requests identify the server-owned record by artifact ID + candidate ID; the reviewed identifier itself is never posted back as authorization state. Promotion still does not execute a provider. ADR 0047 records the decision.
 
-PR #68 adds a cross-layer closure guard derived from live declarations. Governed executable bindings must exactly match process-wide runtime adapter ownership, runtime adapters must use the reviewed registry descriptors, and planned/unreviewed sources cannot silently enter production runtime ownership. The same guard requires every required `ACTIVE` recursive source to stay zero-spend eligible; any current recursive source that is not zero-spend eligible must remain `OPTIONAL`. ADR 0040 records the decision.
-
-Remaining before V2-D closes:
-
-1. expose document review/run controls and existing source-state/evaluation summaries cleanly in the private operator UI;
-2. surface retained reviewed-document seed provenance without re-deriving backend authorization or evidence semantics in the browser;
-3. perform a final stale-compatibility/documentation/zero-spend consistency audit and explicitly record V2-D closure if no material gap remains.
-
-No new third-party source should be activated during these closure blocks.
+Cross-layer closure guards from PR #68 keep catalog, binding, registry and process-wide runtime ownership aligned and enforce the zero-spend baseline for required recursive sources.
 
 ## M10 — evaluation and calibration laboratory
 
@@ -144,9 +122,9 @@ Observation count is evidence yield, not evidence quality. Reliability percentag
 
 ## Immediate next gate
 
-The retained backend ownership audit and private canonical-reference display migration are complete. The next V2-D block is operator workflow visibility: expose reviewed-document review/run actions, retained seed provenance, and the existing typed source-state/evaluation summaries without duplicating backend authorization or evidence logic in the browser.
+The reviewed-document operator controls are now visible and retain the existing backend authorization boundary. The remaining V2-D visibility work is narrower: surface retained reviewed-document seed provenance plus typed source-state/evaluation summaries in the private case view without copying provider payloads or re-deriving policy in browser code.
 
-After that, run the final architecture/compatibility/documentation/zero-spend closure audit. Only once V2-D is explicitly closed should new public/API sources be reviewed one at a time, with current official terms, authentication, limits and cost rechecked before activation.
+After that, run the final architecture/compatibility/documentation/zero-spend consistency audit. If no material gap remains, explicitly close V2-D before reviewing any new third-party API/source.
 
 Production recursion remains depth 2 / 12 nodes.
 
