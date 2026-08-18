@@ -317,5 +317,5 @@ def test_read_model_rejects_identity_claim_drift_even_with_matching_digest(
 
 
 def test_m6_keeps_no_browser_facing_dashboard_http_endpoint() -> None:
-    paths = {route.path for route in app.routes}
+    paths = {route.path for route in app.routes if hasattr(route, "path")}
     assert not any(path.startswith("/v1/dashboard") for path in paths)

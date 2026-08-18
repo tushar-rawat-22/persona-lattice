@@ -30,6 +30,7 @@ from .providers.errors import (
 )
 from .providers.registry import PROVIDERS
 from .research import QuickResearchReport, ResearchKind, run_quick_research
+from .upload_review_api import router as upload_review_router
 from .uploads import (
     FileBatchPreview,
     MAX_FILE_BYTES,
@@ -52,6 +53,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "X-PersonaLattice-CSRF"],
 )
+app.include_router(upload_review_router)
 
 
 class AdminLoginRequest(BaseModel):
