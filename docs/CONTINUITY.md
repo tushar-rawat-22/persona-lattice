@@ -12,13 +12,41 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main after PR #87: `f859c99083a87504357fcaa000dbfff2e35af443`
-- PR #87 exact tested head: `3c2d35761c29eed0e7e506205eaf800dd3edeba1`
-- PR #87 CI: run `32166209900`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and deployment image
-- PR #87 decision: ADR 0049, private case views consume retained reviewed-upload provenance and typed source state/evaluation directly
+- Verified main after PR #90: `716be3e042a3b3e3d1216297ffed4f576034a7cf`
+- PR #89 exact tested head: `f4e5ceb70bde7867cfcb07bc57459da19e023b3a`
+- PR #89 CI: run `32171892313`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
+- PR #89 merge: `bde651cb4249410b543b5c4accb283edfc262bab`
+- PR #90 exact tested head: `d7bd2c802417e56584fad15602bd420733f077ea`
+- PR #90 CI: run `32172134510`, full success across the same matrix
+- PR #90 merge / verified main: `716be3e042a3b3e3d1216297ffed4f576034a7cf`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
+- Zero-spend operating runbook: `docs/ZERO_SPEND_RUNBOOK.md`
+- Optional paid Render reference: `deploy/render-paid.yaml`
 
-PR #87 closes the private operator visibility gap left after PR #85. Quick retained cases show their top-level `source_runs` projection; converged cases show the same projection per research node; reviewed-upload cases show retained `seed_provenance`. Historical cases that predate typed source-run retention show source execution state as unavailable instead of receiving guessed backfill. The case UI reads retained state, reason, attempt flags and counters directly; it does not parse warnings or reconstruct provider policy in TypeScript.
+## Milestone state
+
+- M0-M6: complete.
+- M7 private one-admin product: implemented and manually accepted locally.
+- M8 privacy lifecycle/operations: substantially implemented; hosted backup/restore is intentionally deferred until a persistent hosted store is actually selected.
+- M9 private convergence: implemented.
+- V2-A typed lead graph: complete, PR #20.
+- V2-B deterministic frontier: complete, PR #21.
+- V2-C source capability registry/planner: complete, PR #22.
+- **V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.**
+- M10: deterministic evaluation contracts exist; representative labelled evaluation remains before any recursion/threshold change.
+
+## V2-D closure findings
+
+The final audit did not pass on first inspection. Two real defects were fixed before closure:
+
+1. the repository-root `render.yaml` still made a paid Render `starter` + persistent-disk topology look like the default deployment contract even though the product rule requires a zero-spend baseline;
+2. runtime consistency tests proved governed binding → runtime ownership, but did not prove the reverse direction that every `ProviderStatus.DEVELOPMENT` provider is a current governed binding/runtime member.
+
+PR #89 repaired both. Local one-admin operation is now the default zero-spend authority, the paid Render design is an explicit optional reference under `deploy/`, CI forbids a root paid Blueprint, and development provider membership must exactly match current governed binding/runtime membership. PR #89 also added an objective unique/contiguous ADR-numbering guard after an earlier duplicate-ADR incident exposed that documentation weakness.
+
+Render's current official Blueprint documentation was rechecked during the audit: custom Blueprint filenames/paths are supported, so keeping the optional paid reference at `deploy/render-paid.yaml` is a valid deliberate separation rather than a dead file. Recheck current hosting cost/terms again before any future deployment.
+
+ADR 0050 records zero-spend deployment authority. ADR 0051 records V2-D closure and its non-authorizations.
 
 ## Permanent evidence semantics
 
@@ -36,7 +64,7 @@ PR #87 closes the private operator visibility gap left after PR #85. Quick retai
 
 Allowed scope is attributable public information and explicitly authorized data. PersonaLattice does not add private-account bypass, login/account-recovery enumeration, password/OTP/session/token collection, CAPTCHA/WAF/proxy/Tor evasion, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking, covert subject contact or regulated eligibility decisioning.
 
-The baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered; no `BRAVE_SEARCH_API_KEY` means no Brave attempt.
+The required baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered; no `BRAVE_SEARCH_API_KEY` means no Brave attempt.
 
 Uploaded content is untrusted data. Extraction is never execution authority. A candidate becomes externally research-authorized only after explicit human confirmation, and only a separate explicit run action may start research.
 
@@ -60,65 +88,17 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - private upload-review UI: `apps/web/app/admin/upload-review-workflow.tsx`
 - source expansion design: `docs/V2_SOURCE_EXPANSION_PLAN.md`
 
-M0-M6 are complete. Private V1 one-admin research, retention/deletion, audit, local HTTPS-tunnel acceptance and the ephemeral canonical evidence graph are implemented.
+## Closed V2-D invariants
 
-## V2 checkpoint
+### Source execution ownership
 
-### V2-A — typed lead graph — complete
+Current network execution is governed for Sherlock, GitHub, GitLab, Codeforces, public DNS and optional Brave exact-match search. The executable legacy-network allowance is empty.
 
-PR #20. Exact-field lead extraction, M1-consistent normalization, typed dispositions and blocked sensitive field classes.
+Catalog, current executable binding, provider registry and process-wide runtime ownership are checked symmetrically. Planned/review/manual/reference sources remain non-executable. Required active recursive sources must be zero-spend eligible; a non-zero-spend recursive source can only be optional.
 
-### V2-B — deterministic frontier — complete
+### Source-run semantics
 
-PR #21. Reservation-safe frontier, duplicate/cycle suppression, reason-coded outcomes and bounded lead-graph report state. Production limits remain depth 2 / 12 nodes.
-
-### V2-C — capability registry/planner — complete
-
-PR #22. Capability, lifecycle/cost/configuration/review state and zero-spend planning are separated from execution authority.
-
-### V2-D — runtime consistency and architecture closure — final audit next
-
-Current network execution ownership:
-
-- Sherlock — governed runtime
-- GitHub — governed runtime
-- GitLab — governed runtime
-- Codeforces — governed runtime
-- public DNS — governed runtime
-- optional Brave exact-match search — governed runtime
-- executable legacy network allowance — **empty**
-
-Provider/runtime migration is complete for current sources. Key migration PRs: #24-#32, #50, #52, #54.
-
-Source-state/report/evaluation work includes PRs #34-#48, #70, #85 and #87. The retained projection has typed states/reasons, observation counts, attempt/terminal flags, state/reason counts and deterministic evaluation counters with explicit attempt/failure/no-match/yield semantics. Quick and converged retained paths use the same projection helper. The private case UI consumes those retained fields directly. Historical cases created before the projection existed are not backfilled with guessed state.
-
-Document-intake/review checkpoints:
-
-- PR #56: deterministic candidate character spans and fail-closed reviewed identifier promotion;
-- PR #58: extraction-time PDF page spans and corrected flattened-text limits;
-- PR #60: short-lived server-owned candidate review state without raw-document retention;
-- PR #62/#63: atomic confirm/reject/re-review/promotion with immutable candidate value/provenance;
-- PR #64: authenticated + CSRF-protected HTTP review actions;
-- PR #66: separate explicit retained-case execution from a currently confirmed, research-authorized server-owned candidate;
-- PR #83: private operator controls for confirm/reject/re-review/promotion preview and separate explicit converged-case execution;
-- PR #87: retained reviewed-document seed provenance and source execution/evaluation state are visible in private case views without moving authorization into the browser.
-
-Architecture/privacy closure checkpoints:
-
-- PR #68: catalog/binding/registry/shared-runtime ownership and zero-spend invariants; ADR 0040;
-- PR #70: convergence requires canonical typed source-run reports; ADR 0041;
-- PR #72: complete quick-provider payloads have one retained owner; ADR 0042;
-- PR #74: M5 candidate provenance references canonical node observations; ADR 0043;
-- PR #77: converged pivot provenance uses canonical observation/decision references; ADR 0044;
-- PR #79: quick connected fields use canonical observation references; ADR 0045;
-- PR #81: private UI resolves canonical quick/converged references and API response hydration is removed; ADR 0046;
-- PR #83: private upload-review UI preserves server-owned review/execution authority; ADR 0047;
-- PR #85: quick/converged source visibility and evaluation use one retained privacy-bounded projection; ADR 0048;
-- PR #87: private case UI consumes retained seed provenance/source state/evaluation directly and treats missing historical state as unavailable; ADR 0049.
-
-## Source-run semantics
-
-Retained source-run projections carry logical source name, lead kind, state/reason, observation count and execution/terminal flags plus deterministic aggregate/per-source counters. They do not duplicate identifier values, source locators, provider payloads, secrets, exception text or timing data.
+Retained source-run projections carry logical source name, lead kind, typed state/reason, observation count and execution/terminal flags plus deterministic aggregate/per-source counters. They do not duplicate identifier values, source locators, provider payloads, secrets, exception text or timing data.
 
 Critical distinctions:
 
@@ -132,34 +112,44 @@ Critical distinctions:
 - returned malformed result → unavailable, attempted only when post-attempt phase is mechanically proven;
 - generic `ProviderValidationError` → no source-run record because its phase is ambiguous.
 
-`source_provider_exception_record()` is the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state. Source-evaluation counters are descriptive counts, not provider reliability probabilities or identity-quality scores.
+`source_provider_exception_record()` is the governed provider-exception mapping authority. Warnings are human context only and are never parsed into source state. Evaluation counters are descriptive counts, not provider reliability probabilities or identity-quality scores.
+
+### Retained privacy ownership
+
+Complete provider evidence and provenance have canonical retained owners. Quick connected fields, M5 candidate provenance, converged lead decisions and admitted edges use validated canonical references where duplicate value/locator retention is unnecessary. Historical self-contained formats remain readable through explicit read-only compatibility; compatibility copies are not written back into new retained data.
+
+### Reviewed-document authority
+
+The chain is server-owned and explicit:
+
+1. bounded document/image extraction produces candidate data only;
+2. deterministic character/page provenance is retained where mechanically known;
+3. review candidates live in short-lived server-owned state without raw-document retention;
+4. confirm/reject/re-review/promotion mutate only review/authorization state, never candidate value/provenance;
+5. authenticated + CSRF-protected HTTP routes accept candidate/artifact IDs rather than browser-supplied authorization data;
+6. promotion yields a typed reviewed lead but does not call providers;
+7. a separate explicit case-run action reloads trusted current review state, rechecks purpose/consent, then may start research;
+8. retained reviewed-document seed provenance and typed source-state/evaluation are visible in the private UI without recreating policy in the browser.
 
 ## Current deliberate limits
 
 - convergence max depth: 2;
 - convergence max nodes: 12;
-- no new third-party provider activation during V2-D closure;
-- planned sources remain non-executable;
 - newly discovered phone leads require review;
 - contextual name/organization/location remain non-autonomous;
 - public-search snippets do not become automatic identifier leads;
-- Brave remains optional and excluded from the zero-spend requirement;
+- Brave remains optional and excluded from required zero-spend operation;
 - no identity probability or universal-account claims.
 
-## Immediate next gate
+## Next phase
 
-Run the final V2-D architecture/compatibility/privacy/documentation/zero-spend closure audit. Do not add another provider during this audit.
+V2-D is closed. Do not add another hard-coded source branch or reopen its architecture casually.
 
-The audit must verify, from executable code and regression tests rather than documentation claims alone:
+The next phase is reviewed source expansion, but provider activation must remain one bounded source at a time. Before activation, re-check current primary documentation, terms, quotas, cost, authentication, returned fields, contact risk and retention implications. A source appearing in `V2_SOURCE_EXPANSION_PLAN.md` is not permission to execute it.
 
-1. source catalog ↔ executable binding ↔ provider registry ↔ process-wide runtime ownership consistency;
-2. retained-report single ownership, canonical provenance references and explicit read-only historical compatibility;
-3. upload candidate extraction → human review → promotion → separate explicit case execution authority;
-4. typed source-state/evaluation semantics, phase-proven attempt accounting and private UI consumption without warning inference;
-5. required baseline functionality with zero paid APIs/hosting/database/proxy/enrichment, while optional Brave remains non-required;
-6. roadmap, ADR numbering, continuity checkpoint and tests matching current executable behavior with no stale compatibility seam that can bypass the newer contracts.
+For each future source, require catalog + policy + governed adapter + deterministic fixtures + typed source-state reporting + canonical evidence ownership. Metered/credentialed sources must remain optional, and PersonaLattice must keep working when they are absent.
 
-If the audit finds a material inconsistency, fix it before declaring closure. If the audit is clean, record an explicit V2-D closure checkpoint before reviewing or activating any new third-party provider/API.
+M10 remains the gate for raising production recursion or changing correlation thresholds. Production stays depth 2 / 12 nodes until labelled evaluation supports a change.
 
 ## Update discipline
 
