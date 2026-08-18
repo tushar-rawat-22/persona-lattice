@@ -142,7 +142,9 @@ The next product phase is **reviewed source expansion**, one provider at a time.
 6. preserve canonical evidence/provenance ownership and the existing privacy boundary;
 7. keep the product functional at zero spend when the new source is absent.
 
-Bluesky's current public AppView remains a promising zero-direct-cost candidate, but its public-web opt-out semantics must be enforced fail-closed before activation. It remains planned, not executable, until that adapter contract and fixtures exist.
+Bluesky admission and the bounded public-profile adapter now exist. PR #96 also adds an explicit attempted-but-neutral `withheld` source state so public-web opt-out and suspended/deactivated account responses do not pollute not-found or provider-failure metrics. Bluesky still remains `PLANNED`, unbound and absent from the process-wide runtime and quick-research path.
+
+The next Bluesky block is atomic activation: recheck current official policy/cost, then move catalog review/status, source binding, provider status, shared `ProviderRuntime` ownership and quick-research/source-run integration together. Activation must keep generic username spraying impossible, preserve the minimal field allowlist, and retain deterministic success/not-found/opt-out/account-unavailable/malformed/rate-limit/transient fixtures.
 
 Potential source candidates remain those already recorded in `docs/V2_SOURCE_EXPANSION_PLAN.md`; their presence there is not activation permission.
 
