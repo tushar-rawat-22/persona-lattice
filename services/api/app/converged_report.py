@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from copy import deepcopy
 
 
 class ConvergedReportReferenceError(ValueError):
@@ -119,27 +118,3 @@ def validate_converged_provenance_references(report: Mapping[str, object]) -> No
                 "New edges must reference admitted lead decisions instead of copying provenance."
             )
         resolve_edge_decision(report, edge)
-
-
-def hydrate_case_report_edge_provenance(report_payload: dict[str, object]) -> dict[str, object]:
-    """Add transient legacy edge fields for the current private UI without retaining copies."""
-
-    hydrated = deepcopy(report_payload)
-    converged = hydrated.get("converged_report")
-    if not isinstance(converged, dict):
-        return hydrated
-    edges = converged.get("edges")
-    if not isinstance(edges, list):
-        return hydrated
-
-    for edge_value in edges:
-        if not isinstance(edge_value, dict):
-            raise ConvergedReportReferenceError("edge must be an object.")
-        if "lead_decision_index" not in edge_value:
-            # Read-only compatibility for cases retained before the reference contract.
-            continue
-        decision = resolve_edge_decision(converged, edge_value)
-        observation = resolve_decision_source_observation(converged, decision)
-        edge_value["source"] = observation["source"]
-        edge_value["source_locator"] = observation["source_locator"]
-    return hydrated
