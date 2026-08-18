@@ -26,6 +26,7 @@ from .policy import (
     UploadPolicyError,
 )
 from .promotion import promote_confirmed_identifier_candidate
+from .review_store import UPLOAD_REVIEW_STORE, UploadReviewStore
 from .service import UploadBatchError, process_upload_batch
 
 __all__ = [
@@ -44,8 +45,10 @@ __all__ = [
     "PageTextSpan",
     "ReviewCandidate",
     "ReviewStatus",
+    "UPLOAD_REVIEW_STORE",
     "UploadBatchError",
     "UploadPolicyError",
+    "UploadReviewStore",
     "confirm_candidate",
     "extract_identifier_candidates",
     "extract_text_safely",
