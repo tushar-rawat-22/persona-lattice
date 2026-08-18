@@ -2,9 +2,13 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
-from app.cases import _report_payload, hydrate_case_report_connected_identifiers
+from app.cases import _report_payload
 from app.research import QuickObservation, QuickResearchReport, ResearchKind
+
+
+_WEB_QUICK_RESEARCH = Path(__file__).parents[3] / "apps" / "web" / "app" / "admin" / "quick-research.tsx"
 
 
 def test_quick_case_retains_full_provider_evidence_once() -> None:
@@ -46,93 +50,23 @@ def test_quick_case_retains_full_provider_evidence_once() -> None:
             "status": "observed_public_field",
         }
     ]
+    assert "value" not in connected[0]
+    assert "source" not in connected[0]
+    assert "source_locator" not in connected[0]
     assert "source_evidence" not in structured
     assert "public_account_candidates" not in structured
     assert "contradictions" not in structured
     assert structured["public_account_candidate_observation_indexes"] == [0]
 
-    hydrated = hydrate_case_report_connected_identifiers(payload)
-    hydrated_item = hydrated["structured_report"]["connected_identifiers"][0]
-    assert hydrated_item["value"] == "public@example.test"
-    assert hydrated_item["source"] == "github_public_api"
-    assert hydrated_item["source_locator"] == "https://github.com/synthetic-user"
 
-    # Response hydration is transient and does not mutate the retained payload.
-    assert "value" not in payload["structured_report"]["connected_identifiers"][0]
+def test_private_ui_resolves_quick_references_without_api_hydration() -> None:
+    source = _WEB_QUICK_RESEARCH.read_text(encoding="utf-8")
 
-
-def _synthetic_connected_payload(item: dict[str, object]) -> dict[str, object]:
-    return {
-        "observations": [
-            {
-                "source": "github_public_api",
-                "source_locator": "https://github.com/synthetic-user",
-                "details": {"email": "public@example.test"},
-            }
-        ],
-        "structured_report": {
-            "report_version": "private-evidence-report-v2",
-            "connected_identifiers": [item],
-        },
-    }
-
-
-def test_connected_identifier_hydration_fails_closed_on_bad_reference() -> None:
-    payload = _synthetic_connected_payload(
-        {
-            "kind": "email",
-            "observation_index": 9,
-            "detail_field": "email",
-            "status": "observed_public_field",
-        }
-    )
-
-    try:
-        hydrate_case_report_connected_identifiers(payload)
-    except ValueError as exc:
-        assert "out of range" in str(exc)
-    else:
-        raise AssertionError("Malformed connected-field references must fail closed.")
-
-
-def test_connected_identifier_hydration_rejects_mixed_legacy_and_reference_shape() -> None:
-    payload = _synthetic_connected_payload(
-        {
-            "kind": "email",
-            "value": "public@example.test",
-            "source": "github_public_api",
-            "source_locator": "https://github.com/synthetic-user",
-            "observation_index": 0,
-            "detail_field": "email",
-            "status": "observed_public_field",
-        }
-    )
-
-    try:
-        hydrate_case_report_connected_identifiers(payload)
-    except ValueError as exc:
-        assert "cannot mix" in str(exc)
-    else:
-        raise AssertionError("Mixed legacy/reference connected fields must fail closed.")
-
-
-def test_connected_identifier_hydration_validates_legacy_shape() -> None:
-    payload = _synthetic_connected_payload(
-        {
-            "kind": "email",
-            "value": "public@example.test",
-            "source": "",
-            "source_locator": "https://github.com/synthetic-user",
-            "status": "observed_public_field",
-        }
-    )
-
-    try:
-        hydrate_case_report_connected_identifiers(payload)
-    except ValueError as exc:
-        assert "legacy" in str(exc).lower()
-    else:
-        raise AssertionError("Malformed legacy connected fields must fail closed.")
+    assert "resolveConnectedIdentifier" in source
+    assert "CONNECTED_IDENTIFIER_FIELD_BY_KIND" in source
+    assert "item.observation_index" in source
+    assert "item.detail_field" in source
+    assert "Stored connected-field reference could not be resolved safely." in source
 
 
 def test_structured_report_does_not_copy_seed_value() -> None:
