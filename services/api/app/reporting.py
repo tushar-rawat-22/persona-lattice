@@ -9,8 +9,9 @@ from .research import QuickResearchReport
 @dataclass(frozen=True, slots=True)
 class ConnectedIdentifier:
     kind: str
-    observation_index: int
-    detail_field: str
+    value: str
+    source: str
+    source_locator: str
     status: str = "observed_public_field"
 
 
@@ -23,21 +24,21 @@ def _text(value: object) -> str | None:
     return text or None
 
 
-def _connected_identifiers(report: QuickResearchReport) -> list[dict[str, object]]:
+def _connected_identifiers(report: QuickResearchReport) -> list[dict[str, str]]:
     connected: list[ConnectedIdentifier] = []
     seen: set[tuple[str, str]] = set()
 
-    for observation_index, observation in enumerate(report.observations):
+    for observation in report.observations:
         details = observation.details
         candidates = (
-            ("email", "email"),
-            ("username", "twitter_username"),
-            ("url", "blog"),
-            ("location_claim", "location"),
-            ("organization_claim", "company"),
+            ("email", details.get("email")),
+            ("username", details.get("twitter_username")),
+            ("url", details.get("blog")),
+            ("location_claim", details.get("location")),
+            ("organization_claim", details.get("company")),
         )
-        for kind, detail_field in candidates:
-            value = _text(details.get(detail_field))
+        for kind, raw in candidates:
+            value = _text(raw)
             if value is None:
                 continue
             key = (kind, value.casefold())
@@ -47,16 +48,18 @@ def _connected_identifiers(report: QuickResearchReport) -> list[dict[str, object
             connected.append(
                 ConnectedIdentifier(
                     kind=kind,
-                    observation_index=observation_index,
-                    detail_field=detail_field,
+                    value=value,
+                    source=observation.source,
+                    source_locator=observation.source_locator,
                 )
             )
 
     return [
         {
             "kind": item.kind,
-            "observation_index": item.observation_index,
-            "detail_field": item.detail_field,
+            "value": item.value,
+            "source": item.source,
+            "source_locator": item.source_locator,
             "status": item.status,
         }
         for item in connected
@@ -123,9 +126,11 @@ def build_structured_report(report: QuickResearchReport) -> dict[str, object]:
             "identity_claim": False,
             "interpretation": "Evidence report only. PersonaLattice does not assert that candidate accounts belong to the same person without corroborating evidence.",
         },
+        # This is a deliberately small operator index. It duplicates only the exact public fields
+        # selected for cross-source navigation; full provider payloads remain owned by observations.
         "connected_identifiers": connected,
         "public_account_candidate_observation_indexes": public_account_indexes,
         "contradiction_observation_indexes": contradiction_indexes,
         "coverage_gaps": _coverage_gaps(report),
-        "provenance_rule": "Provider observations are the canonical retained evidence. Structured report sections reference those observations instead of copying evidence payloads or source locators.",
+        "provenance_rule": "Provider observations are the canonical retained evidence. Structured report sections must not copy complete observation payloads.",
     }
