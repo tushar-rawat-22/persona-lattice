@@ -100,50 +100,37 @@ def _coverage_gaps(report: QuickResearchReport) -> list[str]:
 
 
 def build_structured_report(report: QuickResearchReport) -> dict[str, object]:
-    source_evidence = [
-        {
-            "source": observation.source,
-            "source_locator": observation.source_locator,
-            "summary": observation.summary,
-            "details": dict(observation.details),
-        }
-        for observation in report.observations
-    ]
-    public_accounts = [
-        item
-        for item in source_evidence
-        if item["details"].get("account_candidate") is True
-    ]
-    contradictions = [
-        item
-        for item in source_evidence
-        if item["details"].get("contradiction") is True
-        or item["details"].get("account_state") == "illegal"
-    ]
     connected = _connected_identifiers(report)
+    public_account_indexes = [
+        index
+        for index, observation in enumerate(report.observations)
+        if observation.details.get("account_candidate") is True
+    ]
+    contradiction_indexes = [
+        index
+        for index, observation in enumerate(report.observations)
+        if observation.details.get("contradiction") is True
+        or observation.details.get("account_state") == "illegal"
+    ]
     source_names = sorted({observation.source for observation in report.observations})
 
     return {
-        "report_version": "private-evidence-report-v1",
-        "seed": {
-            "kind": report.kind.value,
-            "normalized_value": report.normalized_value,
-        },
+        "report_version": "private-evidence-report-v2",
         "executive_summary": {
             "observation_count": len(report.observations),
             "source_count": len(source_names),
             "sources": source_names,
             "connected_identifier_count": len(connected),
-            "public_account_candidate_count": len(public_accounts),
+            "public_account_candidate_count": len(public_account_indexes),
             "identity_probability": None,
             "identity_claim": False,
             "interpretation": "Evidence report only. PersonaLattice does not assert that candidate accounts belong to the same person without corroborating evidence.",
         },
+        # This is a deliberately small operator index. It duplicates only the exact public fields
+        # selected for cross-source navigation; full provider payloads remain owned by observations.
         "connected_identifiers": connected,
-        "public_account_candidates": public_accounts,
-        "contradictions": contradictions,
-        "source_evidence": source_evidence,
-        "warnings": list(report.warnings),
+        "public_account_candidate_observation_indexes": public_account_indexes,
+        "contradiction_observation_indexes": contradiction_indexes,
         "coverage_gaps": _coverage_gaps(report),
-        "provenance_rule": "Every displayed fact must remain attributable to its source locator; absent evidence is reported as unknown rather than inferred.",
+        "provenance_rule": "Provider observations are the canonical retained evidence. Structured report sections must not copy complete observation payloads.",
     }

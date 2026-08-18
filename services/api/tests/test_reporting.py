@@ -3,7 +3,7 @@ from app.reporting import build_structured_report
 from app.research import QuickObservation, QuickResearchReport, ResearchKind
 
 
-def test_structured_username_report_preserves_provenance_and_uncertainty() -> None:
+def test_structured_username_report_keeps_full_evidence_out_of_projection() -> None:
     report = QuickResearchReport(
         kind=ResearchKind.USERNAME,
         normalized_value="synthetic-user",
@@ -27,6 +27,7 @@ def test_structured_username_report_preserves_provenance_and_uncertainty() -> No
 
     result = build_structured_report(report)
     summary = result["executive_summary"]
+    assert result["report_version"] == "private-evidence-report-v2"
     assert summary["identity_probability"] is None
     assert summary["identity_claim"] is False
     assert summary["public_account_candidate_count"] == 1
@@ -42,6 +43,12 @@ def test_structured_username_report_preserves_provenance_and_uncertainty() -> No
     }
     assert all(item["source"] == "github_public_api" for item in connected)
     assert all(item["source_locator"] == "https://github.com/synthetic-user" for item in connected)
+    assert result["public_account_candidate_observation_indexes"] == [0]
+    assert result["contradiction_observation_indexes"] == []
+    assert "source_evidence" not in result
+    assert "public_account_candidates" not in result
+    assert "contradictions" not in result
+    assert "seed" not in result
     assert result["coverage_gaps"]
 
 
