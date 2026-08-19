@@ -1,173 +1,154 @@
 # Roadmap
 
-PersonaLattice is a private, evidence-first research workbench. The public route is a demo surface; real intake, provider execution and retained case data belong to one authenticated operator account unless a future security/privacy review changes that model.
+PersonaLattice is a private, evidence-first research workbench. The public route is a demo surface. Real intake, provider execution and retained case data belong to one authenticated operator account unless a future security/privacy review changes that model.
 
-## Permanent product rules
+## Product rules
 
-- Observations, factual Claims and correlation results remain separate.
+- Observations, factual claims and correlation results stay separate.
 - Every lead and conclusion keeps provenance.
 - A lead is a research direction, not proof of identity.
-- Same-handle reuse alone remains insufficient evidence.
+- Same-handle reuse alone is weak evidence.
 - M5 remains uncalibrated evidence-strength triage, not identity probability.
 - Contradictions, vetoes and stale evidence remain visible.
-- No AI/ML/embedding/biometric identity decision is authorized by the current roadmap.
-- No private-account bypass, credential/account-recovery enumeration, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking or regulated eligibility decisioning is a product capability.
-- The default product must remain usable without paid APIs, paid hosting, paid databases, paid proxies or paid enrichment.
+- No biometric/embedding/ML identity decision is authorized.
+- No private-account bypass, credential/account-recovery probing, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking or regulated eligibility decisioning is a product capability.
+- The required operating baseline stays free: no paid API, hosting, database, proxy or enrichment dependency.
 
-## M0-M6 — core platform
+## Core platform — M0 through M6
 
-**Status: complete**
+**Complete.**
 
-Repository/CI, evidence and provenance storage, normalization, bounded file intake, the governed provider framework, reviewed Sherlock discovery, deterministic M5 correlation and the local evidence dashboard are implemented.
+Repository/CI, evidence and provenance storage, deterministic normalization, bounded file intake, the governed provider framework, reviewed Sherlock discovery, deterministic M5 correlation and the local evidence dashboard are implemented.
 
 M5 permanent outputs remain `calibration_status=uncalibrated` and `is_identity_claim=false`.
 
-## M7 — private one-admin research product
+## Private operator product — M7 through M9
 
-**Status: implemented and manually accepted locally**
+**Implemented; local one-admin flow manually accepted.**
 
-The private product has one deployment-configured admin, Argon2 password verification, HttpOnly sessions, CSRF protection, a private `/admin` route, same-origin API proxying, retained cases, delete/expiry controls and live bounded research.
+The private product has one deployment-configured admin, Argon2 password verification, HttpOnly sessions, CSRF protection, a private `/admin` route, same-origin API proxying, retained cases, expiry/delete controls and bounded live research.
 
-Current live research sources include reviewed Sherlock, GitHub, GitLab, Codeforces, Bluesky public profiles for valid AT handles, phone numbering-plan metadata, public DNS infrastructure metadata and metadata-only authoritative RDAP for explicit domain seeds. Brave exact public-web search is optional when configured.
+Current live sources:
 
-Local operation is the zero-spend baseline. Paid hosting is optional; the previously reviewed Render topology is retained only at `deploy/render-paid.yaml`.
+- reviewed Sherlock username discovery;
+- GitHub, GitLab and Codeforces public profiles;
+- Bluesky public profiles for valid AT handles;
+- phone numbering-plan metadata;
+- public DNS infrastructure metadata;
+- authoritative metadata-only RDAP for explicit domain seeds;
+- optional Brave exact public-web search when configured.
 
-## M8 — privacy lifecycle and operations
+Local operation is the zero-spend baseline. The previously reviewed paid Render topology is retained only as an optional reference at `deploy/render-paid.yaml`.
 
-**Status: substantially implemented**
+Privacy/operations already include a 30-day default retained-case lifecycle, automatic expiry purge, explicit deletion, privacy-safe audit events, secrets outside Git and bounded request/concurrency/timeout/response limits. Backup/restore remains deferred until a persistent hosted production store is actually chosen.
 
-Implemented: 30-day default retained-case lifecycle, automatic expiry purge, explicit deletion, privacy-safe audit events, secrets outside Git, and bounded request/concurrency/timeout/response limits.
+## Recursive evidence graph — V2
 
-Backup/restore design remains deferred until a persistent hosted production store is actually selected.
+### V2-A — typed lead graph
 
-## M9 — evidence graph and convergence
+**Complete — PR #20.**
 
-**Status: implemented**
+Typed lead kinds/dispositions, exact-field extraction, M1-consistent normalization and fail-closed handling for sensitive fields.
 
-Private V1 admits live provider observations into an ephemeral canonical M1 graph, runs M5 and retains bounded report/provenance records. It does not create a second persistent raw-personal-data graph.
+### V2-B — deterministic frontier
 
-### V2-A — typed recursive evidence lead graph
+**Complete — PR #21.**
 
-**Status: complete — PR #20**
-
-Exact-field lead extraction, typed lead kinds/dispositions, M1-consistent normalization and fail-closed handling for sensitive field classes.
-
-### V2-B — deterministic frontier orchestration
-
-**Status: complete — PR #21**
-
-Reservation-safe scheduling, duplicate/cycle suppression, reason-coded outcomes and additive lead-graph report state.
+Reservation-safe scheduling, duplicate/cycle suppression, reason-coded outcomes and retained graph state.
 
 Production limits remain **depth 2 / 12 nodes**. Raising them requires evaluation evidence.
 
-### V2-C — source capability registry and planner
+### V2-C — source capability registry
 
-**Status: complete — PR #22**
+**Complete — PR #22.**
 
 Capability, execution authority, lifecycle state, cost class, credential class, source-policy review and recursive eligibility are explicit. Planned sources remain non-executable by construction.
 
 ### V2-D — runtime consistency and architecture closure
 
-**Status: complete — PRs #89-#90**
+**Complete — PRs #89-#90.**
 
-Every executable network source is behind the governed runtime. The executable legacy-network allowance is empty. Catalog, binding, provider registry and process runtime ownership are checked symmetrically. Required active recursive sources must remain zero-spend eligible; non-zero-spend recursive sources can only be optional.
+Every executable network source is behind the governed runtime. Catalog, binding, provider registry and process runtime ownership are checked symmetrically. Required active recursive sources must remain zero-spend eligible; non-zero-spend recursive sources can only be optional.
 
 Source-run accounting is phase-proven, retained evidence/provenance has canonical owners, historical retained formats remain read-only compatible, and the reviewed-document chain is server-owned from extraction through explicit case execution.
 
-The default operating contract is `docs/ZERO_SPEND_RUNBOOK.md`; paid Render deployment is an optional reference at `deploy/render-paid.yaml`.
+## Source expansion
+
+New sources must use the existing catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run → canonical evidence path.
+
+### Bluesky
+
+**Active — PR #98.** Credentialless and zero-direct-cost. Only valid AT handles are applicable. Retained fields are limited to DID, normalized handle and optional display name plus non-identity/public-visibility metadata. Public-web opt-out and suspended/deactivated accounts are neutral attempted `withheld` outcomes.
+
+### RDAP
+
+**Active — PR #137.** Credentialless, zero-direct-cost registration metadata for explicit DOMAIN seeds. The source emits no recursive subject leads. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from admitted observations.
+
+The live path uses IANA longest-match bootstrap routing, one process-wide bootstrap cache, fresh DNS/global-address checks, IP-pinned HTTPS with hostname TLS validation, bounded redirects/response size and separate validation of canonical query URL versus final evidence locator.
+
+`routing_unavailable` remains a non-attempt outcome when prerequisite routing authority is unavailable. Once an authoritative RDAP provider is contacted, rate limits, transient service failures and malformed results use attempted-failure semantics. Discovered domain clues remain **display-only**; only explicit DOMAIN seeds run RDAP.
+
+No WHOIS fallback, RDRS/nonpublic workflow, reverse/bulk lookup or contact harvesting is approved.
+
+### Gravatar
+
+**Planned.** Admission preflight exists, but activation remains blocked by provider privacy-policy requirements and the need for a free server-side key kept outside Git. It must remain unnecessary to the zero-spend baseline.
+
+### WebFinger
+
+**Planned.** Parser/admission, SSRF-safe transport, URL-only semantics and an exact-host policy gate exist. The production host-approval registry remains empty because no reviewed host has yet met the required current terms/privacy basis. ActivityPub actor fetching is separate and unapproved.
 
 ## M10 — evaluation and calibration laboratory
 
-**Status: deterministic replay and consented-analysis infrastructure established; representative evaluation remains**
+**Infrastructure established; representative evaluation remains.**
 
-Established:
+Implemented:
 
-- complete deterministic source-state/failure fixture coverage;
+- deterministic source-state/failure fixtures;
 - provider attempt/failure/no-match/yield counters with explicit denominators;
 - graph growth, depth, duplicate and budget-stop counters;
 - label-gated wrong-pivot measurement;
 - controlled graph-limit comparison through the production `LeadFrontier`;
 - a six-fixture synthetic cohort spanning username, email, URL and reviewed-phone seeds;
 - provider-boundary request-cost and observation-yield accounting;
-- versioned replay fingerprints for exact cohort inputs and deterministic results;
-- replay-anchored M5 factor-ablation manifests and real-engine omission execution;
-- rollback-only diagnostic M5 execution so M10 experiments do not become retained evidence;
+- replay fingerprints for exact cohort inputs/results;
+- replay-anchored real-engine M5 factor ablations;
+- rollback-only diagnostic M5 execution;
 - UUID-independent semantic fixture/result fingerprints;
-- explicit synthetic-vs-consented label-provenance manifests;
-- consented-only scenario accounting with exact numerator/denominator counts rather than unsupported population error-rate claims.
+- synthetic-vs-consented label-provenance manifests;
+- consented-only scenario accounting with exact numerator/denominator counts;
+- a bounded local consented-cohort runner so private reviewed identifiers no longer need to become repository fixtures.
 
-### Current controlled graph result
+### Current synthetic graph result
 
-The current depth-2 / 12-node synthetic policy admits 9 labelled pivots: **8 relevant and 1 wrong**. It performs 11 simulated source attempts: 9 yield-producing attempts and 2 provider failures, for 11 abstract request-cost units and 9 observation-yield units.
+Production depth 2 / 12 nodes admits 9 labelled pivots: **8 relevant, 1 wrong**. It performs 11 simulated source attempts.
 
-A depth-3 / 12-node candidate admits three additional labelled pivots. In these fixtures, **all three are wrong-labelled and no additional relevant pivot is gained**. It adds 3 simulated attempts, 3 request-cost units and 3 observation-yield units.
+The depth-3 / 12-node diagnostic candidate admits 12 labelled pivots: **8 relevant, 4 wrong**, with 14 simulated attempts.
 
-This is diagnostic synthetic evidence, not population evidence or monetary cost. Production recursion stays depth 2 / 12 nodes.
+In this synthetic cohort, the extra depth adds three attempts and three wrong-labelled pivots with no additional relevant pivot. This is regression evidence, not population evidence. Production stays depth 2 / 12 nodes.
 
-### Current controlled M5 ablation result
+### Current M5 ablation result
 
 - compatible profile metadata omission: `possible_match` 35 → `insufficient_evidence` 20;
 - exact confirmed identifier omission: `strong_candidate` 75 → `insufficient_evidence` 20;
 - independent cross-link omission: `strong_candidate` 70 → `possible_match` 35;
 - diagnostic hard-contradiction omission: `contradicted` 0 → `strong_candidate` 90.
 
-The contradiction omission is safety-critical diagnostic work only. No production factor weight, threshold, veto or calibration semantic changed.
+The contradiction omission is safety-critical diagnostic work only. Production factor weights, thresholds and vetoes are unchanged.
 
 ### Remaining M10 gate
 
-The bottleneck is real label evidence, not another synthetic metric. Assemble a genuinely consented or independently reviewed cohort whose external evidence records satisfy the existing provenance contract, then run it through the consented-only accounting boundary. Do not relabel regression fixtures as consented to manufacture progress, and do not publish false-positive/false-negative or probability terminology until cohort design and denominators genuinely support it.
+The bottleneck is real label evidence, not another synthetic metric. A local runner now exists for private consented/reviewed cohorts, but the repository still contains no representative real cohort and must not manufacture one.
 
-## Reviewed source expansion
-
-V2-D is closed. New sources must use the existing catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run → canonical evidence path.
-
-### Bluesky public profiles
-
-**Status: active — PR #98**
-
-Bluesky is credentialless and zero-direct-cost. Only normalized values that pass the AT-handle admission contract can trigger a request. Plain usernames and malformed/`@` UI forms are skipped before provider execution.
-
-Retained fields stay minimal: DID, normalized handle and optional display name plus account-candidate/non-identity/public-visibility flags. Public-web opt-out and suspended/deactivated accounts are neutral attempted `withheld` outcomes rather than `not_found` or provider failure.
-
-### Gravatar
-
-**Status: planned — admission preflight complete in PR #113**
-
-The provider-specific email-hash and returned-profile validation contract exists, but activation remains blocked by the provider-terms/privacy-policy requirement. A future activation also needs a free server-side key outside Git and deterministic provider fixtures. Gravatar must remain unnecessary to the zero-spend baseline.
-
-### WebFinger public-link resolution
-
-**Status: planned — parser, transport, URL-only semantics and exact-host policy gate complete in PRs #115, #117, #119 and #121**
-
-The historical source key remains `webfinger_activitypub` for compatibility, but its reviewed meaning is WebFinger URL → URL public-link resolution only. ActivityPub actor fetching is a separate future capability and remains unapproved.
-
-The pre-activation stack has four independent controls: explicit HTTPS profile/JRD admission; fresh-DNS globally-routable IP-pinned HTTPS transport with bounded redirects; URL-only source semantics; and time-bounded exact-host source-policy approval with no wildcard or subdomain inheritance.
-
-A concrete `mastodon.social` review did not establish a sufficiently explicit current host-specific terms/privacy basis for approval. The production exact-host registry remains empty.
-
-### RDAP
-
-**Status: active — PR #137**
-
-RDAP provides zero-direct-cost, credentialless registration metadata for explicit DOMAIN seeds. It is metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
-
-The live path uses RFC 9224 longest-match IANA bootstrap selection, one process-wide cached owner of `https://data.iana.org/rdap/dns.json`, fresh DNS/global-address validation before each provider hop, IP-pinned HTTPS with hostname TLS validation, bounded redirects and response size, explicit RDAP response handling, and separate validation of the bootstrap-derived canonical query URL versus the final evidence source locator.
-
-`routing_unavailable` is a typed **non-attempt** outcome for prerequisite routing failures such as an unusable IANA bootstrap snapshot. Once an authoritative RDAP service has actually been contacted, rate limits, transient service failures and malformed results use attempted-failure semantics. A valid not-found response is a completed zero-observation result.
-
-DOMAIN has one canonical M1 representation across `IdentifierKind`, lead canonicalization, quick research, convergence, live M5 and RDAP admission. Explicit domain seeds can run end to end. Discovered domain clues remain **display-only** and do not become recursive pivots.
-
-Redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic-data workflow, bulk/reverse lookup or contact harvesting is approved. Existing persistent SQLite databases created before DOMAIN was added to M1 may require a deliberate schema recreation/migration before persisting DOMAIN identifiers.
+The next useful M10 work is to run a genuinely consented or independently reviewed cohort whose external evidence records satisfy the provenance contract, then inspect scenario-specific counts and denominators. Do not publish false-positive/false-negative, calibration or probability claims until cohort design supports those terms.
 
 ## Immediate next gate
 
-Do not reopen V2-D architecture casually, remove safety-critical M5 vetoes because an ablation changes the score, or raise recursion because a fixture family looks favorable.
-
-For evaluation, prioritize genuinely consented/reviewed label evidence. The next useful M10 progress must come from defensible labels and denominators, not another synthetic metric renamed as accuracy.
-
-For source expansion, prefer a small number of high-value zero-spend sources whose current terms, privacy model and provenance can be defended. WebFinger remains planned unless a concrete host passes the existing exact-host source-policy gate. Gravatar remains blocked on its privacy-policy requirement and free server-side-key requirement. ActivityPub actor fetching remains separate and unapproved.
-
-Production recursion remains **depth 2 / 12 nodes**. M5 remains uncalibrated evidence-strength triage and `hard_contradiction` remains a production veto.
+1. Merge the local consented-cohort runner only after its exact head passes CI and its output/privacy contract is proven.
+2. Use that runner with genuinely reviewed evidence when a lawful cohort is available; do not relabel synthetic fixtures as consented.
+3. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
+4. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
+5. Continue improving the operator workflow around evidence/provenance hierarchy rather than generic AI-SaaS presentation patterns.
 
 Success means the operator can answer for every hop:
 
