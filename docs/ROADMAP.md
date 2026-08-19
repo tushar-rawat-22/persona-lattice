@@ -152,13 +152,15 @@ A concrete `mastodon.social` review did not establish a sufficiently explicit cu
 
 ### RDAP
 
-**Status: planned — admission preflight PR #123; metadata-only source contract PR #126**
+**Status: planned — admission PR #123; metadata-only contract PR #126; authoritative transport PR #128**
 
-RDAP is being reviewed as zero-spend domain registration metadata from authoritative services. The source contract is metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
+RDAP is being reviewed as zero-spend domain registration metadata from authoritative services. The source contract remains metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
 
-The retained queried domain is already-known input context and may appear through the generic extractor only as a display-only duplicate; it is not a newly emitted autonomous pivot.
+PR #128 corrected IANA bootstrap authority selection to RFC 9224 longest matching DNS-suffix semantics and added the pre-activation network boundary: fresh DNS/global-address validation before every hop, IP-pinned HTTPS with hostname TLS validation, bounded HTTPS redirects, four-second connection timeout, 64 KiB response ceiling, RDAP media-type validation, explicit 404/429/transient/malformed handling, and fallback to an equivalent bootstrap service only after transient unavailability.
 
-RDAP remains `PLANNED`, unbound, source-policy-unreviewed and non-recursive. No RDAP network request exists yet. The next bounded block is the authoritative SSRF-safe transport/provider path using IANA bootstrap discovery, bounded HTTPS execution and typed success/not-found/malformed/rate-limit/unavailable outcomes. Activation must be atomic across catalog, binding, provider registry, shared runtime, quick research and canonical observation.
+A redirect or rebinding failure found **after** a provider has already responded is classified as post-contact result validation, not as a no-attempt policy failure. The transport preserves the bootstrap-derived query URL and final response URL separately for later exact provenance handling.
+
+RDAP remains `PLANNED`, unbound, source-policy-unreviewed and non-recursive. The transport does not fetch IANA bootstrap data per request and does not activate the provider. A bounded bootstrap refresh/cache owner is still required before atomic catalog → binding → registry → shared runtime → typed source-state → canonical observation activation.
 
 Redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic-data workflow, bulk/reverse lookup or contact harvesting is approved.
 
@@ -168,7 +170,7 @@ Do not reopen V2-D architecture casually, remove safety-critical M5 vetoes becau
 
 For evaluation, prioritize genuinely consented/reviewed label evidence.
 
-For source expansion, finish the RDAP authoritative transport/provider block without weakening its metadata-only contract. Keep RDAP non-executable until the full governed path and deterministic fixtures are green. WebFinger remains planned unless a concrete host passes the existing exact-host source-policy gate. Gravatar remains blocked on its privacy-policy requirement. ActivityPub actor fetching remains unapproved.
+For source expansion, define the **bounded IANA RDAP bootstrap refresh/cache authority**, then complete one atomic governed RDAP activation while preserving metadata-only output and the zero-spend baseline. Do not fetch IANA bootstrap data on every research request. WebFinger remains planned unless a concrete host passes the existing exact-host source-policy gate. Gravatar remains blocked on its privacy-policy requirement. ActivityPub actor fetching remains unapproved.
 
 Production recursion remains **depth 2 / 12 nodes**. M5 remains uncalibrated evidence-strength triage and `hard_contradiction` remains a production veto.
 
