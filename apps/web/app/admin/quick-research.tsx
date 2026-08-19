@@ -12,7 +12,15 @@ const CONNECTED_IDENTIFIER_FIELD_BY_KIND: Record<string, string> = {
   organization_claim: "company",
 };
 
-type ResearchKind = "username" | "phone" | "email" | "url";
+type ResearchKind = "username" | "phone" | "email" | "url" | "domain";
+
+const PLACEHOLDER_BY_KIND: Record<ResearchKind, string> = {
+  username: "@handle",
+  phone: "+1 415 555 0123",
+  email: "person@example.com",
+  url: "https://example.com/profile",
+  domain: "example.com",
+};
 
 type Observation = {
   source: string;
@@ -486,6 +494,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
               <option value="phone">Phone number</option>
               <option value="email">Email address</option>
               <option value="url">Public profile URL</option>
+              <option value="domain">Domain</option>
             </select>
           </label>
           <label>
@@ -493,11 +502,16 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
             <input
               value={value}
               onChange={(event) => setValue(event.target.value)}
-              placeholder={kind === "username" ? "@handle" : "Identifier to research"}
+              placeholder={PLACEHOLDER_BY_KIND[kind]}
               required
             />
           </label>
         </div>
+        {kind === "domain" && (
+          <p className="muted">
+            Enter a bare domain such as example.com. Domain research is explicit-seed only; domain clues discovered during another case remain display-only.
+          </p>
+        )}
         <button type="submit" disabled={busy || !value.trim() || !csrfToken}>
           {busy ? "Following public evidence pivots…" : "Run converged research case"}
         </button>
