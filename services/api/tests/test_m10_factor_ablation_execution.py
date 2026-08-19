@@ -5,6 +5,7 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import func, select
 
 from app.correlation import (
     CorrelationEngine,
@@ -13,6 +14,7 @@ from app.correlation import (
     CorrelationRequest,
     FactorKind,
 )
+from app.correlation.models import CorrelationFactorRecord, CorrelationRun
 from app.evidence import (
     EvidenceStore,
     IdentifierKind,
@@ -198,6 +200,11 @@ def _scenario(case_result, kind: FactorKind):
     )
 
 
+def _assert_no_retained_m5_diagnostics(session) -> None:
+    assert session.scalar(select(func.count()).select_from(CorrelationRun)) == 0
+    assert session.scalar(select(func.count()).select_from(CorrelationFactorRecord)) == 0
+
+
 def test_ablation_execution_uses_real_m5_outcomes_and_records_deltas() -> None:
     database = create_database_engine("sqlite+pysqlite:///:memory:")
     create_schema(database)
@@ -245,6 +252,7 @@ def test_ablation_execution_uses_real_m5_outcomes_and_records_deltas() -> None:
         assert veto.ablated_outcome is CorrelationOutcome.STRONG_CANDIDATE
         assert veto.ablated_evidence_score == 90
         assert veto.evidence_score_delta == 90
+        _assert_no_retained_m5_diagnostics(session)
 
 
 def test_absent_factor_omission_is_explicit_noop_and_execution_is_repeatable() -> None:
@@ -267,6 +275,7 @@ def test_absent_factor_omission_is_explicit_noop_and_execution_is_repeatable() -
         assert absent_exact.factor_present is False
         assert absent_exact.evidence_score_delta == 0
         assert absent_exact.ablated_outcome is possible.baseline_outcome
+        _assert_no_retained_m5_diagnostics(session)
 
 
 def test_execution_rejects_tampered_plan_and_invalid_case_contract() -> None:
@@ -305,3 +314,4 @@ def test_execution_rejects_tampered_plan_and_invalid_case_contract() -> None:
                 engine=engine,
                 cases=(one_factor,),
             )
+        _assert_no_retained_m5_diagnostics(session)
