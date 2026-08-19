@@ -141,22 +141,26 @@ The provider-specific email-hash and returned-profile validation contract exists
 
 The historical source key remains `webfinger_activitypub` for compatibility, but its reviewed meaning is WebFinger URL → URL public-link resolution only. ActivityPub actor fetching is a separate future capability and remains unapproved.
 
-The pre-activation stack now has four independent controls:
+The pre-activation stack has four independent controls:
 
 1. explicit HTTPS profile-URL/JRD admission;
 2. fresh-DNS, globally-routable, IP-pinned HTTPS transport with bounded HTTPS-only redirects;
 3. URL-only source semantics with no generic username/name emission;
 4. time-bounded **exact-host** source-policy approval with no wildcard or subdomain inheritance.
 
-RFC 7033 permits authenticated and client-dependent WebFinger responses, so arbitrary hosts are not treated as one universally reviewed source. The production exact-host approval registry is intentionally empty until a real server passes current primary terms/privacy/source review.
-
-The next WebFinger block should review **one concrete host**. If it passes, add that exact host approval and activate WebFinger atomically through binding, provider registry, shared `ProviderRuntime`, quick research, typed source-state reporting and canonical evidence. If no host passes, keep WebFinger planned and move to another zero-spend source rather than weakening the policy gate.
+A concrete `mastodon.social` review did not establish a sufficiently explicit current host-specific terms/privacy basis for approval. The gate was not weakened; the production exact-host registry remains empty. WebFinger stays non-executable until a concrete host passes that policy.
 
 ### RDAP
 
-**Status: planned**
+**Status: planned — admission preflight PR #123; metadata-only source contract PR #126**
 
-RDAP remains an acceptable zero-spend source-review track for domain registration metadata that authoritative services actually expose. Redaction/missing fields remain authoritative; the product must not seek nonpublic registration data to fill gaps.
+RDAP is being reviewed as zero-spend domain registration metadata from authoritative services. The source contract is metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
+
+The retained queried domain is already-known input context and may appear through the generic extractor only as a display-only duplicate; it is not a newly emitted autonomous pivot.
+
+RDAP remains `PLANNED`, unbound, source-policy-unreviewed and non-recursive. No RDAP network request exists yet. The next bounded block is the authoritative SSRF-safe transport/provider path using IANA bootstrap discovery, bounded HTTPS execution and typed success/not-found/malformed/rate-limit/unavailable outcomes. Activation must be atomic across catalog, binding, provider registry, shared runtime, quick research and canonical observation.
+
+Redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic-data workflow, bulk/reverse lookup or contact harvesting is approved.
 
 ## Immediate next gate
 
@@ -164,7 +168,7 @@ Do not reopen V2-D architecture casually, remove safety-critical M5 vetoes becau
 
 For evaluation, prioritize genuinely consented/reviewed label evidence.
 
-For source expansion, perform a current primary-source review of one concrete WebFinger host under the new exact-host policy. If it cannot be defended cleanly, stop and pivot to RDAP rather than approving a software-wide wildcard. Gravatar remains blocked on its privacy-policy requirement. ActivityPub actor fetching remains unapproved.
+For source expansion, finish the RDAP authoritative transport/provider block without weakening its metadata-only contract. Keep RDAP non-executable until the full governed path and deterministic fixtures are green. WebFinger remains planned unless a concrete host passes the existing exact-host source-policy gate. Gravatar remains blocked on its privacy-policy requirement. ActivityPub actor fetching remains unapproved.
 
 Production recursion remains **depth 2 / 12 nodes**. M5 remains uncalibrated evidence-strength triage and `hard_contradiction` remains a production veto.
 
