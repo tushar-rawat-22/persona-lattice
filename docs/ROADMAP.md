@@ -80,7 +80,7 @@ V2-D closure does not authorize larger recursion, wider retention, paid baseline
 
 ## M10 — evaluation and calibration laboratory
 
-**Status: multi-kind synthetic cohort with operational accounting and deterministic replay identity established; representative evaluation remains**
+**Status: multi-kind synthetic cohort, operational accounting, replay identity and ablation manifest established; representative evaluation remains**
 
 Established:
 
@@ -93,7 +93,8 @@ Established:
 - a reusable six-fixture synthetic cohort spanning username, email, URL and reviewed-phone seeds;
 - aggregate review-required, display-only and blocked policy-state counts;
 - provider-boundary source-attempt, successful/zero-yield attempt, observation-yield-unit and abstract request-cost-unit accounting;
-- versioned SHA-256 replay fingerprints for exact canonicalized cohort inputs and deterministic comparison results.
+- versioned SHA-256 replay fingerprints for exact canonicalized cohort inputs and deterministic comparison results;
+- replay-anchored M5 factor-ablation manifests that fingerprint the exact current weights, thresholds, independence requirements, strong-factor vocabulary and veto vocabulary.
 
 ### Current controlled result
 
@@ -103,12 +104,14 @@ A depth-3 / 12-node candidate admits three additional labelled pivots. In these 
 
 This is synthetic fixture evidence, not population evidence or monetary cost. It supports leaving production recursion unchanged; it does not establish an optimal frontier policy or a universal source-efficiency rate.
 
-Replay fingerprints identify the exact controlled experiment definition and result payload. They are not accuracy, calibration, confidence or quality scores.
+Replay fingerprints identify the exact controlled experiment definition and result payload. Factor-ablation manifests additionally identify the exact M5 policy and omission scenario set. Neither is an accuracy, calibration, confidence or quality score.
+
+Every omission scenario is diagnostic-only. Removing a veto factor such as `hard_contradiction` is explicitly safety-critical and is not an authorized production-policy candidate.
 
 Still required before increasing recursion or changing correlation thresholds:
 
 - broader consented or otherwise defensibly labelled cohorts;
-- deterministic factor ablations anchored to replay fingerprints;
+- execute replay-anchored factor ablations through the real M5 correlation engine rather than a second policy implementation;
 - labelled false-positive/false-negative and threshold analysis where defensible labels exist;
 - provider-specific request/yield weights only where a real adapter needs more than the current one-request/one-yield fixture abstraction;
 - reviewed monetary pricing only when an actual provider has a current price model relevant to a decision;
@@ -134,7 +137,7 @@ The first rollout remains sequential after the existing public-profile enrichmen
 
 Do not reopen V2-D architecture casually and do not raise recursion because one fixture family looks favorable.
 
-The preferred next M10 work is **broader defensible labels and replay-anchored factor ablations**, not a deeper production graph. Provider-specific cost weights should be introduced only when a real adapter needs more fidelity than one abstract request-cost unit per simulated call.
+The preferred next M10 work is **execute the replay-anchored factor-ablation scenarios through the real M5 engine and broaden defensible labels**, not a deeper production graph. The ablation layer must remain diagnostic; it must not fork or reimplement M5 policy. Provider-specific cost weights should be introduced only when a real adapter needs more fidelity than one abstract request-cost unit per simulated call.
 
 A separate acceptable track is fresh review of exactly one additional zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions. Current official terms, cost, authentication, returned fields, contact risk and retention implications must be reviewed before activation.
 
