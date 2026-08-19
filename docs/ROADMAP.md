@@ -80,7 +80,7 @@ V2-D closure does not authorize larger recursion, wider retention, paid baseline
 
 ## M10 — evaluation and calibration laboratory
 
-**Status: multi-kind synthetic cohort, operational accounting, replay identity, real-engine factor ablation and UUID-independent controlled M5 replay established; representative evaluation remains**
+**Status: deterministic replay, real-engine ablation and explicit label-provenance infrastructure established; representative evaluation remains**
 
 Established:
 
@@ -96,34 +96,44 @@ Established:
 - versioned SHA-256 replay fingerprints for exact canonicalized cohort inputs and deterministic comparison results;
 - replay-anchored M5 factor-ablation manifests that fingerprint the exact current weights, thresholds, independence requirements, strong-factor vocabulary and veto vocabulary;
 - controlled factor omissions executed through the production `CorrelationEngine`, with baseline/ablated outcome, score and independence-group deltas;
-- non-retaining M10 correlation execution: each diagnostic M5 run is rolled back and does not become retained case evidence;
-- a versioned reusable semantic specification for the controlled M5 ablation cases, with UUID-independent fixture, per-case and result replay fingerprints that survive reconstruction in fresh databases.
+- non-retaining M10 correlation execution: diagnostic M5 runs are rolled back and do not become retained case evidence;
+- a versioned reusable semantic specification for controlled M5 ablation cases, with UUID-independent fixture, per-case and result replay fingerprints;
+- a replay-anchored label-provenance manifest that requires explicit `synthetic` or `consented` basis and an opaque SHA-256 external-record reference for every labelled graph fixture;
+- separate synthetic and consented **declared-label corpus counts**, deliberately distinct from scenario-specific admitted-pivot denominators.
 
 ### Current controlled graph result
 
 In the broader synthetic cohort, the current depth-2 / 12-node policy admits 9 labelled pivots: **8 relevant and 1 wrong**. It performs 11 simulated source attempts: 9 successful yield-producing attempts and 2 provider failures, for 11 abstract request-cost units and 9 observation-yield units.
 
-A depth-3 / 12-node candidate admits three additional labelled pivots. In these fixtures, **all three additional pivots are wrong-labelled and no additional relevant pivot is gained**. The candidate performs 14 simulated source attempts and therefore adds 3 request-cost units and 3 yield units. Those three additional yield units correspond to the three additional wrong-labelled pivots in this cohort.
+A depth-3 / 12-node candidate admits three additional labelled pivots. In these fixtures, **all three additional pivots are wrong-labelled and no additional relevant pivot is gained**. The candidate performs 14 simulated source attempts and therefore adds 3 request-cost units and 3 yield units.
 
 This is synthetic fixture evidence, not population evidence or monetary cost. It supports leaving production recursion unchanged; it does not establish an optimal frontier policy or a universal source-efficiency rate.
 
 ### Current controlled M5 ablation result
 
-The first real-engine ablation set uses separate controlled cases so the contradiction veto does not hide positive-factor sensitivity:
+The current real-engine controlled cases remain:
 
-- metadata/temporal case: baseline `possible_match`, score 35; omitting compatible profile metadata produces `insufficient_evidence`, score 20 (`-15`);
-- exact-identifier case: baseline `strong_candidate`, score 75; omitting exact confirmed identifier overlap produces `insufficient_evidence`, score 20 (`-55`);
-- independent-cross-link case: baseline `strong_candidate`, score 70; omitting the independent cross-link produces `possible_match`, score 35 (`-35`);
-- contradiction case: baseline `contradicted`, score 0; diagnostic omission of `hard_contradiction` produces `strong_candidate`, score 90 (`+90`). That omission is explicitly safety-critical and is not a production-policy candidate.
+- metadata/temporal: baseline `possible_match`, score 35; omit compatible profile metadata → `insufficient_evidence`, score 20 (`-15`);
+- exact identifier: baseline `strong_candidate`, score 75; omit exact confirmed identifier overlap → `insufficient_evidence`, score 20 (`-55`);
+- independent cross-link: baseline `strong_candidate`, score 70; omit independent cross-link → `possible_match`, score 35 (`-35`);
+- contradiction veto: baseline `contradicted`, score 0; diagnostic omit `hard_contradiction` → `strong_candidate`, score 90 (`+90`).
 
-These values describe controlled deterministic sensitivity under the current M5 policy. They are not factor importance probabilities, calibration evidence, population error rates or permission to change production weights/vetoes.
+The contradiction omission is safety-critical diagnostic work only. These controlled deltas are not calibration evidence, population error rates or permission to change production policy.
 
-Replay fingerprints identify the exact controlled graph experiment definition and result payload. Factor-ablation manifests identify the exact M5 policy and omission scenario set. The controlled M5 ablation cases now have a separate versioned semantic fixture identity independent of generated database UUIDs; each materialized case carries its semantic fingerprint through execution, and the final result replay is bound to those fingerprints rather than case names alone.
+### Label provenance boundary
+
+Reproducible labels are not automatically defensible ground truth. PR #109 / ADR 0062 adds an explicit provenance layer before future false-positive/false-negative work.
+
+Each labelled fixture must now have a matching provenance record whose basis is `synthetic` or `consented`, plus an opaque SHA-256 reference to the external label/consent record. The manifest is bound to the exact M10 replay input and result digests and fails closed if the cohort, labels or provenance coverage drift.
+
+The manifest exposes **declared** label corpus counts. It does not treat every fixture label as an admitted-pivot denominator because a frontier policy may never execute or admit that labelled pivot. Future error analysis must use actual scenario execution counters together with the provenance manifest.
+
+Raw consent text and personal identifiers do not belong in the manifest. The evidence-record digest must not be a bare hash of a personal identifier.
 
 Still required before increasing recursion or changing correlation thresholds:
 
-- broader consented or otherwise defensibly labelled cohorts;
-- labelled false-positive/false-negative and threshold analysis where defensible labels exist;
+- a genuinely consented or separately reviewed labelled cohort large enough to support defensible analysis;
+- labelled false-positive/false-negative and threshold analysis using actual admitted denominators;
 - provider-specific request/yield weights only where a real adapter needs more than the current one-request/one-yield fixture abstraction;
 - reviewed monetary pricing only when an actual provider has a current price model relevant to a decision;
 - no probability claim unless calibration evidence supports it.
@@ -148,7 +158,7 @@ The first rollout remains sequential after the existing public-profile enrichmen
 
 Do not reopen V2-D architecture casually, do not remove safety-critical M5 vetoes because an ablation changes the score, and do not raise recursion because one fixture family looks favorable.
 
-The preferred next M10 work is to broaden **consented or otherwise defensibly labelled cohorts** and then perform labelled false-positive/false-negative and threshold analysis where the labels and denominators are actually defensible. The controlled M5 fixture/replay provenance gap is closed; replay hashes remain experiment identity only and do not make the synthetic cases calibration evidence.
+The preferred next M10 work is to add a genuinely consented or otherwise separately reviewed labelled cohort that can satisfy the PR #109 label-provenance contract. Only then should PersonaLattice implement false-positive/false-negative or threshold analysis, and only with actual scenario-specific admitted denominators. The existing six-fixture synthetic cohort remains diagnostic regression data, not consented evidence.
 
 A separate acceptable track is fresh review of exactly one additional zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions. Current official terms, cost, authentication, returned fields, contact risk and retention implications must be reviewed before activation.
 
