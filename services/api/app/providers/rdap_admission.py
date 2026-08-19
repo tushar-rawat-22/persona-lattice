@@ -107,8 +107,33 @@ def _validated_bootstrap_base_url(value: str) -> str:
     return urlunsplit(("https", hostname, path, "", ""))
 
 
+def _normalized_bootstrap_suffix(value: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise RdapAdmissionError("RDAP bootstrap DNS entries must be non-empty strings.")
+    if any(ord(character) <= 0x20 or ord(character) == 0x7F for character in value):
+        raise RdapAdmissionError("RDAP bootstrap DNS entry is malformed.")
+    suffix = value.rstrip(".").lower()
+    try:
+        suffix = suffix.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise RdapAdmissionError("RDAP bootstrap DNS entry is not valid IDNA.") from exc
+    labels = suffix.split(".")
+    if not labels or any(_DNS_LABEL_RE.fullmatch(label) is None for label in labels):
+        raise RdapAdmissionError("RDAP bootstrap DNS entry contains an invalid label.")
+    return suffix
+
+
+def _bootstrap_suffix_matches(domain: str, suffix: str) -> bool:
+    return domain == suffix or domain.endswith(f".{suffix}")
+
+
 def rdap_bootstrap_base_urls(payload: Mapping[str, object], *, domain: str) -> tuple[str, ...]:
-    """Resolve one domain to reviewed HTTPS base URLs from an IANA-style bootstrap payload."""
+    """Resolve one domain to authoritative HTTPS base URLs from IANA-style bootstrap data.
+
+    RFC 9224 requires DNS bootstrap selection by the longest matching label suffix,
+    not merely by the final TLD. Equivalent entries at the same longest match are
+    combined in registry order; less-specific matches are ignored.
+    """
 
     target = normalize_rdap_domain(domain)
     services = payload.get("services")
@@ -117,34 +142,41 @@ def rdap_bootstrap_base_urls(payload: Mapping[str, object], *, domain: str) -> t
     if len(services) > _MAX_BOOTSTRAP_SERVICES:
         raise RdapAdmissionError("RDAP bootstrap payload exceeds the service admission limit.")
 
-    matches: list[str] = []
+    longest_label_count = 0
+    matching_url_groups: list[Sequence[object]] = []
     for service in services:
         if not isinstance(service, Sequence) or isinstance(service, (str, bytes)) or len(service) != 2:
-            raise RdapAdmissionError("RDAP bootstrap service entries must contain TLD and URL arrays.")
-        tlds, urls = service
-        if not isinstance(tlds, Sequence) or isinstance(tlds, (str, bytes)):
-            raise RdapAdmissionError("RDAP bootstrap TLD list must be an array.")
+            raise RdapAdmissionError("RDAP bootstrap service entries must contain DNS and URL arrays.")
+        suffixes, urls = service
+        if not isinstance(suffixes, Sequence) or isinstance(suffixes, (str, bytes)):
+            raise RdapAdmissionError("RDAP bootstrap DNS list must be an array.")
         if not isinstance(urls, Sequence) or isinstance(urls, (str, bytes)):
             raise RdapAdmissionError("RDAP bootstrap URL list must be an array.")
         if len(urls) > _MAX_BASE_URLS_PER_SERVICE:
             raise RdapAdmissionError("RDAP bootstrap service exposes too many base URLs.")
-        normalized_tlds: set[str] = set()
-        for tld in tlds:
-            if not isinstance(tld, str) or not tld:
-                raise RdapAdmissionError("RDAP bootstrap TLD entries must be non-empty strings.")
-            try:
-                normalized_tlds.add(tld.rstrip(".").lower().encode("idna").decode("ascii"))
-            except UnicodeError as exc:
-                raise RdapAdmissionError("RDAP bootstrap TLD entry is not valid IDNA.") from exc
-        if target.tld not in normalized_tlds:
+
+        service_match_length = 0
+        for raw_suffix in suffixes:
+            suffix = _normalized_bootstrap_suffix(raw_suffix)
+            if _bootstrap_suffix_matches(target.domain, suffix):
+                service_match_length = max(service_match_length, suffix.count(".") + 1)
+        if service_match_length == 0:
             continue
+        if service_match_length > longest_label_count:
+            longest_label_count = service_match_length
+            matching_url_groups = [urls]
+        elif service_match_length == longest_label_count:
+            matching_url_groups.append(urls)
+
+    matches: list[str] = []
+    for urls in matching_url_groups:
         for url in urls:
             normalized_url = _validated_bootstrap_base_url(url)
             if normalized_url not in matches:
                 matches.append(normalized_url)
 
     if not matches:
-        raise RdapAdmissionError("RDAP bootstrap payload has no authoritative service for the domain TLD.")
+        raise RdapAdmissionError("RDAP bootstrap payload has no authoritative service for the domain.")
     return tuple(matches)
 
 
