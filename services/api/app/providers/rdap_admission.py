@@ -7,8 +7,10 @@ import ipaddress
 import re
 from urllib.parse import quote, urlsplit, urlunsplit
 
+from ..evidence import IdentifierKind, normalize_identifier
+from ..evidence.normalization import InvalidIdentifier
+
 _DNS_LABEL_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
-_MAX_DOMAIN_LENGTH = 253
 _MAX_BOOTSTRAP_SERVICES = 512
 _MAX_BASE_URLS_PER_SERVICE = 8
 _MAX_STATUS_VALUES = 32
@@ -32,42 +34,21 @@ class RdapDomainObservation:
 
 
 def normalize_rdap_domain(value: str) -> RdapDomainTarget:
-    """Normalize an explicit public DNS domain for future RDAP lookup.
+    """Normalize an explicit public DNS domain through the canonical M1 authority.
 
     This is admission-only. It neither discovers subdomains nor performs network
-    I/O. IDNs are canonicalized to their ASCII A-label form so bootstrap matching
-    and returned-domain validation use one deterministic representation.
+    I/O. Provider routing and returned-domain validation intentionally reuse the
+    same M1 representation used by quick research, convergence and live M5.
     """
 
     if not isinstance(value, str) or not value:
         raise RdapAdmissionError("RDAP domain must be a non-empty string.")
-    if any(ord(character) <= 0x20 or ord(character) == 0x7F for character in value):
-        raise RdapAdmissionError("RDAP domain must not contain whitespace or control characters.")
-    if "://" in value or any(character in value for character in "/?#@"):
-        raise RdapAdmissionError("RDAP domain must be a bare DNS name, not a URL or credential-bearing value.")
-
-    domain = value.rstrip(".").lower()
-    if not domain or len(domain) > _MAX_DOMAIN_LENGTH:
-        raise RdapAdmissionError("RDAP domain is missing or too long.")
     try:
-        ipaddress.ip_address(domain)
-    except ValueError:
-        pass
-    else:
-        raise RdapAdmissionError("RDAP domain lookup does not accept IP literals.")
-
-    if "." not in domain:
-        raise RdapAdmissionError("RDAP domain must contain a registrable-style multi-label DNS name.")
-    if domain.endswith((".local", ".localhost", ".internal", ".home", ".lan")):
-        raise RdapAdmissionError("RDAP domain must not use a local-use suffix.")
-    try:
-        ascii_domain = domain.encode("idna").decode("ascii")
-    except UnicodeError as exc:
-        raise RdapAdmissionError("RDAP domain is not valid IDNA.") from exc
-    labels = ascii_domain.split(".")
-    if any(_DNS_LABEL_RE.fullmatch(label) is None for label in labels):
-        raise RdapAdmissionError("RDAP domain contains an invalid DNS label.")
-    return RdapDomainTarget(domain=ascii_domain, tld=labels[-1])
+        normalized = normalize_identifier(IdentifierKind.DOMAIN, value)
+    except InvalidIdentifier as exc:
+        raise RdapAdmissionError(str(exc)) from exc
+    labels = normalized.normalized_value.split(".")
+    return RdapDomainTarget(domain=normalized.normalized_value, tld=labels[-1])
 
 
 def _validated_bootstrap_base_url(value: str) -> str:

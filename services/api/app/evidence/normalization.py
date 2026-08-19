@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from dataclasses import dataclass
+import ipaddress
+import re
 from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 import phonenumbers
@@ -17,6 +19,11 @@ class NormalizedIdentifier:
     raw_value: str
     normalized_value: str
     comparison_key: str
+
+
+_DNS_LABEL_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
+_MAX_DOMAIN_LENGTH = 253
+_LOCAL_USE_DOMAIN_SUFFIXES = (".local", ".localhost", ".internal", ".home", ".lan")
 
 
 def _compact_whitespace(value: str) -> str:
@@ -96,6 +103,38 @@ def _normalize_url(raw: str) -> tuple[str, str]:
     return normalized, normalized
 
 
+def _normalize_domain(raw: str) -> tuple[str, str]:
+    if any(ord(character) <= 0x20 or ord(character) == 0x7F for character in raw):
+        raise InvalidIdentifier("Domain must not contain whitespace or control characters.")
+    if "://" in raw or any(character in raw for character in "/?#@"):
+        raise InvalidIdentifier("Domain must be a bare DNS name, not a URL or credential-bearing value.")
+
+    domain = raw.rstrip(".").lower()
+    if not domain or len(domain) > _MAX_DOMAIN_LENGTH:
+        raise InvalidIdentifier("Domain is missing or too long.")
+    try:
+        ipaddress.ip_address(domain)
+    except ValueError:
+        pass
+    else:
+        raise InvalidIdentifier("Domain identifiers do not accept IP literals.")
+
+    if "." not in domain:
+        raise InvalidIdentifier("Domain must contain a registrable-style multi-label DNS name.")
+    if domain.endswith(_LOCAL_USE_DOMAIN_SUFFIXES):
+        raise InvalidIdentifier("Domain must not use a local-use suffix.")
+    try:
+        ascii_domain = domain.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise InvalidIdentifier("Domain is not valid IDNA.") from exc
+    if len(ascii_domain) > _MAX_DOMAIN_LENGTH:
+        raise InvalidIdentifier("Domain is too long after IDNA normalization.")
+    labels = ascii_domain.split(".")
+    if any(_DNS_LABEL_RE.fullmatch(label) is None for label in labels):
+        raise InvalidIdentifier("Domain contains an invalid DNS label.")
+    return ascii_domain, ascii_domain
+
+
 def normalize_identifier(kind: IdentifierKind, raw: str) -> NormalizedIdentifier:
     raw_value = raw.strip()
 
@@ -110,6 +149,11 @@ def normalize_identifier(kind: IdentifierKind, raw: str) -> NormalizedIdentifier
         normalized, key = _normalize_username(raw_value)
     elif kind is IdentifierKind.URL:
         normalized, key = _normalize_url(raw_value)
+    elif kind is IdentifierKind.DOMAIN:
+        # Domain admission is intentionally stricter than the generic trim-first
+        # identifiers: surrounding whitespace is rejected rather than normalized
+        # away so URLs, pasted prose and ambiguous values cannot become domains.
+        normalized, key = _normalize_domain(raw)
     elif kind in {IdentifierKind.NAME, IdentifierKind.ORGANIZATION}:
         normalized = _compact_whitespace(raw_value)
         key = normalized.casefold()
