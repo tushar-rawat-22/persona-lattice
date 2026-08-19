@@ -107,6 +107,47 @@ def _validated_bootstrap_base_url(value: str) -> str:
     return urlunsplit(("https", hostname, path, "", ""))
 
 
+def _validated_rdap_response_url(value: str) -> str:
+    """Validate the final HTTPS URL that actually returned an RDAP object.
+
+    Network-layer address validation remains the transport's responsibility. This
+    parser independently rejects provenance URLs that could not have crossed that
+    transport boundary safely.
+    """
+
+    if not isinstance(value, str) or not value or len(value) > 4096:
+        raise RdapAdmissionError("RDAP response URL is missing or exceeds limits.")
+    if any(ord(character) <= 0x20 or ord(character) == 0x7F for character in value):
+        raise RdapAdmissionError("RDAP response URL contains whitespace or control characters.")
+    parsed = urlsplit(value)
+    if parsed.scheme != "https" or parsed.hostname is None:
+        raise RdapAdmissionError("RDAP response URL must use HTTPS with a DNS hostname.")
+    if parsed.username is not None or parsed.password is not None or parsed.fragment:
+        raise RdapAdmissionError("RDAP response URL contains unsupported authority or fragment data.")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise RdapAdmissionError("RDAP response URL has an invalid port.") from exc
+    if port not in {None, 443}:
+        raise RdapAdmissionError("RDAP response URL may use only the default HTTPS port.")
+    hostname = parsed.hostname.rstrip(".").lower()
+    try:
+        ipaddress.ip_address(hostname)
+    except ValueError:
+        pass
+    else:
+        raise RdapAdmissionError("RDAP response URL must use a DNS hostname.")
+    try:
+        hostname = hostname.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise RdapAdmissionError("RDAP response URL hostname is not valid IDNA.") from exc
+    labels = hostname.split(".")
+    if len(labels) < 2 or any(_DNS_LABEL_RE.fullmatch(label) is None for label in labels):
+        raise RdapAdmissionError("RDAP response URL hostname is not a valid public DNS-style hostname.")
+    path = parsed.path or "/"
+    return urlunsplit(("https", hostname, path, parsed.query, ""))
+
+
 def _normalized_bootstrap_suffix(value: str) -> str:
     if not isinstance(value, str) or not value:
         raise RdapAdmissionError("RDAP bootstrap DNS entries must be non-empty strings.")
@@ -193,13 +234,17 @@ def admitted_rdap_domain_observation(
     *,
     requested_domain: str,
     source_locator: str,
+    canonical_query_url: str | None = None,
 ) -> RdapDomainObservation:
     """Retain only low-sensitivity public registration context from a domain response.
 
-    Registrant/contact names, addresses, email, telephone and organization values
-    are intentionally excluded even when an upstream response exposes them. The
-    authoritative service's redaction remains authoritative; this boundary never
-    attempts to infer or recover omitted registration data.
+    ``source_locator`` is the final HTTPS URL that actually returned the RDAP
+    object. ``canonical_query_url`` is the IANA-bootstrap-derived initial query
+    URL and is validated separately when redirects occurred. Registrant/contact
+    names, addresses, email, telephone and organization values are intentionally
+    excluded even when an upstream response exposes them. The authoritative
+    service's redaction remains authoritative; this boundary never attempts to
+    infer or recover omitted registration data.
     """
 
     target = normalize_rdap_domain(requested_domain)
@@ -212,9 +257,18 @@ def admitted_rdap_domain_observation(
     if returned != target.domain:
         raise RdapAdmissionError("RDAP response domain does not match the requested domain.")
 
-    expected_locator = rdap_domain_query_url(source_locator.rsplit("domain/", 1)[0], domain=target.domain)
-    if source_locator != expected_locator:
-        raise RdapAdmissionError("RDAP source locator is not the canonical admitted domain query URL.")
+    query_locator = canonical_query_url or source_locator
+    if "domain/" not in query_locator:
+        raise RdapAdmissionError("RDAP canonical query URL is not a domain query.")
+    expected_query = rdap_domain_query_url(
+        query_locator.rsplit("domain/", 1)[0],
+        domain=target.domain,
+    )
+    if query_locator != expected_query:
+        raise RdapAdmissionError("RDAP canonical query URL is not the admitted domain query URL.")
+    validated_source_locator = _validated_rdap_response_url(source_locator)
+    if source_locator != validated_source_locator:
+        raise RdapAdmissionError("RDAP source locator is not a canonical admitted HTTPS response URL.")
 
     statuses = payload.get("status", ())
     if not isinstance(statuses, Sequence) or isinstance(statuses, (str, bytes)):
