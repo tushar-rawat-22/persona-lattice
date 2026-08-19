@@ -11,14 +11,16 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main before this block: `4a92b661002d11a8e217c30460a9be3ff2f434e9`
 - PR #137: governed metadata-only RDAP activation — merged
 - PR #138: bounded local consented M10 cohort runner — merged
-- Open PRs/issues before this block: none
-- Current branch: `m10-reviewed-label-provenance`
-- Current block: independently reviewed M10 label provenance and reviewed-only accounting
-- Exact-head CI: pending; merge only after the complete required matrix passes
-- Relevant decision: ADR 0078
+- PR #139: independently reviewed M10 label provenance and reviewed-only accounting — merged
+- PR #139 exact tested head: `6ad918ee0a1cb1efdb405f905d11ab1c4cda3c48`
+- PR #139 exact-head CI: run `32299192182`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- PR #139 merge / verified main before the current block: `756e1459947bdd3ff75563474eb919d03bfb5885`
+- Current branch: `m10-reviewed-local-runner`
+- Current block: shared private local M10 cohort materializer + reviewed runner
+- Current exact-head CI: pending; do not merge until the complete matrix passes
+- Relevant decisions: ADR 0078 and ADR 0079
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -37,25 +39,34 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - RDAP: active for explicit DOMAIN seeds through the governed runtime, PR #137.
 - Gravatar: PLANNED; blocked on provider privacy-policy/free-key requirements.
 - WebFinger: PLANNED; parser/transport/URL-only semantics/exact-host policy exist, but no host is approved.
-- M10: deterministic replay, graph/source accounting, real-engine factor ablations, label-provenance manifests, consented-only accounting and a local consented cohort runner exist. Representative real evaluation remains incomplete.
+- M10: deterministic replay, graph/source accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), consented/reviewed-only accounting and a local consented runner exist. Representative real evaluation remains incomplete.
 
-## Current block — independently reviewed labels
+## Current block — shared local evidence-backed cohort ingestion
 
-The repository previously recognized only `synthetic` and `consented` M10 label provenance. That prevented a truthful analysis path for evidence established by independent review when consent was not the basis.
+PR #139 closed the semantic provenance gap: independently reviewed evidence now has its own basis and reviewed-only accounting boundary, while the consented-only boundary remains strict.
 
-This branch adds `independently_reviewed` as a third explicit basis. The label manifest keeps fixture and declared-label counts for all three bases separately. The manifest still retains only an opaque lowercase SHA-256 reference to the external evidence/review record; raw identifiers, source documents, review notes and consent material stay outside Git.
+The next operational gap was that only consented evidence had a privacy-bounded local JSON runner. Duplicating that parser for reviewed evidence would create two normalization, graph-shape and privacy contracts, so this branch extracts one shared local cohort materializer.
 
-A new reviewed-only analysis boundary accepts a cohort only when every fixture is `independently_reviewed`. It rejects synthetic, consented and mixed provenance, requires complete labels for every admitted pivot, and reports the same kind of exact scenario count fractions used by the consented analysis.
+The shared materializer keeps the existing limits and M1-backed canonicalization used by the consented runner. It builds the same `M10GraphFixture` contract and accepts the evidence basis only from the executable caller. Input JSON cannot select its own basis: top-level or fixture-level `basis` / `label_basis` fields are rejected.
 
-The reviewed fractions are descriptive within the reviewed corpus. They are not population false-positive/false-negative rates, calibration evidence, confidence or identity probability.
+The consented runner now calls the shared materializer with `CONSENTED`. A new reviewed runner calls it with `INDEPENDENTLY_REVIEWED`. Synthetic provenance is rejected by this evidence-backed local path.
 
-The existing consented-only analysis remains strict. Independently reviewed evidence does not satisfy its consent requirement.
+Both runners:
 
-ADR 0078 records the distinction and non-changes.
+- keep the 1 MiB input, 256-fixture and 2,048-node bounds;
+- use the same production depth-2 / 12-node baseline and depth-3 / 12-node diagnostic candidate;
+- require an opaque lowercase SHA-256 reference to the external consent/review record;
+- require complete labels for admitted pivots at the matching analysis boundary;
+- emit aggregate scenario accounting and experiment/provenance digests only;
+- return generic CLI validation failures instead of echoing private values.
+
+The two entry points stay separate intentionally. The operator chooses the evidence basis by choosing the consented or reviewed command, not through an input-file flag.
+
+ADR 0079 records this design. `docs/M10_CONSENTED_COHORT_RUNBOOK.md` and `docs/M10_REVIEWED_COHORT_RUNBOOK.md` describe the two workflows.
 
 ## RDAP activation checkpoint
 
-The live path is:
+The live path remains:
 
 `explicit DOMAIN seed → M1 DOMAIN normalization → rdap_domain_registry binding → DEVELOPMENT provider descriptor → process-wide ProviderRuntime → process-wide IANA bootstrap cache → SSRF-safe authoritative RDAP transport → metadata-only observation → typed source-run report → canonical converged evidence`
 
@@ -84,11 +95,12 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Run exact-head CI for the reviewed-provenance branch; repair any regression rather than weakening the consent/review distinction.
-2. Merge only when API 3.11/3.13, audits/Ruff, web and production-image checks are green.
-3. Once merged, use the consented path only for genuine consent evidence and the reviewed path only for genuine independent review evidence. Neither path manufactures a real cohort.
-4. Add another external source only if it has high coverage value and a defensible current zero-spend/terms/privacy/provenance story.
-5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
+1. Put the current shared-materializer/reviewed-runner head through exact-head CI; repair any consented-runner regression instead of maintaining two parsers.
+2. Merge only when API 3.11/3.13, audits/Ruff, web and production-image checks pass.
+3. After merge, the M10 ingestion bottleneck is real evidence. Use the consented command only for genuine consent records and the reviewed command only for genuine independent review records.
+4. Do not manufacture either evidence basis or publish population/calibration claims from a convenience cohort.
+5. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
+6. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
 
 ## Update discipline
 
