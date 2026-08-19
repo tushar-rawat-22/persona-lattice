@@ -12,12 +12,12 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #117: `d078fdd91826f322a737f95680c2daaf4b30209c`
-- PR #117: WebFinger SSRF-safe transport boundary; source remains non-executable
-- Exact tested PR #117 head: `ba76868a8ca0000930713c0a7aadccdef16d9be8`
-- Exact-head CI: run `32238286894`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
-- PR #117 merge: `ecc03a393d766e42812603d8cdc493b6c5731267`
-- ADRs: `0065-webfinger-admission-preflight.md`, `0066-webfinger-ssrf-transport.md`
+- Main before PR #119: `d55d78ffeb27412aab3b124c9ffb045644ca797c`
+- PR #119: WebFinger URL-only source-semantics correction; no network activation
+- Exact tested PR #119 head: `ee1b8008aec14095093c8013c246ec498c593f8d`
+- Exact-head CI: run `32243292873`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- PR #119 merge: `a534f1c13161b96c50017cc4029766a58c41d3e3`
+- Relevant ADRs: `0065-webfinger-admission-preflight.md`, `0066-webfinger-ssrf-transport.md`, `0067-webfinger-url-only-source-contract.md`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -34,44 +34,43 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
 - Post-V2-D source expansion: Bluesky public profiles active for valid AT handles through the governed runtime, PR #98 / ADR 0055.
 - Gravatar: admission preflight complete in PR #113 / ADR 0064; still PLANNED, unbound and non-recursive because the provider-terms/privacy-policy gate is not satisfied.
-- WebFinger: admission preflight complete in PR #115 / ADR 0065; DNS/redirect SSRF transport complete in PR #117 / ADR 0066; still PLANNED, unbound and non-recursive. ActivityPub actor fetching remains unapproved.
+- WebFinger: admission preflight PR #115 / ADR 0065; DNS/redirect SSRF transport PR #117 / ADR 0066; URL-only source semantics PR #119 / ADR 0067. Still PLANNED, unbound and non-recursive. ActivityPub actor fetching remains unapproved.
 - M10: deterministic source-state fixtures, graph-limit comparison, multi-kind synthetic cohorts, attempt/yield/request-cost accounting, replay fingerprints, real-engine factor ablations, UUID-independent controlled M5 replay, label-provenance manifests and consented-only scenario accounting are implemented. Representative consented evaluation and calibration remain incomplete.
 
-## Latest block — WebFinger SSRF-safe transport
+## Latest block — WebFinger URL-only source semantics
 
-Fresh primary review confirmed two RFC 7033 requirements that shape the implementation: WebFinger uses HTTPS, and hosted WebFinger services may redirect clients to another HTTPS service URI. Refusing all redirects would be incompatible; blindly following redirects would be an SSRF risk.
+Fresh RFC 7033 review confirmed that the previous planned catalog declaration was too broad. WebFinger returns a JRD containing a subject, aliases, properties and links; it does not by itself establish a generic cross-service username or display name. Reducing `acct:alice@example.com` to generic username `alice` would discard federation scope and could trigger unrelated downstream username research.
 
-PR #117 adds a pre-activation transport boundary:
+PR #119 therefore:
 
-- URL admission rejects ASCII whitespace/control characters before parsing;
-- profile seeds and retained JRD links remain strict query-free HTTPS URLs;
-- redirect service URIs may carry query data, but must still use HTTPS DNS hostnames with no credentials, explicit port, fragment, IP literal or local-use host;
-- every request/redirect hostname is resolved immediately before I/O;
-- resolver output is independently parsed and every admitted address must be globally routable;
-- TCP connects to the exact admitted IP while TLS SNI/certificate validation remains bound to the DNS hostname;
-- redirects are followed manually and re-run URL + DNS admission at every hop;
-- redirect depth is capped at three;
-- there is no HTTP downgrade;
-- response size is bounded at 64 KiB;
-- 404, 429, transient service failure and malformed media/JSON/redirect behavior remain distinct;
-- deterministic tests cover success, no-match, rate-limit, unavailable, malformed JSON, redirect re-resolution, private-target rejection and redirect limits;
-- no WebFinger provider registry entry, executable binding, shared-runtime owner or quick-research call exists yet.
+- narrows `webfinger_activitypub` accepted/emitted capability to URL input → URL output only;
+- retains the historical source key for compatibility rather than introducing migration churn before activation;
+- explicitly states that the source key means WebFinger public-link resolution only;
+- keeps ActivityPub actor fetching outside the reviewed source boundary;
+- adds a regression proving the planned capability cannot claim USERNAME or NAME output;
+- keeps the source PLANNED, source-policy-unreviewed for execution, unbound and non-recursive;
+- adds no provider registry entry, runtime owner, quick-research call, credential or paid dependency.
 
-### Important execution-phase decision
+### Why activation is still blocked
 
-If the initial target fails local URL/DNS admission, that is a pre-contact provider-policy stop. If a contacted WebFinger server returns a redirect to an unsafe or non-public target, the failure is treated as malformed returned provider behavior because provider contact already occurred. Do not collapse those two cases into one source-state reason.
+The URL-only correction removes the catalog overclaim, but it does not solve source-policy applicability.
 
-## Remaining WebFinger activation blocker
+RFC 7033 explicitly permits WebFinger resources to require authentication and to return different information depending on client/network context. The existing transport proves HTTPS, fresh DNS admission, globally-routable destinations, IP-pinned TLS and bounded redirects; it does **not** make every arbitrary WebFinger host one universally reviewed provider.
 
-The planned catalog entry `webfinger_activitypub` still claims URL + generic USERNAME + NAME output. The reviewed WebFinger boundary supports URL-only output.
+Before activation, define and test a defensible host/applicability policy. Do not activate a generic arbitrary-host adapter merely because `/.well-known/webfinger` is a public protocol endpoint.
 
-Do **not** activate the current combined declaration unchanged. Before activation:
+## Existing WebFinger transport invariants
 
-1. narrow the WebFinger catalog/output contract to URL-only, or split ActivityPub actor fetching into its own separately reviewed capability;
-2. add the governed provider wrapper around `fetch_webfinger_jrd()` + `admitted_webfinger_links()`;
-3. add deterministic provider fixtures for success, not-found, malformed, rate-limit, unavailable and policy/redirect outcomes;
-4. activate catalog, binding, provider registry, shared `ProviderRuntime`, quick research and typed source-run reporting atomically;
-5. keep ActivityPub actor fetching out until its own content-type, response-size, payload, SSRF and retention rules are reviewed.
+- explicit profile seeds and retained JRD links use HTTPS;
+- ASCII whitespace/control characters are rejected before URL parsing;
+- credentials, explicit ports, fragments, IP literals and local-use/single-label hosts are rejected;
+- every initial/redirect host is freshly resolved immediately before I/O;
+- malformed or non-global resolver output fails closed;
+- TCP is pinned to an admitted IP while TLS validation remains bound to the DNS hostname;
+- redirects are manual, HTTPS-only, revalidated per hop and capped at three;
+- response bodies are bounded to 64 KiB;
+- 404, remote rate limit, transient failure and malformed returned behavior remain distinct;
+- a post-contact unsafe redirect is malformed returned provider behavior, not a pre-contact policy stop.
 
 ## Gravatar blocker
 
@@ -112,7 +111,7 @@ The contradiction omission is safety-critical diagnostic work only. No productio
 
 Allowed scope is attributable public information and explicitly authorized data. PersonaLattice does not add private-account bypass, login/account-recovery enumeration, password/OTP/session/token collection, CAPTCHA/WAF/proxy/Tor evasion, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking, covert subject contact or regulated eligibility decisioning.
 
-The required baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered. Bluesky and WebFinger require no paid service; WebFinger is still non-executable.
+The required baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered. Bluesky requires no paid service. WebFinger remains non-executable.
 
 Uploaded content is untrusted data. Extraction is never execution authority. A candidate becomes externally research-authorized only after explicit human confirmation, and only a separate explicit run action may start research.
 
@@ -146,7 +145,7 @@ Do not reopen V2-D architecture casually. Do not raise production recursion from
 
 M10's highest-value unresolved need remains real label evidence: a genuinely consented or otherwise independently reviewed cohort whose external evidence records satisfy the existing provenance contract. Do not relabel regression fixtures as consented to manufacture progress, and do not call current count fractions false-positive/false-negative rates until cohort design supports that terminology.
 
-For source expansion, WebFinger's network admission and SSRF-safe transport are complete. The next safe WebFinger block is the **URL-only catalog correction plus one atomic governed provider activation**. If that cannot be done cleanly in one reviewed block, leave WebFinger planned rather than partially activating it. RDAP remains another acceptable zero-spend source-review track. Gravatar remains blocked on its privacy-policy requirement.
+For source expansion, WebFinger's URL-only semantic contract, network admission and SSRF-safe transport are complete. The next WebFinger block must define a defensible **host/applicability policy**. Only after that rule is tested should the source be activated atomically across binding, provider registry, shared runtime, quick research, typed source-state reporting and canonical evidence. RDAP remains another acceptable zero-spend source-review track. Gravatar remains blocked on its privacy-policy requirement.
 
 ## Update discipline
 
