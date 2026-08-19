@@ -80,7 +80,7 @@ V2-D closure does not authorize larger recursion, wider retention, paid baseline
 
 ## M10 — evaluation and calibration laboratory
 
-**Status: multi-kind synthetic cohort, operational accounting, replay identity and real-engine factor ablation established; representative evaluation remains**
+**Status: multi-kind synthetic cohort, operational accounting, replay identity, real-engine factor ablation and UUID-independent controlled M5 replay established; representative evaluation remains**
 
 Established:
 
@@ -96,7 +96,8 @@ Established:
 - versioned SHA-256 replay fingerprints for exact canonicalized cohort inputs and deterministic comparison results;
 - replay-anchored M5 factor-ablation manifests that fingerprint the exact current weights, thresholds, independence requirements, strong-factor vocabulary and veto vocabulary;
 - controlled factor omissions executed through the production `CorrelationEngine`, with baseline/ablated outcome, score and independence-group deltas;
-- non-retaining M10 correlation execution: each diagnostic M5 run is rolled back and does not become retained case evidence.
+- non-retaining M10 correlation execution: each diagnostic M5 run is rolled back and does not become retained case evidence;
+- a versioned reusable semantic specification for the controlled M5 ablation cases, with UUID-independent fixture, per-case and result replay fingerprints that survive reconstruction in fresh databases.
 
 ### Current controlled graph result
 
@@ -117,12 +118,11 @@ The first real-engine ablation set uses separate controlled cases so the contrad
 
 These values describe controlled deterministic sensitivity under the current M5 policy. They are not factor importance probabilities, calibration evidence, population error rates or permission to change production weights/vetoes.
 
-Replay fingerprints identify the exact controlled graph experiment definition and result payload. Factor-ablation manifests identify the exact M5 policy and omission scenario set. The current controlled M5 case set is not yet a separately fingerprinted cross-run fixture library; that remains an evaluation-provenance gap rather than something to paper over.
+Replay fingerprints identify the exact controlled graph experiment definition and result payload. Factor-ablation manifests identify the exact M5 policy and omission scenario set. The controlled M5 ablation cases now have a separate versioned semantic fixture identity independent of generated database UUIDs; each materialized case carries its semantic fingerprint through execution, and the final result replay is bound to those fingerprints rather than case names alone.
 
 Still required before increasing recursion or changing correlation thresholds:
 
 - broader consented or otherwise defensibly labelled cohorts;
-- stable semantic/fingerprint identity for reusable controlled M5 ablation fixtures independent of database-generated UUIDs;
 - labelled false-positive/false-negative and threshold analysis where defensible labels exist;
 - provider-specific request/yield weights only where a real adapter needs more than the current one-request/one-yield fixture abstraction;
 - reviewed monetary pricing only when an actual provider has a current price model relevant to a decision;
@@ -148,7 +148,7 @@ The first rollout remains sequential after the existing public-profile enrichmen
 
 Do not reopen V2-D architecture casually, do not remove safety-critical M5 vetoes because an ablation changes the score, and do not raise recursion because one fixture family looks favorable.
 
-The preferred next M10 work is to make the controlled M5 ablation cases **reusable and fingerprintable without depending on generated database UUIDs**, then broaden defensible labels and threshold analysis. The execution layer now uses the real M5 engine; the remaining provenance gap is the semantic identity of the controlled M5 case set across reconstructed runs.
+The preferred next M10 work is to broaden **consented or otherwise defensibly labelled cohorts** and then perform labelled false-positive/false-negative and threshold analysis where the labels and denominators are actually defensible. The controlled M5 fixture/replay provenance gap is closed; replay hashes remain experiment identity only and do not make the synthetic cases calibration evidence.
 
 A separate acceptable track is fresh review of exactly one additional zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions. Current official terms, cost, authentication, returned fields, contact risk and retention implications must be reviewed before activation.
 
