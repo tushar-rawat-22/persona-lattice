@@ -12,12 +12,12 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #113: `0aefa13a552d0704f65b535acf57d391bac17565`
-- PR #113: Gravatar admission preflight; source remains non-executable
-- Exact tested PR #113 head: `760936e9ee7a84cc4e65b4f14783936053e90747`
-- Exact-head CI: run `32228479066`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
-- PR #113 merge: `abe08b033f52ecb047d2c31e739e0efb955c110f`
-- ADR: `docs/decisions/0064-gravatar-admission-preflight.md`
+- Main before PR #115: `d0d9a0835bc3a97ad400cd088179e1fb411ad8a2`
+- PR #115: WebFinger admission preflight; source remains non-executable
+- Exact tested PR #115 head: `f1b73e0818ec9561ba85b1775a19e9752a11eb7a`
+- Exact-head CI: run `32233384289`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
+- PR #115 merge: `1e052a48c6551d650c6830fe27063b5e3a04960b`
+- ADR: `docs/decisions/0065-webfinger-admission-preflight.md`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -33,73 +33,65 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-C source capability registry/planner: complete, PR #22.
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
 - Post-V2-D source expansion: Bluesky public profiles active for valid AT handles through the governed runtime, PR #98 / ADR 0055.
-- Gravatar: admission preflight complete in PR #113 / ADR 0064; still PLANNED, unbound and non-recursive.
+- Gravatar: admission preflight complete in PR #113 / ADR 0064; still PLANNED, unbound and non-recursive because the provider-terms/privacy-policy gate is not yet satisfied.
+- WebFinger/ActivityPub: WebFinger admission preflight complete in PR #115 / ADR 0065; still PLANNED, unbound and non-recursive. ActivityPub actor fetching is not approved by this block.
 - M10: deterministic source-state fixtures, graph-limit comparison, multi-kind synthetic cohorts, attempt/yield/request-cost accounting, replay fingerprints, real-engine factor ablations, UUID-independent controlled M5 fixture replay, label-provenance manifests and consented-only scenario accounting are implemented. Representative consented evaluation and calibration remain incomplete.
 
-## Latest block — Gravatar admission preflight
+## Latest block — WebFinger admission preflight
 
-Fresh official review established that Gravatar's Profiles API uses a SHA-256 identifier derived from a trimmed, lower-cased email. The Profiles API is currently free; Gravatar recommends a server-side API key for production use and documents higher limits for authenticated calls.
+Fresh review used RFC 7033 plus current Mastodon WebFinger documentation. WebFinger is an open HTTPS standard and requires no API credential or paid service. Individual federated servers may still differ in policy and availability.
 
-The upstream profile schema exposes substantially more data than PersonaLattice needs, including location, company, verified accounts, contact information, payment information, biography, image URLs and other profile fields. PR #113 therefore adds only a local admission boundary:
+PR #115 adds only a network-free admission boundary:
 
-- `services/api/app/providers/gravatar_admission.py`;
-- provider-local email hash derivation only; canonical PersonaLattice email normalization is unchanged;
-- returned profile hash must exactly match the requested email-derived hash;
-- canonical provenance must be HTTPS `gravatar.com/<slug>` with no credentials, port, query or fragment;
-- retained payload is limited to optional display name plus `account_candidate=true`, `identity_claim=false` and public-profile visibility metadata;
-- broader Gravatar fields are not admitted;
-- deterministic malformed, mismatch and provenance tests are included;
-- there is no network request, provider registry entry, source binding, shared-runtime owner or API key in this block.
+- `services/api/app/providers/webfinger_admission.py`;
+- only explicit absolute HTTPS profile URLs are accepted as resource seeds;
+- credentials, explicit ports, query/fragment seeds, IP literals, single-label/local-use hosts and `/.well-known/` seeds fail closed;
+- DNS hostnames are syntactically validated and IDNA-normalized, but this preflight does **not** claim they currently resolve to public IPs;
+- the RFC 7033 request endpoint is constructed on the same host as the explicit profile resource;
+- returned JRDs must be anchored to the requested profile URL through `subject` or `aliases`;
+- only bounded HTTPS `self` and `profile-page` links are admitted;
+- query/fragment links, credential-bearing links, explicit-port links, IP-literal links and malformed DNS labels are rejected;
+- WebFinger properties are not treated as names or other personal attributes;
+- `acct:user@domain` is not collapsed into a generic username lead;
+- there is no DNS lookup, network request, provider registry entry, source binding or shared-runtime owner in this block.
 
-### Activation blocker
+### Activation blockers
 
-Automattic's current API terms require an application using its APIs to disclose how API data is collected/stored/refreshed and to provide an accessible privacy policy. PersonaLattice currently has no privacy-policy surface. Activating Gravatar before that requirement is satisfied would be a provider-terms defect.
+The existing planned catalog entry `webfinger_activitypub` currently claims it may emit URL, generic USERNAME and NAME leads. That is broader than RFC 7033 alone supports. Converting `acct:alice@example.com` to generic username `alice` discards the federation domain and could cause unsafe cross-service spraying. WebFinger also does not itself establish a display name.
 
-A future activation must therefore re-check current official terms and must not proceed until:
+Before activation:
 
-1. PersonaLattice exposes an accurate accessible privacy policy/disclosure;
-2. a free server-side Gravatar key is configured outside Git without creating a paid baseline dependency;
-3. source catalog, binding, provider registry, shared `ProviderRuntime`, quick research and typed source-run reporting are activated atomically;
-4. success, not-found, missing-key, malformed-result, rate-limit and unavailable behavior are deterministically tested;
-5. the retained field set remains minimal.
+1. narrow the executable WebFinger output contract to URL-only, or split ActivityPub actor fetching into a separately reviewed capability;
+2. implement provider/runtime redirect handling that revalidates every redirect target and prevents DNS rebinding/private-network SSRF;
+3. resolve the request host immediately before I/O and reject non-global addresses;
+4. add deterministic success, not-found, malformed, unavailable/rate-limit and redirect/SSRF fixtures;
+5. activate catalog, binding, provider registry, shared `ProviderRuntime`, quick research and typed source-run reporting atomically;
+6. keep ActivityPub actor fetching out of the activation unless its own content-type, response-size, payload and retention rules are reviewed.
 
-Do not turn this into a universal email-account existence checker and do not add avatar, contact, payment, biography or verified-account harvesting as part of activation.
+Do not activate the current combined catalog declaration unchanged.
+
+## Gravatar blocker
+
+Gravatar's preflight remains valid but activation is blocked. Automattic's current API terms require an application using its APIs to disclose how API data is collected/stored/refreshed and to provide an accessible privacy policy. PersonaLattice does not yet provide that surface. A future Gravatar activation also needs a free server-side key outside Git and deterministic provider fixtures. It must remain unnecessary to the zero-spend baseline.
 
 ## Current controlled synthetic graph result
 
-Production policy — depth 2 / 12 nodes:
+Production depth 2 / 12 nodes: 9 labelled admitted pivots (8 relevant, 1 wrong), 11 simulated attempts, 9 yield-producing attempts, 2 zero-yield provider failures, 11 request-cost units, 9 observation-yield units and 3 local budget stops.
 
-- 6 synthetic fixtures;
-- 9 labelled admitted pivots: 8 relevant, 1 wrong;
-- 11 simulated source attempts;
-- 9 successful/yield-producing attempts;
-- 2 zero-yield provider failures;
-- 11 abstract request-cost units;
-- 9 observation-yield units;
-- 3 local budget stops.
+Candidate depth 3 / 12 nodes: 12 labelled admitted pivots (8 relevant, 4 wrong), 14 attempts, 12 yield-producing attempts, 2 zero-yield provider failures, 14 request-cost units, 12 observation-yield units and no depth budget stops.
 
-Candidate depth 3 / 12 nodes:
-
-- 12 labelled admitted pivots: 8 relevant, 4 wrong;
-- 14 simulated source attempts;
-- 12 successful/yield-producing attempts;
-- 2 zero-yield provider failures;
-- 14 abstract request-cost units;
-- 12 observation-yield units;
-- no depth budget stops.
-
-Delta depth 2 → depth 3: +3 attempts, +3 request-cost units, +3 yield units, +3 wrong-labelled pivots and +0 relevant pivots in this synthetic cohort. This is regression evidence only. Production recursion remains depth 2 / 12 nodes.
+Controlled delta depth 2 → 3: +3 attempts, +3 request-cost units, +3 yield units, +3 wrong-labelled pivots and +0 relevant pivots. This is synthetic regression evidence only. Production recursion remains depth 2 / 12 nodes.
 
 ## Current controlled M5 sensitivity result
 
 Under `m5-evidence-strength-v1`:
 
-- metadata/temporal: baseline `possible_match`, score 35; omit compatible profile metadata → `insufficient_evidence`, score 20 (`-15`);
-- exact identifier: baseline `strong_candidate`, score 75; omit exact confirmed identifier overlap → `insufficient_evidence`, score 20 (`-55`);
-- independent cross-link: baseline `strong_candidate`, score 70; omit independent cross-link → `possible_match`, score 35 (`-35`);
-- contradiction veto: baseline `contradicted`, score 0; diagnostic omit hard contradiction → `strong_candidate`, score 90 (`+90`).
+- compatible profile metadata omission: `possible_match` 35 → `insufficient_evidence` 20;
+- exact confirmed identifier omission: `strong_candidate` 75 → `insufficient_evidence` 20;
+- independent cross-link omission: `strong_candidate` 70 → `possible_match` 35;
+- diagnostic hard-contradiction omission: `contradicted` 0 → `strong_candidate` 90.
 
-The contradiction omission is safety-critical diagnostic work only. No M5 factor weight, threshold, veto, calibration status or identity semantic changed.
+The contradiction omission is safety-critical diagnostic work only. No production factor weight, threshold, veto, calibration status or identity semantic changed.
 
 ## Permanent evidence semantics
 
@@ -117,7 +109,7 @@ The contradiction omission is safety-critical diagnostic work only. No M5 factor
 
 Allowed scope is attributable public information and explicitly authorized data. PersonaLattice does not add private-account bypass, login/account-recovery enumeration, password/OTP/session/token collection, CAPTCHA/WAF/proxy/Tor evasion, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking, covert subject contact or regulated eligibility decisioning.
 
-The required baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered; no `BRAVE_SEARCH_API_KEY` means no Brave attempt. Bluesky requires no credential or paid service. A future Gravatar integration may use a free server-side key, but it must not become a paid baseline dependency.
+The required baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered. Bluesky and WebFinger require no credential or paid service; WebFinger is still non-executable.
 
 Uploaded content is untrusted data. Extraction is never execution authority. A candidate becomes externally research-authorized only after explicit human confirmation, and only a separate explicit run action may start research.
 
@@ -139,17 +131,18 @@ Reviewed-document extraction creates candidates only; short-lived server-owned r
 - contextual name/organization/location remain non-autonomous;
 - public-search snippets do not become automatic identifier leads;
 - Brave remains optional and excluded from required zero-spend operation;
-- Bluesky is applicable only to syntactically valid AT handles, not arbitrary usernames;
+- Bluesky applies only to syntactically valid AT handles, not arbitrary usernames;
 - Gravatar remains planned and cannot execute;
+- WebFinger/ActivityPub remains planned and cannot execute;
 - no identity probability or universal-account claims.
 
 ## Next gate
 
 Do not reopen V2-D architecture casually. Do not raise production recursion from synthetic evidence, and do not treat the hard-contradiction ablation as a production recommendation.
 
-The highest-value M10 need remains real label evidence: assemble a genuinely consented or otherwise independently reviewed cohort whose external evidence records satisfy the existing provenance contract. Do not relabel regression fixtures as consented to manufacture progress, and do not call the current count fractions false-positive/false-negative rates until cohort design supports that terminology.
+M10's highest-value unresolved need remains real label evidence: a genuinely consented or otherwise independently reviewed cohort whose external evidence records satisfy the existing provenance contract. Do not relabel regression fixtures as consented to manufacture progress, and do not call current count fractions false-positive/false-negative rates until cohort design supports that terminology.
 
-For source expansion, Gravatar activation is blocked until the privacy-policy requirement above is satisfied. A separate acceptable source track is fresh review of exactly one other zero-spend candidate such as WebFinger/ActivityPub or RDAP, with current official terms, cost, authentication, fields, contact risk and retention reviewed before any activation.
+For source expansion, the next safe WebFinger step is **not** activation-by-status-flip. First correct the catalog/output model and define a redirect/DNS-resolution SSRF boundary. RDAP remains another acceptable zero-spend source-review track. Gravatar remains blocked on its privacy-policy requirement.
 
 ## Update discipline
 
