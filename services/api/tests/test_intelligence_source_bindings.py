@@ -94,6 +94,15 @@ def test_public_dns_is_governed_for_url_only_and_never_domain_seed_today() -> No
         source_binding_for("public_dns_infrastructure", kind=LeadKind.DOMAIN)
 
 
+def test_webfinger_planning_is_url_only_and_does_not_claim_activitypub_fields() -> None:
+    capability = SOURCE_BY_NAME["webfinger_activitypub"]
+    assert capability.status is SourceStatus.PLANNED
+    assert capability.accepts == frozenset({LeadKind.URL})
+    assert capability.emits == frozenset({LeadKind.URL})
+    assert capability.source_policy_reviewed is False
+    assert capability.recursive_eligible is False
+
+
 def test_planned_and_deferred_sources_have_no_executable_binding() -> None:
     for name in (
         "gravatar_public_profile",
