@@ -12,12 +12,12 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #111: `2b13a2bf8a4e79f4d8ef2ffa10d01bc95dcce0fe`
-- PR #111: consented-only M10 scenario accounting
-- Exact tested PR #111 head: `f48fdf6e4b2bcfbfd8ef6f7205c1d58a04a83c68`
-- Exact-head CI: run `32223948991`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
-- PR #111 merge: `aa9ee406a41b7f4e36af2d1e6038a4cd85f7641b`
-- ADR: `docs/decisions/0063-consented-m10-scenario-accounting.md`
+- Main before PR #113: `0aefa13a552d0704f65b535acf57d391bac17565`
+- PR #113: Gravatar admission preflight; source remains non-executable
+- Exact tested PR #113 head: `760936e9ee7a84cc4e65b4f14783936053e90747`
+- Exact-head CI: run `32228479066`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
+- PR #113 merge: `abe08b033f52ecb047d2c31e739e0efb955c110f`
+- ADR: `docs/decisions/0064-gravatar-admission-preflight.md`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -33,41 +33,37 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-C source capability registry/planner: complete, PR #22.
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
 - Post-V2-D source expansion: Bluesky public profiles active for valid AT handles through the governed runtime, PR #98 / ADR 0055.
+- Gravatar: admission preflight complete in PR #113 / ADR 0064; still PLANNED, unbound and non-recursive.
 - M10: deterministic source-state fixtures, graph-limit comparison, multi-kind synthetic cohorts, attempt/yield/request-cost accounting, replay fingerprints, real-engine factor ablations, UUID-independent controlled M5 fixture replay, label-provenance manifests and consented-only scenario accounting are implemented. Representative consented evaluation and calibration remain incomplete.
 
-## Latest block — consented-only M10 scenario accounting
+## Latest block — Gravatar admission preflight
 
-PR #111 adds `services/api/app/intelligence/m10_consented_analysis.py`.
+Fresh official review established that Gravatar's Profiles API uses a SHA-256 identifier derived from a trimmed, lower-cased email. The Profiles API is currently free; Gravatar recommends a server-side API key for production use and documents higher limits for authenticated calls.
 
-The boundary deliberately refuses to produce analysis from the current synthetic regression cohort. It requires:
+The upstream profile schema exposes substantially more data than PersonaLattice needs, including location, company, verified accounts, contact information, payment information, biography, image URLs and other profile fields. PR #113 therefore adds only a local admission boundary:
 
-- every fixture provenance basis to be `consented`;
-- exact replay/fixture/provenance agreement through the existing label-manifest builder;
-- every admitted pivot in every scenario to have an explicit label;
-- scenario names to remain unique;
-- admitted label counters to remain internally consistent.
+- `services/api/app/providers/gravatar_admission.py`;
+- provider-local email hash derivation only; canonical PersonaLattice email normalization is unchanged;
+- returned profile hash must exactly match the requested email-derived hash;
+- canonical provenance must be HTTPS `gravatar.com/<slug>` with no credentials, port, query or fragment;
+- retained payload is limited to optional display name plus `account_candidate=true`, `identity_claim=false` and public-profile visibility metadata;
+- broader Gravatar fields are not admitted;
+- deterministic malformed, mismatch and provenance tests are included;
+- there is no network request, provider registry entry, source binding, shared-runtime owner or API key in this block.
 
-For an eligible cohort it records exact scenario-level counts:
+### Activation blocker
 
-- declared relevant and wrong labels;
-- admitted relevant and wrong pivots;
-- relevant labels not admitted;
-- wrong labels not admitted.
+Automattic's current API terms require an application using its APIs to disclose how API data is collected/stored/refreshed and to provide an accessible privacy policy. PersonaLattice currently has no privacy-policy surface. Activating Gravatar before that requirement is satisfied would be a provider-terms defect.
 
-It also exposes exact numerator/denominator pairs for:
+A future activation must therefore re-check current official terms and must not proceed until:
 
-- wrong admitted pivots / labelled admitted pivots;
-- admitted relevant pivots / declared relevant labels.
+1. PersonaLattice exposes an accurate accessible privacy policy/disclosure;
+2. a free server-side Gravatar key is configured outside Git without creating a paid baseline dependency;
+3. source catalog, binding, provider registry, shared `ProviderRuntime`, quick research and typed source-run reporting are activated atomically;
+4. success, not-found, missing-key, malformed-result, rate-limit and unavailable behavior are deterministically tested;
+5. the retained field set remains minimal.
 
-These are count fractions only. They are not population false-positive/false-negative rates, calibration, confidence, identity probability or evidence that the consented cohort is representative. Zero denominators produce no fraction rather than a fabricated zero rate.
-
-The analysis digest is anchored to the exact M10 replay input/result digests and the exact label-manifest digest. Raw consent text, personal identifiers and source documents remain outside M10; the manifest retains only opaque SHA-256 references to externally controlled consent/label records.
-
-### Self-review decision
-
-Do **not** rename these fractions to false-positive/false-negative rates yet. A consented fixture corpus is still not automatically a representative population sample, and the wrong-label denominator is not necessarily the same thing as a statistical negative-class denominator. Stronger terminology requires stronger cohort design.
-
-Tests may mark synthetic fixture shapes as `consented` only to exercise the contract in isolation. That is test data, not real consent evidence, and must never be presented as evaluation results.
+Do not turn this into a universal email-account existence checker and do not add avatar, contact, payment, biography or verified-account harvesting as part of activation.
 
 ## Current controlled synthetic graph result
 
@@ -92,7 +88,7 @@ Candidate depth 3 / 12 nodes:
 - 12 observation-yield units;
 - no depth budget stops.
 
-Delta depth 2 → depth 3 in this synthetic cohort: +3 attempts, +3 request-cost units, +3 yield units, +3 wrong-labelled pivots and +0 relevant pivots. This is regression evidence only. Production recursion remains depth 2 / 12 nodes.
+Delta depth 2 → depth 3: +3 attempts, +3 request-cost units, +3 yield units, +3 wrong-labelled pivots and +0 relevant pivots in this synthetic cohort. This is regression evidence only. Production recursion remains depth 2 / 12 nodes.
 
 ## Current controlled M5 sensitivity result
 
@@ -121,29 +117,9 @@ The contradiction omission is safety-critical diagnostic work only. No M5 factor
 
 Allowed scope is attributable public information and explicitly authorized data. PersonaLattice does not add private-account bypass, login/account-recovery enumeration, password/OTP/session/token collection, CAPTCHA/WAF/proxy/Tor evasion, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking, covert subject contact or regulated eligibility decisioning.
 
-The required baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered; no `BRAVE_SEARCH_API_KEY` means no Brave attempt. Bluesky requires no credential or paid service and is not a single point of failure for the zero-spend path.
+The required baseline must work with zero paid APIs, zero paid database, zero paid hosting requirement, zero paid proxy network and zero paid enrichment. Metered integrations can exist only as optional extensions. Brave remains optional/metered; no `BRAVE_SEARCH_API_KEY` means no Brave attempt. Bluesky requires no credential or paid service. A future Gravatar integration may use a free server-side key, but it must not become a paid baseline dependency.
 
 Uploaded content is untrusted data. Extraction is never execution authority. A candidate becomes externally research-authorized only after explicit human confirmation, and only a separate explicit run action may start research.
-
-## Stable architecture
-
-- Next.js UI: `apps/web`
-- FastAPI API: `services/api`
-- evidence/persistence/normalization: `services/api/app/evidence`
-- bounded file intake + review: `services/api/app/uploads`
-- governed provider execution: `services/api/app/providers`
-- process-wide provider ownership: `services/api/app/providers/shared_runtime.py`
-- deterministic correlation: `services/api/app/correlation`
-- convergence: `services/api/app/convergence.py`
-- typed leads/frontier/source planning/reporting/evaluation: `services/api/app/intelligence`
-- M10 cohort aggregation: `services/api/app/intelligence/m10_cohort.py`
-- M10 fixture library: `services/api/app/intelligence/m10_fixture_library.py`
-- M10 replay identity: `services/api/app/intelligence/m10_replay.py`
-- M10 label provenance: `services/api/app/intelligence/m10_label_provenance.py`
-- M10 consented accounting: `services/api/app/intelligence/m10_consented_analysis.py`
-- M10 factor ablation: `services/api/app/intelligence/m10_factor_ablation.py`, `m10_factor_ablation_execution.py`, `m10_factor_ablation_fixtures.py`
-- quick research: `services/api/app/research.py`
-- retained cases: `services/api/app/cases.py`
 
 ## Closed V2-D invariants
 
@@ -164,17 +140,16 @@ Reviewed-document extraction creates candidates only; short-lived server-owned r
 - public-search snippets do not become automatic identifier leads;
 - Brave remains optional and excluded from required zero-spend operation;
 - Bluesky is applicable only to syntactically valid AT handles, not arbitrary usernames;
+- Gravatar remains planned and cannot execute;
 - no identity probability or universal-account claims.
 
 ## Next gate
 
 Do not reopen V2-D architecture casually. Do not raise production recursion from synthetic evidence, and do not treat the hard-contradiction ablation as a production recommendation.
 
-The next M10 need is **real label evidence, not another synthetic metric**. Assemble a genuinely consented or otherwise independently reviewed cohort whose external evidence records satisfy the PR #109 provenance contract. Every pivot admitted by a scenario must be labelled before the new PR #111 accounting boundary can run.
+The highest-value M10 need remains real label evidence: assemble a genuinely consented or otherwise independently reviewed cohort whose external evidence records satisfy the existing provenance contract. Do not relabel regression fixtures as consented to manufacture progress, and do not call the current count fractions false-positive/false-negative rates until cohort design supports that terminology.
 
-Do not mark regression fixtures as consented to manufacture progress. Do not call the returned count fractions false-positive/false-negative rates until the cohort design and denominators support that terminology. Production limits stay depth 2 / 12 nodes and M5 remains uncalibrated evidence-strength triage.
-
-A separate acceptable track is fresh review of exactly one zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions; current official terms, cost, authentication, fields, contact risk and retention review are required before activation.
+For source expansion, Gravatar activation is blocked until the privacy-policy requirement above is satisfied. A separate acceptable source track is fresh review of exactly one other zero-spend candidate such as WebFinger/ActivityPub or RDAP, with current official terms, cost, authentication, fields, contact risk and retention reviewed before any activation.
 
 ## Update discipline
 
