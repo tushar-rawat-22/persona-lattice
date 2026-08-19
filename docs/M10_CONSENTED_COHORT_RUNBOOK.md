@@ -2,13 +2,13 @@
 
 Use this runner only for a private cohort whose labels are backed by consented or independently reviewed evidence. Synthetic regression fixtures already live in the repository; this path exists so real identifiers do not have to.
 
-The input JSON stays on the operator machine. PersonaLattice reads it, evaluates the current graph policy against the existing depth-3 diagnostic candidate, and prints aggregate counts plus cryptographic replay/provenance digests. It does not print seed values, lead values, source locators or the external evidence record.
+The input JSON stays on the operator machine. PersonaLattice reads it, evaluates the current graph policy against the existing depth-3 diagnostic candidate, and prints aggregate counts plus cryptographic replay/provenance digests. It does not print seed values, lead values, source locators, fixture names, the cohort name or the external evidence record.
 
 ## Before you create a cohort
 
 Keep the supporting consent/review record outside Git. Each fixture needs a lowercase SHA-256 digest that refers to that external record. Do not use a bare hash of an email address, phone number, name or other low-entropy identifier as the evidence record.
 
-Use opaque fixture and cohort names. Do not put a person's name, email address or phone number in those labels because the cohort name is included in the aggregate output for operator bookkeeping.
+Use opaque fixture and cohort names anyway. They remain part of the private experiment definition and replay identity even though the command-line output does not echo them.
 
 ## File shape
 
@@ -66,11 +66,14 @@ python -m app.intelligence.m10_consented_runner /absolute/path/to/private-cohort
 
 The command writes one compact JSON object to stdout. Store that aggregate result wherever you keep experiment records; do not copy the private input file into the repository.
 
+Validation failures intentionally return one generic message instead of echoing parser or fixture details. Inspect the private input locally when validation fails; do not weaken this boundary just to get more convenient terminal errors.
+
 ## What the output means
 
 The output contains:
 
 - the SHA-256 digest of the exact local input bytes;
+- a SHA-256 digest of the cohort name rather than the name itself;
 - the existing deterministic replay input/result digests;
 - the label-provenance manifest digest;
 - the consented-analysis digest;
