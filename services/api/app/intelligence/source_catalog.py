@@ -397,7 +397,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
     SourceCapability(
         name="rdap_domain_registry",
         accepts=frozenset({LeadKind.DOMAIN}),
-        emits=frozenset({LeadKind.ORGANIZATION}),
+        emits=frozenset(),
         status=SourceStatus.PLANNED,
         mode=SourceMode.OPEN_STANDARD,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
@@ -406,8 +406,8 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         recursive_eligible=False,
         priority=155,
         note=(
-            "Adapter target for registration metadata that the authoritative RDAP service "
-            "actually returns; privacy redaction remains authoritative."
+            "Planned metadata-only domain registration context: bounded status and nameserver data; "
+            "registrant/contact/organization fields never become typed leads."
         ),
     ),
     SourceCapability(
