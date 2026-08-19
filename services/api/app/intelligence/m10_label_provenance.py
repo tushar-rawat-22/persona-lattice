@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from .graph_evaluation import PivotRelevance
-from .m10_cohort import M10GraphFixture
 from .m10_replay import M10ReplayRecord, build_m10_replay_record
 
 _SCHEMA_VERSION = 1
@@ -26,8 +25,8 @@ class M10LabelBasis(StrEnum):
 class M10FixtureLabelProvenance:
     """Privacy-bounded provenance for one fixture's relevance labels.
 
-    `evidence_digest` is an opaque SHA-256 reference to the external label/consent
-    evidence. Raw consent text, personal identifiers and source documents do not
+    `evidence_digest` is an opaque SHA-256 reference to an external label/consent
+    record. Raw consent text, personal identifiers and source documents do not
     belong in the M10 experiment manifest.
     """
 
@@ -44,7 +43,11 @@ class M10FixtureLabelProvenance:
 
 @dataclass(frozen=True, slots=True)
 class M10LabelManifest:
-    """Replay-anchored label provenance and count-only denominator metadata."""
+    """Replay-anchored provenance plus declared-label corpus counts.
+
+    These counts describe labels present in fixture definitions. They are not
+    scenario-specific admitted-pivot denominators and must not be used as rates.
+    """
 
     schema_version: int
     replay_input_digest: str
@@ -53,11 +56,11 @@ class M10LabelManifest:
     fixture_count: int
     synthetic_fixture_count: int
     consented_fixture_count: int
-    labelled_pivot_count: int
-    synthetic_labelled_pivot_count: int
-    consented_labelled_pivot_count: int
-    relevant_pivot_count: int
-    wrong_pivot_count: int
+    declared_label_count: int
+    synthetic_declared_label_count: int
+    consented_declared_label_count: int
+    declared_relevant_label_count: int
+    declared_wrong_label_count: int
 
 
 def _sha256_json(payload: object) -> str:
@@ -78,8 +81,8 @@ def build_m10_label_manifest(
 ) -> M10LabelManifest:
     """Bind fixture labels to explicit provenance and the exact M10 replay.
 
-    The builder intentionally returns counts, not error rates. A synthetic label
-    can support deterministic regression tests but must remain distinguishable
+    The builder intentionally returns corpus counts, not error rates. A synthetic
+    label can support deterministic regression tests but must remain distinguishable
     from consented ground truth before any future false-positive/false-negative
     analysis is attempted.
     """
@@ -115,8 +118,8 @@ def build_m10_label_manifest(
         )
 
     provenance_by_name = {item.fixture_name: item for item in provenance_tuple}
-    labelled = relevant = wrong = 0
-    synthetic_labelled = consented_labelled = 0
+    declared = relevant = wrong = 0
+    synthetic_declared = consented_declared = 0
     synthetic_fixtures = consented_fixtures = 0
 
     manifest_fixtures: list[dict[str, object]] = []
@@ -126,7 +129,7 @@ def build_m10_label_manifest(
             [key, fixture.pivot_relevance_by_key[key].value]
             for key in sorted(fixture.pivot_relevance_by_key)
         ]
-        labelled_count = len(pivot_labels)
+        declared_count = len(pivot_labels)
         relevant_count = sum(
             1
             for value in fixture.pivot_relevance_by_key.values()
@@ -137,18 +140,18 @@ def build_m10_label_manifest(
             for value in fixture.pivot_relevance_by_key.values()
             if value is PivotRelevance.WRONG
         )
-        if relevant_count + wrong_count != labelled_count:
+        if relevant_count + wrong_count != declared_count:
             raise ValueError("M10 fixture contains an unsupported pivot relevance label.")
 
-        labelled += labelled_count
+        declared += declared_count
         relevant += relevant_count
         wrong += wrong_count
         if item.basis is M10LabelBasis.SYNTHETIC:
             synthetic_fixtures += 1
-            synthetic_labelled += labelled_count
+            synthetic_declared += declared_count
         elif item.basis is M10LabelBasis.CONSENTED:
             consented_fixtures += 1
-            consented_labelled += labelled_count
+            consented_declared += declared_count
         else:  # defensive against forged enum-like values
             raise ValueError("M10 label provenance uses an unsupported basis.")
 
@@ -175,9 +178,9 @@ def build_m10_label_manifest(
         fixture_count=len(fixture_tuple),
         synthetic_fixture_count=synthetic_fixtures,
         consented_fixture_count=consented_fixtures,
-        labelled_pivot_count=labelled,
-        synthetic_labelled_pivot_count=synthetic_labelled,
-        consented_labelled_pivot_count=consented_labelled,
-        relevant_pivot_count=relevant,
-        wrong_pivot_count=wrong,
+        declared_label_count=declared,
+        synthetic_declared_label_count=synthetic_declared,
+        consented_declared_label_count=consented_declared,
+        declared_relevant_label_count=relevant,
+        declared_wrong_label_count=wrong,
     )
