@@ -54,7 +54,7 @@ def test_iana_style_bootstrap_selects_only_matching_tld_https_services() -> None
 def test_bootstrap_rejects_unsafe_or_missing_service_urls() -> None:
     with pytest.raises(RdapAdmissionError):
         rdap_bootstrap_base_urls(
-            {"services": [[ ["com"], ["http://rdap.example.com/"] ]]},
+            {"services": [[["com"], ["http://rdap.example.com/"]]]},
             domain="example.com",
         )
     with pytest.raises(RdapAdmissionError, match="no authoritative service"):
@@ -131,7 +131,7 @@ def test_response_must_match_requested_domain_and_canonical_locator() -> None:
         admitted_rdap_domain_observation(
             {"objectClassName": "domain", "ldhName": "example.com"},
             requested_domain="example.com",
-            source_locator="https://other.example/rdap/domain/example.com",
+            source_locator="https://rdap.registry.example/rdap/domain/mallory.com",
         )
 
 
