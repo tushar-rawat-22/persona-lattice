@@ -96,17 +96,17 @@ def test_future_email_plan_contains_gravatar_but_not_as_executable() -> None:
     assert gravatar.credential_class is SourceCredentialClass.FREE_API_KEY
 
 
-def test_future_domain_plan_contains_metadata_only_rdap_without_identity_emission() -> None:
+def test_active_rdap_is_metadata_only_zero_spend_domain_source() -> None:
     rdap = SOURCE_BY_NAME["rdap_domain_registry"]
 
     assert rdap.accepts == frozenset({LeadKind.DOMAIN})
     assert rdap.emits == frozenset()
-    assert rdap.status is SourceStatus.PLANNED
-    assert rdap.recursive_eligible is False
-    assert rdap.source_policy_reviewed is False
+    assert rdap.status is SourceStatus.ACTIVE
+    assert rdap.recursive_eligible is True
+    assert rdap.source_policy_reviewed is True
     assert rdap.zero_spend_eligible is True
-    assert "metadata-only" in rdap.note
-    assert "never become typed leads" in rdap.note
+    assert "metadata" in rdap.note.lower()
+    assert "display-only" in rdap.note
 
 
 def test_public_dns_source_cannot_emit_person_or_personal_ip_leads() -> None:

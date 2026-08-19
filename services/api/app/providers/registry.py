@@ -28,6 +28,7 @@ PHONE_ONLY = frozenset({"phone"})
 USERNAME_ONLY = frozenset({"username"})
 USERNAME_EMAIL = frozenset({"username", "email"})
 URL_ONLY = frozenset({"url"})
+DOMAIN_ONLY = frozenset({"domain"})
 PUBLIC_SEARCH_IDENTIFIERS = frozenset({"username", "email", "phone", "url"})
 
 
@@ -231,6 +232,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         timeout_seconds=5.0,
         max_response_bytes=256 * 1024,
         max_concurrency=1,
+        rate_limit=10,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
+        name="rdap_domain_registry",
+        capability="public_domain_registration_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "IANA-bootstrap-selected authoritative RDAP domain lookup; metadata-only status and "
+            "nameserver context, with registration redaction treated as authoritative."
+        ),
+        version="rfc9082-rfc9224-v1",
+        source_category=SourceCategory.REGISTRY,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=DOMAIN_ONLY,
+        max_attempts=1,
+        timeout_seconds=12.0,
+        max_response_bytes=64 * 1024,
+        max_concurrency=2,
         rate_limit=10,
         rate_window_seconds=60.0,
     ),

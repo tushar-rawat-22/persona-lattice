@@ -53,14 +53,15 @@ def test_planned_source_is_never_promoted_by_zero_spend_filter() -> None:
     assert "gravatar_public_profile" not in _names(plan.optional)
 
 
-def test_domain_plan_does_not_claim_runtime_coverage_that_is_not_wired() -> None:
+def test_domain_plan_exposes_active_metadata_only_rdap_without_dns_domain_execution() -> None:
     plan = build_source_plan(LeadKind.DOMAIN)
 
-    assert plan.active == ()
+    assert "rdap_domain_registry" in _names(plan.active)
     assert plan.optional == ()
     assert "public_dns_infrastructure" in _names(plan.deferred)
-    assert "rdap_domain_registry" in _names(plan.planned)
-    assert plan.has_current_coverage is False
+    assert "rdap_domain_registry" not in _names(plan.planned)
+    assert plan.has_current_coverage is True
+    assert plan.has_zero_spend_current_coverage is True
 
 
 def test_name_has_no_public_recursive_source_but_future_authorized_import_is_visible() -> None:

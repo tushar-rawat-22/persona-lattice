@@ -53,6 +53,12 @@ class ProviderRateBudgetExceeded(ProviderExecutionError):
     code = "provider_local_rate_budget"
 
 
+class ProviderRoutingUnavailableError(ProviderExecutionError):
+    """Prerequisite routing authority failed before any subject provider contact."""
+
+    code = "provider_routing_unavailable"
+
+
 class ProviderPublicWebOptOutError(ProviderExecutionError):
     """Provider returned an explicit public-web visibility opt-out after contact."""
 

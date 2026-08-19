@@ -398,16 +398,16 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         name="rdap_domain_registry",
         accepts=frozenset({LeadKind.DOMAIN}),
         emits=frozenset(),
-        status=SourceStatus.PLANNED,
+        status=SourceStatus.ACTIVE,
         mode=SourceMode.OPEN_STANDARD,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
         credential_class=SourceCredentialClass.NONE,
-        source_policy_reviewed=False,
-        recursive_eligible=False,
-        priority=155,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=45,
         note=(
-            "Planned metadata-only domain registration context: bounded status and nameserver data; "
-            "registrant/contact/organization fields never become typed leads."
+            "Authoritative IANA-bootstrap-selected RDAP metadata for explicit DOMAIN seeds only; "
+            "emitted subject leads are empty and discovered domains remain display-only."
         ),
     ),
     SourceCapability(

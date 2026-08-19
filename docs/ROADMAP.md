@@ -28,7 +28,7 @@ M5 permanent outputs remain `calibration_status=uncalibrated` and `is_identity_c
 
 The private product has one deployment-configured admin, Argon2 password verification, HttpOnly sessions, CSRF protection, a private `/admin` route, same-origin API proxying, retained cases, delete/expiry controls and live bounded research.
 
-Current live research sources include reviewed Sherlock, GitHub, GitLab, Codeforces, Bluesky public profiles for valid AT handles, phone numbering-plan metadata and public DNS infrastructure metadata. Brave exact public-web search is optional when configured.
+Current live research sources include reviewed Sherlock, GitHub, GitLab, Codeforces, Bluesky public profiles for valid AT handles, phone numbering-plan metadata, public DNS infrastructure metadata and metadata-only authoritative RDAP for explicit domain seeds. Brave exact public-web search is optional when configured.
 
 Local operation is the zero-spend baseline. Paid hosting is optional; the previously reviewed Render topology is retained only at `deploy/render-paid.yaml`.
 
@@ -147,27 +147,25 @@ A concrete `mastodon.social` review did not establish a sufficiently explicit cu
 
 ### RDAP
 
-**Status: planned — DOMAIN reachability implemented in PR #136; provider activation remains**
+**Status: active — PR #137**
 
-RDAP is being reviewed as zero-spend domain registration metadata from authoritative services. Its contract is metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
+RDAP provides zero-direct-cost, credentialless registration metadata for explicit DOMAIN seeds. It is metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
 
-The pre-activation path has RFC 9224 longest-match IANA bootstrap selection, one process-wide cached owner of `https://data.iana.org/rdap/dns.json`, fresh DNS/global-address validation before each provider hop, IP-pinned HTTPS with hostname TLS validation, bounded redirects and response size, explicit RDAP response handling, and separate validation of the bootstrap-derived canonical query URL versus the final evidence source locator.
+The live path uses RFC 9224 longest-match IANA bootstrap selection, one process-wide cached owner of `https://data.iana.org/rdap/dns.json`, fresh DNS/global-address validation before each provider hop, IP-pinned HTTPS with hostname TLS validation, bounded redirects and response size, explicit RDAP response handling, and separate validation of the bootstrap-derived canonical query URL versus the final evidence source locator.
 
-PR #134 added `routing_unavailable` as a typed **non-attempt** outcome for failures of prerequisite routing authority such as an unusable IANA bootstrap snapshot. That state is counted separately from subject-provider failures and does not increase provider-attempt accounting.
+`routing_unavailable` is a typed **non-attempt** outcome for prerequisite routing failures such as an unusable IANA bootstrap snapshot. Once an authoritative RDAP service has actually been contacted, rate limits, transient service failures and malformed results use attempted-failure semantics. A valid not-found response is a completed zero-observation result.
 
-PR #136 gives DOMAIN one canonical M1 representation across `IdentifierKind`, lead canonicalization, quick research, convergence, live M5 and RDAP admission. Explicit domain seeds can run end to end without an external provider. Discovered domain clues remain **display-only** and do not become recursive pivots.
+DOMAIN has one canonical M1 representation across `IdentifierKind`, lead canonicalization, quick research, convergence, live M5 and RDAP admission. Explicit domain seeds can run end to end. Discovered domain clues remain **display-only** and do not become recursive pivots.
 
-RDAP itself remains `PLANNED`, unbound, source-policy-unreviewed and non-recursive until the governed adapter is activated atomically. Redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic-data workflow, bulk/reverse lookup or contact harvesting is approved.
+Redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic-data workflow, bulk/reverse lookup or contact harvesting is approved. Existing persistent SQLite databases created before DOMAIN was added to M1 may require a deliberate schema recreation/migration before persisting DOMAIN identifiers.
 
 ## Immediate next gate
 
 Do not reopen V2-D architecture casually, remove safety-critical M5 vetoes because an ablation changes the score, or raise recursion because a fixture family looks favorable.
 
-For evaluation, prioritize genuinely consented/reviewed label evidence.
+For evaluation, prioritize genuinely consented/reviewed label evidence. The next useful M10 progress must come from defensible labels and denominators, not another synthetic metric renamed as accuracy.
 
-For RDAP, keep Issue #133 open through the activation PR. Wire the existing metadata-only adapter path atomically through catalog review → binding → DEVELOPMENT provider registry → process-wide `ProviderRuntime` → DOMAIN quick research → typed source-run reporting → canonical observation. Preserve `routing_unavailable` as a pre-provider non-attempt and use attempted-failure semantics only after an authoritative RDAP service has actually been contacted.
-
-Activation must preserve exact canonical-query/final-response provenance, redaction authority, deterministic success/not-found/malformed/rate-limit/unavailable/bootstrap-unavailable fixtures, and the zero-spend baseline. WebFinger remains planned unless a concrete host passes the existing exact-host source-policy gate. Gravatar remains blocked on its privacy-policy requirement. ActivityPub actor fetching remains unapproved.
+For source expansion, prefer a small number of high-value zero-spend sources whose current terms, privacy model and provenance can be defended. WebFinger remains planned unless a concrete host passes the existing exact-host source-policy gate. Gravatar remains blocked on its privacy-policy requirement and free server-side-key requirement. ActivityPub actor fetching remains separate and unapproved.
 
 Production recursion remains **depth 2 / 12 nodes**. M5 remains uncalibrated evidence-strength triage and `hard_contradiction` remains a production veto.
 

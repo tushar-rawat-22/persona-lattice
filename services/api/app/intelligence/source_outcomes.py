@@ -11,6 +11,7 @@ from ..providers.errors import (
     ProviderRemoteRateLimitError,
     ProviderResponseTooLarge,
     ProviderResultValidationError,
+    ProviderRoutingUnavailableError,
     ProviderTimeoutError,
     ProviderTransientError,
     ProviderValidationError,
@@ -208,6 +209,8 @@ def source_provider_exception_record(
             source_name=source_name,
             lead_kind=lead_kind,
         )
+    if isinstance(exc, ProviderRoutingUnavailableError):
+        return source_routing_unavailable_record(source_name=source_name, lead_kind=lead_kind)
     if isinstance(exc, ProviderPublicWebOptOutError):
         return source_withheld_record(
             source_name=source_name,

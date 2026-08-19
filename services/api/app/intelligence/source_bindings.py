@@ -102,6 +102,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         migration_note="Public URL hostname resolution executes through the shared ProviderRuntime.",
     ),
     SourceBinding(
+        source_name="rdap_domain_registry",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="rdap_domain_registry",
+        accepts=frozenset({LeadKind.DOMAIN}),
+        migration_note=(
+            "Explicit DOMAIN seeds execute metadata-only authoritative RDAP through ProviderRuntime; "
+            "discovered domain leads remain display-only."
+        ),
+    ),
+    SourceBinding(
         source_name="brave_public_web_index",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="brave_public_web_index",

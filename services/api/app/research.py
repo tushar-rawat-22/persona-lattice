@@ -36,6 +36,7 @@ from .providers.shared_runtime import (
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
     DEFAULT_PROVIDER_RUNTIME,
+    DEFAULT_RDAP_PROVIDER,
     DEFAULT_SHERLOCK_PROVIDER,
 )
 from .providers.sherlock import SherlockProvider
@@ -169,6 +170,19 @@ def _dns_observation_from_provider(item: ProviderObservationData) -> QuickObserv
         source="public_dns_infrastructure",
         source_locator=item.source_locator,
         summary="Globally reachable addresses for the public hostname; website infrastructure only.",
+        details=dict(item.payload),
+    )
+
+
+def _rdap_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    domain = str(item.payload.get("domain", "domain"))
+    return QuickObservation(
+        source="rdap_domain_registry",
+        source_locator=item.source_locator,
+        summary=(
+            f"Authoritative public RDAP registration metadata for {domain}; "
+            "registration context only."
+        ),
         details=dict(item.payload),
     )
 
@@ -974,15 +988,61 @@ async def _research_url(
     )
 
 
-async def _research_domain(normalized_value: str) -> QuickResearchReport:
-    """Admit an explicit domain seed without implying that RDAP is active yet."""
+async def _research_domain(
+    normalized_value: str,
+    *,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> QuickResearchReport:
+    """Run explicit DOMAIN research through the metadata-only RDAP source."""
 
+    subject_id = uuid4()
+    identifier_id = uuid4()
+    request = ExecutionRequest(
+        provider_name=DEFAULT_RDAP_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    try:
+        result = await DEFAULT_PROVIDER_RUNTIME.execute(
+            request=request,
+            query=ProviderQuery(
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                identifier_kind=IdentifierKind.DOMAIN.value,
+                identifier_value=normalized_value,
+            ),
+        )
+    except Exception as exc:
+        source_run = _source_run_for_exception(
+            source_name="rdap_domain_registry",
+            lead_kind=LeadKind.DOMAIN,
+            exc=exc,
+        )
+        warnings = ("Authoritative RDAP domain metadata was unavailable.",)
+        return QuickResearchReport(
+            kind=ResearchKind.DOMAIN,
+            normalized_value=normalized_value,
+            observations=(),
+            warnings=warnings,
+            source_runs=() if source_run is None else (source_run,),
+        )
+
+    observations = tuple(_rdap_observation_from_provider(item) for item in result.observations)
     return QuickResearchReport(
         kind=ResearchKind.DOMAIN,
         normalized_value=normalized_value,
-        observations=(),
-        warnings=("No reviewed external domain source is active for this seed yet.",),
-        source_runs=(),
+        observations=observations,
+        warnings=(),
+        source_runs=(
+            source_result_record(
+                source_name="rdap_domain_registry",
+                lead_kind=LeadKind.DOMAIN,
+                observation_count=len(observations),
+            ),
+        ),
     )
 
 
@@ -1037,5 +1097,9 @@ async def run_quick_research(
             network_lookup=network_lookup,
         )
     if kind is ResearchKind.DOMAIN:
-        return await _research_domain(normalized.normalized_value)
+        return await _research_domain(
+            normalized.normalized_value,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
+        )
     raise ValueError("Unsupported research kind.")
