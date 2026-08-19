@@ -109,12 +109,13 @@ Implemented:
 - UUID-independent semantic fixture/result fingerprints;
 - explicit label-provenance manifests;
 - consented-only scenario accounting with exact numerator/denominator counts;
-- a bounded local consented-cohort runner so private consented identifiers do not need to become repository fixtures;
-- an explicit **independently reviewed** label basis and reviewed-only accounting boundary, kept separate from consent and synthetic regression data.
+- an explicit **independently reviewed** label basis and reviewed-only accounting boundary, separate from consent and synthetic regression data;
+- one shared bounded private local cohort materializer used by separate consented and independently reviewed runner entry points;
+- local consented and reviewed runners so private evidence-backed identifiers do not need to become repository fixtures.
 
-M10 now distinguishes three provenance bases: `synthetic`, `consented` and `independently_reviewed`. None can silently satisfy another basis. Both consented-only and reviewed-only analysis require complete labels for admitted pivots and report exact corpus counts/fractions rather than unsupported population rates.
+M10 distinguishes three provenance bases: `synthetic`, `consented` and `independently_reviewed`. None can silently satisfy another basis. Both evidence-backed local runners fix their provenance basis in code; input JSON files cannot select or upgrade their own basis.
 
-The reviewed path stores only an opaque SHA-256 reference to an external review record. It does not put raw review notes, personal identifiers or source documents into the experiment manifest.
+Both consented-only and reviewed-only analysis require complete labels for admitted pivots and report exact corpus counts/fractions rather than unsupported population rates. The runners retain only aggregate output and cryptographic experiment/provenance digests; raw review/consent records and private identifiers remain outside Git.
 
 ### Current synthetic graph result
 
@@ -135,16 +136,16 @@ The contradiction omission is safety-critical diagnostic work only. Production f
 
 ### Remaining M10 gate
 
-The bottleneck is real evidence, not another synthetic metric.
+The bottleneck is real evidence, not another synthetic metric or another ingestion parser.
 
-Use the consented path only when genuine consent records support the labels. Use the independently reviewed path only when a real external review record supports the labels. Do not manufacture either basis from repository fixtures or a bare hash of an identifier.
+Use the consented runner only when genuine consent records support the labels. Use the reviewed runner only when a real external review record supports the labels. Do not manufacture either basis from repository fixtures, an input flag or a bare hash of an identifier.
 
 Do not publish false-positive/false-negative, calibration, probability or population-performance claims until cohort design and denominators genuinely support those terms.
 
 ## Immediate next gate
 
-1. Put this reviewed-label boundary through exact-head CI and merge only if the existing consented path remains strict and unchanged.
-2. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching boundary; do not upgrade one provenance basis into another.
+1. Put the shared local materializer and reviewed runner through exact-head CI; existing consented-runner behavior must remain green.
+2. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching runner. The next blocker is the evidence itself, not ingestion code.
 3. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
 4. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
 5. Continue improving the operator workflow around evidence/provenance hierarchy rather than generic AI-SaaS presentation patterns.

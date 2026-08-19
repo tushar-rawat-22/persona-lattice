@@ -9,10 +9,6 @@ from pathlib import Path
 
 from .frontier import compatibility_frontier_limits
 from .graph_limit_evaluation import GraphLimitScenario
-from .m10_consented_analysis import (
-    M10ConsentedCohortAnalysis,
-    build_m10_consented_cohort_analysis,
-)
 from .m10_label_provenance import M10LabelBasis
 from .m10_local_cohort import (
     LOCAL_COHORT_SCHEMA_VERSION,
@@ -21,11 +17,15 @@ from .m10_local_cohort import (
     sha256_text,
 )
 from .m10_replay import build_m10_replay_record
+from .m10_reviewed_analysis import (
+    M10ReviewedCohortAnalysis,
+    build_m10_reviewed_cohort_analysis,
+)
 
 
 @dataclass(frozen=True, slots=True)
-class M10LocalConsentedRun:
-    """Privacy-bounded result of one local consented-cohort evaluation."""
+class M10LocalReviewedRun:
+    """Privacy-bounded result of one local independently reviewed cohort."""
 
     schema_version: int
     cohort_name_digest: str
@@ -39,17 +39,17 @@ class M10LocalConsentedRun:
 
 
 def _scenario_accounting_payload(
-    analysis: M10ConsentedCohortAnalysis,
+    analysis: M10ReviewedCohortAnalysis,
 ) -> tuple[dict[str, object], ...]:
     return tuple(asdict(scenario) for scenario in analysis.scenarios)
 
 
-def evaluate_local_consented_payload(payload: object, *, input_digest: str) -> M10LocalConsentedRun:
-    """Validate and evaluate one private consented cohort without retaining identifiers."""
+def evaluate_local_reviewed_payload(payload: object, *, input_digest: str) -> M10LocalReviewedRun:
+    """Validate and evaluate one private reviewed cohort without retaining identifiers."""
 
     cohort = materialize_local_labelled_payload(
         payload,
-        basis=M10LabelBasis.CONSENTED,
+        basis=M10LabelBasis.INDEPENDENTLY_REVIEWED,
     )
     baseline = GraphLimitScenario(
         name="production_depth_2_nodes_12",
@@ -64,12 +64,12 @@ def evaluate_local_consented_payload(payload: object, *, input_digest: str) -> M
         baseline=baseline,
         candidates=(candidate,),
     )
-    analysis = build_m10_consented_cohort_analysis(
+    analysis = build_m10_reviewed_cohort_analysis(
         fixtures=cohort.fixtures,
         replay=replay,
         provenance=cohort.provenance,
     )
-    return M10LocalConsentedRun(
+    return M10LocalReviewedRun(
         schema_version=LOCAL_COHORT_SCHEMA_VERSION,
         cohort_name_digest=sha256_text(cohort.cohort_name),
         local_input_digest=input_digest,
@@ -82,26 +82,26 @@ def evaluate_local_consented_payload(payload: object, *, input_digest: str) -> M
     )
 
 
-def evaluate_local_consented_file(path: Path) -> M10LocalConsentedRun:
-    """Load a bounded local consented JSON cohort and return aggregate/digest output only."""
+def evaluate_local_reviewed_file(path: Path) -> M10LocalReviewedRun:
+    """Load a bounded local reviewed JSON cohort and return aggregate/digest output only."""
 
-    payload, input_digest = load_local_labelled_file(path, label="consented")
-    return evaluate_local_consented_payload(payload, input_digest=input_digest)
+    payload, input_digest = load_local_labelled_file(path, label="reviewed")
+    return evaluate_local_reviewed_payload(payload, input_digest=input_digest)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Evaluate a private consented M10 cohort locally. Output contains only "
-            "aggregate counts and replay/provenance digests; the input file is not retained."
+            "Evaluate a private independently reviewed M10 cohort locally. Output contains "
+            "only aggregate counts and replay/provenance digests; the input file is not retained."
         )
     )
-    parser.add_argument("cohort", type=Path, help="Path to a local consented-cohort JSON file")
+    parser.add_argument("cohort", type=Path, help="Path to a local reviewed-cohort JSON file")
     args = parser.parse_args(argv)
     try:
-        result = evaluate_local_consented_file(args.cohort)
+        result = evaluate_local_reviewed_file(args.cohort)
     except (OSError, ValueError):
-        print("M10 consented cohort validation failed.", file=sys.stderr)
+        print("M10 reviewed cohort validation failed.", file=sys.stderr)
         return 2
     print(json.dumps(asdict(result), sort_keys=True, separators=(",", ":")))
     return 0
