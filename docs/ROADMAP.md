@@ -80,7 +80,7 @@ V2-D closure does not authorize larger recursion, wider retention, paid baseline
 
 ## M10 — evaluation and calibration laboratory
 
-**Status: multi-kind synthetic cohort established; cost/yield and representative evaluation remain**
+**Status: multi-kind synthetic cohort with operational request/yield accounting established; representative evaluation remains**
 
 Established:
 
@@ -91,26 +91,27 @@ Established:
 - controlled graph-limit comparison through the production `LeadFrontier`;
 - count-only cohort aggregation without reliability/probability claims;
 - a reusable six-fixture synthetic cohort spanning username, email, URL and reviewed-phone seeds;
-- aggregate review-required, display-only and blocked policy-state counts.
+- aggregate review-required, display-only and blocked policy-state counts;
+- provider-boundary source-attempt, successful/zero-yield attempt, observation-yield-unit and abstract request-cost-unit accounting.
 
 ### Current controlled result
 
-In the broader synthetic cohort, the current depth-2 / 12-node policy admits 9 labelled pivots: **8 relevant and 1 wrong**.
+In the broader synthetic cohort, the current depth-2 / 12-node policy admits 9 labelled pivots: **8 relevant and 1 wrong**. It performs 11 simulated source attempts: 9 successful yield-producing attempts and 2 provider failures, for 11 abstract request-cost units and 9 observation-yield units.
 
-A depth-3 / 12-node candidate admits three additional labelled pivots. In these fixtures, **all three additional pivots are wrong-labelled and no additional relevant pivot is gained**. The deeper policy removes three depth budget stops, but that extra reach does not improve labelled relevant yield in this controlled cohort.
+A depth-3 / 12-node candidate admits three additional labelled pivots. In these fixtures, **all three additional pivots are wrong-labelled and no additional relevant pivot is gained**. The candidate performs 14 simulated source attempts and therefore adds 3 request-cost units and 3 yield units. Those three additional yield units correspond to the three additional wrong-labelled pivots in this cohort.
 
-This is synthetic fixture evidence, not population evidence. It supports leaving production recursion unchanged; it does not establish an optimal frontier policy.
+This is synthetic fixture evidence, not population evidence or monetary cost. It supports leaving production recursion unchanged; it does not establish an optimal frontier policy or a universal source-efficiency rate.
 
 Still required before increasing recursion or changing correlation thresholds:
 
-- explicit provider/source attempt, observation-yield and request-cost-unit accounting for evaluation fixtures;
 - broader consented or otherwise defensibly labelled cohorts;
 - deterministic replay/factor ablations;
 - labelled false-positive/false-negative and threshold analysis where defensible labels exist;
-- reviewed provider cost/yield implications for larger frontier policies;
+- provider-specific request/yield weights only where a real adapter needs more than the current one-request/one-yield fixture abstraction;
+- reviewed monetary pricing only when an actual provider has a current price model relevant to a decision;
 - no probability claim unless calibration evidence supports it.
 
-Observation count is evidence yield, not evidence quality. Reliability percentages should not be published without controlled sample size and denominator semantics.
+Observation/yield count is evidence volume, not evidence quality. Reliability percentages should not be published without controlled sample size and denominator semantics.
 
 ## Reviewed source expansion
 
@@ -130,7 +131,7 @@ The first rollout remains sequential after the existing public-profile enrichmen
 
 Do not reopen V2-D architecture casually and do not raise recursion because one fixture family looks favorable.
 
-The preferred next M10 block is **source-attempt / observation-yield / request-cost-unit accounting** over deterministic fixtures. Monetary cost should remain separate unless a provider has a freshly reviewed price model. This will let larger frontier policies be compared on operational burden without turning synthetic counts into financial claims.
+The preferred next M10 work is **broader defensible labels and replay/ablation support**, not a deeper production graph. Provider-specific cost weights should be introduced only when a real adapter needs more fidelity than one abstract request-cost unit per simulated call.
 
 A separate acceptable track is fresh review of exactly one additional zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions. Current official terms, cost, authentication, returned fields, contact risk and retention implications must be reviewed before activation.
 
