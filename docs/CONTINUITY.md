@@ -11,12 +11,12 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #130: `a04b9063eec28903431e7f66af40aeaf71024cc4`
-- PR #130: bounded process-wide IANA RDAP bootstrap cache
-- Exact tested PR #130 head: `2d4c73b5346420a2c2571fdf2c5ac8d8e8fef35e`
-- Exact-head CI: run `32271318756`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
-- PR #130 merge: `0247737aa64b159e96c6075c2c94f2ad5513d013`
-- Relevant RDAP ADRs: `0069-rdap-domain-admission-preflight.md`, `0070-rdap-metadata-only-source-contract.md`, `0071-rdap-authoritative-transport.md`, `0072-rdap-bootstrap-cache.md`
+- Main before PR #132: `42cb8f1759b1ed41bb9505b887eb4264eafaedd7`
+- PR #132: RDAP final-response provenance correction before activation
+- Exact tested implementation head before continuity update: `c6ba4716e29df4fd874d0eddb59b3d9c7f8a7443`
+- Exact-head CI: run `32276834735`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- Open activation blocker: Issue #133 — DOMAIN reachability plus bootstrap/non-attempt accounting
+- Relevant RDAP ADRs: `0069-rdap-domain-admission-preflight.md`, `0070-rdap-metadata-only-source-contract.md`, `0071-rdap-authoritative-transport.md`, `0072-rdap-bootstrap-cache.md`, `0073-rdap-final-response-provenance.md`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -34,52 +34,54 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Bluesky public profiles: active for valid AT handles through the governed runtime, PR #98.
 - Gravatar: admission preflight complete; still PLANNED because its provider-terms/privacy-policy gate is unresolved.
 - WebFinger: parser/admission, SSRF transport, URL-only semantics and exact-host policy are complete; still PLANNED because no concrete host has passed the exact-host source-policy gate.
-- RDAP: admission, metadata-only contract, authoritative SSRF-safe transport and process-wide IANA bootstrap cache are complete through PR #130. RDAP itself remains PLANNED, unbound, source-policy-unreviewed and non-recursive.
+- RDAP: admission, metadata-only contract, authoritative SSRF-safe transport, process-wide IANA bootstrap cache and final-response provenance contract are complete through PR #132. RDAP itself remains PLANNED, unbound, source-policy-unreviewed and non-recursive.
 - M10: deterministic replay, source/graph accounting, real-engine factor ablations, label-provenance manifests and consented-only accounting exist. Representative consented evaluation/calibration remains incomplete.
 
-## Latest block — IANA RDAP bootstrap cache
+## Latest block — RDAP final-response provenance
 
-PR #130 closes the routing-authority ownership gap without activating RDAP subject research.
+PR #132 fixes a provenance bug without activating RDAP subject research.
 
-### Primary-source basis
+The transport already preserved both the IANA-bootstrap-derived canonical domain query and the final HTTPS URL that returned an RDAP object after any admitted redirects. The admission layer previously forced retained `source_locator` to equal the initial query URL. That would have retained where the request started instead of where redirected evidence was actually returned.
 
-RFC 9224 says RDAP clients should not fetch IANA bootstrap registries on every RDAP request and should cache them using HTTP freshness signaling. It also requires the JSON bootstrap registry to be served as `application/json`.
+ADR 0073 now separates the two roles:
 
-The fixed domain bootstrap authority is `https://data.iana.org/rdap/dns.json`. This registry is routing metadata, not subject evidence.
+- `canonical_query_url` proves that routing began from the exact RFC 9082 domain query selected through IANA bootstrap data;
+- `source_locator` is the final canonical HTTPS URL that actually returned the admitted object and owns retained evidence provenance.
 
-### Cache contract
+The final locator is independently constrained to HTTPS, a DNS hostname, default HTTPS port, no credentials and no fragment. Fresh DNS/global-address validation remains the transport's responsibility on every hop.
 
-`rdap_bootstrap_cache.py` now provides one process-wide `IANA_RDAP_BOOTSTRAP_CACHE` that:
+Regression coverage proves redirected final provenance is retained and rejects HTTP downgrade, credential-bearing URLs, IP literals, non-default ports and fragments. Existing non-redirected admission remains compatible.
 
-- fetches only the fixed IANA DNS bootstrap URL;
-- uses normal certificate-validated HTTPS and does not follow redirects;
-- bounds responses at 128 KiB and validates a bounded `services` structure;
-- requires `application/json` for a successful bootstrap response;
-- reuses fresh state without another IANA request;
-- honors `Cache-Control: max-age`, otherwise `Expires`, using response `Date` when available;
-- uses a 24-hour fallback freshness lifetime capped at seven days;
-- treats `no-cache` as immediately stale and does not retain `no-store` responses;
-- retains ETag/Last-Modified validators for conditional refresh;
-- accepts 304 only when a prior snapshot exists;
-- serializes refresh under one async lock to avoid request stampedes;
-- returns deep copies so research code cannot mutate cached authority data;
-- does not silently serve an expired snapshot when refresh fails.
+### Primary-source basis rechecked 2026-08-19
 
-Bootstrap refresh errors use dedicated bootstrap exceptions. They are not automatically classified as contacted subject-provider failures because IANA bootstrap retrieval is routing metadata, not a research provider call.
+- RFC 9082 defines domain queries by appending `domain/<domain>` to an authoritative RDAP base URL.
+- RFC 9224 requires label-wise longest-match bootstrap selection and permits equivalent authoritative services; clients should cache bootstrap registries rather than fetch them on every request.
+- IANA remains the authoritative DNS RDAP bootstrap registry publisher and exposes `dns.json`.
+- IANA's current RDAP server requirements explicitly account for 3xx redirects, 4xx not-found behavior, 200 domain objects and 429 rate-limit responses.
+- IANA protocol-registry data remains intended for free use; this does not override downstream registration-data privacy rights.
+- ICANN's Registration Data Policy was revised on 12 May 2026; PersonaLattice continues to treat nonpublic registration data as outside this public metadata source.
 
-### Flaws corrected during review
+## RDAP activation blockers found during adversarial review
 
-Three issues were fixed before the exact green head was merged:
+The previous handover said the next step could be one immediate atomic activation. That was too optimistic. Two additional execution-contract gaps must be closed first, and Issue #133 records them.
 
-1. The first version also accepted `application/rdap+json`. RFC 9224 requires `application/json` for the bootstrap registry, so the media-type gate is now strict.
-2. The first version treated `no-store` only as zero freshness but still retained the snapshot object. It now does not cache `no-store` responses at all; `Expires` freshness also uses origin `Date` when available.
-3. The first version provided a cache class but no process-wide owner. A module singleton now makes ownership explicit so the later RDAP provider cannot accidentally recreate per-request caches.
+### 1. DOMAIN is not executable quick research
 
-Regression tests cover fresh reuse, conditional 304 refresh, origin-date `Expires`, no-store behavior, expired-refresh failure, malformed/media-type/redirect rejection, concurrent refresh serialization, returned-payload isolation and the process-wide owner.
+The V2 graph has `LeadKind.DOMAIN`, and RDAP accepts DOMAIN at the capability layer, but `ResearchKind` currently exposes only username, phone, email and URL. `run_quick_research()` therefore cannot execute a domain seed, and convergence cannot construct a DOMAIN research node.
+
+Activation must not make the catalog claim executable domain coverage until a bounded DOMAIN route exists. The current extractor policy also keeps discovered domain fields display-only; do not silently change that recursion policy as part of provider activation.
+
+### 2. IANA bootstrap failure is routing failure, not RDAP provider failure
+
+The process-wide IANA bootstrap cache is routing authority. If it cannot supply a current usable registry snapshot, no authoritative RDAP subject provider has been contacted.
+
+Typed source-state reporting therefore needs an explicit non-attempt routing/bootstrap-unavailable outcome before RDAP enters the shared provider runtime. Do not classify that state as `execution_failure`, `remote_rate_limit`, or malformed RDAP provider output merely because the adapter would otherwise sit inside ProviderRuntime.
+
+Deterministic tests must prove bootstrap failure contributes zero RDAP provider attempts while failures after authoritative RDAP contact count as attempts according to the existing phase-proven source contract.
 
 ## RDAP remains non-executable
 
-PR #130 intentionally does **not** add a provider registry descriptor, source binding, shared `ProviderRuntime` adapter, domain-seed quick-research route or provider network execution.
+PR #132 intentionally does **not** add a provider registry descriptor, source binding, shared `ProviderRuntime` adapter, domain-seed quick-research route or provider network execution.
 
 The existing RDAP privacy contract remains metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/contact names, organizations, addresses, email addresses and telephone numbers remain excluded. Upstream redaction and missing fields remain authoritative.
 
@@ -104,9 +106,13 @@ Controlled M5 omission results under `m5-evidence-strength-v1` remain diagnostic
 
 ## Next gate
 
-For source expansion, complete one **atomic governed RDAP activation** through source catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run reporting → canonical observation.
+Close Issue #133 before RDAP activation:
 
-Activation must preserve metadata-only output, authoritative redaction, exact query/final-response provenance, zero-spend operation and deterministic success/not-found/malformed/rate-limit/unavailable fixtures. Bootstrap-unavailable state must be mapped truthfully without pretending an RDAP subject provider was contacted when only IANA routing metadata failed.
+1. add a bounded explicit DOMAIN quick-research route without broadening display-only domain recursion;
+2. add a truthful bootstrap/routing-unavailable non-attempt source outcome and deterministic accounting tests;
+3. only then perform one atomic governed RDAP activation through source catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run reporting → canonical metadata-only observation.
+
+The activation must preserve exact canonical-query/final-response provenance, authoritative redaction, metadata-only output and zero-spend operation.
 
 For M10, the highest-value unresolved need remains genuinely consented or independently reviewed label evidence. Do not relabel synthetic regression fixtures as consented to manufacture progress.
 
