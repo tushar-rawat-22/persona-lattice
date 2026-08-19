@@ -239,7 +239,12 @@ async def _request_one_rdap_url(
                 raise ProviderResultValidationError(str(exc)) from exc
             raise
 
-        addresses = _validated_public_addresses(await resolver(target.hostname))
+        try:
+            addresses = _validated_public_addresses(await resolver(target.hostname))
+        except ProviderPolicyError as exc:
+            if contacted_provider:
+                raise ProviderResultValidationError(str(exc)) from exc
+            raise
         if not addresses:
             if contacted_provider:
                 raise ProviderResultValidationError(
