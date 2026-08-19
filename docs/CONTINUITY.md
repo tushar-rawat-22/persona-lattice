@@ -18,9 +18,10 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - PR #140: shared private local M10 materializer + reviewed runner — merged
 - PR #142: operator DOMAIN research reachability — merged
 - PR #144: operator pivot evidence context — merged
+- PR #146: M5 operator factor explainability — implementation ready for merge
+- PR #146 exact tested implementation head: `bc8c7ffbb6fd33778e0ecaf0b6896d78e1f14f32`
+- PR #146 implementation CI: run `32313616632`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
 - Current branch: `feat/m5-factor-explainability`
-- Current block: expose retained M5 factor rationale and evaluated-observation context in the private case view
-- Exact-head CI: pending; merge only after the complete required matrix passes
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -41,17 +42,19 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - WebFinger: PLANNED; parser/admission, SSRF transport, URL-only semantics and exact-host policy are complete, but no concrete host is approved.
 - M10: deterministic replay, source/graph accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), strict consented/reviewed-only accounting and shared private local cohort ingestion are implemented. Representative real evaluation remains incomplete.
 
-## Current block — M5 operator explainability
+## Latest block — M5 operator explainability
 
 The retained M5 evaluation already includes the evidence-strength outcome, score, calibration state, positive independence-group count, policy version and the factor list. Each factor carries its independence group, base weight, applied weight, status, rationale and veto flag.
 
-Before this block, the private case view displayed only the outcome/score and one terse line per factor. That forced the operator to infer why a factor contributed, why a weight changed, or whether the factor was a veto.
+Before PR #146, the private case view displayed only the outcome/score and one terse line per factor. That forced the operator to infer why a factor contributed, why a weight changed, or whether the factor was a veto.
 
-The current branch renders the retained factor explanation directly. It also shows the source locator of the canonical candidate observation when that reference resolves, the number of positive independence groups and the M5 policy version. Historical evaluations still use their retained source/locator fallback when available.
+PR #146 renders the retained factor explanation directly. It also shows the source locator of the canonical candidate observation when that reference resolves, the number of positive independence groups and the M5 policy version. Historical evaluations still use their retained source/locator fallback when available.
 
 The browser does not reproduce M5 thresholds, weights or veto rules. It only consumes fields already present in the retained evaluation, so there is no second scoring authority and no new personal-data retention.
 
 A UI regression contract checks that the factor rationale, independence group, base/applied weights, status and veto marker remain visible while threshold/outcome policy names are not hard-coded into the display block.
+
+The implementation head passed the full required CI matrix in run `32313616632`. The final documentation-only head must also pass before merge.
 
 ## RDAP checkpoint
 
@@ -92,7 +95,7 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Put the M5 explainability branch through exact-head CI; fix regressions rather than weakening the retained-output boundary.
+1. Merge PR #146 only after its final documentation head passes the complete required CI matrix.
 2. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
 3. Continue operator evidence/provenance work only where it removes a specific investigation step. Pivot attribution and M5 factor rationale are now the two covered explainability gaps.
 4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
