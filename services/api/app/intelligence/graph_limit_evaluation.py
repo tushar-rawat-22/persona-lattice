@@ -98,6 +98,23 @@ class GraphLimitComparison:
 
 
 @dataclass(frozen=True, slots=True)
+class GraphOperationalCounters:
+    """Synthetic provider-boundary work counts for one graph fixture."""
+
+    source_attempt_count: int
+    successful_source_attempt_count: int
+    zero_yield_source_attempt_count: int
+    observation_yield_unit_count: int
+    request_cost_unit_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class GraphFixtureEvaluation:
+    graph: GraphEvaluationCounters
+    operational: GraphOperationalCounters
+
+
+@dataclass(frozen=True, slots=True)
 class _FixtureNode:
     key: str
     depth: int
@@ -164,19 +181,26 @@ def _validate_fixture_truth(
         )
 
 
-def evaluate_graph_limit_fixture(
+def evaluate_graph_limit_fixture_with_operations(
     *,
     seed_key: str,
     seed_kind: LeadKind,
     leads_by_parent: Mapping[str, Sequence[GraphFixtureLead]],
     pivot_relevance_by_key: Mapping[str, PivotRelevance],
     limits: FrontierLimits,
-) -> GraphEvaluationCounters:
-    """Run one network-free fixture through the real LeadFrontier policy.
+) -> GraphFixtureEvaluation:
+    """Run one fixture and return graph plus provider-boundary work counters.
 
-    The fixture supplies only deterministic lead emissions, provider success/failure
-    facts and optional external relevance labels. It does not call research providers,
-    infer identity truth or change production convergence limits.
+    A source attempt is counted at the exact point where the real frontier has
+    returned `ENQUEUE` and the fixture would call a provider. This matters because a
+    successful provider result can still be rejected later by `admit()` as a
+    duplicate or post-call budget conflict. Such a call still consumed one request
+    and produced one synthetic observation-yield unit even though no pivot was added.
+
+    Each attempted fixture call currently costs one abstract request-cost unit. A
+    successful call contributes one synthetic observation-yield unit; a modelled
+    provider failure contributes zero. These units are evaluation bookkeeping, not
+    currency or provider reliability claims.
     """
 
     _validate_fixture_truth(
@@ -194,6 +218,11 @@ def evaluate_graph_limit_fixture(
     decisions: list[_FixtureDecision] = []
     admitted_keys: set[str] = set()
     truncated = False
+    source_attempt_count = 0
+    successful_source_attempt_count = 0
+    zero_yield_source_attempt_count = 0
+    observation_yield_unit_count = 0
+    request_cost_unit_count = 0
 
     while queue:
         parent_key = queue.popleft()
@@ -211,10 +240,16 @@ def evaluate_graph_limit_fixture(
                     truncated = True
                 continue
 
+            source_attempt_count += 1
+            request_cost_unit_count += 1
+
             if fixture_lead.provider_fails:
+                zero_yield_source_attempt_count += 1
                 decisions.append(_FixtureDecision(frontier.fail(candidate)))
                 continue
 
+            successful_source_attempt_count += 1
+            observation_yield_unit_count += 1
             child_key = fixture_lead.result_key
             admission = frontier.admit(
                 candidate,
@@ -237,7 +272,7 @@ def evaluate_graph_limit_fixture(
     admitted_labels = {
         key: label for key, label in pivot_relevance_by_key.items() if key in admitted_keys
     }
-    return build_graph_evaluation_counters(
+    graph = build_graph_evaluation_counters(
         _FixtureReport(
             nodes=tuple(nodes),
             edges=tuple(edges),
@@ -246,6 +281,35 @@ def evaluate_graph_limit_fixture(
         ),
         admitted_pivot_labels=admitted_labels,
     )
+    return GraphFixtureEvaluation(
+        graph=graph,
+        operational=GraphOperationalCounters(
+            source_attempt_count=source_attempt_count,
+            successful_source_attempt_count=successful_source_attempt_count,
+            zero_yield_source_attempt_count=zero_yield_source_attempt_count,
+            observation_yield_unit_count=observation_yield_unit_count,
+            request_cost_unit_count=request_cost_unit_count,
+        ),
+    )
+
+
+def evaluate_graph_limit_fixture(
+    *,
+    seed_key: str,
+    seed_kind: LeadKind,
+    leads_by_parent: Mapping[str, Sequence[GraphFixtureLead]],
+    pivot_relevance_by_key: Mapping[str, PivotRelevance],
+    limits: FrontierLimits,
+) -> GraphEvaluationCounters:
+    """Run one network-free fixture through the real LeadFrontier policy."""
+
+    return evaluate_graph_limit_fixture_with_operations(
+        seed_key=seed_key,
+        seed_kind=seed_kind,
+        leads_by_parent=leads_by_parent,
+        pivot_relevance_by_key=pivot_relevance_by_key,
+        limits=limits,
+    ).graph
 
 
 def compare_graph_limit_fixture(

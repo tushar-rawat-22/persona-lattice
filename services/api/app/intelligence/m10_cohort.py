@@ -9,7 +9,7 @@ from .graph_evaluation import PivotRelevance
 from .graph_limit_evaluation import (
     GraphFixtureLead,
     GraphLimitScenario,
-    evaluate_graph_limit_fixture,
+    evaluate_graph_limit_fixture_with_operations,
 )
 
 
@@ -42,6 +42,11 @@ class M10CohortCounters:
     review_required_count: int
     display_only_count: int
     blocked_count: int
+    source_attempt_count: int
+    successful_source_attempt_count: int
+    zero_yield_source_attempt_count: int
+    observation_yield_unit_count: int
+    request_cost_unit_count: int
     labelled_admitted_pivot_count: int
     wrong_pivot_count: int
     relevant_pivot_count: int
@@ -66,6 +71,11 @@ class M10CohortDelta:
     review_required_delta: int
     display_only_delta: int
     blocked_delta: int
+    source_attempt_delta: int
+    successful_source_attempt_delta: int
+    zero_yield_source_attempt_delta: int
+    observation_yield_unit_delta: int
+    request_cost_unit_delta: int
     labelled_admitted_pivot_delta: int
     wrong_pivot_delta: int
     relevant_pivot_delta: int
@@ -84,7 +94,7 @@ def _evaluate_scenario(
     scenario: GraphLimitScenario,
 ) -> M10CohortScenarioResult:
     results = tuple(
-        evaluate_graph_limit_fixture(
+        evaluate_graph_limit_fixture_with_operations(
             seed_key=fixture.seed_key,
             seed_kind=fixture.seed_kind,
             leads_by_parent=fixture.leads_by_parent,
@@ -93,28 +103,41 @@ def _evaluate_scenario(
         )
         for fixture in fixtures
     )
+    graphs = tuple(item.graph for item in results)
+    operations = tuple(item.operational for item in results)
     return M10CohortScenarioResult(
         scenario=scenario,
         counters=M10CohortCounters(
             fixture_count=len(results),
-            node_count=sum(item.node_count for item in results),
-            added_node_count=sum(item.added_node_count for item in results),
-            max_observed_depth=max(item.max_observed_depth for item in results),
+            node_count=sum(item.node_count for item in graphs),
+            added_node_count=sum(item.added_node_count for item in graphs),
+            max_observed_depth=max(item.max_observed_depth for item in graphs),
             duplicate_suppression_count=sum(
-                item.duplicate_suppression_count for item in results
+                item.duplicate_suppression_count for item in graphs
             ),
-            provider_failure_count=sum(item.provider_failure_count for item in results),
-            budget_stop_count=sum(item.budget_stop_count for item in results),
-            review_required_count=sum(item.review_required_count for item in results),
-            display_only_count=sum(item.display_only_count for item in results),
-            blocked_count=sum(item.blocked_count for item in results),
+            provider_failure_count=sum(item.provider_failure_count for item in graphs),
+            budget_stop_count=sum(item.budget_stop_count for item in graphs),
+            review_required_count=sum(item.review_required_count for item in graphs),
+            display_only_count=sum(item.display_only_count for item in graphs),
+            blocked_count=sum(item.blocked_count for item in graphs),
+            source_attempt_count=sum(item.source_attempt_count for item in operations),
+            successful_source_attempt_count=sum(
+                item.successful_source_attempt_count for item in operations
+            ),
+            zero_yield_source_attempt_count=sum(
+                item.zero_yield_source_attempt_count for item in operations
+            ),
+            observation_yield_unit_count=sum(
+                item.observation_yield_unit_count for item in operations
+            ),
+            request_cost_unit_count=sum(item.request_cost_unit_count for item in operations),
             labelled_admitted_pivot_count=sum(
-                item.labelled_admitted_pivot_count for item in results
+                item.labelled_admitted_pivot_count for item in graphs
             ),
-            wrong_pivot_count=sum(item.wrong_pivot_count for item in results),
-            relevant_pivot_count=sum(item.relevant_pivot_count for item in results),
+            wrong_pivot_count=sum(item.wrong_pivot_count for item in graphs),
+            relevant_pivot_count=sum(item.relevant_pivot_count for item in graphs),
             unlabelled_admitted_pivot_count=sum(
-                item.unlabelled_admitted_pivot_count for item in results
+                item.unlabelled_admitted_pivot_count for item in graphs
             ),
         ),
     )
@@ -130,7 +153,8 @@ def compare_m10_graph_fixture_cohort(
 
     This function is deliberately descriptive. It aggregates deterministic counts
     across independent fixture families and does not recommend a production limit,
-    calculate reliability percentages, or convert labels into identity probability.
+    calculate reliability percentages, convert labels into identity probability, or
+    treat request-cost units as money.
     """
 
     fixture_tuple = tuple(fixtures)
@@ -173,6 +197,22 @@ def compare_m10_graph_fixture_cohort(
                 result.counters.display_only_count - base.display_only_count
             ),
             blocked_delta=result.counters.blocked_count - base.blocked_count,
+            source_attempt_delta=result.counters.source_attempt_count - base.source_attempt_count,
+            successful_source_attempt_delta=(
+                result.counters.successful_source_attempt_count
+                - base.successful_source_attempt_count
+            ),
+            zero_yield_source_attempt_delta=(
+                result.counters.zero_yield_source_attempt_count
+                - base.zero_yield_source_attempt_count
+            ),
+            observation_yield_unit_delta=(
+                result.counters.observation_yield_unit_count
+                - base.observation_yield_unit_count
+            ),
+            request_cost_unit_delta=(
+                result.counters.request_cost_unit_count - base.request_cost_unit_count
+            ),
             labelled_admitted_pivot_delta=(
                 result.counters.labelled_admitted_pivot_count
                 - base.labelled_admitted_pivot_count

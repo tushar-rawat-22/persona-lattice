@@ -12,10 +12,9 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #100: `f73cf61813045b84ade6d5d378bf2078609169ce`
-- PR #100 exact tested head: `3bbfdf9afbee752417eaa64ec3c4af102c0b69ed`
-- PR #100 exact-head CI: run `32197849901`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
-- PR #100 merge: `e7807fca1908eba420cd1a88e44136cf34d6c59d`
+- Main before PR #102: `5f7b2008e6a013acce1e8a0ac6f4144e29562aa5`
+- PR #102 tested implementation/documentation head before this continuity checkpoint: `c149a12e0e1e8f6bc62cf63fe0fde150ade34e8e`
+- PR #102 exact-head CI: run `32201808759`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend operating runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -30,58 +29,68 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-B deterministic frontier: complete, PR #21.
 - V2-C source capability registry/planner: complete, PR #22.
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
-- M10: source-state fixtures, graph-limit comparison and multi-kind labelled synthetic cohort support exist. Source-attempt/yield cost modelling, consented/representative cohorts, replay/ablation and threshold analysis remain before any recursion/threshold change.
+- M10: source-state fixtures, graph-limit comparison, multi-kind labelled synthetic cohort support and provider-boundary source-attempt/yield/request-cost-unit accounting exist. Broader defensible cohorts, replay/ablation and threshold analysis remain before any recursion/threshold change.
 - Post-V2-D source expansion: Bluesky public profiles are active for valid AT handles through the governed runtime, PR #98 / ADR 0055.
 
-## Latest block — broadened M10 labelled cohort
+## Latest block — M10 operational request/yield accounting
 
-PR #100 expands the deterministic M10 cohort without adding a provider or changing production policy.
+PR #102 adds deterministic operational-work counters to the existing graph-limit cohort comparison without changing production research behavior.
 
-The reusable fixture library now spans four executable seed kinds:
+### Accounting boundary
 
-- username;
-- email;
-- URL;
-- reviewed phone.
+The important implementation detail is that source attempts are counted at the exact simulated provider boundary: after `LeadFrontier.consider()` returns `ENQUEUE`, before the fixture models provider success/failure.
 
-Six fixture families cover depth-limited traversal, duplicate suppression, provider failure, email → URL → username traversal, URL traversal with a review-only phone clue, and a reviewed-phone seed path. M10 cohort aggregation now also retains `review_required`, `display_only` and `blocked` counts instead of dropping those non-executing policy outcomes.
+This was corrected during self-review. Deriving attempts later as `admitted pivots + provider failures` is wrong because a provider call can succeed and still have its returned key rejected by `frontier.admit()` as a duplicate or post-call budget conflict. Such a call still consumed a request and produced a synthetic result.
 
-### Controlled comparison
+The final evaluator therefore exposes:
 
-Using the real `LeadFrontier` through `compatibility_frontier_limits`:
+- `source_attempt_count` — every fixture call that actually crosses the simulated provider boundary;
+- `successful_source_attempt_count` — attempted calls with a successful fixture result, even if the resulting pivot is later not admitted;
+- `zero_yield_source_attempt_count` — modelled provider failures;
+- `observation_yield_unit_count` — one synthetic yield unit per successful fixture call;
+- `request_cost_unit_count` — one abstract request-cost unit per attempted fixture call.
 
-Current policy — depth 2 / 12 nodes:
+Duplicates/review/display/blocked/local budget stops that happen before provider execution consume zero request-cost units. Regression coverage also proves that a successful post-call duplicate still consumes one request-cost unit and one yield unit.
+
+These are synthetic accounting units, not money, provider billing estimates, reliability rates or identity-quality scores.
+
+### Controlled cohort result
+
+Current production policy — depth 2 / 12 nodes:
 
 - 6 fixtures;
 - 15 total nodes / 9 added nodes;
-- 9 labelled admitted pivots;
-- 8 relevant pivots;
-- 1 wrong pivot;
-- 2 duplicate suppressions;
-- 2 provider failures;
-- 3 budget stops;
-- 1 review-required decision.
+- 9 labelled admitted pivots: 8 relevant, 1 wrong;
+- 11 simulated source attempts;
+- 9 successful/yield-producing attempts;
+- 2 zero-yield provider failures;
+- 11 abstract request-cost units;
+- 9 observation-yield units;
+- 3 local budget stops.
 
-Candidate policy — depth 3 / 12 nodes:
+Candidate — depth 3 / 12 nodes:
 
 - 18 total nodes / 12 added nodes;
-- 12 labelled admitted pivots;
-- 8 relevant pivots;
-- 4 wrong pivots;
-- the three extra admitted pivots are all labelled wrong in this synthetic cohort;
-- no additional relevant pivot is gained;
-- the three depth budget stops disappear.
+- 12 labelled admitted pivots: 8 relevant, 4 wrong;
+- 14 simulated source attempts;
+- 12 successful/yield-producing attempts;
+- 2 zero-yield provider failures;
+- 14 abstract request-cost units;
+- 12 observation-yield units;
+- no depth budget stops.
 
-This is deterministic fixture evidence, not population evidence. It strengthens the case for leaving production at depth 2 / 12 nodes, but it does not establish an optimal recursion policy.
+Delta from depth 2 → depth 3 in this synthetic cohort:
 
-### Corrected assumptions during PR #100
+- +3 source attempts;
+- +3 request-cost units;
+- +3 observation-yield units;
+- +3 admitted pivots;
+- +3 wrong-labelled pivots;
+- +0 relevant pivots.
 
-1. The earlier cohort was too username-heavy to support broader product conclusions. M10 now includes email, URL and reviewed-phone seed shapes.
-2. Cohort aggregation previously omitted review/display/blocked states even though the production frontier tracks them. Those counts now survive aggregation.
-3. More graph reach is not automatically more useful. In this controlled cohort, depth 3 adds three pivots and all three are wrong-labelled while relevant-pivot count stays flat.
-4. The cohort still does not model provider request-cost units or money. It must not be used to claim that a larger frontier is operationally cheap or expensive yet.
+This makes the controlled tradeoff explicit: the tested deeper frontier does more simulated source work while adding no relevant labelled pivot in this cohort. It is still synthetic evidence and does not establish an optimal production policy.
 
-ADR 0056 records the decision and limits.
+ADR 0057 records the decision and limitations.
 
 ## Permanent evidence semantics
 
@@ -119,47 +128,20 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - typed leads/frontier/source planning/reporting/evaluation: `services/api/app/intelligence`
 - M10 cohort aggregation: `services/api/app/intelligence/m10_cohort.py`
 - M10 reusable multi-kind fixture library: `services/api/app/intelligence/m10_fixture_library.py`
-- quick structured-report references: `services/api/app/reporting.py`
+- graph-limit + provider-boundary operational evaluator: `services/api/app/intelligence/graph_limit_evaluation.py`
 - quick research: `services/api/app/research.py`
 - retained cases: `services/api/app/cases.py`
-- private case view: `apps/web/app/admin/quick-research.tsx`
-- private upload-review UI: `apps/web/app/admin/upload-review-workflow.tsx`
 - source expansion design: `docs/V2_SOURCE_EXPANSION_PLAN.md`
 
 ## Closed V2-D invariants
-
-### Source execution ownership
 
 Current network execution is governed for Sherlock, GitHub, GitLab, Codeforces, Bluesky (valid AT handles only), public DNS and optional Brave exact-match search. The executable legacy-network allowance is empty.
 
 Catalog, executable binding, provider registry and process-wide runtime ownership are checked symmetrically. Planned/review/manual/reference sources remain non-executable. Required active recursive sources must be zero-spend eligible; a non-zero-spend recursive source can only be optional.
 
-### Source-run semantics
+Retained source-run projections carry typed state/reason and bounded count metadata without duplicating identifier values, source locators, provider payloads, secrets, exception text or timing data. Complete provider evidence/provenance has canonical retained owners. Historical formats remain read-only compatible.
 
-Retained source-run projections carry logical source name, lead kind, typed state/reason, observation count and execution/terminal flags plus deterministic aggregate/per-source counters. They do not duplicate identifier values, source locators, provider payloads, secrets, exception text or timing data.
-
-Critical distinctions:
-
-- completed call with results → `executed / results_returned`;
-- completed call with zero results → `not_found / no_match`;
-- completed neutral withholding → `withheld / public_web_opt_out` or `withheld / account_unavailable`, attempted but not failure;
-- optional source absent → `unavailable / optional_not_configured`, no attempt;
-- local budget stop → `budget_stopped / local_budget`, no provider contact;
-- provider-policy rejection → blocked, no attempt;
-- required server-side secret absent → unavailable, no attempt;
-- remote rate limit / proven execution failure → unavailable, attempted;
-- returned malformed result → unavailable, attempted only when post-attempt phase is mechanically proven;
-- generic `ProviderValidationError` → no source-run record because its phase is ambiguous.
-
-Warnings are human context only and are never parsed into source state. Evaluation counters are descriptive counts, not provider reliability probabilities or identity-quality scores.
-
-### Retained privacy ownership
-
-Complete provider evidence and provenance have canonical retained owners. Quick connected fields, M5 candidate provenance, converged lead decisions and admitted edges use validated canonical references where duplicate value/locator retention is unnecessary. Historical self-contained formats remain readable through explicit read-only compatibility; compatibility copies are not written back into new retained data.
-
-### Reviewed-document authority
-
-Extraction creates candidates only; short-lived server-owned review state owns authorization; review mutation cannot alter candidate value/provenance; promotion does not call providers; only a separate authenticated, CSRF-protected explicit case-run action can reload current trusted state and begin research.
+Reviewed-document extraction creates candidates only; short-lived server-owned review state owns authorization; review mutation cannot alter candidate value/provenance; promotion does not call providers; only a separate authenticated, CSRF-protected explicit case-run action can begin research.
 
 ## Current deliberate limits
 
@@ -174,13 +156,13 @@ Extraction creates candidates only; short-lived server-owned review state owns a
 
 ## Next gate
 
-Do not reopen V2-D architecture casually and do not change recursion because a synthetic cohort looks convenient.
+Do not reopen V2-D architecture casually and do not raise production recursion. The current synthetic M10 result now shows both quality and operational-work costs moving in the wrong direction for depth 3: +3 request units, +3 yield units, +3 wrong-labelled pivots and +0 relevant pivots.
 
-The highest-value next M10 block is explicit source-attempt / observation-yield / request-cost-unit accounting for fixtures. Keep monetary cost separate unless an actual provider has a reviewed price model. This is needed before comparing the operational burden of larger frontier policies.
+The preferred next M10 work is broader consented or otherwise defensibly labelled evaluation plus deterministic replay/factor-ablation support. Provider-specific request/yield weights should be added only where a real adapter needs more fidelity than the current one-request/one-yield fixture abstraction.
 
-A separate acceptable track is fresh review of exactly one zero-spend candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions; fresh official terms, cost, authentication, fields, contact risk and retention review are required before activation.
+A separate acceptable track is fresh review of exactly one zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions; current official terms, cost, authentication, fields, contact risk and retention review are required before activation.
 
-Before any production recursion or M5-threshold change, M10 still needs broader consented/representative cohorts, deterministic replay/factor ablations and defensible labelled false-positive/false-negative analysis. Production limits remain depth 2 / 12 nodes.
+Production limits remain depth 2 / 12 nodes. M5 remains uncalibrated evidence-strength triage, not identity probability.
 
 ## Update discipline
 
