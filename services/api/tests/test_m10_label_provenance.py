@@ -58,9 +58,11 @@ def test_label_manifest_keeps_synthetic_label_corpus_separate() -> None:
     assert manifest.fixture_count == 6
     assert manifest.synthetic_fixture_count == 6
     assert manifest.consented_fixture_count == 0
+    assert manifest.independently_reviewed_fixture_count == 0
     assert manifest.declared_label_count == 12
     assert manifest.synthetic_declared_label_count == 12
     assert manifest.consented_declared_label_count == 0
+    assert manifest.independently_reviewed_declared_label_count == 0
     assert manifest.declared_relevant_label_count == 8
     assert manifest.declared_wrong_label_count == 4
 
@@ -83,9 +85,34 @@ def test_label_manifest_tracks_consented_labels_without_raw_evidence() -> None:
 
     assert manifest.consented_fixture_count == 1
     assert manifest.consented_declared_label_count == len(first.pivot_relevance_by_key)
+    assert manifest.independently_reviewed_fixture_count == 0
     assert manifest.synthetic_declared_label_count == (
         manifest.declared_label_count - manifest.consented_declared_label_count
     )
+
+
+def test_label_manifest_tracks_independent_review_without_calling_it_consent() -> None:
+    fixtures = broadened_synthetic_m10_cohort()
+    provenance = list(_synthetic_provenance(fixtures))
+    first = fixtures[0]
+    provenance[0] = M10FixtureLabelProvenance(
+        fixture_name=first.name,
+        basis=M10LabelBasis.INDEPENDENTLY_REVIEWED,
+        evidence_digest=_digest("opaque-independent-review-record-001"),
+    )
+
+    manifest = build_m10_label_manifest(
+        fixtures=fixtures,
+        replay=_replay(fixtures),
+        provenance=provenance,
+    )
+
+    declared = len(first.pivot_relevance_by_key)
+    assert manifest.independently_reviewed_fixture_count == 1
+    assert manifest.independently_reviewed_declared_label_count == declared
+    assert manifest.consented_fixture_count == 0
+    assert manifest.consented_declared_label_count == 0
+    assert manifest.synthetic_declared_label_count == manifest.declared_label_count - declared
 
 
 def test_label_manifest_is_order_invariant_for_independent_fixtures() -> None:
