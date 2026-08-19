@@ -12,6 +12,7 @@ from app.intelligence.source_outcomes import (
     source_optional_not_configured_record,
     source_provider_policy_record,
     source_result_record,
+    source_routing_unavailable_record,
 )
 from app.intelligence.source_states import SourceRunReason, SourceRunState
 
@@ -93,6 +94,18 @@ def test_missing_required_credential_is_explicit_without_claiming_execution() ->
     assert record.state is SourceRunState.UNAVAILABLE
     assert record.reason is SourceRunReason.CREDENTIAL_NOT_CONFIGURED
     assert record.execution_attempted is False
+
+
+def test_routing_unavailable_is_explicit_without_claiming_provider_contact() -> None:
+    record = source_routing_unavailable_record(
+        source_name="rdap_domain_registry",
+        lead_kind=LeadKind.DOMAIN,
+    )
+
+    assert record.state is SourceRunState.UNAVAILABLE
+    assert record.reason is SourceRunReason.ROUTING_UNAVAILABLE
+    assert record.execution_attempted is False
+    assert record.terminal_for_automation is True
 
 
 def test_malformed_result_is_an_attempted_failure() -> None:
