@@ -70,6 +70,14 @@ def test_local_consented_runner_produces_aggregate_replay_anchored_output() -> N
     assert "external-consent-record-001" not in serialized
 
 
+def test_local_consented_runner_input_cannot_claim_provenance_basis() -> None:
+    payload = _payload()
+    payload["basis"] = "independently_reviewed"
+
+    with pytest.raises(ValueError, match="cannot declare its own label provenance basis"):
+        evaluate_local_consented_payload(payload, input_digest=_digest("private-input"))
+
+
 def test_local_consented_runner_rejects_incomplete_labels() -> None:
     payload = _payload()
     payload["fixtures"][0]["nodes"][0].pop("relevance")
