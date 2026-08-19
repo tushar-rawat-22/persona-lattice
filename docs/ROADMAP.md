@@ -158,15 +158,27 @@ Retained fields stay minimal: DID, normalized handle and optional display name p
 
 The first rollout remains sequential after the existing public-profile enrichment block. Optimize only from measured latency/yield evidence.
 
+### WebFinger
+
+**Status: pre-activation transport boundary complete — PRs #115 and #117**
+
+PR #115 established the network-free RFC 7033 admission contract for explicit HTTPS profile URLs and bounded JRD links. PR #117 adds the redirect/DNS SSRF transport needed before activation.
+
+The transport resolves every request and redirect host immediately before I/O, independently rejects malformed/non-global resolver output, pins TCP to the admitted IP while validating TLS against the DNS hostname, and re-runs the same admission process on every redirect. Redirects are bounded to three. There is no HTTP downgrade and no new runtime dependency.
+
+WebFinger is still **PLANNED, unbound and non-recursive**. ActivityPub actor fetching remains outside this reviewed capability.
+
+The remaining activation blocker is the catalog/output mismatch: the planned `webfinger_activitypub` declaration still claims URL + generic USERNAME + NAME output, while the reviewed WebFinger boundary supports URL-only output. That contract must be corrected before an atomic provider activation.
+
 ## Immediate next gate
 
 Do not reopen V2-D architecture casually, do not remove safety-critical M5 vetoes because an ablation changes the score, and do not raise recursion because one fixture family looks favorable.
 
-M10 now has both label-provenance and consented-only scenario-accounting boundaries. The preferred next work is therefore **not another synthetic metric**: assemble a genuinely consented or otherwise separately reviewed labelled cohort whose external evidence records satisfy the existing provenance contract, then run it through the consented analysis with complete admitted-pivot labels. Do not mark test fixtures as consented merely to obtain fractions.
+M10 now has both label-provenance and consented-only scenario-accounting boundaries. The preferred evaluation work is therefore **not another synthetic metric**: assemble a genuinely consented or otherwise separately reviewed labelled cohort whose external evidence records satisfy the existing provenance contract, then run it through the consented analysis with complete admitted-pivot labels. Do not mark test fixtures as consented merely to obtain fractions.
 
 Only after that evidence exists should PersonaLattice decide whether stronger false-positive/false-negative or threshold analysis is mathematically justified. The existing six-fixture synthetic cohort remains diagnostic regression data.
 
-A separate acceptable track is fresh review of exactly one additional zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions. Current official terms, cost, authentication, returned fields, contact risk and retention implications must be reviewed before activation.
+For source expansion, WebFinger's admission and SSRF-safe transport boundaries are now in place, but activation still requires the URL-only catalog correction plus one atomic provider/binding/registry/shared-runtime/quick-research/typed-state integration. Gravatar remains blocked on its privacy-policy requirement. RDAP remains an acceptable parallel zero-spend source-review track.
 
 Production recursion remains **depth 2 / 12 nodes**. M10 evidence, not feature pressure, decides whether those limits change. M5 remains uncalibrated evidence-strength triage and `hard_contradiction` remains a production veto.
 
