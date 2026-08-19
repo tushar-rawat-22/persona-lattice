@@ -25,6 +25,7 @@ MAX_LOCAL_COHORT_FIXTURES = 256
 MAX_LOCAL_COHORT_NODES = 2_048
 _MAX_TEXT = 4_096
 _SHA256_HEX_LENGTH = 64
+_BASIS_FIELDS = frozenset({"basis", "label_basis"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +71,11 @@ def _list(value: object, *, field: str) -> list[Any]:
     return value
 
 
+def _reject_input_basis(value: dict[str, Any], *, field: str) -> None:
+    if _BASIS_FIELDS.intersection(value):
+        raise ValueError(f"{field} cannot declare its own label provenance basis.")
+
+
 def _canonical_key(kind: LeadKind, value: str) -> tuple[str, str]:
     normalized, comparison_key = canonicalize_lead(kind, value)
     return normalized, f"{kind.value}:{comparison_key}"
@@ -80,6 +86,7 @@ def _build_fixture(
     *,
     basis: M10LabelBasis,
 ) -> tuple[M10GraphFixture, M10FixtureLabelProvenance, int]:
+    _reject_input_basis(raw, field="fixture")
     name = _text(raw.get("name"), field="fixture.name", max_length=128)
     evidence_digest = _text(
         raw.get("evidence_digest"), field=f"fixture[{name}].evidence_digest", max_length=64
@@ -222,6 +229,7 @@ def materialize_local_labelled_payload(
         raise ValueError("Local evidence-backed cohorts cannot use synthetic provenance.")
 
     root = _object(payload, field="cohort")
+    _reject_input_basis(root, field="cohort")
     if root.get("schema_version") != LOCAL_COHORT_SCHEMA_VERSION:
         raise ValueError(f"cohort.schema_version must equal {LOCAL_COHORT_SCHEMA_VERSION}.")
     cohort_name = _text(root.get("cohort_name"), field="cohort.cohort_name", max_length=128)
