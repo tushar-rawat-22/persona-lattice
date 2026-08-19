@@ -18,7 +18,7 @@ PersonaLattice is a private, evidence-first research workbench. The public route
 
 **Status: complete**
 
-Repository and CI, evidence/provenance model, normalization, bounded file intake, governed provider framework, reviewed Sherlock discovery, deterministic M5 correlation and the local evidence dashboard are implemented.
+Repository/CI, evidence and provenance storage, normalization, bounded file intake, the governed provider framework, reviewed Sherlock discovery, deterministic M5 correlation and the local evidence dashboard are implemented.
 
 M5 permanent outputs remain `calibration_status=uncalibrated` and `is_identity_claim=false`.
 
@@ -40,7 +40,7 @@ Implemented: 30-day default retained-case lifecycle, automatic expiry purge, exp
 
 Backup/restore design remains deferred until a persistent hosted production store is actually selected.
 
-## M9 — evidence graph and report convergence
+## M9 — evidence graph and convergence
 
 **Status: implemented**
 
@@ -76,11 +76,9 @@ Source-run accounting is phase-proven, retained evidence/provenance has canonica
 
 The default operating contract is `docs/ZERO_SPEND_RUNBOOK.md`; paid Render deployment is an optional reference at `deploy/render-paid.yaml`.
 
-V2-D closure does not authorize larger recursion, wider retention, paid baseline dependencies or identity-probability claims.
-
 ## M10 — evaluation and calibration laboratory
 
-**Status: deterministic replay, real-engine ablation, label provenance and consented-scenario accounting infrastructure established; representative evaluation remains**
+**Status: deterministic replay and consented-analysis infrastructure established; representative evaluation remains**
 
 Established:
 
@@ -89,100 +87,86 @@ Established:
 - graph growth, depth, duplicate and budget-stop counters;
 - label-gated wrong-pivot measurement;
 - controlled graph-limit comparison through the production `LeadFrontier`;
-- count-only cohort aggregation without reliability/probability claims;
-- a reusable six-fixture synthetic cohort spanning username, email, URL and reviewed-phone seeds;
-- aggregate review-required, display-only and blocked policy-state counts;
-- provider-boundary source-attempt, successful/zero-yield attempt, observation-yield-unit and abstract request-cost-unit accounting;
-- versioned SHA-256 replay fingerprints for exact canonicalized cohort inputs and deterministic comparison results;
-- replay-anchored M5 factor-ablation manifests that fingerprint the exact current weights, thresholds, independence requirements, strong-factor vocabulary and veto vocabulary;
-- controlled factor omissions executed through the production `CorrelationEngine`, with baseline/ablated outcome, score and independence-group deltas;
-- non-retaining M10 correlation execution: diagnostic M5 runs are rolled back and do not become retained case evidence;
-- a versioned reusable semantic specification for controlled M5 ablation cases, with UUID-independent fixture, per-case and result replay fingerprints;
-- a replay-anchored label-provenance manifest that requires explicit `synthetic` or `consented` basis and an opaque SHA-256 external-record reference for every labelled graph fixture;
-- separate synthetic and consented **declared-label corpus counts**, deliberately distinct from scenario-specific admitted-pivot denominators;
-- a consented-only scenario-accounting boundary that rejects synthetic/mixed cohorts and unlabelled admitted pivots, records exact admitted/missed label counts, and exposes numerator/denominator count fractions without converting them into population error rates.
+- a six-fixture synthetic cohort spanning username, email, URL and reviewed-phone seeds;
+- provider-boundary request-cost and observation-yield accounting;
+- versioned replay fingerprints for exact cohort inputs and deterministic results;
+- replay-anchored M5 factor-ablation manifests and real-engine omission execution;
+- rollback-only diagnostic M5 execution so M10 experiments do not become retained evidence;
+- UUID-independent semantic fixture/result fingerprints;
+- explicit synthetic-vs-consented label-provenance manifests;
+- consented-only scenario accounting with exact numerator/denominator counts rather than unsupported population error-rate claims.
 
 ### Current controlled graph result
 
-In the broader synthetic cohort, the current depth-2 / 12-node policy admits 9 labelled pivots: **8 relevant and 1 wrong**. It performs 11 simulated source attempts: 9 successful yield-producing attempts and 2 provider failures, for 11 abstract request-cost units and 9 observation-yield units.
+The current depth-2 / 12-node synthetic policy admits 9 labelled pivots: **8 relevant and 1 wrong**. It performs 11 simulated source attempts: 9 yield-producing attempts and 2 provider failures, for 11 abstract request-cost units and 9 observation-yield units.
 
-A depth-3 / 12-node candidate admits three additional labelled pivots. In these fixtures, **all three additional pivots are wrong-labelled and no additional relevant pivot is gained**. The candidate performs 14 simulated source attempts and therefore adds 3 request-cost units and 3 yield units.
+A depth-3 / 12-node candidate admits three additional labelled pivots. In these fixtures, **all three are wrong-labelled and no additional relevant pivot is gained**. It adds 3 simulated attempts, 3 request-cost units and 3 observation-yield units.
 
-This is synthetic fixture evidence, not population evidence or monetary cost. It supports leaving production recursion unchanged; it does not establish an optimal frontier policy or a universal source-efficiency rate.
+This is diagnostic synthetic evidence, not population evidence or monetary cost. Production recursion stays depth 2 / 12 nodes.
 
 ### Current controlled M5 ablation result
 
-The current real-engine controlled cases remain:
+- compatible profile metadata omission: `possible_match` 35 → `insufficient_evidence` 20;
+- exact confirmed identifier omission: `strong_candidate` 75 → `insufficient_evidence` 20;
+- independent cross-link omission: `strong_candidate` 70 → `possible_match` 35;
+- diagnostic hard-contradiction omission: `contradicted` 0 → `strong_candidate` 90.
 
-- metadata/temporal: baseline `possible_match`, score 35; omit compatible profile metadata → `insufficient_evidence`, score 20 (`-15`);
-- exact identifier: baseline `strong_candidate`, score 75; omit exact confirmed identifier overlap → `insufficient_evidence`, score 20 (`-55`);
-- independent cross-link: baseline `strong_candidate`, score 70; omit independent cross-link → `possible_match`, score 35 (`-35`);
-- contradiction veto: baseline `contradicted`, score 0; diagnostic omit `hard_contradiction` → `strong_candidate`, score 90 (`+90`).
+The contradiction omission is safety-critical diagnostic work only. No production factor weight, threshold, veto or calibration semantic changed.
 
-The contradiction omission is safety-critical diagnostic work only. These controlled deltas are not calibration evidence, population error rates or permission to change production policy.
+### Remaining M10 gate
 
-### Label provenance and consented-scenario boundary
-
-Reproducible labels are not automatically defensible ground truth. PR #109 / ADR 0062 adds an explicit provenance layer before future error-style work.
-
-Each labelled fixture must have a matching provenance record whose basis is `synthetic` or `consented`, plus an opaque SHA-256 reference to the external label/consent record. The manifest is bound to the exact M10 replay input and result digests and fails closed if the cohort, labels or provenance coverage drift.
-
-The manifest exposes **declared** label corpus counts. It does not treat every fixture label as an admitted-pivot denominator because a frontier policy may never execute or admit that labelled pivot.
-
-PR #111 / ADR 0063 adds the next boundary: consented scenario accounting refuses synthetic or mixed provenance and refuses any scenario with unlabelled admitted pivots. For an eligible cohort it records exact admitted relevant/wrong counts, relevant/wrong labels not admitted by each scenario, and exact count fractions for admitted-wrong share and relevant-label recall. Fractions remain numerator/denominator pairs; they are not published as population false-positive/false-negative rates, confidence, calibration or identity probability.
-
-Raw consent text and personal identifiers do not belong in either manifest or analysis record. The evidence-record digest must not be a bare hash of a personal identifier.
-
-Still required before increasing recursion or changing correlation thresholds:
-
-- a genuinely consented or separately reviewed labelled cohort large enough to support defensible analysis;
-- run that cohort through the consented-only accounting boundary with complete admitted-pivot labels;
-- stronger false-positive/false-negative or threshold terminology only if the cohort definition and denominators actually justify it;
-- provider-specific request/yield weights only where a real adapter needs more than the current one-request/one-yield fixture abstraction;
-- reviewed monetary pricing only when an actual provider has a current price model relevant to a decision;
-- no probability claim unless calibration evidence supports it.
-
-Observation/yield count is evidence volume, not evidence quality. Reliability percentages should not be published without controlled sample size and denominator semantics.
+The bottleneck is real label evidence, not another synthetic metric. Assemble a genuinely consented or independently reviewed cohort whose external evidence records satisfy the existing provenance contract, then run it through the consented-only accounting boundary. Do not relabel regression fixtures as consented to manufacture progress, and do not publish false-positive/false-negative or probability terminology until cohort design and denominators genuinely support it.
 
 ## Reviewed source expansion
 
-V2-D is closed. New sources use the existing catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run → canonical evidence path rather than adding parallel execution branches.
+V2-D is closed. New sources must use the existing catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run → canonical evidence path.
 
 ### Bluesky public profiles
 
 **Status: active — PR #98**
 
-Bluesky is credentialless and zero-direct-cost. Applicability is narrower than generic username research: only normalized values that pass the AT-handle admission contract can trigger a request. Plain usernames and malformed/`@` UI forms are skipped before provider execution.
+Bluesky is credentialless and zero-direct-cost. Only normalized values that pass the AT-handle admission contract can trigger a request. Plain usernames and malformed/`@` UI forms are skipped before provider execution.
 
-Retained fields stay minimal: DID, normalized handle and optional display name plus account-candidate/non-identity/public-visibility flags. Public-web opt-out and suspended/deactivated accounts remain neutral attempted `withheld` outcomes rather than `not_found` or provider failure.
+Retained fields stay minimal: DID, normalized handle and optional display name plus account-candidate/non-identity/public-visibility flags. Public-web opt-out and suspended/deactivated accounts are neutral attempted `withheld` outcomes rather than `not_found` or provider failure.
 
-The first rollout remains sequential after the existing public-profile enrichment block. Optimize only from measured latency/yield evidence.
+### Gravatar
 
-### WebFinger
+**Status: planned — admission preflight complete in PR #113**
 
-**Status: pre-activation transport and URL-only source contract complete — PRs #115, #117 and #119**
+The provider-specific email-hash and returned-profile validation contract exists, but activation remains blocked by the provider-terms/privacy-policy requirement. A future activation also needs a free server-side key outside Git and deterministic provider fixtures. Gravatar must remain unnecessary to the zero-spend baseline.
 
-PR #115 established the network-free RFC 7033 admission contract for explicit HTTPS profile URLs and bounded JRD links. PR #117 added fresh-DNS/IP-pinned redirect transport. PR #119 corrected the planned source declaration so WebFinger emits URL leads only; generic username/name output is no longer claimed.
+### WebFinger public-link resolution
 
-The historical source key `webfinger_activitypub` remains for compatibility, but its reviewed meaning is now WebFinger public-link resolution only. ActivityPub actor fetching is a separate future capability and remains unapproved.
+**Status: planned — parser, transport, URL-only semantics and exact-host policy gate complete in PRs #115, #117, #119 and #121**
 
-The transport resolves every request and redirect host immediately before I/O, independently rejects malformed/non-global resolver output, pins TCP to the admitted IP while validating TLS against the DNS hostname, and re-runs the same admission process on every redirect. Redirects are bounded to three. There is no HTTP downgrade and no new runtime dependency.
+The historical source key remains `webfinger_activitypub` for compatibility, but its reviewed meaning is WebFinger URL → URL public-link resolution only. ActivityPub actor fetching is a separate future capability and remains unapproved.
 
-WebFinger is still **PLANNED, unbound and non-recursive**. Fresh RFC 7033 review exposed the remaining policy problem: WebFinger servers may require authentication or vary responses by client/network. A generic arbitrary-host adapter therefore cannot honestly be treated as one universally reviewed provider solely because the protocol is open.
+The pre-activation stack now has four independent controls:
 
-Before activation, define and test a defensible applicability/host-policy rule. Only then wire the URL-only source atomically through source binding, provider registry, shared `ProviderRuntime`, quick research, typed source-state reporting and canonical evidence.
+1. explicit HTTPS profile-URL/JRD admission;
+2. fresh-DNS, globally-routable, IP-pinned HTTPS transport with bounded HTTPS-only redirects;
+3. URL-only source semantics with no generic username/name emission;
+4. time-bounded **exact-host** source-policy approval with no wildcard or subdomain inheritance.
+
+RFC 7033 permits authenticated and client-dependent WebFinger responses, so arbitrary hosts are not treated as one universally reviewed source. The production exact-host approval registry is intentionally empty until a real server passes current primary terms/privacy/source review.
+
+The next WebFinger block should review **one concrete host**. If it passes, add that exact host approval and activate WebFinger atomically through binding, provider registry, shared `ProviderRuntime`, quick research, typed source-state reporting and canonical evidence. If no host passes, keep WebFinger planned and move to another zero-spend source rather than weakening the policy gate.
+
+### RDAP
+
+**Status: planned**
+
+RDAP remains an acceptable zero-spend source-review track for domain registration metadata that authoritative services actually expose. Redaction/missing fields remain authoritative; the product must not seek nonpublic registration data to fill gaps.
 
 ## Immediate next gate
 
-Do not reopen V2-D architecture casually, do not remove safety-critical M5 vetoes because an ablation changes the score, and do not raise recursion because one fixture family looks favorable.
+Do not reopen V2-D architecture casually, remove safety-critical M5 vetoes because an ablation changes the score, or raise recursion because a fixture family looks favorable.
 
-M10 now has both label-provenance and consented-only scenario-accounting boundaries. The preferred evaluation work is therefore **not another synthetic metric**: assemble a genuinely consented or otherwise separately reviewed labelled cohort whose external evidence records satisfy the existing provenance contract, then run it through the consented analysis with complete admitted-pivot labels. Do not mark test fixtures as consented merely to obtain fractions.
+For evaluation, prioritize genuinely consented/reviewed label evidence.
 
-Only after that evidence exists should PersonaLattice decide whether stronger false-positive/false-negative or threshold analysis is mathematically justified. The existing six-fixture synthetic cohort remains diagnostic regression data.
+For source expansion, perform a current primary-source review of one concrete WebFinger host under the new exact-host policy. If it cannot be defended cleanly, stop and pivot to RDAP rather than approving a software-wide wildcard. Gravatar remains blocked on its privacy-policy requirement. ActivityPub actor fetching remains unapproved.
 
-For source expansion, WebFinger's URL-only semantic contract plus admission and SSRF-safe transport are complete, but activation remains blocked on a defensible host/applicability policy. Gravatar remains blocked on its privacy-policy requirement. RDAP remains an acceptable parallel zero-spend source-review track.
-
-Production recursion remains **depth 2 / 12 nodes**. M10 evidence, not feature pressure, decides whether those limits change. M5 remains uncalibrated evidence-strength triage and `hard_contradiction` remains a production veto.
+Production recursion remains **depth 2 / 12 nodes**. M5 remains uncalibrated evidence-strength triage and `hard_contradiction` remains a production veto.
 
 Success means the operator can answer for every hop:
 
