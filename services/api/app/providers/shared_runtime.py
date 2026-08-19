@@ -7,6 +7,7 @@ from .codeforces_public import CodeforcesPublicProfileProvider
 from .github_public import GitHubPublicProfileProvider
 from .gitlab_public import GitLabPublicProfileProvider
 from .public_dns import PublicDnsInfrastructureProvider
+from .rdap_domain import RdapDomainRegistryProvider
 from .runtime import ProviderRuntime
 from .sherlock import SherlockProvider
 
@@ -19,6 +20,7 @@ DEFAULT_GITLAB_PROVIDER = GitLabPublicProfileProvider()
 DEFAULT_CODEFORCES_PROVIDER = CodeforcesPublicProfileProvider()
 DEFAULT_BLUESKY_PROVIDER = BlueskyPublicProfileProvider()
 DEFAULT_DNS_PROVIDER = PublicDnsInfrastructureProvider()
+DEFAULT_RDAP_PROVIDER = RdapDomainRegistryProvider()
 DEFAULT_BRAVE_PROVIDER = BravePublicWebSearchProvider()
 DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
     adapters=[
@@ -28,6 +30,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_CODEFORCES_PROVIDER,
         DEFAULT_BLUESKY_PROVIDER,
         DEFAULT_DNS_PROVIDER,
+        DEFAULT_RDAP_PROVIDER,
         DEFAULT_BRAVE_PROVIDER,
     ]
 )
