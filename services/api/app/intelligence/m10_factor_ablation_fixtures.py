@@ -81,6 +81,16 @@ def _case_spec_payload(spec: M10FactorAblationCaseSpec) -> dict[str, object]:
     }
 
 
+def _case_semantic_digest(spec: M10FactorAblationCaseSpec, evaluated_at: datetime) -> str:
+    return _sha256_json(
+        {
+            "schema_version": _FIXTURE_SCHEMA_VERSION,
+            "evaluated_at": evaluated_at.isoformat(),
+            "case": _case_spec_payload(spec),
+        }
+    )
+
+
 def _validate_case_specs(cases: tuple[M10FactorAblationCaseSpec, ...]) -> None:
     if not cases:
         raise ValueError("At least one controlled M10 factor-ablation case spec is required.")
@@ -303,13 +313,14 @@ def materialize_m10_factor_ablation_cases(
 
         materialized.append(
             M10FactorAblationCase(
-                case.name,
-                CorrelationRequest(
+                name=case.name,
+                request=CorrelationRequest(
                     subject_id=subject_id,
                     candidate_observation_id=candidate.id,
                     evaluated_at=fixture_set.evaluated_at,
                     factors=tuple(factor_inputs),
                 ),
+                semantic_case_digest=_case_semantic_digest(case, fixture_set.evaluated_at),
             )
         )
     return tuple(materialized)
@@ -324,6 +335,7 @@ def _execution_payload(execution: M10FactorAblationExecution) -> dict[str, objec
         "cases": [
             {
                 "name": case.name,
+                "semantic_case_digest": case.semantic_case_digest,
                 "baseline_outcome": case.baseline_outcome.value,
                 "baseline_evidence_score": case.baseline_evidence_score,
                 "baseline_positive_independence_groups": case.baseline_positive_independence_groups,
@@ -363,10 +375,23 @@ def build_m10_factor_ablation_replay_record(
     )
     if fixture_set.fixture_digest != expected_fixture.fixture_digest:
         raise ValueError("M10 controlled fixture digest does not match its semantic definition.")
-    expected_names = {case.name for case in fixture_set.cases}
-    actual_names = {case.name for case in execution.cases}
-    if actual_names != expected_names or len(execution.cases) != len(expected_names):
+
+    expected_case_digests = {
+        case.name: _case_semantic_digest(case, fixture_set.evaluated_at)
+        for case in fixture_set.cases
+    }
+    actual_case_digests = {
+        case.name: case.semantic_case_digest
+        for case in execution.cases
+    }
+    if (
+        set(actual_case_digests) != set(expected_case_digests)
+        or len(execution.cases) != len(expected_case_digests)
+    ):
         raise ValueError("M10 ablation execution cases do not match the controlled fixture set.")
+    if actual_case_digests != expected_case_digests:
+        raise ValueError("M10 ablation execution case fingerprints do not match the controlled fixture set.")
+
     return M10FactorAblationReplayRecord(
         schema_version=_REPLAY_SCHEMA_VERSION,
         plan_digest=execution.plan_digest,
