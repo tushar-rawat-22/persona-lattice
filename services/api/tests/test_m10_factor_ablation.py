@@ -5,7 +5,7 @@ from dataclasses import replace
 
 import pytest
 
-from app.correlation.policy import M5_POLICY_VERSION, VETO_FACTOR_KINDS
+from app.correlation.policy import FACTOR_WEIGHTS, M5_POLICY_VERSION, VETO_FACTOR_KINDS
 from app.correlation.types import FactorKind
 from app.intelligence.frontier import compatibility_frontier_limits
 from app.intelligence.graph_evaluation import PivotRelevance
@@ -80,6 +80,20 @@ def test_ablation_plan_changes_when_replay_fixture_truth_changes() -> None:
     assert original_plan.baseline_replay_input_digest != changed_plan.baseline_replay_input_digest
     assert original_plan.baseline_replay_result_digest != changed_plan.baseline_replay_result_digest
     assert original_plan.plan_digest != changed_plan.plan_digest
+
+
+def test_ablation_policy_anchor_changes_when_m5_weight_changes(monkeypatch) -> None:
+    replay = _replay()
+    original = build_m10_factor_ablation_plan(replay)
+    kind = FactorKind.SAME_USERNAME
+
+    monkeypatch.setitem(FACTOR_WEIGHTS, kind, FACTOR_WEIGHTS[kind] + 1)
+    changed = build_m10_factor_ablation_plan(replay)
+
+    assert original.baseline_replay_input_digest == changed.baseline_replay_input_digest
+    assert original.baseline_replay_result_digest == changed.baseline_replay_result_digest
+    assert original.m5_policy_digest != changed.m5_policy_digest
+    assert original.plan_digest != changed.plan_digest
 
 
 def test_ablation_plan_rejects_untrusted_replay_identity() -> None:
