@@ -141,7 +141,7 @@ async def test_malformed_media_type_and_json_fail_after_provider_contact() -> No
 
 
 @pytest.mark.asyncio
-async def test_redirect_revalidates_dns_and_refuses_private_target() -> None:
+async def test_redirect_revalidates_dns_and_marks_private_target_as_post_contact_invalid() -> None:
     resolutions: list[str] = []
 
     async def resolver(host: str) -> tuple[str, ...]:
@@ -153,7 +153,7 @@ async def test_redirect_revalidates_dns_and_refuses_private_target() -> None:
     async def requester(*_: str) -> PinnedHTTPSResponse:
         return response(302, headers={"location": "https://private.registry.example/rdap/domain/example.com"})
 
-    with pytest.raises(ProviderPolicyError, match="non-global"):
+    with pytest.raises(ProviderResultValidationError, match="non-global"):
         await fetch_rdap_domain(
             "example.com", bootstrap_payload=BOOTSTRAP, resolver=resolver, requester=requester
         )
