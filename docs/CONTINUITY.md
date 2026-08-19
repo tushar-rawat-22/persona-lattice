@@ -16,6 +16,8 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Issue #133: closed; DOMAIN reachability and routing-accounting blockers are complete
 - Current implementation branch: `m10-local-consented-cohort-runner`
 - Current PR: #138 — local bounded consented M10 cohort runner
+- Exact tested implementation head before this continuity checkpoint: `e3bac8f4886d7e7ad35c5118a100249fabe09e6e`
+- Exact-head CI: run `32294421695`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -71,6 +73,8 @@ The runner compares the current production depth-2 / 12-node policy against the 
 
 ADR 0077 documents this boundary. `docs/M10_CONSENTED_COHORT_RUNBOOK.md` describes the local file contract and invocation.
 
+The exact implementation head `e3bac8f4886d7e7ad35c5118a100249fabe09e6e` passed CI run `32294421695` completely. The current continuity-only head must pass the same required matrix before PR #138 merges.
+
 ## Current controlled evaluation checkpoint
 
 Production depth 2 / 12 nodes: 9 labelled admitted pivots (8 relevant, 1 wrong), 11 simulated attempts.
@@ -90,7 +94,7 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. PR #138 must pass exact-head CI before merge. If CI exposes a contract or privacy flaw, fix the implementation rather than weakening tests.
+1. The continuity-only PR #138 head must pass exact-head CI before merge.
 2. Once merged, M10 has a practical local path for real **consented** labels. The unresolved bottleneck becomes the actual lawful consented cohort, not ingestion code.
 3. Do not manufacture progress by relabelling synthetic or merely reviewed fixtures as consented. Run the local tool only when an external consent record genuinely supports each fixture label.
 4. Add another source only if it has high coverage value and a defensible current zero-spend/terms/privacy/provenance story.
