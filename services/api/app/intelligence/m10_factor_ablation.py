@@ -63,12 +63,29 @@ def _validate_digest(value: str, *, field: str) -> None:
         raise ValueError(f"{field} must be a SHA-256 hex digest.") from exc
 
 
+def _validate_policy_vocabulary() -> None:
+    factor_kinds = set(FactorKind)
+    weight_kinds = set(FACTOR_WEIGHTS)
+    if weight_kinds != factor_kinds:
+        missing = sorted(kind.value for kind in factor_kinds - weight_kinds)
+        extra = sorted(kind.value for kind in weight_kinds - factor_kinds)
+        raise ValueError(
+            "M5 factor weights drift from the factor vocabulary: "
+            f"missing={missing!r}, extra={extra!r}."
+        )
+    if not STRONG_FACTOR_KINDS.issubset(factor_kinds):
+        raise ValueError("M5 strong-factor vocabulary contains an unknown factor kind.")
+    if not VETO_FACTOR_KINDS.issubset(factor_kinds):
+        raise ValueError("M5 veto-factor vocabulary contains an unknown factor kind.")
+
+
 def _m5_policy_payload() -> dict[str, object]:
+    _validate_policy_vocabulary()
     return {
         "policy_version": M5_POLICY_VERSION,
         "factor_weights": [
             [kind.value, FACTOR_WEIGHTS[kind]]
-            for kind in sorted(FACTOR_WEIGHTS, key=lambda item: item.value)
+            for kind in sorted(FactorKind, key=lambda item: item.value)
         ],
         "possible_match_threshold": POSSIBLE_MATCH_THRESHOLD,
         "strong_candidate_threshold": STRONG_CANDIDATE_THRESHOLD,
