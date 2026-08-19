@@ -40,6 +40,7 @@ def _counter_payload(records: tuple[SourceRunRecord, ...]) -> dict[str, int]:
         "remote_rate_limit_count": reason_counts[SourceRunReason.REMOTE_RATE_LIMIT],
         "execution_failure_count": reason_counts[SourceRunReason.EXECUTION_FAILURE],
         "malformed_result_count": reason_counts[SourceRunReason.MALFORMED_RESULT],
+        "routing_unavailable_count": reason_counts[SourceRunReason.ROUTING_UNAVAILABLE],
         "local_budget_stop_count": reason_counts[SourceRunReason.LOCAL_BUDGET],
         "optional_not_configured_count": reason_counts[SourceRunReason.OPTIONAL_NOT_CONFIGURED],
         "missing_secret_config_count": reason_counts[
