@@ -11,6 +11,7 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
+- Verified main before this block: `a9b8c1db79548fc30e9d75ec24999d4ad2f1f090`
 - PR #137: governed metadata-only RDAP activation — merged
 - PR #138: bounded local consented M10 cohort runner — merged
 - PR #139: independently reviewed M10 provenance boundary — merged
@@ -18,8 +19,10 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - PR #142: operator DOMAIN research reachability — merged
 - PR #142 exact tested head: `f3729a48705ba8ab349fb6cef1217cd9c5f5d921`
 - PR #142 exact-head CI: run `32304516425`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
-- PR #142 merge / verified main: `bee7eae824c20c8e4b3ca7ee60eb0702ea259ab4`
 - Issue #141: closed by PR #142
+- Current branch: `feat/operator-pivot-evidence-context`
+- Current block: expose the exact canonical observation field and observation context that caused each resolvable evidence pivot
+- Current exact-head CI: pending; merge only after the complete required matrix passes
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -37,22 +40,22 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Bluesky public profiles: active for valid AT handles, PR #98.
 - RDAP: active for explicit DOMAIN seeds through the governed runtime, PR #137; operator UI reachability complete in PR #142.
 - Gravatar: PLANNED; blocked on provider privacy-policy/free-key requirements.
-- WebFinger: PLANNED; parser/transport/URL-only semantics/exact-host policy exist, but no host is approved.
-- M10: deterministic replay, graph/source accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), strict consented/reviewed-only accounting, and shared private local cohort ingestion are implemented. Representative real evaluation remains incomplete.
+- WebFinger: PLANNED; parser/admission, SSRF transport, URL-only semantics and exact-host policy are complete, but no concrete host is approved.
+- M10: deterministic replay, source/graph accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), strict consented/reviewed-only accounting and shared private local cohort ingestion are implemented. Representative real evaluation remains incomplete.
 
-## Latest block — operator DOMAIN research reachability
+## Current block — operator pivot evidence context
 
-RDAP became live for explicit DOMAIN seeds in PR #137, but the private `QuickResearch` component still exposed only username, phone, email and URL. PR #142 closes that product gap.
+The retained converged report already carries canonical provenance references for admitted pivots: an edge points to one admitted lead decision, that decision identifies the parent observation index and exact source field, and the parent observation owns the provider source/locator and summary.
 
-The private operator UI now includes `domain` in its `ResearchKind` contract and starting-identifier selector, sends the existing `kind` field unchanged to `/v1/cases/run-converged`, and gives DOMAIN input the bare-domain example `example.com`.
+Before this block, the private operator UI resolved that chain only far enough to show the provider source and locator. That answered where the evidence came from but not which exact observation field caused the pivot. The operator then had to scan the parent node's raw observation JSON manually.
 
-The UI states the policy boundary directly: domain research is explicit-seed only. Domain clues discovered during another case remain `DISPLAY_ONLY`; PR #142 does not add domain auto-pivoting or alter recursion policy.
+The current branch extends the existing fail-closed resolver rather than changing the retained schema. For new canonical-reference cases it returns the exact `source_field` and the canonical observation summary together with the existing source and source locator. Pivot cards show that context directly.
 
-A cross-layer regression imports the live backend `ResearchKind` enum and compares it with both the TypeScript research-kind union and the selector options. A future backend kind addition or UI refactor now fails CI if the operator surface silently loses an executable research kind.
+Historical self-contained edges retained before ADR 0044 still render through the existing read-only compatibility path. They do not invent a source field or observation summary that was never retained; the UI labels the historical field as unavailable instead.
 
-Stored DOMAIN cases require no separate rendering branch. They use the existing retained-case header, research-node kind/value display, typed source-run summary, canonical observation source locators and recent-case list.
+The resolver still rejects mixed legacy/reference shapes, missing/out-of-range decision references, non-admitted decisions, parent/child/reason mismatches, missing observation references, empty source/locator values and source fields that are not present in the referenced observation details.
 
-No new network provider, RDAP field, permission, retention field or evidence semantic was added.
+This is a presentation/useability change over existing canonical evidence. It adds no retained personal data, provider field, network request, permission, new inference, graph recursion or identity semantic.
 
 ## RDAP checkpoint
 
@@ -72,7 +75,7 @@ The two private evidence-backed entry points share one bounded local materialize
 
 The runners keep the 1 MiB input, 256-fixture and 2,048-node bounds, M1-backed normalization, production depth-2 / 12-node baseline and depth-3 / 12-node diagnostic candidate. They emit aggregate accounting and cryptographic replay/provenance digests rather than raw private identifiers.
 
-The engineering bottleneck is now real lawful evidence, not another parser or synthetic metric.
+The engineering bottleneck is real lawful evidence, not another parser or synthetic metric.
 
 ## Controlled evaluation checkpoint
 
@@ -93,11 +96,12 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Prioritize genuine consented or independently reviewed M10 evidence. Do not invent a convenience cohort to claim evaluation progress.
-2. Improve operator evidence/provenance navigation where it removes investigation friction; avoid decorative or generic AI-SaaS redesign work.
-3. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
-4. Keep the backend/UI research-kind parity regression green as live research kinds evolve.
-5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
+1. Put the pivot evidence-context branch through exact-head CI. Repair regressions rather than weakening canonical-reference validation.
+2. Merge only when API 3.11/3.13, audits/Ruff, web and production-image checks pass; then record the exact tested checkpoint in this file before merge if the head changes.
+3. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
+4. Continue operator evidence/provenance work only where it removes a specific investigation step; avoid decorative redesign and duplicated retained evidence.
+5. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
+6. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
 
 ## Update discipline
 

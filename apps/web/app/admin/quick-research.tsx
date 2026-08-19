@@ -224,6 +224,11 @@ type ResolvedProvenance = {
   source_locator: string;
 };
 
+type ResolvedPivotProvenance = ResolvedProvenance & {
+  source_field: string | null;
+  observation_summary: string | null;
+};
+
 type ResolvedConnectedIdentifier = ResolvedProvenance & {
   value: string;
 };
@@ -294,14 +299,19 @@ function m5EvaluationKey(evaluation: M5Evaluation): string {
   return `${evaluation.candidate_node}-${evaluation.candidate_source_locator ?? evaluation.candidate_source ?? "legacy"}`;
 }
 
-function resolveEdgeProvenance(report: ConvergedReport, edge: ConvergedEdge): ResolvedProvenance | null {
+function resolveEdgeProvenance(report: ConvergedReport, edge: ConvergedEdge): ResolvedPivotProvenance | null {
   const hasLegacy = edge.source !== undefined || edge.source_locator !== undefined;
   const hasReference = edge.lead_decision_index !== undefined;
 
   if (hasLegacy && hasReference) return null;
   if (hasLegacy) {
     if (!nonEmptyString(edge.source) || !nonEmptyString(edge.source_locator)) return null;
-    return { source: edge.source, source_locator: edge.source_locator };
+    return {
+      source: edge.source,
+      source_locator: edge.source_locator,
+      source_field: null,
+      observation_summary: null,
+    };
   }
 
   if (!Number.isInteger(edge.lead_decision_index) || (edge.lead_decision_index ?? -1) < 0) return null;
@@ -327,7 +337,12 @@ function resolveEdgeProvenance(report: ConvergedReport, edge: ConvergedEdge): Re
   }
   if (!(decision.source_field in observation.details)) return null;
 
-  return { source: observation.source, source_locator: observation.source_locator };
+  return {
+    source: observation.source,
+    source_locator: observation.source_locator,
+    source_field: decision.source_field,
+    observation_summary: nonEmptyString(observation.summary) ? observation.summary : null,
+  };
 }
 
 function SourceRunSummary({ sourceRuns, title }: { sourceRuns?: SourceRunReport; title: string }) {
@@ -584,11 +599,19 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                         <div className="connectedField" key={`${edge.parent_key}-${edge.child_key}-${index}`}>
                           <span>{edge.reason}</span>
                           <strong>{edge.child_key}</strong>
-                          <small>
-                            {provenance
-                              ? `${provenance.source} · ${provenance.source_locator}`
-                              : "Canonical pivot provenance could not be resolved safely."}
-                          </small>
+                          {provenance ? (
+                            <>
+                              <small>
+                                {provenance.source_field
+                                  ? `${provenance.source} · field ${provenance.source_field}`
+                                  : `${provenance.source} · historical field unavailable`}
+                              </small>
+                              {provenance.observation_summary && <small>{provenance.observation_summary}</small>}
+                              <small>{provenance.source_locator}</small>
+                            </>
+                          ) : (
+                            <small>Canonical pivot provenance could not be resolved safely.</small>
+                          )}
                         </div>
                       );
                     })}

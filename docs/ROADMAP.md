@@ -42,6 +42,8 @@ Local operation is the zero-spend baseline. The paid Render topology remains an 
 
 Privacy/operations include a 30-day default retained-case lifecycle, automatic expiry purge, explicit deletion, privacy-safe audit events, secrets outside Git and bounded request/concurrency/timeout/response limits. Backup/restore remains deferred until a persistent hosted production store is chosen.
 
+The operator case view resolves retained canonical references rather than duplicating provider evidence. Evidence-pivot cards expose the source, exact observation field and observation summary that caused a pivot when canonical reference data is available; historical self-contained cases remain read-only compatible and do not gain invented field attribution.
+
 ## Recursive evidence graph — V2
 
 ### V2-A — typed lead graph
@@ -148,10 +150,10 @@ Do not publish false-positive/false-negative, calibration, probability or popula
 
 1. Keep the operator research-kind parity regression green as backend capabilities evolve; explicit DOMAIN research must remain reachable without changing display-only domain-pivot policy.
 2. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching runner. The blocker is the evidence itself, not ingestion code.
-3. Improve operator evidence/provenance navigation where it reduces investigation friction; avoid decorative or generic AI-SaaS redesign work.
+3. Continue improving operator evidence/provenance navigation only where it answers a concrete investigation question; the current pivot view now exposes the canonical source field and observation context that caused each resolvable pivot.
 4. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
 5. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
 
 Success means the operator can answer for every hop:
 
-> What source produced this clue, why was it allowed to become a lead, what did the system do with it, and what remains unknown?
+> What source produced this clue, which field caused the pivot, why was it allowed to become a lead, what did the system do with it, and what remains unknown?
