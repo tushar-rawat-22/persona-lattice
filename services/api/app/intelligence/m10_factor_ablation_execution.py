@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
 from collections.abc import Iterable
+from dataclasses import dataclass, replace
 
 from app.correlation import CorrelationEngine, CorrelationOutcome, CorrelationRequest, FactorKind
+from app.correlation.types import CorrelationResult
 
 from .m10_factor_ablation import (
     M10FactorAblationPlan,
@@ -76,6 +77,19 @@ def _validate_cases(cases: tuple[M10FactorAblationCase, ...]) -> None:
             )
 
 
+def _correlate_without_retaining(
+    engine: CorrelationEngine,
+    request: CorrelationRequest,
+) -> CorrelationResult:
+    """Run the real M5 engine while rolling back any diagnostic run/factor records."""
+
+    savepoint = engine.session.begin_nested()
+    try:
+        return engine.correlate(request)
+    finally:
+        savepoint.rollback()
+
+
 def execute_m10_factor_ablation_plan(
     *,
     plan: M10FactorAblationPlan,
@@ -86,8 +100,10 @@ def execute_m10_factor_ablation_plan(
 
     This function does not reproduce M5 scoring rules. It changes only the factor
     inputs supplied to the existing engine and reports the resulting deterministic
-    outcome/score/group deltas. Safety-critical veto omissions remain diagnostics,
-    never production policy candidates.
+    outcome/score/group deltas. Each diagnostic correlation is rolled back to its
+    own savepoint so M10 cannot retain ablation runs in the supplied evidence
+    database. Safety-critical veto omissions remain diagnostics, never production
+    policy candidates.
     """
 
     validate_m10_factor_ablation_plan(plan)
@@ -96,7 +112,7 @@ def execute_m10_factor_ablation_plan(
 
     case_results: list[M10FactorAblationCaseResult] = []
     for case in prepared_cases:
-        baseline = engine.correlate(case.request)
+        baseline = _correlate_without_retaining(engine, case.request)
         scenario_results: list[M10FactorAblationScenarioResult] = []
         factor_kinds = {factor.kind for factor in case.request.factors}
 
@@ -110,7 +126,10 @@ def execute_m10_factor_ablation_plan(
                 raise ValueError(
                     "M10 factor-ablation omission removed every factor from a controlled case."
                 )
-            ablated = engine.correlate(replace(case.request, factors=ablated_factors))
+            ablated = _correlate_without_retaining(
+                engine,
+                replace(case.request, factors=ablated_factors),
+            )
             scenario_results.append(
                 M10FactorAblationScenarioResult(
                     scenario_name=scenario.name,
