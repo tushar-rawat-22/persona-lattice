@@ -380,7 +380,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
     SourceCapability(
         name="webfinger_activitypub",
         accepts=frozenset({LeadKind.URL}),
-        emits=frozenset({LeadKind.URL, LeadKind.USERNAME, LeadKind.NAME}),
+        emits=frozenset({LeadKind.URL}),
         status=SourceStatus.PLANNED,
         mode=SourceMode.OPEN_STANDARD,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
@@ -389,8 +389,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         recursive_eligible=False,
         priority=150,
         note=(
-            "Adapter target for recognized federated profile URLs; generic usernames alone "
-            "are insufficient to choose the WebFinger host."
+            "Compatibility source key for WebFinger public-link resolution only. ActivityPub actor "
+            "fetching is a separate future capability; WebFinger does not emit generic username or "
+            "name leads."
         ),
     ),
     SourceCapability(
