@@ -58,6 +58,7 @@ class ResearchKind(StrEnum):
     PHONE = "phone"
     EMAIL = "email"
     URL = "url"
+    DOMAIN = "domain"
 
 
 @dataclass(frozen=True, slots=True)
@@ -973,6 +974,18 @@ async def _research_url(
     )
 
 
+async def _research_domain(normalized_value: str) -> QuickResearchReport:
+    """Admit an explicit domain seed without implying that RDAP is active yet."""
+
+    return QuickResearchReport(
+        kind=ResearchKind.DOMAIN,
+        normalized_value=normalized_value,
+        observations=(),
+        warnings=("No reviewed external domain source is active for this seed yet.",),
+        source_runs=(),
+    )
+
+
 async def run_quick_research(
     *,
     kind: ResearchKind,
@@ -1023,4 +1036,6 @@ async def run_quick_research(
             public_search_lookup=public_search_lookup,
             network_lookup=network_lookup,
         )
+    if kind is ResearchKind.DOMAIN:
+        return await _research_domain(normalized.normalized_value)
     raise ValueError("Unsupported research kind.")
