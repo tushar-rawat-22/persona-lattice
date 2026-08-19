@@ -38,37 +38,29 @@ Current live sources:
 - authoritative metadata-only RDAP for explicit domain seeds;
 - optional Brave exact public-web search when configured.
 
-Local operation is the zero-spend baseline. The previously reviewed paid Render topology is retained only as an optional reference at `deploy/render-paid.yaml`.
+Local operation is the zero-spend baseline. The paid Render topology remains an optional reference at `deploy/render-paid.yaml`.
 
-Privacy/operations already include a 30-day default retained-case lifecycle, automatic expiry purge, explicit deletion, privacy-safe audit events, secrets outside Git and bounded request/concurrency/timeout/response limits. Backup/restore remains deferred until a persistent hosted production store is actually chosen.
+Privacy/operations include a 30-day default retained-case lifecycle, automatic expiry purge, explicit deletion, privacy-safe audit events, secrets outside Git and bounded request/concurrency/timeout/response limits. Backup/restore remains deferred until a persistent hosted production store is chosen.
 
 ## Recursive evidence graph — V2
 
 ### V2-A — typed lead graph
 
-**Complete — PR #20.**
-
-Typed lead kinds/dispositions, exact-field extraction, M1-consistent normalization and fail-closed handling for sensitive fields.
+**Complete — PR #20.** Typed lead kinds/dispositions, exact-field extraction, M1-consistent normalization and fail-closed handling for sensitive fields.
 
 ### V2-B — deterministic frontier
 
-**Complete — PR #21.**
-
-Reservation-safe scheduling, duplicate/cycle suppression, reason-coded outcomes and retained graph state.
+**Complete — PR #21.** Reservation-safe scheduling, duplicate/cycle suppression, reason-coded outcomes and retained graph state.
 
 Production limits remain **depth 2 / 12 nodes**. Raising them requires evaluation evidence.
 
 ### V2-C — source capability registry
 
-**Complete — PR #22.**
-
-Capability, execution authority, lifecycle state, cost class, credential class, source-policy review and recursive eligibility are explicit. Planned sources remain non-executable by construction.
+**Complete — PR #22.** Capability, execution authority, lifecycle state, cost class, credential class, source-policy review and recursive eligibility are explicit. Planned sources remain non-executable by construction.
 
 ### V2-D — runtime consistency and architecture closure
 
-**Complete — PRs #89-#90.**
-
-Every executable network source is behind the governed runtime. Catalog, binding, provider registry and process runtime ownership are checked symmetrically. Required active recursive sources must remain zero-spend eligible; non-zero-spend recursive sources can only be optional.
+**Complete — PRs #89-#90.** Every executable network source is behind the governed runtime. Catalog, binding, provider registry and process runtime ownership are checked symmetrically. Required active recursive sources must remain zero-spend eligible; non-zero-spend recursive sources can only be optional.
 
 Source-run accounting is phase-proven, retained evidence/provenance has canonical owners, historical retained formats remain read-only compatible, and the reviewed-document chain is server-owned from extraction through explicit case execution.
 
@@ -86,13 +78,13 @@ New sources must use the existing catalog → binding → provider registry → 
 
 The live path uses IANA longest-match bootstrap routing, one process-wide bootstrap cache, fresh DNS/global-address checks, IP-pinned HTTPS with hostname TLS validation, bounded redirects/response size and separate validation of canonical query URL versus final evidence locator.
 
-`routing_unavailable` remains a non-attempt outcome when prerequisite routing authority is unavailable. Once an authoritative RDAP provider is contacted, rate limits, transient service failures and malformed results use attempted-failure semantics. Discovered domain clues remain **display-only**; only explicit DOMAIN seeds run RDAP.
+`routing_unavailable` remains a non-attempt outcome when prerequisite routing authority is unavailable. Once an authoritative RDAP provider is contacted, rate limits, transient failures and malformed results use attempted-failure semantics. Discovered domain clues remain **display-only**; only explicit DOMAIN seeds run RDAP.
 
 No WHOIS fallback, RDRS/nonpublic workflow, reverse/bulk lookup or contact harvesting is approved.
 
 ### Gravatar
 
-**Planned.** Admission preflight exists, but activation remains blocked by provider privacy-policy requirements and the need for a free server-side key kept outside Git. It must remain unnecessary to the zero-spend baseline.
+**Planned.** Admission preflight exists, but activation remains blocked by provider privacy-policy requirements and the need for a free server-side key outside Git. It must remain unnecessary to the zero-spend baseline.
 
 ### WebFinger
 
@@ -100,7 +92,7 @@ No WHOIS fallback, RDRS/nonpublic workflow, reverse/bulk lookup or contact harve
 
 ## M10 — evaluation and calibration laboratory
 
-**Infrastructure established; representative evaluation remains.**
+**Infrastructure established; representative evidence remains the bottleneck.**
 
 Implemented:
 
@@ -115,15 +107,18 @@ Implemented:
 - replay-anchored real-engine M5 factor ablations;
 - rollback-only diagnostic M5 execution;
 - UUID-independent semantic fixture/result fingerprints;
-- synthetic-vs-consented label-provenance manifests;
+- explicit label-provenance manifests;
 - consented-only scenario accounting with exact numerator/denominator counts;
-- a bounded local **consented** cohort runner so private consented identifiers no longer need to become repository fixtures.
+- a bounded local consented-cohort runner so private consented identifiers do not need to become repository fixtures;
+- an explicit **independently reviewed** label basis and reviewed-only accounting boundary, kept separate from consent and synthetic regression data.
 
-The current provenance vocabulary distinguishes `synthetic` and `consented`. It does not yet define an independently-reviewed-but-not-consented basis, so the local runner must not classify reviewed evidence as consented merely to make it analyzable.
+M10 now distinguishes three provenance bases: `synthetic`, `consented` and `independently_reviewed`. None can silently satisfy another basis. Both consented-only and reviewed-only analysis require complete labels for admitted pivots and report exact corpus counts/fractions rather than unsupported population rates.
+
+The reviewed path stores only an opaque SHA-256 reference to an external review record. It does not put raw review notes, personal identifiers or source documents into the experiment manifest.
 
 ### Current synthetic graph result
 
-Production depth 2 / 12 nodes admits 9 labelled pivots: **8 relevant, 1 wrong**. It performs 11 simulated source attempts.
+Production depth 2 / 12 nodes admits 9 labelled pivots: **8 relevant, 1 wrong**, with 11 simulated source attempts.
 
 The depth-3 / 12-node diagnostic candidate admits 12 labelled pivots: **8 relevant, 4 wrong**, with 14 simulated attempts.
 
@@ -140,16 +135,16 @@ The contradiction omission is safety-critical diagnostic work only. Production f
 
 ### Remaining M10 gate
 
-The bottleneck is real consented label evidence, not another synthetic metric. A local runner now exists for private consented cohorts, but the repository still contains no representative real cohort and must not manufacture one.
+The bottleneck is real evidence, not another synthetic metric.
 
-The next useful M10 work is to run a genuinely consented cohort whose external consent records satisfy the provenance contract, then inspect scenario-specific counts and denominators. Do not publish false-positive/false-negative, calibration or probability claims until cohort design supports those terms.
+Use the consented path only when genuine consent records support the labels. Use the independently reviewed path only when a real external review record supports the labels. Do not manufacture either basis from repository fixtures or a bare hash of an identifier.
 
-If independently reviewed labels are needed without consent, add an explicit provenance basis and analysis boundary first rather than misusing the `consented` label.
+Do not publish false-positive/false-negative, calibration, probability or population-performance claims until cohort design and denominators genuinely support those terms.
 
 ## Immediate next gate
 
-1. Merge the local consented-cohort runner only after its exact head passes CI and its output/privacy contract is proven.
-2. Use that runner with genuine consent evidence when a lawful cohort is available; do not relabel synthetic or merely reviewed fixtures as consented.
+1. Put this reviewed-label boundary through exact-head CI and merge only if the existing consented path remains strict and unchanged.
+2. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching boundary; do not upgrade one provenance basis into another.
 3. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
 4. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
 5. Continue improving the operator workflow around evidence/provenance hierarchy rather than generic AI-SaaS presentation patterns.
