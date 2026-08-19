@@ -5,11 +5,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from .contracts import LeadKind
-from .graph_evaluation import GraphEvaluationCounters, PivotRelevance
+from .graph_evaluation import PivotRelevance
 from .graph_limit_evaluation import (
     GraphFixtureLead,
     GraphLimitScenario,
-    evaluate_graph_limit_fixture,
+    evaluate_graph_limit_fixture_with_operations,
 )
 
 
@@ -89,35 +89,12 @@ class M10CohortComparison:
     deltas: tuple[M10CohortDelta, ...]
 
 
-def _operational_counts(counters: GraphEvaluationCounters) -> tuple[int, int, int, int, int]:
-    """Return deterministic synthetic execution-cost counts for one graph fixture.
-
-    The graph fixture models one bounded source request after every lead that passes
-    frontier admission. An admitted pivot therefore represents one successful source
-    attempt and one observation-yield unit; a provider failure represents one
-    attempted request with zero yield. Leads stopped as duplicates, review-only or by
-    local frontier budgets never become source attempts and consume no request-cost
-    unit.
-
-    Request-cost units are abstract request units, not currency and not a claim about
-    a provider's billing model. A future fixture contract can add provider-specific
-    multi-request weights without changing these semantics.
-    """
-
-    successful = counters.admitted_pivot_count
-    zero_yield = counters.provider_failure_count
-    attempts = successful + zero_yield
-    observation_yield_units = successful
-    request_cost_units = attempts
-    return attempts, successful, zero_yield, observation_yield_units, request_cost_units
-
-
 def _evaluate_scenario(
     fixtures: tuple[M10GraphFixture, ...],
     scenario: GraphLimitScenario,
 ) -> M10CohortScenarioResult:
     results = tuple(
-        evaluate_graph_limit_fixture(
+        evaluate_graph_limit_fixture_with_operations(
             seed_key=fixture.seed_key,
             seed_kind=fixture.seed_kind,
             leads_by_parent=fixture.leads_by_parent,
@@ -126,34 +103,41 @@ def _evaluate_scenario(
         )
         for fixture in fixtures
     )
-    operational = tuple(_operational_counts(item) for item in results)
+    graphs = tuple(item.graph for item in results)
+    operations = tuple(item.operational for item in results)
     return M10CohortScenarioResult(
         scenario=scenario,
         counters=M10CohortCounters(
             fixture_count=len(results),
-            node_count=sum(item.node_count for item in results),
-            added_node_count=sum(item.added_node_count for item in results),
-            max_observed_depth=max(item.max_observed_depth for item in results),
+            node_count=sum(item.node_count for item in graphs),
+            added_node_count=sum(item.added_node_count for item in graphs),
+            max_observed_depth=max(item.max_observed_depth for item in graphs),
             duplicate_suppression_count=sum(
-                item.duplicate_suppression_count for item in results
+                item.duplicate_suppression_count for item in graphs
             ),
-            provider_failure_count=sum(item.provider_failure_count for item in results),
-            budget_stop_count=sum(item.budget_stop_count for item in results),
-            review_required_count=sum(item.review_required_count for item in results),
-            display_only_count=sum(item.display_only_count for item in results),
-            blocked_count=sum(item.blocked_count for item in results),
-            source_attempt_count=sum(item[0] for item in operational),
-            successful_source_attempt_count=sum(item[1] for item in operational),
-            zero_yield_source_attempt_count=sum(item[2] for item in operational),
-            observation_yield_unit_count=sum(item[3] for item in operational),
-            request_cost_unit_count=sum(item[4] for item in operational),
+            provider_failure_count=sum(item.provider_failure_count for item in graphs),
+            budget_stop_count=sum(item.budget_stop_count for item in graphs),
+            review_required_count=sum(item.review_required_count for item in graphs),
+            display_only_count=sum(item.display_only_count for item in graphs),
+            blocked_count=sum(item.blocked_count for item in graphs),
+            source_attempt_count=sum(item.source_attempt_count for item in operations),
+            successful_source_attempt_count=sum(
+                item.successful_source_attempt_count for item in operations
+            ),
+            zero_yield_source_attempt_count=sum(
+                item.zero_yield_source_attempt_count for item in operations
+            ),
+            observation_yield_unit_count=sum(
+                item.observation_yield_unit_count for item in operations
+            ),
+            request_cost_unit_count=sum(item.request_cost_unit_count for item in operations),
             labelled_admitted_pivot_count=sum(
-                item.labelled_admitted_pivot_count for item in results
+                item.labelled_admitted_pivot_count for item in graphs
             ),
-            wrong_pivot_count=sum(item.wrong_pivot_count for item in results),
-            relevant_pivot_count=sum(item.relevant_pivot_count for item in results),
+            wrong_pivot_count=sum(item.wrong_pivot_count for item in graphs),
+            relevant_pivot_count=sum(item.relevant_pivot_count for item in graphs),
             unlabelled_admitted_pivot_count=sum(
-                item.unlabelled_admitted_pivot_count for item in results
+                item.unlabelled_admitted_pivot_count for item in graphs
             ),
         ),
     )
