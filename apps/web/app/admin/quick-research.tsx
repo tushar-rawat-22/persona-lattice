@@ -572,15 +572,25 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                     {converged.m5.evaluations.map((evaluation) => {
                       const candidate = resolveM5Candidate(converged, evaluation);
                       const candidateSource = candidate?.source ?? evaluation.candidate_source ?? "canonical observation unavailable";
+                      const candidateLocator = candidate?.source_locator ?? evaluation.candidate_source_locator ?? null;
                       return (
                         <div className="connectedField" key={m5EvaluationKey(evaluation)}>
                           <span>{evaluation.outcome}</span>
                           <strong>{evaluation.evidence_score} / 100</strong>
                           <small>{candidateSource} · {evaluation.calibration_status} · not an identity probability</small>
+                          {candidateLocator && <small>{candidateLocator}</small>}
+                          <small>
+                            {evaluation.positive_independence_groups} positive independence groups · policy {evaluation.policy_version}
+                          </small>
                           {evaluation.factors.map((factor) => (
-                            <small key={`${factor.kind}-${factor.independence_group}`}>
-                              {factor.kind}: {factor.applied_weight >= 0 ? "+" : ""}{factor.applied_weight} · {factor.status}
-                            </small>
+                            <div className="nestedObservation" key={`${factor.kind}-${factor.independence_group}`}>
+                              <strong>{factor.kind}</strong>
+                              <span>{factor.status} · group {factor.independence_group}</span>
+                              <small>
+                                weight {factor.base_weight} → {factor.applied_weight}{factor.veto ? " · veto factor" : ""}
+                              </small>
+                              <small>{factor.rationale}</small>
+                            </div>
                           ))}
                         </div>
                       );

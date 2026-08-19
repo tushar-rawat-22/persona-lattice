@@ -11,15 +11,17 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
+- Verified main before this block: `109aef753ccd69576b0ca104449b6e4ec24891fa`
 - PR #137: governed metadata-only RDAP activation — merged
 - PR #138: bounded local consented M10 cohort runner — merged
 - PR #139: independently reviewed M10 provenance boundary — merged
 - PR #140: shared private local M10 materializer + reviewed runner — merged
 - PR #142: operator DOMAIN research reachability — merged
 - PR #144: operator pivot evidence context — merged
-- PR #144 exact tested head: `ef3f653fdd4bd3f15d7e46591f1d53f0431c0ae2`
-- PR #144 exact-head CI: run `32309463659`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
-- PR #144 merge / verified main: `ee7aed8ea58bb588b09293ffba0063ab17ea781d`
+- PR #146: M5 operator factor explainability — implementation ready for merge
+- PR #146 exact tested implementation head: `bc8c7ffbb6fd33778e0ecaf0b6896d78e1f14f32`
+- PR #146 implementation CI: run `32313616632`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- Current branch: `feat/m5-factor-explainability`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -40,17 +42,19 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - WebFinger: PLANNED; parser/admission, SSRF transport, URL-only semantics and exact-host policy are complete, but no concrete host is approved.
 - M10: deterministic replay, source/graph accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), strict consented/reviewed-only accounting and shared private local cohort ingestion are implemented. Representative real evaluation remains incomplete.
 
-## Latest block — operator pivot evidence context
+## Latest block — M5 operator explainability
 
-The retained converged report already carries canonical provenance references for admitted pivots: an edge points to one admitted lead decision, that decision identifies the parent observation index and exact source field, and the parent observation owns the provider source/locator and summary.
+The retained M5 evaluation already includes the evidence-strength outcome, score, calibration state, positive independence-group count, policy version and the factor list. Each factor carries its independence group, base weight, applied weight, status, rationale and veto flag.
 
-Before PR #144, the private operator UI resolved that chain only far enough to show the provider source and locator. The operator still had to scan the parent node's raw observation details to see which field actually caused the pivot.
+Before PR #146, the private case view displayed only the outcome/score and one terse line per factor. That forced the operator to infer why a factor contributed, why a weight changed, or whether the factor was a veto.
 
-PR #144 keeps the retained schema unchanged and extends the existing fail-closed resolver. For canonical-reference cases, evidence-pivot cards now show the provider source, exact `source_field`, canonical observation summary and source locator. Historical self-contained edges retained before ADR 0044 remain readable but do not gain invented field attribution; the UI states that the historical field is unavailable.
+PR #146 renders the retained factor explanation directly. It also shows the source locator of the canonical candidate observation when that reference resolves, the number of positive independence groups and the M5 policy version. Historical evaluations still use their retained source/locator fallback when available.
 
-The resolver still rejects mixed legacy/reference shapes, invalid decision indexes, non-admitted decisions, parent/child/reason mismatches, invalid observation indexes, empty source/locator values and source fields absent from the referenced observation details.
+The browser does not reproduce M5 thresholds, weights or veto rules. It only consumes fields already present in the retained evaluation, so there is no second scoring authority and no new personal-data retention.
 
-This is presentation over existing canonical evidence. It adds no retained personal data, provider field, network request, permission, inference, graph recursion or identity semantic.
+A UI regression contract checks that the factor rationale, independence group, base/applied weights, status and veto marker remain visible while threshold/outcome policy names are not hard-coded into the display block.
+
+The implementation head passed the full required CI matrix in run `32313616632`. The final documentation-only head must also pass before merge.
 
 ## RDAP checkpoint
 
@@ -91,10 +95,10 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
-2. Continue operator evidence/provenance work only where it removes a specific investigation step. The current pivot view now answers which canonical field caused a resolvable hop.
-3. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
-4. Keep the backend/UI research-kind parity regression and pivot-reference regression green as retained contracts evolve.
+1. Merge PR #146 only after its final documentation head passes the complete required CI matrix.
+2. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
+3. Continue operator evidence/provenance work only where it removes a specific investigation step. Pivot attribution and M5 factor rationale are now the two covered explainability gaps.
+4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
 5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
 
 ## Update discipline
