@@ -83,6 +83,45 @@ async def test_expired_bootstrap_uses_conditional_refresh_and_304() -> None:
 
 
 @pytest.mark.asyncio
+async def test_expires_uses_origin_date_for_freshness_lifetime() -> None:
+    calls = 0
+
+    async def fetcher(headers: dict[str, str]) -> RdapBootstrapHTTPResponse:
+        nonlocal calls
+        calls += 1
+        return response(
+            headers={
+                "cache-control": "",
+                "date": "Wed, 19 Aug 2026 10:00:00 GMT",
+                "expires": "Wed, 19 Aug 2026 12:00:00 GMT",
+            }
+        )
+
+    cache = IanaRdapBootstrapCache(fetcher=fetcher)
+    await cache.get_payload(now=NOW)
+    await cache.get_payload(now=NOW + timedelta(hours=1, minutes=59))
+
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_no_store_response_is_returned_but_not_cached() -> None:
+    calls = 0
+
+    async def fetcher(headers: dict[str, str]) -> RdapBootstrapHTTPResponse:
+        nonlocal calls
+        calls += 1
+        return response(headers={"cache-control": "no-store", "etag": '"v1"'})
+
+    cache = IanaRdapBootstrapCache(fetcher=fetcher)
+    first = await cache.get_payload(now=NOW)
+    second = await cache.get_payload(now=NOW)
+
+    assert first == second
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 async def test_refresh_failure_does_not_serve_expired_authority() -> None:
     attempts = 0
 
@@ -108,6 +147,10 @@ async def test_refresh_failure_does_not_serve_expired_authority() -> None:
         (response(body=b'{"services":[]}'), "service count"),
         (
             response(headers={"content-type": "text/plain"}),
+            "unsupported media type",
+        ),
+        (
+            response(headers={"content-type": "application/rdap+json"}),
             "unsupported media type",
         ),
         (response(status=302, headers={}), "unexpectedly redirected"),
