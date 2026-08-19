@@ -19,9 +19,10 @@ The runner:
 - canonicalizes seed and lead identifiers through the same M1-backed lead normalization used by the graph;
 - only allows child nodes beneath the seed or an earlier successful automatic pivot;
 - evaluates the current production depth-2 / 12-node policy against the existing depth-3 / 12-node diagnostic candidate;
-- prints no seed values, lead values, source locators or raw external evidence records.
+- prints no seed values, lead values, source locators, fixture names, cohort name or raw external evidence records;
+- returns one generic validation error at the CLI boundary so malformed private values cannot leak through exception text.
 
-The private input file is not persisted by PersonaLattice. The output carries a digest of the input bytes, the existing M10 replay digests, the label-manifest digest, the analysis digest and aggregate scenario accounting.
+The private input file is not persisted by PersonaLattice. The output carries a digest of the input bytes, a digest of the cohort name, the existing M10 replay digests, the label-manifest digest, the analysis digest and aggregate scenario accounting.
 
 ## Boundaries
 
