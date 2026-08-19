@@ -80,7 +80,7 @@ V2-D closure does not authorize larger recursion, wider retention, paid baseline
 
 ## M10 — evaluation and calibration laboratory
 
-**Status: deterministic replay, real-engine ablation and explicit label-provenance infrastructure established; representative evaluation remains**
+**Status: deterministic replay, real-engine ablation, label provenance and consented-scenario accounting infrastructure established; representative evaluation remains**
 
 Established:
 
@@ -99,7 +99,8 @@ Established:
 - non-retaining M10 correlation execution: diagnostic M5 runs are rolled back and do not become retained case evidence;
 - a versioned reusable semantic specification for controlled M5 ablation cases, with UUID-independent fixture, per-case and result replay fingerprints;
 - a replay-anchored label-provenance manifest that requires explicit `synthetic` or `consented` basis and an opaque SHA-256 external-record reference for every labelled graph fixture;
-- separate synthetic and consented **declared-label corpus counts**, deliberately distinct from scenario-specific admitted-pivot denominators.
+- separate synthetic and consented **declared-label corpus counts**, deliberately distinct from scenario-specific admitted-pivot denominators;
+- a consented-only scenario-accounting boundary that rejects synthetic/mixed cohorts and unlabelled admitted pivots, records exact admitted/missed label counts, and exposes numerator/denominator count fractions without converting them into population error rates.
 
 ### Current controlled graph result
 
@@ -120,20 +121,23 @@ The current real-engine controlled cases remain:
 
 The contradiction omission is safety-critical diagnostic work only. These controlled deltas are not calibration evidence, population error rates or permission to change production policy.
 
-### Label provenance boundary
+### Label provenance and consented-scenario boundary
 
-Reproducible labels are not automatically defensible ground truth. PR #109 / ADR 0062 adds an explicit provenance layer before future false-positive/false-negative work.
+Reproducible labels are not automatically defensible ground truth. PR #109 / ADR 0062 adds an explicit provenance layer before future error-style work.
 
-Each labelled fixture must now have a matching provenance record whose basis is `synthetic` or `consented`, plus an opaque SHA-256 reference to the external label/consent record. The manifest is bound to the exact M10 replay input and result digests and fails closed if the cohort, labels or provenance coverage drift.
+Each labelled fixture must have a matching provenance record whose basis is `synthetic` or `consented`, plus an opaque SHA-256 reference to the external label/consent record. The manifest is bound to the exact M10 replay input and result digests and fails closed if the cohort, labels or provenance coverage drift.
 
-The manifest exposes **declared** label corpus counts. It does not treat every fixture label as an admitted-pivot denominator because a frontier policy may never execute or admit that labelled pivot. Future error analysis must use actual scenario execution counters together with the provenance manifest.
+The manifest exposes **declared** label corpus counts. It does not treat every fixture label as an admitted-pivot denominator because a frontier policy may never execute or admit that labelled pivot.
 
-Raw consent text and personal identifiers do not belong in the manifest. The evidence-record digest must not be a bare hash of a personal identifier.
+PR #111 / ADR 0063 adds the next boundary: consented scenario accounting refuses synthetic or mixed provenance and refuses any scenario with unlabelled admitted pivots. For an eligible cohort it records exact admitted relevant/wrong counts, relevant/wrong labels not admitted by each scenario, and exact count fractions for admitted-wrong share and relevant-label recall. Fractions remain numerator/denominator pairs; they are not published as population false-positive/false-negative rates, confidence, calibration or identity probability.
+
+Raw consent text and personal identifiers do not belong in either manifest or analysis record. The evidence-record digest must not be a bare hash of a personal identifier.
 
 Still required before increasing recursion or changing correlation thresholds:
 
 - a genuinely consented or separately reviewed labelled cohort large enough to support defensible analysis;
-- labelled false-positive/false-negative and threshold analysis using actual admitted denominators;
+- run that cohort through the consented-only accounting boundary with complete admitted-pivot labels;
+- stronger false-positive/false-negative or threshold terminology only if the cohort definition and denominators actually justify it;
 - provider-specific request/yield weights only where a real adapter needs more than the current one-request/one-yield fixture abstraction;
 - reviewed monetary pricing only when an actual provider has a current price model relevant to a decision;
 - no probability claim unless calibration evidence supports it.
@@ -158,7 +162,9 @@ The first rollout remains sequential after the existing public-profile enrichmen
 
 Do not reopen V2-D architecture casually, do not remove safety-critical M5 vetoes because an ablation changes the score, and do not raise recursion because one fixture family looks favorable.
 
-The preferred next M10 work is to add a genuinely consented or otherwise separately reviewed labelled cohort that can satisfy the PR #109 label-provenance contract. Only then should PersonaLattice implement false-positive/false-negative or threshold analysis, and only with actual scenario-specific admitted denominators. The existing six-fixture synthetic cohort remains diagnostic regression data, not consented evidence.
+M10 now has both label-provenance and consented-only scenario-accounting boundaries. The preferred next work is therefore **not another synthetic metric**: assemble a genuinely consented or otherwise separately reviewed labelled cohort whose external evidence records satisfy the existing provenance contract, then run it through the consented analysis with complete admitted-pivot labels. Do not mark test fixtures as consented merely to obtain fractions.
+
+Only after that evidence exists should PersonaLattice decide whether stronger false-positive/false-negative or threshold analysis is mathematically justified. The existing six-fixture synthetic cohort remains diagnostic regression data.
 
 A separate acceptable track is fresh review of exactly one additional zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions. Current official terms, cost, authentication, returned fields, contact risk and retention implications must be reviewed before activation.
 

@@ -12,14 +12,14 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #109: `53a0ccd799c274008b53e0d15eeb4c8821d9c894`
-- PR #109: replay-anchored M10 label provenance manifest
-- Exact tested implementation/docs head: `59863bcf4da633c31fd953aebd19a7fe583b84cd`
-- Exact-head CI: run `32219724164`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
-- PR #109 merge: `8faf6ca5d191fcede1d6ae2102104408bf092d08`
-- ADR: `docs/decisions/0062-m10-label-provenance-manifest.md`
+- Main before PR #111: `2b13a2bf8a4e79f4d8ef2ffa10d01bc95dcce0fe`
+- PR #111: consented-only M10 scenario accounting
+- Exact tested PR #111 head: `f48fdf6e4b2bcfbfd8ef6f7205c1d58a04a83c68`
+- Exact-head CI: run `32223948991`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
+- PR #111 merge: `aa9ee406a41b7f4e36af2d1e6038a4cd85f7641b`
+- ADR: `docs/decisions/0063-consented-m10-scenario-accounting.md`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
-- Zero-spend operating runbook: `docs/ZERO_SPEND_RUNBOOK.md`
+- Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
 
 ## Milestone state
@@ -32,37 +32,48 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-B deterministic frontier: complete, PR #21.
 - V2-C source capability registry/planner: complete, PR #22.
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
-- Post-V2-D source expansion: Bluesky public profiles are active for valid AT handles through the governed runtime, PR #98 / ADR 0055.
-- M10 now has source-state fixtures, graph-limit comparison, multi-kind synthetic cohort support, source-attempt/yield/request-cost accounting, deterministic graph replay, replay/policy-anchored factor ablations through the real `CorrelationEngine`, UUID-independent controlled M5 fixture/result replay, and explicit replay-anchored label provenance. Representative consented evaluation and threshold/error analysis remain incomplete.
+- Post-V2-D source expansion: Bluesky public profiles active for valid AT handles through the governed runtime, PR #98 / ADR 0055.
+- M10: deterministic source-state fixtures, graph-limit comparison, multi-kind synthetic cohorts, attempt/yield/request-cost accounting, replay fingerprints, real-engine factor ablations, UUID-independent controlled M5 fixture replay, label-provenance manifests and consented-only scenario accounting are implemented. Representative consented evaluation and calibration remain incomplete.
 
-## Latest block — M10 label provenance before error analysis
+## Latest block — consented-only M10 scenario accounting
 
-PR #109 closes a provenance gap that remained after deterministic replay was established. Reproducible synthetic labels are useful regression data, but they are not consented ground truth and must not silently become population denominators.
+PR #111 adds `services/api/app/intelligence/m10_consented_analysis.py`.
 
-New module: `services/api/app/intelligence/m10_label_provenance.py`.
+The boundary deliberately refuses to produce analysis from the current synthetic regression cohort. It requires:
 
-The new contract:
+- every fixture provenance basis to be `consented`;
+- exact replay/fixture/provenance agreement through the existing label-manifest builder;
+- every admitted pivot in every scenario to have an explicit label;
+- scenario names to remain unique;
+- admitted label counters to remain internally consistent.
 
-- defines `M10LabelBasis.SYNTHETIC` and `M10LabelBasis.CONSENTED`;
-- requires exactly one `M10FixtureLabelProvenance` record for every fixture in the replayed cohort;
-- stores only fixture name, label basis and an opaque lowercase SHA-256 reference to an external label/consent record;
-- does not store raw consent text, source documents or personal identifiers in the M10 manifest;
-- rebuilds the exact M10 replay from the supplied fixtures and fails closed if either replay input or result digest drifts;
-- rejects duplicate, missing or extra provenance records;
-- fingerprints replay identity, provenance basis, evidence-record digest and exact fixture pivot labels;
-- keeps synthetic and consented declared-label corpus counts separate;
-- returns counts only and does not calculate error rates, confidence, probability or calibration.
+For an eligible cohort it records exact scenario-level counts:
 
-A self-review flaw was corrected before merge: the first version named all fixture labels as a denominator-like `labelled_pivot_count`. That was misleading because a frontier scenario may never admit every labelled pivot. The final API uses `declared_*` label counts. Scenario-specific admitted denominators continue to come from actual graph evaluation counters.
+- declared relevant and wrong labels;
+- admitted relevant and wrong pivots;
+- relevant labels not admitted;
+- wrong labels not admitted.
 
-The evidence digest is only an opaque external-record reference. It must not be a bare hash of a personal identifier; the underlying label/consent evidence remains outside this public-safe manifest and under the appropriate data-handling controls.
+It also exposes exact numerator/denominator pairs for:
 
-## Current controlled graph M10 result
+- wrong admitted pivots / labelled admitted pivots;
+- admitted relevant pivots / declared relevant labels.
 
-Current production policy — depth 2 / 12 nodes:
+These are count fractions only. They are not population false-positive/false-negative rates, calibration, confidence, identity probability or evidence that the consented cohort is representative. Zero denominators produce no fraction rather than a fabricated zero rate.
+
+The analysis digest is anchored to the exact M10 replay input/result digests and the exact label-manifest digest. Raw consent text, personal identifiers and source documents remain outside M10; the manifest retains only opaque SHA-256 references to externally controlled consent/label records.
+
+### Self-review decision
+
+Do **not** rename these fractions to false-positive/false-negative rates yet. A consented fixture corpus is still not automatically a representative population sample, and the wrong-label denominator is not necessarily the same thing as a statistical negative-class denominator. Stronger terminology requires stronger cohort design.
+
+Tests may mark synthetic fixture shapes as `consented` only to exercise the contract in isolation. That is test data, not real consent evidence, and must never be presented as evaluation results.
+
+## Current controlled synthetic graph result
+
+Production policy — depth 2 / 12 nodes:
 
 - 6 synthetic fixtures;
-- 15 total nodes / 9 added nodes;
 - 9 labelled admitted pivots: 8 relevant, 1 wrong;
 - 11 simulated source attempts;
 - 9 successful/yield-producing attempts;
@@ -71,9 +82,8 @@ Current production policy — depth 2 / 12 nodes:
 - 9 observation-yield units;
 - 3 local budget stops.
 
-Candidate — depth 3 / 12 nodes:
+Candidate depth 3 / 12 nodes:
 
-- 18 total nodes / 12 added nodes;
 - 12 labelled admitted pivots: 8 relevant, 4 wrong;
 - 14 simulated source attempts;
 - 12 successful/yield-producing attempts;
@@ -82,20 +92,18 @@ Candidate — depth 3 / 12 nodes:
 - 12 observation-yield units;
 - no depth budget stops.
 
-Delta depth 2 → depth 3 in this synthetic cohort: +3 source attempts, +3 request-cost units, +3 observation-yield units, +3 admitted pivots, +3 wrong-labelled pivots and +0 relevant pivots.
-
-This remains synthetic fixture evidence, not population evidence or monetary cost. Production recursion stays unchanged.
+Delta depth 2 → depth 3 in this synthetic cohort: +3 attempts, +3 request-cost units, +3 yield units, +3 wrong-labelled pivots and +0 relevant pivots. This is regression evidence only. Production recursion remains depth 2 / 12 nodes.
 
 ## Current controlled M5 sensitivity result
 
 Under `m5-evidence-strength-v1`:
 
-- `possible_metadata_temporal`: baseline `possible_match`, score 35; omit compatible profile metadata → `insufficient_evidence`, score 20, delta `-15`;
-- `strong_exact_identifier`: baseline `strong_candidate`, score 75; omit exact confirmed identifier overlap → `insufficient_evidence`, score 20, delta `-55`;
-- `strong_independent_cross_link`: baseline `strong_candidate`, score 70; omit independent cross-link → `possible_match`, score 35, delta `-35`;
-- `contradiction_veto`: baseline `contradicted`, score 0; diagnostic omit hard contradiction → `strong_candidate`, score 90, delta `+90`.
+- metadata/temporal: baseline `possible_match`, score 35; omit compatible profile metadata → `insufficient_evidence`, score 20 (`-15`);
+- exact identifier: baseline `strong_candidate`, score 75; omit exact confirmed identifier overlap → `insufficient_evidence`, score 20 (`-55`);
+- independent cross-link: baseline `strong_candidate`, score 70; omit independent cross-link → `possible_match`, score 35 (`-35`);
+- contradiction veto: baseline `contradicted`, score 0; diagnostic omit hard contradiction → `strong_candidate`, score 90 (`+90`).
 
-The contradiction omission is safety-critical diagnostic work only. No M5 weight, threshold, veto, calibration status or identity semantic changed.
+The contradiction omission is safety-critical diagnostic work only. No M5 factor weight, threshold, veto, calibration status or identity semantic changed.
 
 ## Permanent evidence semantics
 
@@ -119,7 +127,7 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 
 ## Stable architecture
 
-- Next.js private/public UI: `apps/web`
+- Next.js UI: `apps/web`
 - FastAPI API: `services/api`
 - evidence/persistence/normalization: `services/api/app/evidence`
 - bounded file intake + review: `services/api/app/uploads`
@@ -129,11 +137,11 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - convergence: `services/api/app/convergence.py`
 - typed leads/frontier/source planning/reporting/evaluation: `services/api/app/intelligence`
 - M10 cohort aggregation: `services/api/app/intelligence/m10_cohort.py`
-- M10 multi-kind fixture library: `services/api/app/intelligence/m10_fixture_library.py`
-- M10 graph replay identity: `services/api/app/intelligence/m10_replay.py`
+- M10 fixture library: `services/api/app/intelligence/m10_fixture_library.py`
+- M10 replay identity: `services/api/app/intelligence/m10_replay.py`
 - M10 label provenance: `services/api/app/intelligence/m10_label_provenance.py`
-- M10 factor-ablation identity/execution: `services/api/app/intelligence/m10_factor_ablation.py`, `m10_factor_ablation_execution.py`
-- M10 UUID-independent controlled ablation fixtures/replay: `services/api/app/intelligence/m10_factor_ablation_fixtures.py`
+- M10 consented accounting: `services/api/app/intelligence/m10_consented_analysis.py`
+- M10 factor ablation: `services/api/app/intelligence/m10_factor_ablation.py`, `m10_factor_ablation_execution.py`, `m10_factor_ablation_fixtures.py`
 - quick research: `services/api/app/research.py`
 - retained cases: `services/api/app/cases.py`
 
@@ -160,13 +168,13 @@ Reviewed-document extraction creates candidates only; short-lived server-owned r
 
 ## Next gate
 
-Do not reopen V2-D architecture casually. Do not raise production recursion from the current synthetic evidence, and do not treat the safety-critical hard-contradiction ablation as a production recommendation.
+Do not reopen V2-D architecture casually. Do not raise production recursion from synthetic evidence, and do not treat the hard-contradiction ablation as a production recommendation.
 
-M10 now has an explicit provenance boundary for labelled graph fixtures. The preferred next work is to add a genuinely consented or separately reviewed labelled cohort that can satisfy this manifest contract, then implement false-positive/false-negative or threshold analysis only where the actual admitted labels and denominators support it. Do not reinterpret the existing synthetic six-fixture corpus as consented evidence.
+The next M10 need is **real label evidence, not another synthetic metric**. Assemble a genuinely consented or otherwise independently reviewed cohort whose external evidence records satisfy the PR #109 provenance contract. Every pivot admitted by a scenario must be labelled before the new PR #111 accounting boundary can run.
 
-A separate acceptable track remains fresh review of exactly one zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions; current official terms, cost, authentication, fields, contact risk and retention review are required before activation.
+Do not mark regression fixtures as consented to manufacture progress. Do not call the returned count fractions false-positive/false-negative rates until the cohort design and denominators support that terminology. Production limits stay depth 2 / 12 nodes and M5 remains uncalibrated evidence-strength triage.
 
-Production limits remain depth 2 / 12 nodes. M5 remains uncalibrated evidence-strength triage, not identity probability.
+A separate acceptable track is fresh review of exactly one zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions; current official terms, cost, authentication, fields, contact risk and retention review are required before activation.
 
 ## Update discipline
 
