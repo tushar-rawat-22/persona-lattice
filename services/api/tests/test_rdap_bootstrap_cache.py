@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.providers.rdap_bootstrap_cache import (
+    IANA_RDAP_BOOTSTRAP_CACHE,
     IanaRdapBootstrapCache,
     RdapBootstrapHTTPResponse,
     RdapBootstrapUnavailableError,
@@ -28,6 +29,10 @@ def response(
     if headers:
         values.update(headers)
     return RdapBootstrapHTTPResponse(status=status, headers=values, body=body)
+
+
+def test_module_exposes_one_process_wide_cache_owner() -> None:
+    assert isinstance(IANA_RDAP_BOOTSTRAP_CACHE, IanaRdapBootstrapCache)
 
 
 @pytest.mark.asyncio
