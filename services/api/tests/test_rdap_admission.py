@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.intelligence.contracts import LeadDisposition, LeadKind
 from app.intelligence.extractor import extract_observation_leads
 from app.intelligence.source_bindings import SourceBindingError, source_binding_for
 from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
@@ -132,8 +133,24 @@ def test_admitted_observation_retains_only_low_sensitivity_registration_context(
         source="rdap_domain_registry",
         source_locator=observation.source_locator,
     )
-    assert leads.candidates == ()
+    assert len(leads.candidates) == 1
+    echoed_domain = leads.candidates[0]
+    assert echoed_domain.kind is LeadKind.DOMAIN
+    assert echoed_domain.value == "example.com"
+    assert echoed_domain.field_name == "domain"
+    assert echoed_domain.disposition is LeadDisposition.DISPLAY_ONLY
     assert leads.blocked_field_names == ()
+    assert all(
+        candidate.kind
+        not in {
+            LeadKind.NAME,
+            LeadKind.EMAIL,
+            LeadKind.PHONE,
+            LeadKind.ORGANIZATION,
+            LeadKind.LOCATION,
+        }
+        for candidate in leads.candidates
+    )
 
 
 def test_response_must_match_requested_domain_and_canonical_locator() -> None:
