@@ -47,7 +47,7 @@ def _synthetic_provenance(fixtures):
     )
 
 
-def test_label_manifest_keeps_synthetic_denominator_separate() -> None:
+def test_label_manifest_keeps_synthetic_label_corpus_separate() -> None:
     fixtures = broadened_synthetic_m10_cohort()
     manifest = build_m10_label_manifest(
         fixtures=fixtures,
@@ -58,11 +58,11 @@ def test_label_manifest_keeps_synthetic_denominator_separate() -> None:
     assert manifest.fixture_count == 6
     assert manifest.synthetic_fixture_count == 6
     assert manifest.consented_fixture_count == 0
-    assert manifest.labelled_pivot_count == 12
-    assert manifest.synthetic_labelled_pivot_count == 12
-    assert manifest.consented_labelled_pivot_count == 0
-    assert manifest.relevant_pivot_count == 8
-    assert manifest.wrong_pivot_count == 4
+    assert manifest.declared_label_count == 12
+    assert manifest.synthetic_declared_label_count == 12
+    assert manifest.consented_declared_label_count == 0
+    assert manifest.declared_relevant_label_count == 8
+    assert manifest.declared_wrong_label_count == 4
 
 
 def test_label_manifest_tracks_consented_labels_without_raw_evidence() -> None:
@@ -82,9 +82,9 @@ def test_label_manifest_tracks_consented_labels_without_raw_evidence() -> None:
     )
 
     assert manifest.consented_fixture_count == 1
-    assert manifest.consented_labelled_pivot_count == len(first.pivot_relevance_by_key)
-    assert manifest.synthetic_labelled_pivot_count == (
-        manifest.labelled_pivot_count - manifest.consented_labelled_pivot_count
+    assert manifest.consented_declared_label_count == len(first.pivot_relevance_by_key)
+    assert manifest.synthetic_declared_label_count == (
+        manifest.declared_label_count - manifest.consented_declared_label_count
     )
 
 
