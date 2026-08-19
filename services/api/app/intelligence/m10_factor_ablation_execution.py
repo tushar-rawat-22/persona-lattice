@@ -21,6 +21,7 @@ class M10FactorAblationCase:
 
     name: str
     request: CorrelationRequest
+    semantic_case_digest: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +45,7 @@ class M10FactorAblationCaseResult:
     """Baseline M5 output plus every replay-anchored omission result for one case."""
 
     name: str
+    semantic_case_digest: str | None
     baseline_outcome: CorrelationOutcome
     baseline_evidence_score: int
     baseline_positive_independence_groups: int
@@ -71,6 +73,10 @@ def _validate_cases(cases: tuple[M10FactorAblationCase, ...]) -> None:
         if case.name in names:
             raise ValueError("M10 factor-ablation case names must be unique.")
         names.add(case.name)
+        if case.semantic_case_digest is not None:
+            digest = case.semantic_case_digest
+            if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+                raise ValueError("M10 factor-ablation semantic case digest must be lowercase SHA-256 hex.")
         if len(case.request.factors) < 2:
             raise ValueError(
                 "M10 factor-ablation cases require at least two factors so every omission remains a valid M5 request."
@@ -151,6 +157,7 @@ def execute_m10_factor_ablation_plan(
         case_results.append(
             M10FactorAblationCaseResult(
                 name=case.name,
+                semantic_case_digest=case.semantic_case_digest,
                 baseline_outcome=baseline.outcome,
                 baseline_evidence_score=baseline.evidence_score,
                 baseline_positive_independence_groups=baseline.positive_independence_groups,
