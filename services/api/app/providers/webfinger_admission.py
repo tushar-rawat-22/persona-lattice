@@ -4,7 +4,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 import ipaddress
+import re
 from urllib.parse import quote, urlsplit, urlunsplit
+
+_DNS_LABEL_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 
 
 class WebFingerAdmissionError(ValueError):
@@ -38,9 +41,7 @@ def _public_dns_hostname(hostname: str) -> str:
     except UnicodeError as exc:
         raise WebFingerAdmissionError("WebFinger profile URL hostname is not valid IDNA.") from exc
     labels = ascii_value.split(".")
-    if any(not label or len(label) > 63 for label in labels):
-        raise WebFingerAdmissionError("WebFinger profile URL hostname has an invalid DNS label.")
-    if any(label.startswith("-") or label.endswith("-") for label in labels):
+    if any(_DNS_LABEL_RE.fullmatch(label) is None for label in labels):
         raise WebFingerAdmissionError("WebFinger profile URL hostname has an invalid DNS label.")
     return ascii_value
 
@@ -119,10 +120,10 @@ def admitted_webfinger_links(
             raise WebFingerAdmissionError("WebFinger admitted href must be HTTPS.")
         if parsed.username is not None or parsed.password is not None or parsed.port is not None:
             raise WebFingerAdmissionError("WebFinger admitted href must not contain credentials or a port.")
-        if parsed.fragment:
-            raise WebFingerAdmissionError("WebFinger admitted href must not contain a fragment.")
+        if parsed.query or parsed.fragment:
+            raise WebFingerAdmissionError("WebFinger admitted href must not contain query or fragment data.")
         hostname = _public_dns_hostname(parsed.hostname)
-        normalized = urlunsplit(("https", hostname, parsed.path or "/", parsed.query, ""))
+        normalized = urlunsplit(("https", hostname, parsed.path or "/", "", ""))
         if normalized not in admitted:
             admitted.append(normalized)
     return tuple(admitted)
