@@ -80,6 +80,8 @@ The live path uses IANA longest-match bootstrap routing, one process-wide bootst
 
 `routing_unavailable` remains a non-attempt outcome when prerequisite routing authority is unavailable. Once an authoritative RDAP provider is contacted, rate limits, transient failures and malformed results use attempted-failure semantics. Discovered domain clues remain **display-only**; only explicit DOMAIN seeds run RDAP.
 
+The private operator console exposes DOMAIN as an explicit starting identifier with a bare-domain example. DOMAIN cases use the same retained source-state, observation and provenance views as other research kinds. A regression contract compares the live backend research-kind enum with the operator selector so future UI changes cannot silently hide an executable kind.
+
 No WHOIS fallback, RDRS/nonpublic workflow, reverse/bulk lookup or contact harvesting is approved.
 
 ### Gravatar
@@ -144,11 +146,11 @@ Do not publish false-positive/false-negative, calibration, probability or popula
 
 ## Immediate next gate
 
-1. Put the shared local materializer and reviewed runner through exact-head CI; existing consented-runner behavior must remain green.
-2. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching runner. The next blocker is the evidence itself, not ingestion code.
-3. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
-4. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
-5. Continue improving the operator workflow around evidence/provenance hierarchy rather than generic AI-SaaS presentation patterns.
+1. Keep the operator research-kind parity regression green as backend capabilities evolve; explicit DOMAIN research must remain reachable without changing display-only domain-pivot policy.
+2. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching runner. The blocker is the evidence itself, not ingestion code.
+3. Improve operator evidence/provenance navigation where it reduces investigation friction; avoid decorative or generic AI-SaaS redesign work.
+4. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
+5. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
 
 Success means the operator can answer for every hop:
 
