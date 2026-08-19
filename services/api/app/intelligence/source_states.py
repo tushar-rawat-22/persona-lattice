@@ -35,6 +35,7 @@ class SourceRunReason(StrEnum):
     PROVIDER_POLICY = "provider_policy"
     OPTIONAL_NOT_CONFIGURED = "optional_not_configured"
     CREDENTIAL_NOT_CONFIGURED = "credential_not_configured"
+    ROUTING_UNAVAILABLE = "routing_unavailable"
     EXECUTION_FAILURE = "execution_failure"
     REMOTE_RATE_LIMIT = "remote_rate_limit"
     MALFORMED_RESULT = "malformed_result"
@@ -63,6 +64,7 @@ _ALLOWED_REASONS: dict[SourceRunState, frozenset[SourceRunReason]] = {
         {
             SourceRunReason.OPTIONAL_NOT_CONFIGURED,
             SourceRunReason.CREDENTIAL_NOT_CONFIGURED,
+            SourceRunReason.ROUTING_UNAVAILABLE,
             SourceRunReason.EXECUTION_FAILURE,
             SourceRunReason.REMOTE_RATE_LIMIT,
             SourceRunReason.MALFORMED_RESULT,

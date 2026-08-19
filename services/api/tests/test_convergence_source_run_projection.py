@@ -108,6 +108,7 @@ def test_quick_report_without_source_runs_gets_explicit_empty_projection() -> No
                 "remote_rate_limit_count": 0,
                 "execution_failure_count": 0,
                 "malformed_result_count": 0,
+                "routing_unavailable_count": 0,
                 "local_budget_stop_count": 0,
                 "optional_not_configured_count": 0,
                 "missing_secret_config_count": 0,

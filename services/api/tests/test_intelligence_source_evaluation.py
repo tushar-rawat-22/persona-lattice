@@ -75,6 +75,7 @@ def test_evaluation_counters_separate_provider_failure_from_local_stops() -> Non
         "remote_rate_limit_count": 1,
         "execution_failure_count": 1,
         "malformed_result_count": 0,
+        "routing_unavailable_count": 0,
         "local_budget_stop_count": 1,
         "optional_not_configured_count": 1,
         "missing_secret_config_count": 0,
