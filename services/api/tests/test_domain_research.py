@@ -8,17 +8,20 @@ from app.evidence import IdentifierKind, InvalidIdentifier, normalize_identifier
 from app.intelligence import LeadDisposition, LeadKind, extract_observation_leads
 from app.intelligence.contracts import canonicalize_lead
 from app.models import Purpose
+from app.providers.rdap_admission import normalize_rdap_domain
 from app.research import ResearchKind, run_quick_research
 
 
 def test_domain_uses_one_m1_normalization_authority() -> None:
     normalized = normalize_identifier(IdentifierKind.DOMAIN, "BÜCHER.Example.")
     lead_value, lead_key = canonicalize_lead(LeadKind.DOMAIN, "BÜCHER.Example.")
+    rdap_target = normalize_rdap_domain("BÜCHER.Example.")
 
     assert normalized.normalized_value == "xn--bcher-kva.example"
     assert normalized.comparison_key == "xn--bcher-kva.example"
     assert lead_value == normalized.normalized_value
     assert lead_key == normalized.comparison_key
+    assert rdap_target.domain == normalized.normalized_value
 
 
 @pytest.mark.parametrize(
