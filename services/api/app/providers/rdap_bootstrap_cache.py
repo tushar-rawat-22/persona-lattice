@@ -141,9 +141,25 @@ def _bounded_payload(body: bytes) -> dict[str, object]:
     return payload
 
 
-def _cache_ttl(headers: Mapping[str, str], *, now: datetime) -> timedelta:
+def _cache_directives(headers: Mapping[str, str]) -> tuple[str, ...]:
     cache_control = headers.get("cache-control", "")
-    directives = [item.strip().casefold() for item in cache_control.split(",") if item.strip()]
+    return tuple(item.strip().casefold() for item in cache_control.split(",") if item.strip())
+
+
+def _http_date(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = parsedate_to_datetime(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _cache_ttl(headers: Mapping[str, str], *, now: datetime) -> timedelta:
+    directives = _cache_directives(headers)
     if "no-store" in directives or "no-cache" in directives:
         return timedelta(0)
     for directive in directives:
@@ -153,22 +169,16 @@ def _cache_ttl(headers: Mapping[str, str], *, now: datetime) -> timedelta:
         try:
             seconds = int(raw)
         except ValueError:
-            break
+            return timedelta(0)
         if seconds < 0:
-            break
+            return timedelta(0)
         return min(timedelta(seconds=seconds), _MAX_TTL)
 
-    raw_expires = headers.get("expires")
-    if raw_expires:
-        try:
-            expires_at = parsedate_to_datetime(raw_expires)
-        except (TypeError, ValueError, OverflowError):
-            pass
-        else:
-            if expires_at.tzinfo is None:
-                expires_at = expires_at.replace(tzinfo=timezone.utc)
-            ttl = expires_at.astimezone(timezone.utc) - now
-            return min(max(ttl, timedelta(0)), _MAX_TTL)
+    expires_at = _http_date(headers.get("expires"))
+    if expires_at is not None:
+        date_at = _http_date(headers.get("date")) or now
+        ttl = expires_at - date_at
+        return min(max(ttl, timedelta(0)), _MAX_TTL)
     return _DEFAULT_TTL
 
 
@@ -205,6 +215,8 @@ class IanaRdapBootstrapCache:
 
             response = await self._fetcher(conditional_headers)
             headers = {key.casefold(): value for key, value in response.headers.items()}
+            directives = _cache_directives(headers)
+            store_allowed = "no-store" not in directives
             ttl = _cache_ttl(headers, now=current)
 
             if response.status == 304:
@@ -219,7 +231,7 @@ class IanaRdapBootstrapCache:
                     etag=headers.get("etag", snapshot.etag),
                     last_modified=headers.get("last-modified", snapshot.last_modified),
                 )
-                self._snapshot = refreshed
+                self._snapshot = refreshed if store_allowed else None
                 return copy.deepcopy(refreshed.payload)
 
             if response.status == 429 or response.status in {408, 500, 502, 503, 504}:
@@ -236,7 +248,7 @@ class IanaRdapBootstrapCache:
                 )
 
             content_type = headers.get("content-type", "").split(";", 1)[0].strip().casefold()
-            if content_type not in {"application/json", "application/rdap+json"}:
+            if content_type != "application/json":
                 raise RdapBootstrapValidationError(
                     "IANA RDAP bootstrap used an unsupported media type."
                 )
@@ -248,5 +260,5 @@ class IanaRdapBootstrapCache:
                 etag=headers.get("etag"),
                 last_modified=headers.get("last-modified"),
             )
-            self._snapshot = refreshed
+            self._snapshot = refreshed if store_allowed else None
             return copy.deepcopy(payload)
