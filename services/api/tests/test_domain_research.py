@@ -7,9 +7,17 @@ from app.convergence import build_converged_payload, run_converged_research
 from app.evidence import IdentifierKind, InvalidIdentifier, normalize_identifier
 from app.intelligence import LeadDisposition, LeadKind, extract_observation_leads
 from app.intelligence.contracts import canonicalize_lead
+from app.intelligence.source_states import SourceRunReason
 from app.models import Purpose
 from app.providers.rdap_admission import normalize_rdap_domain
+from app.providers.rdap_bootstrap_cache import RdapBootstrapUnavailableError
+from app.providers.shared_runtime import DEFAULT_RDAP_PROVIDER
 from app.research import ResearchKind, run_quick_research
+
+
+class _UnavailableBootstrapCache:
+    async def get_payload(self):
+        raise RdapBootstrapUnavailableError("bootstrap unavailable in deterministic test")
 
 
 def test_domain_uses_one_m1_normalization_authority() -> None:
@@ -41,7 +49,9 @@ def test_domain_rejects_ambiguous_or_non_public_seed_shapes(value: str) -> None:
 
 
 @pytest.mark.asyncio
-async def test_explicit_domain_seed_is_reachable_without_activating_rdap() -> None:
+async def test_explicit_domain_seed_is_reachable_when_routing_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setattr(DEFAULT_RDAP_PROVIDER, "bootstrap_cache", _UnavailableBootstrapCache())
+
     report = await run_quick_research(
         kind=ResearchKind.DOMAIN,
         value="Example.COM.",
@@ -52,12 +62,15 @@ async def test_explicit_domain_seed_is_reachable_without_activating_rdap() -> No
     assert report.kind is ResearchKind.DOMAIN
     assert report.normalized_value == "example.com"
     assert report.observations == ()
-    assert report.source_runs == ()
-    assert report.warnings == ("No reviewed external domain source is active for this seed yet.",)
+    assert len(report.source_runs) == 1
+    assert report.source_runs[0].reason is SourceRunReason.ROUTING_UNAVAILABLE
+    assert report.source_runs[0].execution_attempted is False
 
 
 @pytest.mark.asyncio
-async def test_domain_seed_survives_convergence_and_ephemeral_m5() -> None:
+async def test_domain_seed_survives_convergence_and_ephemeral_m5(monkeypatch) -> None:
+    monkeypatch.setattr(DEFAULT_RDAP_PROVIDER, "bootstrap_cache", _UnavailableBootstrapCache())
+
     report = await run_converged_research(
         kind=ResearchKind.DOMAIN,
         value="Example.COM.",
