@@ -14,6 +14,8 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Operating model: one authenticated operator; public route is demo/preview only
 - Main before PR #104: `9693c198e88cc7108b481ee5efef240f61787b53`
 - PR #104: replay-anchored M10 factor-ablation manifest
+- Tested implementation/docs head before this checkpoint commit: `959710a0111b2320cc637db5a0d2680420d53685`
+- Exact-head CI: run `32209076726`, full success across API 3.11/3.13, dependency checks/audits, Ruff, web audit/lint/typecheck/build and production API image
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend operating runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
