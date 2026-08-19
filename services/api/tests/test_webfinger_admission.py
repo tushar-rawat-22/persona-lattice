@@ -30,6 +30,7 @@ def test_explicit_profile_url_builds_same_host_https_webfinger_request() -> None
         "https://social.local/@alice",
         "https://127.0.0.1/@alice",
         "https://[::1]/@alice",
+        "https://bad_label.social.example/@alice",
         "https://user@social.example/@alice",
         "https://social.example:8443/@alice",
         "https://social.example/",
@@ -103,8 +104,10 @@ def test_jrd_does_not_turn_subject_into_generic_username_or_name_fields() -> Non
     [
         "http://social.example/users/alice",
         "https://127.0.0.1/users/alice",
+        "https://bad_label.social.example/users/alice",
         "https://user@social.example/users/alice",
         "https://social.example:8443/users/alice",
+        "https://social.example/users/alice?tracking=1",
         "https://social.example/users/alice#fragment",
     ],
 )
