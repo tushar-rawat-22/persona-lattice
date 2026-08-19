@@ -76,6 +76,12 @@ def _matrix() -> tuple[SourceRunRecord, ...]:
             SourceRunReason.CREDENTIAL_NOT_CONFIGURED,
         ),
         SourceRunRecord(
+            "fixture_routing",
+            LeadKind.DOMAIN,
+            SourceRunState.UNAVAILABLE,
+            SourceRunReason.ROUTING_UNAVAILABLE,
+        ),
+        SourceRunRecord(
             "fixture_remote",
             LeadKind.USERNAME,
             SourceRunState.UNAVAILABLE,
@@ -111,7 +117,7 @@ def test_fixture_matrix_covers_the_entire_current_state_and_reason_vocabulary() 
 def test_fixture_matrix_locks_attempt_failure_and_no_match_semantics() -> None:
     aggregate = build_source_evaluation_counters(_matrix())["aggregate"]
     assert aggregate == {
-        "record_count": 15,
+        "record_count": 16,
         "attempt_count": 7,
         "completed_attempt_count": 4,
         "failed_attempt_count": 3,
@@ -125,6 +131,7 @@ def test_fixture_matrix_locks_attempt_failure_and_no_match_semantics() -> None:
         "remote_rate_limit_count": 1,
         "execution_failure_count": 1,
         "malformed_result_count": 1,
+        "routing_unavailable_count": 1,
         "local_budget_stop_count": 1,
         "optional_not_configured_count": 1,
         "missing_secret_config_count": 1,
@@ -154,6 +161,9 @@ def test_fixture_matrix_keeps_preflight_budget_and_remote_outcomes_separate() ->
     assert by_source["fixture_optional"]["optional_not_configured_count"] == 1
     assert by_source["fixture_config"]["attempt_count"] == 0
     assert by_source["fixture_config"]["missing_secret_config_count"] == 1
+    assert by_source["fixture_routing"]["attempt_count"] == 0
+    assert by_source["fixture_routing"]["routing_unavailable_count"] == 1
+    assert by_source["fixture_routing"]["failed_attempt_count"] == 0
     assert by_source["fixture_policy"]["attempt_count"] == 0
     assert by_source["fixture_policy"]["provider_policy_block_count"] == 1
     assert by_source["fixture_budget"]["attempt_count"] == 0
