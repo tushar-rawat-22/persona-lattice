@@ -50,7 +50,7 @@ def test_local_consented_runner_produces_aggregate_replay_anchored_output() -> N
     result = evaluate_local_consented_payload(_payload(), input_digest=_digest("private-input"))
 
     assert result.schema_version == 1
-    assert result.cohort_name == "reviewed-cohort-001"
+    assert result.cohort_name_digest == _digest("reviewed-cohort-001")
     assert result.fixture_count == 1
     assert len(result.local_input_digest) == 64
     assert len(result.replay_input_digest) == 64
@@ -64,6 +64,7 @@ def test_local_consented_runner_produces_aggregate_replay_anchored_output() -> N
     assert scenarios["candidate_depth_3_nodes_12"]["admitted_relevant_count"] == 1
 
     serialized = json.dumps(asdict(result), sort_keys=True)
+    assert "reviewed-cohort-001" not in serialized
     assert "samplehandle" not in serialized
     assert "example.test" not in serialized
     assert "external-consent-record-001" not in serialized
@@ -118,8 +119,25 @@ def test_local_consented_runner_cli_prints_no_fixture_identifiers(tmp_path, caps
     cohort.write_text(json.dumps(_payload()), encoding="utf-8")
 
     assert main([str(cohort)]) == 0
-    output = capsys.readouterr().out
-    parsed = json.loads(output)
+    captured = capsys.readouterr()
+    parsed = json.loads(captured.out)
     assert parsed["fixture_count"] == 1
-    assert "samplehandle" not in output
-    assert "example.test" not in output
+    assert "reviewed-cohort-001" not in captured.out
+    assert "samplehandle" not in captured.out
+    assert "example.test" not in captured.out
+    assert captured.err == ""
+
+
+def test_local_consented_runner_cli_sanitizes_validation_failure(tmp_path, capsys) -> None:
+    payload = _payload()
+    payload["fixtures"][0]["nodes"][0]["value"] = "secret-person-value"
+    payload["fixtures"][0]["nodes"][0]["kind"] = "unsupported-kind"
+    cohort = tmp_path / "cohort.json"
+    cohort.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert main([str(cohort)]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "M10 consented cohort validation failed.\n"
+    assert "secret-person-value" not in captured.err
+    assert "unsupported-kind" not in captured.err
