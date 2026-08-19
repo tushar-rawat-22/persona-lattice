@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -39,7 +40,7 @@ class M10LocalConsentedRun:
     """Privacy-bounded result of one local consented-cohort evaluation."""
 
     schema_version: int
-    cohort_name: str
+    cohort_name_digest: str
     local_input_digest: str
     replay_input_digest: str
     replay_result_digest: str
@@ -47,6 +48,10 @@ class M10LocalConsentedRun:
     analysis_digest: str
     fixture_count: int
     scenarios: tuple[dict[str, object], ...]
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def _text(value: object, *, field: str, max_length: int = _MAX_TEXT) -> str:
@@ -64,7 +69,7 @@ def _enum(enum_type, value: object, *, field: str):
     try:
         return enum_type(text)
     except ValueError as exc:
-        raise ValueError(f"{field} has unsupported value {text!r}.") from exc
+        raise ValueError(f"{field} has an unsupported value.") from exc
 
 
 def _object(value: object, *, field: str) -> dict[str, Any]:
@@ -112,7 +117,7 @@ def _build_fixture(raw: dict[str, Any]) -> tuple[M10GraphFixture, M10FixtureLabe
             node.get("id"), field=f"fixture[{name}].nodes[{index}].id", max_length=128
         )
         if node_id in node_key_by_id:
-            raise ValueError(f"fixture[{name}] contains duplicate node id {node_id!r}.")
+            raise ValueError(f"fixture[{name}] contains a duplicate node id.")
         parent_id = _text(
             node.get("parent_id"),
             field=f"fixture[{name}].nodes[{index}].parent_id",
@@ -120,8 +125,8 @@ def _build_fixture(raw: dict[str, Any]) -> tuple[M10GraphFixture, M10FixtureLabe
         )
         if parent_id not in parentable_ids:
             raise ValueError(
-                f"fixture[{name}] node {node_id!r} must reference the seed or an earlier "
-                "successful automatic node as parent."
+                f"fixture[{name}] node must reference the seed or an earlier successful "
+                "automatic node as parent."
             )
 
         kind = _enum(LeadKind, node.get("kind"), field=f"fixture[{name}].nodes[{index}].kind")
@@ -145,15 +150,13 @@ def _build_fixture(raw: dict[str, Any]) -> tuple[M10GraphFixture, M10FixtureLabe
         )
         provider_fails = node.get("provider_fails", False)
         if not isinstance(provider_fails, bool):
-            raise ValueError(f"fixture[{name}] node {node_id!r} provider_fails must be boolean.")
+            raise ValueError(f"fixture[{name}] provider_fails must be boolean.")
 
         actual_key = None
         actual_value = node.get("actual_value")
         if actual_value is not None:
             if provider_fails:
-                raise ValueError(
-                    f"fixture[{name}] node {node_id!r} cannot fail and return actual_value."
-                )
+                raise ValueError(f"fixture[{name}] cannot fail and return actual_value.")
             actual_text = _text(
                 actual_value, field=f"fixture[{name}].nodes[{index}].actual_value"
             )
@@ -187,8 +190,7 @@ def _build_fixture(raw: dict[str, Any]) -> tuple[M10GraphFixture, M10FixtureLabe
         if relevance is not None:
             if not can_parent:
                 raise ValueError(
-                    f"fixture[{name}] node {node_id!r} can only be labelled when it can "
-                    "produce a successful automatic pivot."
+                    f"fixture[{name}] can only label a successful automatic pivot."
                 )
             label = _enum(
                 PivotRelevance,
@@ -197,9 +199,7 @@ def _build_fixture(raw: dict[str, Any]) -> tuple[M10GraphFixture, M10FixtureLabe
             )
             existing = relevance_by_key.get(result_key)
             if existing is not None and existing is not label:
-                raise ValueError(
-                    f"fixture[{name}] assigns conflicting labels to result {result_key!r}."
-                )
+                raise ValueError(f"fixture[{name}] assigns conflicting labels to one result.")
             relevance_by_key[result_key] = label
 
     fixture = M10GraphFixture(
@@ -217,12 +217,10 @@ def _build_fixture(raw: dict[str, Any]) -> tuple[M10GraphFixture, M10FixtureLabe
     return fixture, provenance, len(nodes)
 
 
-def _scenario_accounting_payload(analysis: M10ConsentedCohortAnalysis) -> tuple[dict[str, object], ...]:
-    payload: list[dict[str, object]] = []
-    for scenario in analysis.scenarios:
-        item = asdict(scenario)
-        payload.append(item)
-    return tuple(payload)
+def _scenario_accounting_payload(
+    analysis: M10ConsentedCohortAnalysis,
+) -> tuple[dict[str, object], ...]:
+    return tuple(asdict(scenario) for scenario in analysis.scenarios)
 
 
 def evaluate_local_consented_payload(payload: object, *, input_digest: str) -> M10LocalConsentedRun:
@@ -245,7 +243,7 @@ def evaluate_local_consented_payload(payload: object, *, input_digest: str) -> M
     for raw in raw_fixtures:
         fixture, item_provenance, node_count = _build_fixture(_object(raw, field="fixture"))
         if fixture.name in fixture_names:
-            raise ValueError(f"cohort contains duplicate fixture name {fixture.name!r}.")
+            raise ValueError("cohort contains a duplicate fixture name.")
         fixture_names.add(fixture.name)
         total_nodes += node_count
         if total_nodes > _MAX_NODES:
@@ -273,7 +271,7 @@ def evaluate_local_consented_payload(payload: object, *, input_digest: str) -> M
     )
     return M10LocalConsentedRun(
         schema_version=_SCHEMA_VERSION,
-        cohort_name=cohort_name,
+        cohort_name_digest=_sha256_text(cohort_name),
         local_input_digest=input_digest,
         replay_input_digest=replay.input_digest,
         replay_result_digest=replay.result_digest,
@@ -307,7 +305,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("cohort", type=Path, help="Path to a local consented-cohort JSON file")
     args = parser.parse_args(argv)
-    result = evaluate_local_consented_file(args.cohort)
+    try:
+        result = evaluate_local_consented_file(args.cohort)
+    except (OSError, ValueError):
+        print("M10 consented cohort validation failed.", file=sys.stderr)
+        return 2
     print(json.dumps(asdict(result), sort_keys=True, separators=(",", ":")))
     return 0
 
