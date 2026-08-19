@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from app.correlation.policy import (
     FACTOR_WEIGHTS,
@@ -166,7 +166,6 @@ def build_m10_factor_ablation_plan(replay: M10ReplayRecord) -> M10FactorAblation
     _validate_digest(replay.input_digest, field="baseline replay input digest")
     _validate_digest(replay.result_digest, field="baseline replay result digest")
 
-    policy_digest = current_m5_policy_digest()
     scenarios = tuple(
         M10FactorAblationScenario(
             name=f"omit_{kind.value}",
@@ -181,18 +180,10 @@ def build_m10_factor_ablation_plan(replay: M10ReplayRecord) -> M10FactorAblation
         baseline_replay_input_digest=replay.input_digest,
         baseline_replay_result_digest=replay.result_digest,
         m5_policy_version=M5_POLICY_VERSION,
-        m5_policy_digest=policy_digest,
+        m5_policy_digest=current_m5_policy_digest(),
         scenarios=scenarios,
         plan_digest="0" * 64,
     )
-    plan = M10FactorAblationPlan(
-        schema_version=plan.schema_version,
-        baseline_replay_input_digest=plan.baseline_replay_input_digest,
-        baseline_replay_result_digest=plan.baseline_replay_result_digest,
-        m5_policy_version=plan.m5_policy_version,
-        m5_policy_digest=plan.m5_policy_digest,
-        scenarios=plan.scenarios,
-        plan_digest=_sha256_json(_plan_payload(plan)),
-    )
+    plan = replace(plan, plan_digest=_sha256_json(_plan_payload(plan)))
     validate_m10_factor_ablation_plan(plan)
     return plan
