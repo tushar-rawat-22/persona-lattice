@@ -153,18 +153,50 @@ def test_admitted_observation_retains_only_low_sensitivity_registration_context(
     )
 
 
-def test_response_must_match_requested_domain_and_canonical_locator() -> None:
+def test_response_must_match_requested_domain_and_canonical_query() -> None:
     with pytest.raises(RdapAdmissionError, match="does not match"):
         admitted_rdap_domain_observation(
             {"objectClassName": "domain", "ldhName": "mallory.com"},
             requested_domain="example.com",
             source_locator="https://rdap.registry.example/rdap/domain/example.com",
         )
-    with pytest.raises(RdapAdmissionError, match="source locator"):
+    with pytest.raises(RdapAdmissionError, match="canonical query"):
         admitted_rdap_domain_observation(
             {"objectClassName": "domain", "ldhName": "example.com"},
             requested_domain="example.com",
             source_locator="https://rdap.registry.example/rdap/domain/mallory.com",
+        )
+
+
+def test_redirected_response_retains_the_url_that_returned_evidence() -> None:
+    canonical_query = "https://rdap.registry.example/rdap/domain/example.com"
+    final_response = "https://rdap.redirect.example/v1/domain/example.com?view=public"
+    observation = admitted_rdap_domain_observation(
+        {"objectClassName": "domain", "ldhName": "example.com"},
+        requested_domain="example.com",
+        canonical_query_url=canonical_query,
+        source_locator=final_response,
+    )
+    assert observation.source_locator == final_response
+
+
+@pytest.mark.parametrize(
+    "source_locator",
+    [
+        "http://rdap.redirect.example/domain/example.com",
+        "https://user@rdap.redirect.example/domain/example.com",
+        "https://127.0.0.1/domain/example.com",
+        "https://rdap.redirect.example:8443/domain/example.com",
+        "https://rdap.redirect.example/domain/example.com#fragment",
+    ],
+)
+def test_redirected_response_locator_fails_closed_on_unsafe_shapes(source_locator: str) -> None:
+    with pytest.raises(RdapAdmissionError, match="response URL|source locator"):
+        admitted_rdap_domain_observation(
+            {"objectClassName": "domain", "ldhName": "example.com"},
+            requested_domain="example.com",
+            canonical_query_url="https://rdap.registry.example/rdap/domain/example.com",
+            source_locator=source_locator,
         )
 
 
