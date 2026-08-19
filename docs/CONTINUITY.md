@@ -2,7 +2,7 @@
 
 Public-safe engineering handover for PersonaLattice. Verify GitHub before changing anything; this file is a checkpoint, not authority over the repository.
 
-Never place API keys, real research identifiers, retained-case data, password hashes, session material, raw consent evidence or unredacted investigation screenshots here.
+Never place API keys, real research identifiers, retained-case data, password hashes, session material, raw consent/review evidence or unredacted investigation screenshots here.
 
 ## Repository checkpoint
 
@@ -11,13 +11,14 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main before the current M10 block: `e14167efcdc65582eac75c960bb71a4a7757cf03`
+- Verified main before this block: `4a92b661002d11a8e217c30460a9be3ff2f434e9`
 - PR #137: governed metadata-only RDAP activation — merged
-- Issue #133: closed; DOMAIN reachability and routing-accounting blockers are complete
-- Current implementation branch: `m10-local-consented-cohort-runner`
-- Current PR: #138 — local bounded consented M10 cohort runner
-- Exact tested implementation head before this continuity checkpoint: `e3bac8f4886d7e7ad35c5118a100249fabe09e6e`
-- Exact-head CI: run `32294421695`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- PR #138: bounded local consented M10 cohort runner — merged
+- Open PRs/issues before this block: none
+- Current branch: `m10-reviewed-label-provenance`
+- Current block: independently reviewed M10 label provenance and reviewed-only accounting
+- Exact-head CI: pending; merge only after the complete required matrix passes
+- Relevant decision: ADR 0078
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -36,7 +37,21 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - RDAP: active for explicit DOMAIN seeds through the governed runtime, PR #137.
 - Gravatar: PLANNED; blocked on provider privacy-policy/free-key requirements.
 - WebFinger: PLANNED; parser/transport/URL-only semantics/exact-host policy exist, but no host is approved.
-- M10: deterministic replay, graph/source accounting, real-engine factor ablations, label-provenance manifests and consented-only accounting exist. Representative consented evaluation remains incomplete.
+- M10: deterministic replay, graph/source accounting, real-engine factor ablations, label-provenance manifests, consented-only accounting and a local consented cohort runner exist. Representative real evaluation remains incomplete.
+
+## Current block — independently reviewed labels
+
+The repository previously recognized only `synthetic` and `consented` M10 label provenance. That prevented a truthful analysis path for evidence established by independent review when consent was not the basis.
+
+This branch adds `independently_reviewed` as a third explicit basis. The label manifest keeps fixture and declared-label counts for all three bases separately. The manifest still retains only an opaque lowercase SHA-256 reference to the external evidence/review record; raw identifiers, source documents, review notes and consent material stay outside Git.
+
+A new reviewed-only analysis boundary accepts a cohort only when every fixture is `independently_reviewed`. It rejects synthetic, consented and mixed provenance, requires complete labels for every admitted pivot, and reports the same kind of exact scenario count fractions used by the consented analysis.
+
+The reviewed fractions are descriptive within the reviewed corpus. They are not population false-positive/false-negative rates, calibration evidence, confidence or identity probability.
+
+The existing consented-only analysis remains strict. Independently reviewed evidence does not satisfy its consent requirement.
+
+ADR 0078 records the distinction and non-changes.
 
 ## RDAP activation checkpoint
 
@@ -49,31 +64,6 @@ RDAP remains metadata-only. Registrant/contact names, organizations, addresses, 
 `routing_unavailable` remains a non-attempt outcome. Once an authoritative RDAP provider has actually been contacted, remote rate limits, transient failures and malformed returned results use attempted-failure semantics. Discovered domains remain `DISPLAY_ONLY`; only explicit DOMAIN seeds execute RDAP.
 
 Existing persistent SQLite databases created before DOMAIN was added to the M1 enum constraint may require deliberate recreation/migration before persisting DOMAIN identifiers.
-
-## Current M10 block — local consented cohort runner
-
-M10 already had consented-only scenario accounting, but real consented cohorts still required hand-written Python fixtures. PR #138 closes that operational gap without committing private identifiers.
-
-The runner reads a private local JSON file and materializes the existing `M10GraphFixture` contract. It does not create a second frontier evaluator or scoring path. Identifiers pass through the existing M1-backed lead normalization, and the resulting fixture cohort goes through the existing replay and consented-analysis builders.
-
-The provenance vocabulary currently distinguishes `synthetic` from `consented` only. PR #138 therefore accepts **consented evidence only**. Independently reviewed-but-not-consented evidence must not be relabelled as consented; supporting that later requires a separate provenance basis and analysis contract.
-
-Current bounds:
-
-- input file: at most 1 MiB;
-- fixture count: at most 256;
-- declared node count: at most 2,048;
-- each fixture requires an opaque lowercase SHA-256 reference to an external consent record;
-- children may only descend from the seed or an earlier successful automatic pivot;
-- admitted pivots must have complete relevance labels before consented analysis succeeds.
-
-The CLI output contains aggregate scenario accounting and digests only. It does not echo seed values, lead values, source locators, fixture names, the cohort name or raw external consent evidence. The cohort name is represented by a digest. Validation failures return one generic message so underlying canonicalization/fixture exceptions cannot leak private values to terminal error output.
-
-The runner compares the current production depth-2 / 12-node policy against the existing depth-3 / 12-node diagnostic candidate. It does not change production limits.
-
-ADR 0077 documents this boundary. `docs/M10_CONSENTED_COHORT_RUNBOOK.md` describes the local file contract and invocation.
-
-The exact implementation head `e3bac8f4886d7e7ad35c5118a100249fabe09e6e` passed CI run `32294421695` completely. The current continuity-only head must pass the same required matrix before PR #138 merges.
 
 ## Current controlled evaluation checkpoint
 
@@ -94,10 +84,10 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. The continuity-only PR #138 head must pass exact-head CI before merge.
-2. Once merged, M10 has a practical local path for real **consented** labels. The unresolved bottleneck becomes the actual lawful consented cohort, not ingestion code.
-3. Do not manufacture progress by relabelling synthetic or merely reviewed fixtures as consented. Run the local tool only when an external consent record genuinely supports each fixture label.
-4. Add another source only if it has high coverage value and a defensible current zero-spend/terms/privacy/provenance story.
+1. Run exact-head CI for the reviewed-provenance branch; repair any regression rather than weakening the consent/review distinction.
+2. Merge only when API 3.11/3.13, audits/Ruff, web and production-image checks are green.
+3. Once merged, use the consented path only for genuine consent evidence and the reviewed path only for genuine independent review evidence. Neither path manufactures a real cohort.
+4. Add another external source only if it has high coverage value and a defensible current zero-spend/terms/privacy/provenance story.
 5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
 
 ## Update discipline
