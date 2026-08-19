@@ -2,7 +2,7 @@
 
 Use this runner only for a private cohort whose labels are backed by explicit consent evidence. Synthetic regression fixtures already live in the repository; this path exists so real consented identifiers do not have to.
 
-The current M10 provenance vocabulary distinguishes `synthetic` from `consented`; it does not have a separate independently-reviewed basis. Do not use this runner to relabel merely reviewed or inferred evidence as consented. Add a separate reviewed-evidence contract first if that distinction becomes necessary.
+M10 also has an `independently_reviewed` provenance basis, but that is deliberately separate. Do not use this runner for reviewed-but-not-consented evidence. Use the reviewed runner and its external review record instead.
 
 The input JSON stays on the operator machine. PersonaLattice reads it, evaluates the current graph policy against the existing depth-3 diagnostic candidate, and prints aggregate counts plus cryptographic replay/provenance digests. It does not print seed values, lead values, source locators, fixture names, the cohort name or the external consent record.
 
@@ -11,6 +11,8 @@ The input JSON stays on the operator machine. PersonaLattice reads it, evaluates
 Keep the supporting consent record outside Git. Each fixture needs a lowercase SHA-256 digest that refers to that external record. Do not use a bare hash of an email address, phone number, name or other low-entropy identifier as the consent record.
 
 Use opaque fixture and cohort names anyway. They remain part of the private experiment definition and replay identity even though the command-line output does not echo them.
+
+The JSON file cannot choose its own provenance basis. `consented` is fixed by the runner code; any `basis` or `label_basis` field is rejected.
 
 ## File shape
 
