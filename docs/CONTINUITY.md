@@ -12,8 +12,8 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - License: Apache-2.0 for original code
 - Product: private evidence-first public/authorized research workbench
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main before PR #103: `3e5bae9c0f3561f84cee136614d10a9fac0a2900`
-- PR #103: M10 deterministic replay fingerprints
+- Main before PR #104: `9693c198e88cc7108b481ee5efef240f61787b53`
+- PR #104: replay-anchored M10 factor-ablation manifest
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend operating runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -28,32 +28,27 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-B deterministic frontier: complete, PR #21.
 - V2-C source capability registry/planner: complete, PR #22.
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90, ADRs 0050-0051.
-- M10: source-state fixtures, graph-limit comparison, multi-kind labelled synthetic cohort support, provider-boundary source-attempt/yield/request-cost-unit accounting, and deterministic replay fingerprints exist. Broader defensible cohorts, replay-anchored factor ablation and threshold analysis remain before any recursion/threshold change.
+- M10: source-state fixtures, graph-limit comparison, multi-kind labelled synthetic cohort support, provider-boundary source-attempt/yield/request-cost accounting, deterministic replay fingerprints and a replay/policy-anchored factor-ablation manifest exist. Broader defensible cohorts, ablation execution and threshold analysis remain before any recursion/threshold change.
 - Post-V2-D source expansion: Bluesky public profiles are active for valid AT handles through the governed runtime, PR #98 / ADR 0055.
 
-## Latest block — M10 deterministic replay fingerprints
+## Latest block — replay-anchored factor-ablation manifest
 
-PR #103 adds a compact, versioned identity for controlled M10 experiments without changing production research.
+PR #104 adds experiment identity for future M5 factor ablations without changing production M5.
 
-`M10ReplayRecord` carries:
+`M10FactorAblationPlan` records:
 
 - `schema_version=1`;
-- `input_digest` — SHA-256 over the canonicalized labelled fixture definitions plus baseline/candidate frontier policies;
-- `result_digest` — SHA-256 over the deterministic cohort comparison output;
-- the existing `M10CohortComparison` object unchanged.
+- baseline M10 replay input and result digests;
+- current M5 policy version;
+- a SHA-256 digest over exact factor weights, thresholds, minimum strong independence groups, strong-factor vocabulary and veto vocabulary;
+- one deterministic omission scenario for every current `FactorKind`;
+- a plan digest over the replay identity, policy identity and scenario manifest.
 
-Top-level fixture and candidate-scenario ordering is canonicalized because cohort aggregation does not depend on that ordering. Lead ordering under one fixture parent remains part of the digest because it can affect `LeadFrontier` admission and therefore belongs to the experiment definition.
+Every scenario is diagnostic-only. Omitting a veto factor such as `hard_contradiction` is also marked safety-critical. That scenario may be useful for sensitivity analysis but is not an authorized production policy candidate.
 
-The replay payload includes exact synthetic/consented fixture truth, including labels and lead provenance, only as in-process canonical JSON used to compute the digest. It does not create a new retained case/evidence store. The digests are experiment identifiers, not accuracy, reliability, confidence, calibration or identity-probability scores.
+The plan fails closed on unsupported/malformed replay identities and on drift between `FactorKind` and the M5 weight vocabulary. Regression coverage proves that both fixture-truth changes and M5 weight changes alter the experiment identity.
 
-Regression coverage proves:
-
-- replay identity is stable across irrelevant top-level fixture ordering;
-- changing labelled fixture truth changes the input identity and, when the changed label affects an admitted pivot, the result identity;
-- changing frontier policy changes both input and result identity when counters change;
-- production depth/node limits remain untouched.
-
-ADR 0058 records the decision.
+This block does not execute factor ablations or duplicate M5 scoring logic. ADR 0059 records the boundary. The next execution layer must use the real correlation engine.
 
 ## Current controlled M10 result
 
@@ -121,6 +116,7 @@ Uploaded content is untrusted data. Extraction is never execution authority. A c
 - M10 cohort aggregation: `services/api/app/intelligence/m10_cohort.py`
 - M10 reusable multi-kind fixture library: `services/api/app/intelligence/m10_fixture_library.py`
 - M10 replay identity: `services/api/app/intelligence/m10_replay.py`
+- M10 factor-ablation identity: `services/api/app/intelligence/m10_factor_ablation.py`
 - graph-limit + provider-boundary operational evaluator: `services/api/app/intelligence/graph_limit_evaluation.py`
 - quick research: `services/api/app/research.py`
 - retained cases: `services/api/app/cases.py`
@@ -151,7 +147,7 @@ Reviewed-document extraction creates candidates only; short-lived server-owned r
 
 Do not reopen V2-D architecture casually and do not raise production recursion. The current synthetic M10 result shows both quality and operational-work costs moving in the wrong direction for depth 3.
 
-The preferred next M10 work is broader consented or otherwise defensibly labelled evaluation plus **replay-anchored factor ablations**. Provider-specific request/yield weights should be added only where a real adapter needs more fidelity than the current one-request/one-yield fixture abstraction.
+The preferred next M10 block is to **execute the replay-anchored factor-ablation manifest against controlled M5 fixtures through the real `CorrelationEngine`** and record deterministic deltas. Do not implement a second scoring policy in M10. Broader consented or otherwise defensibly labelled evaluation remains necessary before any threshold or recursion decision.
 
 A separate acceptable track is fresh review of exactly one zero-spend source candidate from `docs/V2_SOURCE_EXPANSION_PLAN.md`. Gravatar, WebFinger/ActivityPub and RDAP remain candidates, not permissions; current official terms, cost, authentication, fields, contact risk and retention review are required before activation.
 
