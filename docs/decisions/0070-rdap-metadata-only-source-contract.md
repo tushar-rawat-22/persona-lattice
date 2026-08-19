@@ -17,7 +17,7 @@ Make the planned RDAP source metadata-only:
 - `rdap_domain_registry.emits = frozenset()`;
 - keep the source `PLANNED`, source-policy-unreviewed, unbound and non-recursive;
 - keep admitted RDAP observations limited to domain/status/nameserver registration context plus non-identity/redaction flags;
-- regression-test the retained observation through the normal exact-field lead extractor and require zero typed lead candidates;
+- regression-test the retained observation through the normal exact-field lead extractor and require that only the echoed queried domain can appear, as a display-only duplicate; registrant/registrar/contact/organization fields must produce no lead candidate;
 - continue to treat upstream privacy redaction as authoritative.
 
 This closes Issue #124 but does not authorize RDAP execution.
@@ -25,6 +25,8 @@ This closes Issue #124 but does not authorize RDAP execution.
 ## Consequences
 
 RDAP can provide useful context about a domain without creating automatic person or organization pivots. Registrar/registrant/contact data cannot enter the recursive lead graph through this source contract.
+
+The retained `domain` field can be seen by the generic lead extractor, but it is only the already-known query domain and is classified `display_only`; frontier duplicate handling prevents it from becoming a new autonomous pivot. This is not treated as RDAP emitting a new domain lead.
 
 If a future use case needs an organization field from registration data, it requires a separate semantic review that identifies the role, attribution basis, retention need and lead disposition. It must not be reintroduced as a generic RDAP organization field.
 
