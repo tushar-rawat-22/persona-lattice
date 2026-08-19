@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from app.correlation.policy import (
     FACTOR_WEIGHTS,
@@ -95,6 +95,12 @@ def _m5_policy_payload() -> dict[str, object]:
     }
 
 
+def current_m5_policy_digest() -> str:
+    """Return the exact M5 policy identity used by M10 ablation execution."""
+
+    return _sha256_json(_m5_policy_payload())
+
+
 def _scenario_payload(scenario: M10FactorAblationScenario) -> dict[str, object]:
     return {
         "name": scenario.name,
@@ -102,6 +108,49 @@ def _scenario_payload(scenario: M10FactorAblationScenario) -> dict[str, object]:
         "diagnostic_only": scenario.diagnostic_only,
         "safety_critical": scenario.safety_critical,
     }
+
+
+def _plan_payload(plan: M10FactorAblationPlan) -> dict[str, object]:
+    return {
+        "schema_version": plan.schema_version,
+        "baseline_replay_input_digest": plan.baseline_replay_input_digest,
+        "baseline_replay_result_digest": plan.baseline_replay_result_digest,
+        "m5_policy_version": plan.m5_policy_version,
+        "m5_policy_digest": plan.m5_policy_digest,
+        "scenarios": [_scenario_payload(scenario) for scenario in plan.scenarios],
+    }
+
+
+def validate_m10_factor_ablation_plan(plan: M10FactorAblationPlan) -> None:
+    """Fail closed if a stored/constructed ablation manifest no longer matches M10/M5."""
+
+    if plan.schema_version != _ABLATION_SCHEMA_VERSION:
+        raise ValueError("Unsupported M10 factor-ablation schema version.")
+    _validate_digest(plan.baseline_replay_input_digest, field="baseline replay input digest")
+    _validate_digest(plan.baseline_replay_result_digest, field="baseline replay result digest")
+    _validate_digest(plan.m5_policy_digest, field="M5 policy digest")
+    _validate_digest(plan.plan_digest, field="ablation plan digest")
+    if plan.m5_policy_version != M5_POLICY_VERSION:
+        raise ValueError("M10 ablation plan M5 policy version is stale.")
+    if plan.m5_policy_digest != current_m5_policy_digest():
+        raise ValueError("M10 ablation plan M5 policy digest is stale.")
+
+    expected_kinds = tuple(sorted(FactorKind, key=lambda item: item.value))
+    actual_kinds = tuple(scenario.omitted_factor_kind for scenario in plan.scenarios)
+    if actual_kinds != expected_kinds:
+        raise ValueError("M10 ablation scenarios drift from the exact factor vocabulary.")
+    if len({scenario.name for scenario in plan.scenarios}) != len(plan.scenarios):
+        raise ValueError("M10 ablation scenario names must be unique.")
+    for scenario in plan.scenarios:
+        if scenario.name != f"omit_{scenario.omitted_factor_kind.value}":
+            raise ValueError("M10 ablation scenario name does not match its omitted factor.")
+        if scenario.diagnostic_only is not True:
+            raise ValueError("M10 ablation scenarios must remain diagnostic-only.")
+        if scenario.safety_critical != (scenario.omitted_factor_kind in VETO_FACTOR_KINDS):
+            raise ValueError("M10 ablation safety-critical marking drifted from M5 veto policy.")
+
+    if plan.plan_digest != _sha256_json(_plan_payload(plan)):
+        raise ValueError("M10 ablation plan digest does not match its manifest.")
 
 
 def build_m10_factor_ablation_plan(replay: M10ReplayRecord) -> M10FactorAblationPlan:
@@ -117,7 +166,6 @@ def build_m10_factor_ablation_plan(replay: M10ReplayRecord) -> M10FactorAblation
     _validate_digest(replay.input_digest, field="baseline replay input digest")
     _validate_digest(replay.result_digest, field="baseline replay result digest")
 
-    policy_digest = _sha256_json(_m5_policy_payload())
     scenarios = tuple(
         M10FactorAblationScenario(
             name=f"omit_{kind.value}",
@@ -127,20 +175,15 @@ def build_m10_factor_ablation_plan(replay: M10ReplayRecord) -> M10FactorAblation
         )
         for kind in sorted(FactorKind, key=lambda item: item.value)
     )
-    payload = {
-        "schema_version": _ABLATION_SCHEMA_VERSION,
-        "baseline_replay_input_digest": replay.input_digest,
-        "baseline_replay_result_digest": replay.result_digest,
-        "m5_policy_version": M5_POLICY_VERSION,
-        "m5_policy_digest": policy_digest,
-        "scenarios": [_scenario_payload(scenario) for scenario in scenarios],
-    }
-    return M10FactorAblationPlan(
+    plan = M10FactorAblationPlan(
         schema_version=_ABLATION_SCHEMA_VERSION,
         baseline_replay_input_digest=replay.input_digest,
         baseline_replay_result_digest=replay.result_digest,
         m5_policy_version=M5_POLICY_VERSION,
-        m5_policy_digest=policy_digest,
+        m5_policy_digest=current_m5_policy_digest(),
         scenarios=scenarios,
-        plan_digest=_sha256_json(payload),
+        plan_digest="0" * 64,
     )
+    plan = replace(plan, plan_digest=_sha256_json(_plan_payload(plan)))
+    validate_m10_factor_ablation_plan(plan)
+    return plan
