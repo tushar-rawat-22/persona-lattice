@@ -141,32 +141,23 @@ The provider-specific email-hash and returned-profile validation contract exists
 
 The historical source key remains `webfinger_activitypub` for compatibility, but its reviewed meaning is WebFinger URL → URL public-link resolution only. ActivityPub actor fetching is a separate future capability and remains unapproved.
 
-The pre-activation stack has four independent controls:
+The pre-activation stack has four independent controls: explicit HTTPS profile/JRD admission; fresh-DNS globally-routable IP-pinned HTTPS transport with bounded redirects; URL-only source semantics; and time-bounded exact-host source-policy approval with no wildcard or subdomain inheritance.
 
-1. explicit HTTPS profile-URL/JRD admission;
-2. fresh-DNS, globally-routable, IP-pinned HTTPS transport with bounded HTTPS-only redirects;
-3. URL-only source semantics with no generic username/name emission;
-4. time-bounded **exact-host** source-policy approval with no wildcard or subdomain inheritance.
-
-A concrete `mastodon.social` review did not establish a sufficiently explicit current host-specific terms/privacy basis for approval. The gate was not weakened; the production exact-host registry remains empty. WebFinger stays non-executable until a concrete host passes that policy.
+A concrete `mastodon.social` review did not establish a sufficiently explicit current host-specific terms/privacy basis for approval. The production exact-host registry remains empty.
 
 ### RDAP
 
-**Status: planned — admission PR #123; metadata-only contract PR #126; authoritative transport PR #128; bounded bootstrap cache PR #130; final-response provenance PR #132**
+**Status: planned — admission PR #123; metadata-only contract PR #126; authoritative transport PR #128; bounded bootstrap cache PR #130; final-response provenance PR #132; routing non-attempt contract pending merge in PR #134**
 
-RDAP is being reviewed as zero-spend domain registration metadata from authoritative services. The source contract remains metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
+RDAP is being reviewed as zero-spend domain registration metadata from authoritative services. Its contract is metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
 
-PR #128 corrected IANA bootstrap authority selection to RFC 9224 longest matching DNS-suffix semantics and added the pre-activation network boundary: fresh DNS/global-address validation before every hop, IP-pinned HTTPS with hostname TLS validation, bounded HTTPS redirects, four-second connection timeout, 64 KiB response ceiling, RDAP media-type validation, explicit 404/429/transient/malformed handling, and fallback to an equivalent bootstrap service only after transient unavailability.
+The pre-activation path now has RFC 9224 longest-match IANA bootstrap selection, one process-wide cached owner of `https://data.iana.org/rdap/dns.json`, fresh DNS/global-address validation before each provider hop, IP-pinned HTTPS with hostname TLS validation, bounded redirects and response size, explicit RDAP response handling, and separate validation of the bootstrap-derived canonical query URL versus the final evidence source locator.
 
-PR #130 adds one process-wide owner for IANA's fixed `https://data.iana.org/rdap/dns.json` registry. Fresh snapshots are reused without network I/O; expired snapshots refresh conditionally with ETag/Last-Modified when available; HTTP freshness information drives TTL with bounded fallback/cap; `no-store` is not retained; concurrent refresh is serialized; malformed/oversized/unexpected redirects fail closed; and an expired snapshot is not silently served after refresh failure. The cache holds public routing metadata only and requires no credential or paid service.
+PR #134 adds `routing_unavailable` as a typed **non-attempt** source outcome for failures of prerequisite routing authority such as an unusable IANA bootstrap snapshot. That state is counted separately from subject-provider failures and does not increase provider-attempt accounting.
 
-PR #132 corrects evidence provenance for authoritative redirects. The IANA-bootstrap-derived canonical query URL remains routing-authority proof, while the final validated HTTPS URL that actually returns the RDAP object becomes the retained source locator. Those two roles are now validated independently rather than forcing redirected evidence to retain only the original request URL.
+RDAP remains `PLANNED`, unbound, source-policy-unreviewed and non-recursive. Issue #133 stays open because DOMAIN reachability is not yet end-to-end. `LeadKind.DOMAIN` exists, but `ResearchKind` and M1 `IdentifierKind` do not currently expose DOMAIN, and live M5 converts converged nodes through M1 identifier normalization. Adding only a research enum would therefore create a half-supported path.
 
-A redirect or rebinding failure found **after** an RDAP provider has already responded remains post-contact result validation, not a no-attempt policy failure.
-
-RDAP remains `PLANNED`, unbound, source-policy-unreviewed and non-recursive. Two activation blockers are explicit in Issue #133: quick research still lacks an executable DOMAIN route, and IANA bootstrap refresh failure needs a typed non-attempt routing outcome because no authoritative RDAP provider has been contacted at that point.
-
-Redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic-data workflow, bulk/reverse lookup or contact harvesting is approved.
+The remaining DOMAIN block must define one canonical representation across quick research, convergence and M1/M5 while preserving the existing **display-only** disposition of discovered domain clues. Redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic-data workflow, bulk/reverse lookup or contact harvesting is approved.
 
 ## Immediate next gate
 
@@ -174,7 +165,7 @@ Do not reopen V2-D architecture casually, remove safety-critical M5 vetoes becau
 
 For evaluation, prioritize genuinely consented/reviewed label evidence.
 
-For source expansion, close **Issue #133** before RDAP activation: add a bounded explicit DOMAIN quick-research route without changing the current display-only domain recursion policy, and encode bootstrap/routing unavailability as a proven non-attempt source outcome. Then perform one atomic governed RDAP activation through catalog → binding → provider registry → shared runtime → typed source-state → canonical metadata-only observation.
+For RDAP, merge the routing non-attempt contract only if its exact CI head is green, then keep Issue #133 open until DOMAIN is represented consistently across quick research, convergence and the ephemeral M1/M5 graph. Prove an explicit DOMAIN seed is executable without making discovered domains recursive; then perform one atomic governed RDAP activation through catalog → binding → provider registry → shared runtime → typed source-state → canonical metadata-only observation.
 
 Activation must preserve exact canonical-query/final-response provenance, redaction authority, deterministic success/not-found/malformed/rate-limit/unavailable/bootstrap-unavailable fixtures, and the zero-spend baseline. WebFinger remains planned unless a concrete host passes the existing exact-host source-policy gate. Gravatar remains blocked on its privacy-policy requirement. ActivityPub actor fetching remains unapproved.
 
