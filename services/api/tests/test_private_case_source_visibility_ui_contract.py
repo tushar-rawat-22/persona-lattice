@@ -106,3 +106,28 @@ def test_private_case_view_explains_which_canonical_observation_field_caused_a_p
     assert "decision.source_field" in resolver
     assert "decision.source_field in observation.details" in resolver
     assert "return null" in resolver
+
+
+def test_private_case_view_explains_m5_factor_contributions_without_recomputing_m5() -> None:
+    source = CASE_UI.read_text(encoding="utf-8")
+
+    m5_start = source.index("<h3>M5 evidence-strength triage</h3>")
+    m5_end = source.index("<h3>Evidence pivots</h3>")
+    m5 = source[m5_start:m5_end]
+
+    assert "candidate?.source_locator" in m5
+    assert "evaluation.candidate_source_locator" in m5
+    assert "evaluation.positive_independence_groups" in m5
+    assert "evaluation.policy_version" in m5
+    assert "factor.independence_group" in m5
+    assert "factor.base_weight" in m5
+    assert "factor.applied_weight" in m5
+    assert "factor.status" in m5
+    assert "factor.rationale" in m5
+    assert "factor.veto" in m5
+    assert "not an identity probability" in m5
+
+    # The operator surface consumes retained M5 output. It must not reproduce policy math or thresholds.
+    assert "possible_match" not in m5
+    assert "strong_candidate" not in m5
+    assert "hard_contradiction" not in m5
