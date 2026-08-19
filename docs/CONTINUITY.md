@@ -11,15 +11,15 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main before this block: `9b167653fb92e2d2ae50d8a2df2ba5b08e535b01`
 - PR #137: governed metadata-only RDAP activation — merged
 - PR #138: bounded local consented M10 cohort runner — merged
 - PR #139: independently reviewed M10 provenance boundary — merged
-- PR #140: shared private local M10 materializer + reviewed runner — merged at the verified main above
-- Open product bug at block start: Issue #141 — operator UI omitted live DOMAIN research
-- Current branch: `fix/domain-operator-research`
-- Current block: expose explicit DOMAIN research in the private operator UI and lock backend/UI research-kind parity
-- Current exact-head CI: pending; merge only after the complete required matrix passes
+- PR #140: shared private local M10 materializer + reviewed runner — merged
+- PR #142: operator DOMAIN research reachability — merged
+- PR #142 exact tested head: `f3729a48705ba8ab349fb6cef1217cd9c5f5d921`
+- PR #142 exact-head CI: run `32304516425`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- PR #142 merge / verified main: `bee7eae824c20c8e4b3ca7ee60eb0702ea259ab4`
+- Issue #141: closed by PR #142
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -35,24 +35,24 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - V2-C source capability registry/planner: complete, PR #22.
 - V2-D runtime consistency and architecture closure: complete, PRs #89-#90.
 - Bluesky public profiles: active for valid AT handles, PR #98.
-- RDAP: active for explicit DOMAIN seeds through the governed runtime, PR #137.
+- RDAP: active for explicit DOMAIN seeds through the governed runtime, PR #137; operator UI reachability complete in PR #142.
 - Gravatar: PLANNED; blocked on provider privacy-policy/free-key requirements.
 - WebFinger: PLANNED; parser/transport/URL-only semantics/exact-host policy exist, but no host is approved.
 - M10: deterministic replay, graph/source accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), strict consented/reviewed-only accounting, and shared private local cohort ingestion are implemented. Representative real evaluation remains incomplete.
 
-## Current block — operator DOMAIN research reachability
+## Latest block — operator DOMAIN research reachability
 
-RDAP became live for explicit DOMAIN seeds in PR #137, but the private `QuickResearch` component still exposed only username, phone, email and URL. The backend capability therefore existed without a normal operator entry point. Issue #141 correctly treated that as a product bug rather than a cosmetic request.
+RDAP became live for explicit DOMAIN seeds in PR #137, but the private `QuickResearch` component still exposed only username, phone, email and URL. PR #142 closes that product gap.
 
-This branch adds `domain` to the web `ResearchKind` contract and starting-identifier selector, keeps the existing `/v1/cases/run-converged` request body unchanged, and gives domain input the bare-domain example `example.com`.
+The private operator UI now includes `domain` in its `ResearchKind` contract and starting-identifier selector, sends the existing `kind` field unchanged to `/v1/cases/run-converged`, and gives DOMAIN input the bare-domain example `example.com`.
 
-The UI states the policy boundary directly: domain research is explicit-seed only. Domain clues discovered during another case remain `DISPLAY_ONLY`; this block does not add domain auto-pivoting or alter recursion policy.
+The UI states the policy boundary directly: domain research is explicit-seed only. Domain clues discovered during another case remain `DISPLAY_ONLY`; PR #142 does not add domain auto-pivoting or alter recursion policy.
 
-A cross-layer regression test now imports the live backend `ResearchKind` enum and compares it with both the TypeScript research-kind union and the selector option set. A future backend kind addition or UI refactor therefore fails CI if the operator surface silently loses an executable research kind.
+A cross-layer regression imports the live backend `ResearchKind` enum and compares it with both the TypeScript research-kind union and the selector options. A future backend kind addition or UI refactor now fails CI if the operator surface silently loses an executable research kind.
 
-Stored DOMAIN cases require no separate rendering branch. They use the existing retained-case header, research-node kind/value display, typed source-run summary, canonical observation source locators and recent-case list. The regression contract explicitly checks those paths remain present.
+Stored DOMAIN cases require no separate rendering branch. They use the existing retained-case header, research-node kind/value display, typed source-run summary, canonical observation source locators and recent-case list.
 
-No new network provider, RDAP field, permission, retention field or evidence semantic is added here.
+No new network provider, RDAP field, permission, retention field or evidence semantic was added.
 
 ## RDAP checkpoint
 
@@ -93,10 +93,10 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Put the DOMAIN operator branch through exact-head CI and repair any web/API regression rather than weakening the parity contract.
-2. Merge only when API 3.11/3.13, audits/Ruff, web and production-image checks pass; close Issue #141 with the merge.
-3. After that, prioritize real consented/reviewed M10 evidence and operator evidence/provenance usability. Do not invent a convenience cohort to claim evaluation progress.
-4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
+1. Prioritize genuine consented or independently reviewed M10 evidence. Do not invent a convenience cohort to claim evaluation progress.
+2. Improve operator evidence/provenance navigation where it removes investigation friction; avoid decorative or generic AI-SaaS redesign work.
+3. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
+4. Keep the backend/UI research-kind parity regression green as live research kinds evolve.
 5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
 
 ## Update discipline
