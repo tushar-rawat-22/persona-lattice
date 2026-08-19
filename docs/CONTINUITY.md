@@ -11,12 +11,11 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
-- PR #134: RDAP routing/bootstrap non-attempt accounting — merged
-- Exact tested implementation head: `5965902a528d820a7b7ff85b4475066fcc4080b7`
-- Exact-head CI: run `32282843181`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
-- PR #134 merge commit / main checkpoint: `94120f9549a0380640eee78daefceb60dcd20684`
-- Open activation blocker: Issue #133 — DOMAIN reachability remains; routing/bootstrap non-attempt accounting is closed
-- Relevant RDAP ADRs: `0069-rdap-domain-admission-preflight.md`, `0070-rdap-metadata-only-source-contract.md`, `0071-rdap-authoritative-transport.md`, `0072-rdap-bootstrap-cache.md`, `0073-rdap-final-response-provenance.md`, `0074-rdap-routing-unavailable-non-attempt.md`
+- PR #136: canonical DOMAIN reachability for the RDAP activation sequence
+- Exact tested implementation head before documentation: `ca9818ba101cb0565ed7e40642aee2232d6f443a`
+- Exact-head CI: run `32288646149`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- Open activation blocker: Issue #133 — DOMAIN representation is closed by PR #136; atomic RDAP provider activation remains
+- Relevant RDAP ADRs: `0069-rdap-domain-admission-preflight.md`, `0070-rdap-metadata-only-source-contract.md`, `0071-rdap-authoritative-transport.md`, `0072-rdap-bootstrap-cache.md`, `0073-rdap-final-response-provenance.md`, `0074-rdap-routing-unavailable-non-attempt.md`, `0075-domain-identifier-reachability.md`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -34,42 +33,38 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Bluesky public profiles: active for valid AT handles through the governed runtime, PR #98.
 - Gravatar: admission preflight complete; still PLANNED because its provider-terms/privacy-policy gate is unresolved.
 - WebFinger: parser/admission, SSRF transport, URL-only semantics and exact-host policy are complete; still PLANNED because no concrete host has passed the exact-host source-policy gate.
-- RDAP: admission, metadata-only contract, authoritative SSRF-safe transport, process-wide IANA bootstrap cache, final-response provenance and routing non-attempt accounting are complete through PR #134. RDAP itself remains PLANNED, unbound, source-policy-unreviewed and non-recursive.
+- RDAP: admission, metadata-only contract, authoritative SSRF-safe transport, process-wide IANA bootstrap cache, final-response provenance and routing non-attempt accounting are complete through PR #134. PR #136 adds canonical DOMAIN reachability. RDAP itself remains PLANNED, unbound, source-policy-unreviewed and non-recursive until its activation PR is green.
 - M10: deterministic replay, source/graph accounting, real-engine factor ablations, label-provenance manifests and consented-only accounting exist. Representative consented evaluation/calibration remains incomplete.
 
-## Latest block — RDAP routing failure accounting
+## Latest block — canonical DOMAIN reachability
 
-Issue #133 identified two pre-activation gaps. PR #134 closes the accounting half without activating RDAP.
+Issue #133 originally looked like a small `ResearchKind.DOMAIN` addition. That was wrong: live M5 maps every converged node through M1 `IdentifierKind`, and the V2 lead graph had its own weaker domain canonicalizer. Adding only a research enum would have created a half-supported seed type and another normalization authority.
 
-A typed `routing_unavailable` reason now sits under `SourceRunState.UNAVAILABLE`. It is explicitly a **non-attempt** state: zero observations, terminal for the current source action, and excluded from provider attempt/failure counts. `source_routing_unavailable_record()` is the construction authority, and deterministic source-evaluation counters expose `routing_unavailable_count` separately.
+PR #136 fixes the representation end to end without activating RDAP:
 
-This outcome is intended for prerequisite authority/routing failures such as the process-wide IANA bootstrap cache being unable to supply a current usable DNS RDAP registry snapshot. It is deliberately not mapped by the generic provider-exception mapper, because no authoritative subject provider has been contacted at that point.
+- `IdentifierKind.DOMAIN` is now part of M1;
+- M1 normalizes explicit public DNS names conservatively, including IDNA A-label canonicalization;
+- URLs, IP literals, local-use names, malformed labels and whitespace-bearing values fail closed;
+- `LeadKind.DOMAIN` delegates to M1 instead of using a graph-only normalizer;
+- RDAP admission delegates to the same M1 domain normalizer;
+- `ResearchKind.DOMAIN` is executable;
+- explicit domain seeds pass through quick research, convergence and ephemeral live M5;
+- until RDAP is activated, explicit domain quick research returns a truthful normalized zero-observation/zero-attempt report;
+- discovered domain clues remain `DISPLAY_ONLY` and cannot become automatic recursive pivots.
 
-The first CI pass exposed one stale exact-shape source-run projection test after the new counter was added. The counter was kept; the exact contract expectation was corrected. The final head then passed the full matrix in run `32282843181`.
+The exact implementation head `ca9818ba101cb0565ed7e40642aee2232d6f443a` passed the complete CI matrix in run `32288646149` before the roadmap/continuity edits were added.
 
-ADR 0074 records the decision. The state/reason fixture matrix, direct outcome tests and retained-report projection tests now prove that routing unavailability contributes zero source attempts and zero attempted provider failures.
+One operational caveat remains explicit: existing persistent M1 databases created with the older SQLite enum constraint are not silently rewritten. Any deployment that persists that evidence schema must recreate or deliberately migrate the constraint before storing DOMAIN identifiers. The live converged M5 graph uses its own ephemeral schema and is covered by the new end-to-end test.
 
-## Corrected DOMAIN-reachability assessment
+ADR 0075 records this decision.
 
-The earlier handover described the remaining DOMAIN work as a small `ResearchKind.DOMAIN` addition. That was too shallow.
+## RDAP activation boundary
 
-Three layers currently disagree:
+RDAP is still non-executable. No provider registry descriptor, source binding, shared `ProviderRuntime` adapter or subject-provider request is enabled by PR #136.
 
-1. the V2 graph has `LeadKind.DOMAIN` and RDAP admission already validates bare domains;
-2. `ResearchKind` exposes only username, phone, email and URL;
-3. M1 `IdentifierKind` also has no DOMAIN, and `evaluate_live_m5()` maps every converged research node through `IdentifierKind(node.kind.value)` plus canonical M1 normalization.
+The privacy contract remains metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/contact names, organizations, addresses, email addresses and telephone numbers remain excluded. Upstream redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic lookup, reverse/bulk search or contact harvesting is approved.
 
-Therefore adding `ResearchKind.DOMAIN` alone would create a half-supported seed type: quick research might be made to parse it, but converged retention/M5 would fail or require an ad-hoc normalization bypass. Do **not** patch around M1/M5 merely to activate RDAP quickly.
-
-The next DOMAIN block must decide and test the canonical representation end to end. It may add a bounded DOMAIN identifier kind to M1 if that is the cleanest consistent design, but that change must preserve existing identifier semantics and must not turn discovered domain clues into automatic recursion. The existing domain lead disposition stays display-only unless a separate evaluated policy change explicitly authorizes otherwise.
-
-## RDAP remains non-executable
-
-No provider registry descriptor, source binding, shared `ProviderRuntime` adapter or RDAP subject-provider call is active yet.
-
-The RDAP privacy contract remains metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/contact names, organizations, addresses, email addresses and telephone numbers remain excluded. Upstream redaction and missing fields remain authoritative.
-
-No WHOIS fallback, RDRS/nonpublic lookup, reverse/bulk search or contact harvesting is approved.
+`routing_unavailable` remains the typed non-attempt state for an unusable IANA/bootstrap routing prerequisite. Failures after an authoritative RDAP service has actually been contacted must use the existing attempted-failure semantics instead.
 
 ## Current controlled evaluation checkpoint
 
@@ -90,14 +85,14 @@ Controlled M5 omission results under `m5-evidence-strength-v1` remain diagnostic
 
 ## Next gate
 
-Keep Issue #133 open until DOMAIN reachability is genuinely end-to-end:
+Keep Issue #133 open through the RDAP activation PR.
 
-1. define one canonical DOMAIN identifier/normalization path that is consistent across quick research, convergence and the ephemeral M1/M5 graph;
-2. prove an explicit DOMAIN seed can run without changing the display-only disposition of discovered domain clues;
-3. preserve the now-merged routing/bootstrap non-attempt semantics while proving failures after authoritative RDAP contact use the existing attempted-failure semantics;
-4. only then perform one atomic governed RDAP activation through source catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run reporting → canonical metadata-only observation.
-
-The activation must preserve exact canonical-query/final-response provenance, authoritative redaction, metadata-only output and zero-spend operation.
+1. implement the metadata-only RDAP provider using the existing admission, bootstrap cache and SSRF-safe authoritative transport;
+2. wire it atomically through source catalog review → binding → DEVELOPMENT provider registry → process-wide `ProviderRuntime` → DOMAIN quick research → typed source-run reporting → canonical observation;
+3. prove deterministic success, not-found, malformed, remote-rate-limit, provider-unavailable and bootstrap/routing-unavailable outcomes;
+4. prove bootstrap/routing failure consumes zero RDAP provider attempts while failures after authoritative provider contact do consume an attempt;
+5. preserve canonical bootstrap-query versus final-response provenance and authoritative redaction;
+6. keep discovered domain clues display-only and production recursion at depth 2 / 12 nodes.
 
 For M10, the highest-value unresolved need remains genuinely consented or independently reviewed label evidence. Do not relabel synthetic regression fixtures as consented to manufacture progress.
 
