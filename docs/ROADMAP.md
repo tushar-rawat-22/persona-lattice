@@ -117,7 +117,9 @@ Implemented:
 - UUID-independent semantic fixture/result fingerprints;
 - synthetic-vs-consented label-provenance manifests;
 - consented-only scenario accounting with exact numerator/denominator counts;
-- a bounded local consented-cohort runner so private reviewed identifiers no longer need to become repository fixtures.
+- a bounded local **consented** cohort runner so private consented identifiers no longer need to become repository fixtures.
+
+The current provenance vocabulary distinguishes `synthetic` and `consented`. It does not yet define an independently-reviewed-but-not-consented basis, so the local runner must not classify reviewed evidence as consented merely to make it analyzable.
 
 ### Current synthetic graph result
 
@@ -138,14 +140,16 @@ The contradiction omission is safety-critical diagnostic work only. Production f
 
 ### Remaining M10 gate
 
-The bottleneck is real label evidence, not another synthetic metric. A local runner now exists for private consented/reviewed cohorts, but the repository still contains no representative real cohort and must not manufacture one.
+The bottleneck is real consented label evidence, not another synthetic metric. A local runner now exists for private consented cohorts, but the repository still contains no representative real cohort and must not manufacture one.
 
-The next useful M10 work is to run a genuinely consented or independently reviewed cohort whose external evidence records satisfy the provenance contract, then inspect scenario-specific counts and denominators. Do not publish false-positive/false-negative, calibration or probability claims until cohort design supports those terms.
+The next useful M10 work is to run a genuinely consented cohort whose external consent records satisfy the provenance contract, then inspect scenario-specific counts and denominators. Do not publish false-positive/false-negative, calibration or probability claims until cohort design supports those terms.
+
+If independently reviewed labels are needed without consent, add an explicit provenance basis and analysis boundary first rather than misusing the `consented` label.
 
 ## Immediate next gate
 
 1. Merge the local consented-cohort runner only after its exact head passes CI and its output/privacy contract is proven.
-2. Use that runner with genuinely reviewed evidence when a lawful cohort is available; do not relabel synthetic fixtures as consented.
+2. Use that runner with genuine consent evidence when a lawful cohort is available; do not relabel synthetic or merely reviewed fixtures as consented.
 3. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
 4. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
 5. Continue improving the operator workflow around evidence/provenance hierarchy rather than generic AI-SaaS presentation patterns.
