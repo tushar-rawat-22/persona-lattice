@@ -8,6 +8,7 @@ class IdentifierKind(str, Enum):
     EMAIL = "email"
     USERNAME = "username"
     URL = "url"
+    DOMAIN = "domain"
     ORGANIZATION = "organization"
 
 
