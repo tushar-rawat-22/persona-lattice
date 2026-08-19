@@ -50,20 +50,22 @@ Existing persistent SQLite databases created before DOMAIN was added to the M1 e
 
 ## Current M10 block — local consented cohort runner
 
-M10 already had consented-only scenario accounting, but real reviewed cohorts still required hand-written Python fixtures. PR #138 closes that operational gap without committing private identifiers.
+M10 already had consented-only scenario accounting, but real consented cohorts still required hand-written Python fixtures. PR #138 closes that operational gap without committing private identifiers.
 
 The runner reads a private local JSON file and materializes the existing `M10GraphFixture` contract. It does not create a second frontier evaluator or scoring path. Identifiers pass through the existing M1-backed lead normalization, and the resulting fixture cohort goes through the existing replay and consented-analysis builders.
+
+The provenance vocabulary currently distinguishes `synthetic` from `consented` only. PR #138 therefore accepts **consented evidence only**. Independently reviewed-but-not-consented evidence must not be relabelled as consented; supporting that later requires a separate provenance basis and analysis contract.
 
 Current bounds:
 
 - input file: at most 1 MiB;
 - fixture count: at most 256;
 - declared node count: at most 2,048;
-- each fixture requires an opaque lowercase SHA-256 reference to an external reviewed/consent evidence record;
+- each fixture requires an opaque lowercase SHA-256 reference to an external consent record;
 - children may only descend from the seed or an earlier successful automatic pivot;
 - admitted pivots must have complete relevance labels before consented analysis succeeds.
 
-The CLI output contains aggregate scenario accounting and digests only. It does not echo seed values, lead values, source locators, fixture names, the cohort name or raw external evidence. The cohort name is represented by a digest. Validation failures return one generic message so underlying canonicalization/fixture exceptions cannot leak private values to terminal error output.
+The CLI output contains aggregate scenario accounting and digests only. It does not echo seed values, lead values, source locators, fixture names, the cohort name or raw external consent evidence. The cohort name is represented by a digest. Validation failures return one generic message so underlying canonicalization/fixture exceptions cannot leak private values to terminal error output.
 
 The runner compares the current production depth-2 / 12-node policy against the existing depth-3 / 12-node diagnostic candidate. It does not change production limits.
 
@@ -89,8 +91,8 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 ## Next gate
 
 1. PR #138 must pass exact-head CI before merge. If CI exposes a contract or privacy flaw, fix the implementation rather than weakening tests.
-2. Once merged, M10 finally has a practical local path for real reviewed labels. The unresolved bottleneck becomes the actual lawful/defensible cohort, not ingestion code.
-3. Do not manufacture progress by relabelling synthetic fixtures as consented. Run the local tool only when an external evidence record genuinely supports each fixture label.
+2. Once merged, M10 has a practical local path for real **consented** labels. The unresolved bottleneck becomes the actual lawful consented cohort, not ingestion code.
+3. Do not manufacture progress by relabelling synthetic or merely reviewed fixtures as consented. Run the local tool only when an external consent record genuinely supports each fixture label.
 4. Add another source only if it has high coverage value and a defensible current zero-spend/terms/privacy/provenance story.
 5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
 
