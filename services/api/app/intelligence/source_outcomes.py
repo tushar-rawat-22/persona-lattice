@@ -121,6 +121,21 @@ def source_credential_not_configured_record(
     )
 
 
+def source_routing_unavailable_record(
+    *,
+    source_name: str,
+    lead_kind: LeadKind,
+) -> SourceRunRecord:
+    """Record routing/authority data unavailable before subject-provider contact."""
+
+    return SourceRunRecord(
+        source_name=source_name,
+        lead_kind=lead_kind,
+        state=SourceRunState.UNAVAILABLE,
+        reason=SourceRunReason.ROUTING_UNAVAILABLE,
+    )
+
+
 def source_malformed_result_record(
     *,
     source_name: str,
