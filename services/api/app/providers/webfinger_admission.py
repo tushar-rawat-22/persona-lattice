@@ -21,6 +21,24 @@ class WebFingerRequestTarget:
     endpoint: str
 
 
+@dataclass(frozen=True, slots=True)
+class WebFingerNetworkTarget:
+    """Validated HTTPS target that still requires fresh DNS admission before I/O."""
+
+    url: str
+    hostname: str
+    request_target: str
+
+
+def _require_clean_url(value: str, *, label: str) -> None:
+    if not isinstance(value, str) or not value:
+        raise WebFingerAdmissionError(f"{label} must be a non-empty string.")
+    if len(value) > 2048:
+        raise WebFingerAdmissionError(f"{label} exceeds the admission limit.")
+    if any(ord(character) <= 0x20 or ord(character) == 0x7F for character in value):
+        raise WebFingerAdmissionError(f"{label} must not contain whitespace or control characters.")
+
+
 def _admitted_dns_hostname(hostname: str) -> str:
     """Validate a DNS-style hostname without claiming current routability.
 
@@ -52,17 +70,43 @@ def _admitted_dns_hostname(hostname: str) -> str:
     return ascii_value
 
 
+def webfinger_network_target(url: str, *, allow_query: bool) -> WebFingerNetworkTarget:
+    """Validate one HTTPS network target without performing DNS or network I/O.
+
+    Redirect service URIs may carry a query string under RFC 7033, while profile
+    seeds and admitted evidence links remain query-free. Every returned hostname
+    still needs fresh global-address resolution before a connection is opened.
+    """
+
+    _require_clean_url(url, label="WebFinger network target")
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or parsed.hostname is None:
+        raise WebFingerAdmissionError("WebFinger network target must be an absolute HTTPS URL.")
+    if parsed.username is not None or parsed.password is not None or parsed.port is not None:
+        raise WebFingerAdmissionError("WebFinger network target must not contain credentials or an explicit port.")
+    if parsed.fragment:
+        raise WebFingerAdmissionError("WebFinger network target must not contain a fragment.")
+    if parsed.query and not allow_query:
+        raise WebFingerAdmissionError("WebFinger network target must not contain query data here.")
+
+    hostname = _admitted_dns_hostname(parsed.hostname)
+    path = parsed.path or "/"
+    normalized = urlunsplit(("https", hostname, path, parsed.query, ""))
+    request_target = path + (f"?{parsed.query}" if parsed.query else "")
+    return WebFingerNetworkTarget(
+        url=normalized,
+        hostname=hostname,
+        request_target=request_target,
+    )
+
+
 def webfinger_request_target(profile_url: str) -> WebFingerRequestTarget:
     """Build a bounded RFC 7033 request target from an explicit HTTPS profile URL.
 
     This is admission-only. It performs no DNS resolution or network request.
     """
 
-    if not isinstance(profile_url, str) or not profile_url:
-        raise WebFingerAdmissionError("WebFinger profile URL must be a non-empty string.")
-    if len(profile_url) > 2048:
-        raise WebFingerAdmissionError("WebFinger profile URL exceeds the admission limit.")
-
+    _require_clean_url(profile_url, label="WebFinger profile URL")
     parsed = urlsplit(profile_url)
     if parsed.scheme != "https" or parsed.hostname is None:
         raise WebFingerAdmissionError("WebFinger profile URL must be an absolute HTTPS URL.")
@@ -119,17 +163,9 @@ def admitted_webfinger_links(
         href = item.get("href")
         if rel not in {"self", "http://webfinger.net/rel/profile-page"} or href is None:
             continue
-        if not isinstance(href, str) or len(href) > 2048:
-            raise WebFingerAdmissionError("WebFinger admitted href is malformed or too long.")
-        parsed = urlsplit(href)
-        if parsed.scheme != "https" or parsed.hostname is None:
-            raise WebFingerAdmissionError("WebFinger admitted href must be HTTPS.")
-        if parsed.username is not None or parsed.password is not None or parsed.port is not None:
-            raise WebFingerAdmissionError("WebFinger admitted href must not contain credentials or a port.")
-        if parsed.query or parsed.fragment:
-            raise WebFingerAdmissionError("WebFinger admitted href must not contain query or fragment data.")
-        hostname = _admitted_dns_hostname(parsed.hostname)
-        normalized = urlunsplit(("https", hostname, parsed.path or "/", "", ""))
-        if normalized not in admitted:
-            admitted.append(normalized)
+        if not isinstance(href, str):
+            raise WebFingerAdmissionError("WebFinger admitted href must be a string.")
+        target_link = webfinger_network_target(href, allow_query=False)
+        if target_link.url not in admitted:
+            admitted.append(target_link.url)
     return tuple(admitted)
