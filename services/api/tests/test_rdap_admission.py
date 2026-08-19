@@ -5,7 +5,7 @@ import pytest
 
 from app.intelligence.contracts import LeadDisposition, LeadKind
 from app.intelligence.extractor import extract_observation_leads
-from app.intelligence.source_bindings import SourceBindingError, source_binding_for
+from app.intelligence.source_bindings import SourceExecutionBackend, source_binding_for
 from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
 from app.providers.rdap_admission import (
     RdapAdmissionError,
@@ -200,11 +200,13 @@ def test_redirected_response_locator_fails_closed_on_unsafe_shapes(source_locato
         )
 
 
-def test_rdap_is_metadata_only_planned_and_unbound() -> None:
+def test_rdap_is_metadata_only_active_and_governed() -> None:
     source = SOURCE_BY_NAME["rdap_domain_registry"]
-    assert source.status is SourceStatus.PLANNED
-    assert source.source_policy_reviewed is False
-    assert source.recursive_eligible is False
+    binding = source_binding_for("rdap_domain_registry", kind=LeadKind.DOMAIN)
+
+    assert source.status is SourceStatus.ACTIVE
+    assert source.source_policy_reviewed is True
+    assert source.recursive_eligible is True
     assert source.emits == frozenset()
-    with pytest.raises(SourceBindingError, match="no executable runtime binding"):
-        source_binding_for("rdap_domain_registry")
+    assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
+    assert binding.provider_name == "rdap_domain_registry"
