@@ -147,13 +147,13 @@ A concrete `mastodon.social` review did not establish a sufficiently explicit cu
 
 ### RDAP
 
-**Status: planned — admission PR #123; metadata-only contract PR #126; authoritative transport PR #128; bounded bootstrap cache PR #130; final-response provenance PR #132; routing non-attempt contract pending merge in PR #134**
+**Status: planned — admission PR #123; metadata-only contract PR #126; authoritative transport PR #128; bounded bootstrap cache PR #130; final-response provenance PR #132; routing non-attempt accounting PR #134**
 
 RDAP is being reviewed as zero-spend domain registration metadata from authoritative services. Its contract is metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
 
 The pre-activation path now has RFC 9224 longest-match IANA bootstrap selection, one process-wide cached owner of `https://data.iana.org/rdap/dns.json`, fresh DNS/global-address validation before each provider hop, IP-pinned HTTPS with hostname TLS validation, bounded redirects and response size, explicit RDAP response handling, and separate validation of the bootstrap-derived canonical query URL versus the final evidence source locator.
 
-PR #134 adds `routing_unavailable` as a typed **non-attempt** source outcome for failures of prerequisite routing authority such as an unusable IANA bootstrap snapshot. That state is counted separately from subject-provider failures and does not increase provider-attempt accounting.
+PR #134 adds `routing_unavailable` as a typed **non-attempt** source outcome for failures of prerequisite routing authority such as an unusable IANA bootstrap snapshot. It passed full CI before merge. That state is counted separately from subject-provider failures and does not increase provider-attempt accounting.
 
 RDAP remains `PLANNED`, unbound, source-policy-unreviewed and non-recursive. Issue #133 stays open because DOMAIN reachability is not yet end-to-end. `LeadKind.DOMAIN` exists, but `ResearchKind` and M1 `IdentifierKind` do not currently expose DOMAIN, and live M5 converts converged nodes through M1 identifier normalization. Adding only a research enum would therefore create a half-supported path.
 
@@ -165,7 +165,7 @@ Do not reopen V2-D architecture casually, remove safety-critical M5 vetoes becau
 
 For evaluation, prioritize genuinely consented/reviewed label evidence.
 
-For RDAP, merge the routing non-attempt contract only if its exact CI head is green, then keep Issue #133 open until DOMAIN is represented consistently across quick research, convergence and the ephemeral M1/M5 graph. Prove an explicit DOMAIN seed is executable without making discovered domains recursive; then perform one atomic governed RDAP activation through catalog → binding → provider registry → shared runtime → typed source-state → canonical metadata-only observation.
+For RDAP, keep Issue #133 open until DOMAIN is represented consistently across quick research, convergence and the ephemeral M1/M5 graph. Prove an explicit DOMAIN seed is executable without making discovered domains recursive, preserve the merged routing/bootstrap non-attempt accounting, and then perform one atomic governed RDAP activation through catalog → binding → provider registry → shared runtime → typed source-state → canonical metadata-only observation.
 
 Activation must preserve exact canonical-query/final-response provenance, redaction authority, deterministic success/not-found/malformed/rate-limit/unavailable/bootstrap-unavailable fixtures, and the zero-spend baseline. WebFinger remains planned unless a concrete host passes the existing exact-host source-policy gate. Gravatar remains blocked on its privacy-policy requirement. ActivityPub actor fetching remains unapproved.
 
