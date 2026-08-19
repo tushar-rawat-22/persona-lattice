@@ -11,9 +11,11 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
-- Main at start of Issue #133 accounting block: `b9940a7bc52eecff74bf2fda8fa1bfaaff46707f`
-- Active implementation branch: `rdap-domain-routing-preflight`
-- Open activation blocker: Issue #133 — DOMAIN reachability remains; bootstrap/non-attempt vocabulary is implemented on the branch pending CI/merge
+- PR #134: RDAP routing/bootstrap non-attempt accounting — merged
+- Exact tested implementation head: `5965902a528d820a7b7ff85b4475066fcc4080b7`
+- Exact-head CI: run `32282843181`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- PR #134 merge commit / main checkpoint: `94120f9549a0380640eee78daefceb60dcd20684`
+- Open activation blocker: Issue #133 — DOMAIN reachability remains; routing/bootstrap non-attempt accounting is closed
 - Relevant RDAP ADRs: `0069-rdap-domain-admission-preflight.md`, `0070-rdap-metadata-only-source-contract.md`, `0071-rdap-authoritative-transport.md`, `0072-rdap-bootstrap-cache.md`, `0073-rdap-final-response-provenance.md`, `0074-rdap-routing-unavailable-non-attempt.md`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
@@ -32,18 +34,20 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Bluesky public profiles: active for valid AT handles through the governed runtime, PR #98.
 - Gravatar: admission preflight complete; still PLANNED because its provider-terms/privacy-policy gate is unresolved.
 - WebFinger: parser/admission, SSRF transport, URL-only semantics and exact-host policy are complete; still PLANNED because no concrete host has passed the exact-host source-policy gate.
-- RDAP: admission, metadata-only contract, authoritative SSRF-safe transport, process-wide IANA bootstrap cache and final-response provenance contract are complete through PR #132. RDAP itself remains PLANNED, unbound, source-policy-unreviewed and non-recursive.
+- RDAP: admission, metadata-only contract, authoritative SSRF-safe transport, process-wide IANA bootstrap cache, final-response provenance and routing non-attempt accounting are complete through PR #134. RDAP itself remains PLANNED, unbound, source-policy-unreviewed and non-recursive.
 - M10: deterministic replay, source/graph accounting, real-engine factor ablations, label-provenance manifests and consented-only accounting exist. Representative consented evaluation/calibration remains incomplete.
 
 ## Latest block — RDAP routing failure accounting
 
-Issue #133 identified two pre-activation gaps. This block closes the accounting half without activating RDAP.
+Issue #133 identified two pre-activation gaps. PR #134 closes the accounting half without activating RDAP.
 
-A new typed `routing_unavailable` reason sits under `SourceRunState.UNAVAILABLE`. It is explicitly a **non-attempt** state: zero observations, terminal for the current source action, and excluded from provider attempt/failure counts. `source_routing_unavailable_record()` is the construction authority, and deterministic source-evaluation counters expose `routing_unavailable_count` separately.
+A typed `routing_unavailable` reason now sits under `SourceRunState.UNAVAILABLE`. It is explicitly a **non-attempt** state: zero observations, terminal for the current source action, and excluded from provider attempt/failure counts. `source_routing_unavailable_record()` is the construction authority, and deterministic source-evaluation counters expose `routing_unavailable_count` separately.
 
 This outcome is intended for prerequisite authority/routing failures such as the process-wide IANA bootstrap cache being unable to supply a current usable DNS RDAP registry snapshot. It is deliberately not mapped by the generic provider-exception mapper, because no authoritative subject provider has been contacted at that point.
 
-ADR 0074 records the decision. The state/reason fixture matrix and direct outcome tests prove that routing unavailability contributes zero source attempts and zero attempted provider failures.
+The first CI pass exposed one stale exact-shape source-run projection test after the new counter was added. The counter was kept; the exact contract expectation was corrected. The final head then passed the full matrix in run `32282843181`.
+
+ADR 0074 records the decision. The state/reason fixture matrix, direct outcome tests and retained-report projection tests now prove that routing unavailability contributes zero source attempts and zero attempted provider failures.
 
 ## Corrected DOMAIN-reachability assessment
 
@@ -90,7 +94,7 @@ Keep Issue #133 open until DOMAIN reachability is genuinely end-to-end:
 
 1. define one canonical DOMAIN identifier/normalization path that is consistent across quick research, convergence and the ephemeral M1/M5 graph;
 2. prove an explicit DOMAIN seed can run without changing the display-only disposition of discovered domain clues;
-3. prove routing/bootstrap unavailability remains a non-attempt while failures after authoritative RDAP contact use the existing attempted-failure semantics;
+3. preserve the now-merged routing/bootstrap non-attempt semantics while proving failures after authoritative RDAP contact use the existing attempted-failure semantics;
 4. only then perform one atomic governed RDAP activation through source catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run reporting → canonical metadata-only observation.
 
 The activation must preserve exact canonical-query/final-response provenance, authoritative redaction, metadata-only output and zero-spend operation.
