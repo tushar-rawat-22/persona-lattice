@@ -1,0 +1,34 @@
+# ADR 0077 — Real M10 labels enter through a local bounded runner
+
+Status: accepted
+
+## Context
+
+M10 can already replay labelled graph fixtures and compute consented-only scenario accounting, but the only practical way to use that machinery was to construct Python fixtures in the repository. That is unsuitable for real consented or independently reviewed cases: their identifiers and external evidence records do not belong in Git, CI logs or public fixtures.
+
+## Decision
+
+Add a local JSON runner that converts a bounded private cohort file into the existing `M10GraphFixture` and consented-provenance contracts, executes the existing production `LeadFrontier` comparison, and returns aggregate counts plus replay/provenance digests only.
+
+The runner:
+
+- reads at most 1 MiB of UTF-8 JSON;
+- accepts at most 256 fixtures and 2,048 declared nodes;
+- requires one lowercase SHA-256 external evidence-record reference per fixture;
+- treats every imported fixture as consented and delegates completeness checks to the existing consented-analysis boundary;
+- canonicalizes seed and lead identifiers through the same M1-backed lead normalization used by the graph;
+- only allows child nodes beneath the seed or an earlier successful automatic pivot;
+- evaluates the current production depth-2 / 12-node policy against the existing depth-3 / 12-node diagnostic candidate;
+- prints no seed values, lead values, source locators or raw external evidence records.
+
+The private input file is not persisted by PersonaLattice. The output carries a digest of the input bytes, the existing M10 replay digests, the label-manifest digest, the analysis digest and aggregate scenario accounting.
+
+## Boundaries
+
+This runner does not make a cohort representative, calibrated or suitable for population error-rate claims. It does not verify the substance of consent; the external evidence record remains outside the repository and must be reviewed separately. A bare unsalted hash of an email address, phone number or other low-entropy identifier is not an acceptable evidence record.
+
+The runner does not alter production recursion, M5 factor weights, thresholds, vetoes, provider execution or retained case data.
+
+## Consequences
+
+A real reviewed cohort can now be evaluated locally without turning private identifiers into repository fixtures. M10 can advance on actual evidence when such a cohort exists, while CI continues to use synthetic structural tests only.
