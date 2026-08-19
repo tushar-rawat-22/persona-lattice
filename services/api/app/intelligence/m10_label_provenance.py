@@ -10,7 +10,7 @@ from enum import StrEnum
 from .graph_evaluation import PivotRelevance
 from .m10_replay import M10ReplayRecord, build_m10_replay_record
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -19,15 +19,17 @@ class M10LabelBasis(StrEnum):
 
     SYNTHETIC = "synthetic"
     CONSENTED = "consented"
+    INDEPENDENTLY_REVIEWED = "independently_reviewed"
 
 
 @dataclass(frozen=True, slots=True)
 class M10FixtureLabelProvenance:
     """Privacy-bounded provenance for one fixture's relevance labels.
 
-    `evidence_digest` is an opaque SHA-256 reference to an external label/consent
-    record. Raw consent text, personal identifiers and source documents do not
-    belong in the M10 experiment manifest.
+    `evidence_digest` is an opaque SHA-256 reference to an external label,
+    consent or review record. Raw consent text, review notes, personal
+    identifiers and source documents do not belong in the M10 experiment
+    manifest.
     """
 
     fixture_name: str
@@ -56,9 +58,11 @@ class M10LabelManifest:
     fixture_count: int
     synthetic_fixture_count: int
     consented_fixture_count: int
+    independently_reviewed_fixture_count: int
     declared_label_count: int
     synthetic_declared_label_count: int
     consented_declared_label_count: int
+    independently_reviewed_declared_label_count: int
     declared_relevant_label_count: int
     declared_wrong_label_count: int
 
@@ -81,10 +85,9 @@ def build_m10_label_manifest(
 ) -> M10LabelManifest:
     """Bind fixture labels to explicit provenance and the exact M10 replay.
 
-    The builder intentionally returns corpus counts, not error rates. A synthetic
-    label can support deterministic regression tests but must remain distinguishable
-    from consented ground truth before any future false-positive/false-negative
-    analysis is attempted.
+    The builder intentionally returns corpus counts, not error rates. Synthetic,
+    consented and independently reviewed labels remain separate so downstream
+    analysis cannot silently upgrade one evidence basis into another.
     """
 
     fixture_tuple = tuple(sorted(tuple(fixtures), key=lambda item: item.name))
@@ -119,8 +122,8 @@ def build_m10_label_manifest(
 
     provenance_by_name = {item.fixture_name: item for item in provenance_tuple}
     declared = relevant = wrong = 0
-    synthetic_declared = consented_declared = 0
-    synthetic_fixtures = consented_fixtures = 0
+    synthetic_declared = consented_declared = independently_reviewed_declared = 0
+    synthetic_fixtures = consented_fixtures = independently_reviewed_fixtures = 0
 
     manifest_fixtures: list[dict[str, object]] = []
     for fixture in fixture_tuple:
@@ -152,6 +155,9 @@ def build_m10_label_manifest(
         elif item.basis is M10LabelBasis.CONSENTED:
             consented_fixtures += 1
             consented_declared += declared_count
+        elif item.basis is M10LabelBasis.INDEPENDENTLY_REVIEWED:
+            independently_reviewed_fixtures += 1
+            independently_reviewed_declared += declared_count
         else:  # defensive against forged enum-like values
             raise ValueError("M10 label provenance uses an unsupported basis.")
 
@@ -178,9 +184,11 @@ def build_m10_label_manifest(
         fixture_count=len(fixture_tuple),
         synthetic_fixture_count=synthetic_fixtures,
         consented_fixture_count=consented_fixtures,
+        independently_reviewed_fixture_count=independently_reviewed_fixtures,
         declared_label_count=declared,
         synthetic_declared_label_count=synthetic_declared,
         consented_declared_label_count=consented_declared,
+        independently_reviewed_declared_label_count=independently_reviewed_declared,
         declared_relevant_label_count=relevant,
         declared_wrong_label_count=wrong,
     )
