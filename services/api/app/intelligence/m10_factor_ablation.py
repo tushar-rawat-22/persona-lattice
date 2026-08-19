@@ -95,6 +95,12 @@ def _m5_policy_payload() -> dict[str, object]:
     }
 
 
+def current_m5_policy_digest() -> str:
+    """Return the exact M5 policy identity used by M10 ablation execution."""
+
+    return _sha256_json(_m5_policy_payload())
+
+
 def _scenario_payload(scenario: M10FactorAblationScenario) -> dict[str, object]:
     return {
         "name": scenario.name,
@@ -117,7 +123,7 @@ def build_m10_factor_ablation_plan(replay: M10ReplayRecord) -> M10FactorAblation
     _validate_digest(replay.input_digest, field="baseline replay input digest")
     _validate_digest(replay.result_digest, field="baseline replay result digest")
 
-    policy_digest = _sha256_json(_m5_policy_payload())
+    policy_digest = current_m5_policy_digest()
     scenarios = tuple(
         M10FactorAblationScenario(
             name=f"omit_{kind.value}",
