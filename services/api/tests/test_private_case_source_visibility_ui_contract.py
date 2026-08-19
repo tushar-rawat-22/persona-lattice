@@ -79,3 +79,30 @@ def test_private_domain_research_is_explicit_and_uses_existing_case_views() -> N
     assert "<strong>{node.kind} · {node.normalized_value}</strong>" in source
     assert "sourceRuns={node.source_runs}" in source
     assert "observation.source_locator" in source
+
+
+def test_private_case_view_explains_which_canonical_observation_field_caused_a_pivot() -> None:
+    source = CASE_UI.read_text(encoding="utf-8")
+
+    assert "type ResolvedPivotProvenance" in source
+    assert "source_field: string | null;" in source
+    assert "observation_summary: string | null;" in source
+    assert "source_field: decision.source_field" in source
+    assert "observation_summary: nonEmptyString(observation.summary) ? observation.summary : null" in source
+    assert "field ${provenance.source_field}" in source
+    assert "provenance.observation_summary" in source
+    assert "provenance.source_locator" in source
+
+    resolver_start = source.index("function resolveEdgeProvenance")
+    resolver_end = source.index("function SourceRunSummary")
+    resolver = source[resolver_start:resolver_end]
+
+    # The UI must resolve the exact canonical decision/observation reference and fail closed on drift.
+    assert 'decision.decision !== "admitted"' in resolver
+    assert "decision.parent_key !== edge.parent_key" in resolver
+    assert "decision.child_key !== edge.child_key" in resolver
+    assert "decision.reason !== edge.reason" in resolver
+    assert "decision.source_observation_index" in resolver
+    assert "decision.source_field" in resolver
+    assert "decision.source_field in observation.details" in resolver
+    assert "return null" in resolver
