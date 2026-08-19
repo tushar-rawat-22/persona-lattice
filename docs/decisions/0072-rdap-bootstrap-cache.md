@@ -16,10 +16,10 @@ The cache:
 
 - fetches only `https://data.iana.org/rdap/dns.json`;
 - uses ordinary certificate-validated HTTPS to that fixed, non-user-controlled authority and does not follow redirects;
-- bounds the response at 128 KiB and requires JSON media type plus a bounded `services` structure;
+- bounds the response at 128 KiB and requires the RFC 9224 `application/json` media type plus a bounded `services` structure;
 - reuses a fresh snapshot without network I/O;
-- follows `Cache-Control: max-age` when present, otherwise `Expires`, with a 24-hour fallback and a seven-day maximum local TTL;
-- honors `no-cache`/`no-store` as immediately stale;
+- follows `Cache-Control: max-age` when present, otherwise `Expires`, using the response `Date` when available to avoid local clock skew, with a 24-hour fallback and a seven-day maximum local TTL;
+- treats `no-cache` as immediately stale and does not retain `no-store` responses;
 - preserves ETag and Last-Modified validators for conditional refresh;
 - accepts HTTP 304 only when a prior snapshot exists;
 - serializes refresh under one async lock so concurrent first/expired reads cannot create a refresh stampede;
