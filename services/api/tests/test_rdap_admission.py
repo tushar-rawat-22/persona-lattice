@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.intelligence.contracts import LeadKind
+from app.intelligence.extractor import extract_observation_leads
 from app.intelligence.source_bindings import SourceBindingError, source_binding_for
 from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
 from app.providers.rdap_admission import (
@@ -91,6 +91,8 @@ def test_admitted_observation_retains_only_low_sensitivity_registration_context(
                             ["fn", {}, "text", "Private Person"],
                             ["org", {}, "text", "Private Org"],
                             ["email", {}, "text", "private@example.com"],
+                            ["tel", {}, "text", "+1-202-555-0100"],
+                            ["adr", {}, "text", "Private Address"],
                         ],
                     ],
                 },
@@ -114,10 +116,24 @@ def test_admitted_observation_retains_only_low_sensitivity_registration_context(
         "registrant_contact_retained": False,
         "redaction_authoritative": True,
     }
-    assert "Private Person" not in repr(observation.details)
-    assert "Private Org" not in repr(observation.details)
-    assert "private@example.com" not in repr(observation.details)
-    assert "Registrar Inc" not in repr(observation.details)
+    retained = repr(observation.details)
+    for sensitive_value in (
+        "Private Person",
+        "Private Org",
+        "private@example.com",
+        "+1-202-555-0100",
+        "Private Address",
+        "Registrar Inc",
+    ):
+        assert sensitive_value not in retained
+
+    leads = extract_observation_leads(
+        details=observation.details,
+        source="rdap_domain_registry",
+        source_locator=observation.source_locator,
+    )
+    assert leads.candidates == ()
+    assert leads.blocked_field_names == ()
 
 
 def test_response_must_match_requested_domain_and_canonical_locator() -> None:
@@ -135,14 +151,11 @@ def test_response_must_match_requested_domain_and_canonical_locator() -> None:
         )
 
 
-def test_rdap_remains_planned_unbound_and_organization_emission_is_a_known_blocker() -> None:
+def test_rdap_is_metadata_only_planned_and_unbound() -> None:
     source = SOURCE_BY_NAME["rdap_domain_registry"]
     assert source.status is SourceStatus.PLANNED
     assert source.source_policy_reviewed is False
     assert source.recursive_eligible is False
-    # Current catalog semantics still overclaim ORGANIZATION emission. The
-    # preflight proves the safe retained shape is metadata-only; activation must
-    # remove this emission before the source can become executable.
-    assert source.emits == frozenset({LeadKind.ORGANIZATION})
+    assert source.emits == frozenset()
     with pytest.raises(SourceBindingError, match="no executable runtime binding"):
         source_binding_for("rdap_domain_registry")
