@@ -108,7 +108,7 @@ def test_fixture_digest_changes_with_semantic_truth_and_tampering_fails_closed()
             )
 
 
-def test_result_replay_rejects_execution_case_set_drift() -> None:
+def test_result_replay_rejects_execution_case_set_or_fingerprint_drift() -> None:
     database = create_database_engine("sqlite+pysqlite:///:memory:")
     create_schema(database)
     factory = make_session_factory(database)
@@ -130,4 +130,11 @@ def test_result_replay_rejects_execution_case_set_drift() -> None:
             build_m10_factor_ablation_replay_record(
                 fixture_set=fixture_set,
                 execution=replace(execution, cases=execution.cases[:-1]),
+            )
+
+        tampered_case = replace(execution.cases[0], semantic_case_digest="0" * 64)
+        with pytest.raises(ValueError, match="fingerprints do not match"):
+            build_m10_factor_ablation_replay_record(
+                fixture_set=fixture_set,
+                execution=replace(execution, cases=(tampered_case, *execution.cases[1:])),
             )
