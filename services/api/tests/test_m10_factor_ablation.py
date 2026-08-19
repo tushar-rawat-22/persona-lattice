@@ -96,6 +96,14 @@ def test_ablation_policy_anchor_changes_when_m5_weight_changes(monkeypatch) -> N
     assert original.plan_digest != changed.plan_digest
 
 
+def test_ablation_plan_fails_closed_when_factor_weights_drift_from_vocabulary(monkeypatch) -> None:
+    replay = _replay()
+    monkeypatch.delitem(FACTOR_WEIGHTS, FactorKind.SAME_USERNAME)
+
+    with pytest.raises(ValueError, match="factor weights drift"):
+        build_m10_factor_ablation_plan(replay)
+
+
 def test_ablation_plan_rejects_untrusted_replay_identity() -> None:
     replay = _replay()
 
