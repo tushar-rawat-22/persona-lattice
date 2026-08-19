@@ -21,7 +21,13 @@ class WebFingerRequestTarget:
     endpoint: str
 
 
-def _public_dns_hostname(hostname: str) -> str:
+def _admitted_dns_hostname(hostname: str) -> str:
+    """Validate a DNS-style hostname without claiming current routability.
+
+    A future network adapter must still resolve and reject non-global addresses
+    immediately before I/O and after every redirect.
+    """
+
     value = hostname.rstrip(".").lower()
     if not value or len(value) > 253:
         raise WebFingerAdmissionError("WebFinger profile URL hostname is missing or too long.")
@@ -33,7 +39,7 @@ def _public_dns_hostname(hostname: str) -> str:
         raise WebFingerAdmissionError("WebFinger profile URL must use a DNS hostname, not an IP literal.")
 
     if "." not in value:
-        raise WebFingerAdmissionError("WebFinger profile URL must use a public multi-label hostname.")
+        raise WebFingerAdmissionError("WebFinger profile URL must use a multi-label DNS hostname.")
     if value.endswith((".local", ".localhost", ".internal", ".home", ".lan")):
         raise WebFingerAdmissionError("WebFinger profile URL must not target a local-use hostname.")
     try:
@@ -69,7 +75,7 @@ def webfinger_request_target(profile_url: str) -> WebFingerRequestTarget:
     if parsed.path.startswith("/.well-known/"):
         raise WebFingerAdmissionError("WebFinger profile URL must not point at a well-known endpoint.")
 
-    hostname = _public_dns_hostname(parsed.hostname)
+    hostname = _admitted_dns_hostname(parsed.hostname)
     resource = urlunsplit(("https", hostname, parsed.path, "", ""))
     endpoint = f"https://{hostname}/.well-known/webfinger?resource={quote(resource, safe='')}"
     return WebFingerRequestTarget(resource=resource, hostname=hostname, endpoint=endpoint)
@@ -122,7 +128,7 @@ def admitted_webfinger_links(
             raise WebFingerAdmissionError("WebFinger admitted href must not contain credentials or a port.")
         if parsed.query or parsed.fragment:
             raise WebFingerAdmissionError("WebFinger admitted href must not contain query or fragment data.")
-        hostname = _public_dns_hostname(parsed.hostname)
+        hostname = _admitted_dns_hostname(parsed.hostname)
         normalized = urlunsplit(("https", hostname, parsed.path or "/", "", ""))
         if normalized not in admitted:
             admitted.append(normalized)
