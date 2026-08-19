@@ -11,18 +11,15 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
-- Verified main before this block: `a9b8c1db79548fc30e9d75ec24999d4ad2f1f090`
 - PR #137: governed metadata-only RDAP activation — merged
 - PR #138: bounded local consented M10 cohort runner — merged
 - PR #139: independently reviewed M10 provenance boundary — merged
 - PR #140: shared private local M10 materializer + reviewed runner — merged
 - PR #142: operator DOMAIN research reachability — merged
-- PR #142 exact tested head: `f3729a48705ba8ab349fb6cef1217cd9c5f5d921`
-- PR #142 exact-head CI: run `32304516425`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
-- Issue #141: closed by PR #142
-- Current branch: `feat/operator-pivot-evidence-context`
-- Current block: expose the exact canonical observation field and observation context that caused each resolvable evidence pivot
-- Current exact-head CI: pending; merge only after the complete required matrix passes
+- PR #144: operator pivot evidence context — merged
+- PR #144 exact tested head: `ef3f653fdd4bd3f15d7e46591f1d53f0431c0ae2`
+- PR #144 exact-head CI: run `32309463659`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- PR #144 merge / verified main: `ee7aed8ea58bb588b09293ffba0063ab17ea781d`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -43,19 +40,17 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - WebFinger: PLANNED; parser/admission, SSRF transport, URL-only semantics and exact-host policy are complete, but no concrete host is approved.
 - M10: deterministic replay, source/graph accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), strict consented/reviewed-only accounting and shared private local cohort ingestion are implemented. Representative real evaluation remains incomplete.
 
-## Current block — operator pivot evidence context
+## Latest block — operator pivot evidence context
 
 The retained converged report already carries canonical provenance references for admitted pivots: an edge points to one admitted lead decision, that decision identifies the parent observation index and exact source field, and the parent observation owns the provider source/locator and summary.
 
-Before this block, the private operator UI resolved that chain only far enough to show the provider source and locator. That answered where the evidence came from but not which exact observation field caused the pivot. The operator then had to scan the parent node's raw observation JSON manually.
+Before PR #144, the private operator UI resolved that chain only far enough to show the provider source and locator. The operator still had to scan the parent node's raw observation details to see which field actually caused the pivot.
 
-The current branch extends the existing fail-closed resolver rather than changing the retained schema. For new canonical-reference cases it returns the exact `source_field` and the canonical observation summary together with the existing source and source locator. Pivot cards show that context directly.
+PR #144 keeps the retained schema unchanged and extends the existing fail-closed resolver. For canonical-reference cases, evidence-pivot cards now show the provider source, exact `source_field`, canonical observation summary and source locator. Historical self-contained edges retained before ADR 0044 remain readable but do not gain invented field attribution; the UI states that the historical field is unavailable.
 
-Historical self-contained edges retained before ADR 0044 still render through the existing read-only compatibility path. They do not invent a source field or observation summary that was never retained; the UI labels the historical field as unavailable instead.
+The resolver still rejects mixed legacy/reference shapes, invalid decision indexes, non-admitted decisions, parent/child/reason mismatches, invalid observation indexes, empty source/locator values and source fields absent from the referenced observation details.
 
-The resolver still rejects mixed legacy/reference shapes, missing/out-of-range decision references, non-admitted decisions, parent/child/reason mismatches, missing observation references, empty source/locator values and source fields that are not present in the referenced observation details.
-
-This is a presentation/useability change over existing canonical evidence. It adds no retained personal data, provider field, network request, permission, new inference, graph recursion or identity semantic.
+This is presentation over existing canonical evidence. It adds no retained personal data, provider field, network request, permission, inference, graph recursion or identity semantic.
 
 ## RDAP checkpoint
 
@@ -96,12 +91,11 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Put the pivot evidence-context branch through exact-head CI. Repair regressions rather than weakening canonical-reference validation.
-2. Merge only when API 3.11/3.13, audits/Ruff, web and production-image checks pass; then record the exact tested checkpoint in this file before merge if the head changes.
-3. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
-4. Continue operator evidence/provenance work only where it removes a specific investigation step; avoid decorative redesign and duplicated retained evidence.
-5. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
-6. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
+1. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
+2. Continue operator evidence/provenance work only where it removes a specific investigation step. The current pivot view now answers which canonical field caused a resolvable hop.
+3. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
+4. Keep the backend/UI research-kind parity regression and pivot-reference regression green as retained contracts evolve.
+5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
 
 ## Update discipline
 
