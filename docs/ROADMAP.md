@@ -147,17 +147,17 @@ A concrete `mastodon.social` review did not establish a sufficiently explicit cu
 
 ### RDAP
 
-**Status: planned — admission PR #123; metadata-only contract PR #126; authoritative transport PR #128; bounded bootstrap cache PR #130; final-response provenance PR #132; routing non-attempt accounting PR #134**
+**Status: planned — DOMAIN reachability implemented in PR #136; provider activation remains**
 
 RDAP is being reviewed as zero-spend domain registration metadata from authoritative services. Its contract is metadata-only: `rdap_domain_registry.emits = frozenset()`. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from the admitted observation and cannot become typed subject leads.
 
-The pre-activation path now has RFC 9224 longest-match IANA bootstrap selection, one process-wide cached owner of `https://data.iana.org/rdap/dns.json`, fresh DNS/global-address validation before each provider hop, IP-pinned HTTPS with hostname TLS validation, bounded redirects and response size, explicit RDAP response handling, and separate validation of the bootstrap-derived canonical query URL versus the final evidence source locator.
+The pre-activation path has RFC 9224 longest-match IANA bootstrap selection, one process-wide cached owner of `https://data.iana.org/rdap/dns.json`, fresh DNS/global-address validation before each provider hop, IP-pinned HTTPS with hostname TLS validation, bounded redirects and response size, explicit RDAP response handling, and separate validation of the bootstrap-derived canonical query URL versus the final evidence source locator.
 
-PR #134 adds `routing_unavailable` as a typed **non-attempt** source outcome for failures of prerequisite routing authority such as an unusable IANA bootstrap snapshot. It passed full CI before merge. That state is counted separately from subject-provider failures and does not increase provider-attempt accounting.
+PR #134 added `routing_unavailable` as a typed **non-attempt** outcome for failures of prerequisite routing authority such as an unusable IANA bootstrap snapshot. That state is counted separately from subject-provider failures and does not increase provider-attempt accounting.
 
-RDAP remains `PLANNED`, unbound, source-policy-unreviewed and non-recursive. Issue #133 stays open because DOMAIN reachability is not yet end-to-end. `LeadKind.DOMAIN` exists, but `ResearchKind` and M1 `IdentifierKind` do not currently expose DOMAIN, and live M5 converts converged nodes through M1 identifier normalization. Adding only a research enum would therefore create a half-supported path.
+PR #136 gives DOMAIN one canonical M1 representation across `IdentifierKind`, lead canonicalization, quick research, convergence, live M5 and RDAP admission. Explicit domain seeds can run end to end without an external provider. Discovered domain clues remain **display-only** and do not become recursive pivots.
 
-The remaining DOMAIN block must define one canonical representation across quick research, convergence and M1/M5 while preserving the existing **display-only** disposition of discovered domain clues. Redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic-data workflow, bulk/reverse lookup or contact harvesting is approved.
+RDAP itself remains `PLANNED`, unbound, source-policy-unreviewed and non-recursive until the governed adapter is activated atomically. Redaction and missing fields remain authoritative. No WHOIS fallback, RDRS/nonpublic-data workflow, bulk/reverse lookup or contact harvesting is approved.
 
 ## Immediate next gate
 
@@ -165,7 +165,7 @@ Do not reopen V2-D architecture casually, remove safety-critical M5 vetoes becau
 
 For evaluation, prioritize genuinely consented/reviewed label evidence.
 
-For RDAP, keep Issue #133 open until DOMAIN is represented consistently across quick research, convergence and the ephemeral M1/M5 graph. Prove an explicit DOMAIN seed is executable without making discovered domains recursive, preserve the merged routing/bootstrap non-attempt accounting, and then perform one atomic governed RDAP activation through catalog → binding → provider registry → shared runtime → typed source-state → canonical metadata-only observation.
+For RDAP, keep Issue #133 open through the activation PR. Wire the existing metadata-only adapter path atomically through catalog review → binding → DEVELOPMENT provider registry → process-wide `ProviderRuntime` → DOMAIN quick research → typed source-run reporting → canonical observation. Preserve `routing_unavailable` as a pre-provider non-attempt and use attempted-failure semantics only after an authoritative RDAP service has actually been contacted.
 
 Activation must preserve exact canonical-query/final-response provenance, redaction authority, deterministic success/not-found/malformed/rate-limit/unavailable/bootstrap-unavailable fixtures, and the zero-spend baseline. WebFinger remains planned unless a concrete host passes the existing exact-host source-policy gate. Gravatar remains blocked on its privacy-policy requirement. ActivityPub actor fetching remains unapproved.
 
