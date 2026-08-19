@@ -9,7 +9,6 @@ import ipaddress
 import json
 import socket
 import ssl
-from urllib.parse import urlsplit
 
 from ..network_metadata import resolve_public_host_ips
 from .errors import (
