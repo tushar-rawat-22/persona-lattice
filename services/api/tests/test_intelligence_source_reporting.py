@@ -139,6 +139,7 @@ def test_empty_scope_is_explicit_not_missing() -> None:
                 "remote_rate_limit_count": 0,
                 "execution_failure_count": 0,
                 "malformed_result_count": 0,
+                "routing_unavailable_count": 0,
                 "local_budget_stop_count": 0,
                 "optional_not_configured_count": 0,
                 "missing_secret_config_count": 0,
