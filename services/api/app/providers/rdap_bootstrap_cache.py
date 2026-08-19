@@ -262,3 +262,6 @@ class IanaRdapBootstrapCache:
             )
             self._snapshot = refreshed if store_allowed else None
             return copy.deepcopy(payload)
+
+
+IANA_RDAP_BOOTSTRAP_CACHE = IanaRdapBootstrapCache()
