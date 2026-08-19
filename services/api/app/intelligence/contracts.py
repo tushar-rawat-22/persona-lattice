@@ -50,6 +50,7 @@ _IDENTIFIER_KIND_BY_LEAD_KIND = {
     LeadKind.EMAIL: IdentifierKind.EMAIL,
     LeadKind.PHONE: IdentifierKind.PHONE,
     LeadKind.URL: IdentifierKind.URL,
+    LeadKind.DOMAIN: IdentifierKind.DOMAIN,
     LeadKind.NAME: IdentifierKind.NAME,
     LeadKind.ORGANIZATION: IdentifierKind.ORGANIZATION,
 }
@@ -73,12 +74,6 @@ def canonicalize_lead(kind: LeadKind, value: str) -> tuple[str, str]:
     compact = _compact(value)
     if not compact:
         raise InvalidIdentifier(f"{kind.value} is empty.")
-
-    if kind is LeadKind.DOMAIN:
-        candidate = compact.lower().rstrip(".")
-        if not candidate or "." not in candidate or any(character.isspace() for character in candidate):
-            raise InvalidIdentifier("Domain is malformed.")
-        return candidate, candidate
 
     if kind is LeadKind.LOCATION:
         return compact, compact.casefold()
