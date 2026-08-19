@@ -11,16 +11,15 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Local checkout convention: `~/persona-lattice`
 - License: Apache-2.0 for original code
 - Operating model: one authenticated operator; public route is demo/preview only
+- Verified main before this block: `9b167653fb92e2d2ae50d8a2df2ba5b08e535b01`
 - PR #137: governed metadata-only RDAP activation — merged
 - PR #138: bounded local consented M10 cohort runner — merged
-- PR #139: independently reviewed M10 label provenance and reviewed-only accounting — merged
-- PR #139 exact tested head: `6ad918ee0a1cb1efdb405f905d11ab1c4cda3c48`
-- PR #139 exact-head CI: run `32299192182`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
-- PR #139 merge / verified main before the current block: `756e1459947bdd3ff75563474eb919d03bfb5885`
-- Current branch: `m10-reviewed-local-runner`
-- Current block: shared private local M10 cohort materializer + reviewed runner
-- Current exact-head CI: pending; do not merge until the complete matrix passes
-- Relevant decisions: ADR 0078 and ADR 0079
+- PR #139: independently reviewed M10 provenance boundary — merged
+- PR #140: shared private local M10 materializer + reviewed runner — merged at the verified main above
+- Open product bug at block start: Issue #141 — operator UI omitted live DOMAIN research
+- Current branch: `fix/domain-operator-research`
+- Current block: expose explicit DOMAIN research in the private operator UI and lock backend/UI research-kind parity
+- Current exact-head CI: pending; merge only after the complete required matrix passes
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -39,32 +38,23 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - RDAP: active for explicit DOMAIN seeds through the governed runtime, PR #137.
 - Gravatar: PLANNED; blocked on provider privacy-policy/free-key requirements.
 - WebFinger: PLANNED; parser/transport/URL-only semantics/exact-host policy exist, but no host is approved.
-- M10: deterministic replay, graph/source accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), consented/reviewed-only accounting and a local consented runner exist. Representative real evaluation remains incomplete.
+- M10: deterministic replay, graph/source accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), strict consented/reviewed-only accounting, and shared private local cohort ingestion are implemented. Representative real evaluation remains incomplete.
 
-## Current block — shared local evidence-backed cohort ingestion
+## Current block — operator DOMAIN research reachability
 
-PR #139 closed the semantic provenance gap: independently reviewed evidence now has its own basis and reviewed-only accounting boundary, while the consented-only boundary remains strict.
+RDAP became live for explicit DOMAIN seeds in PR #137, but the private `QuickResearch` component still exposed only username, phone, email and URL. The backend capability therefore existed without a normal operator entry point. Issue #141 correctly treated that as a product bug rather than a cosmetic request.
 
-The next operational gap was that only consented evidence had a privacy-bounded local JSON runner. Duplicating that parser for reviewed evidence would create two normalization, graph-shape and privacy contracts, so this branch extracts one shared local cohort materializer.
+This branch adds `domain` to the web `ResearchKind` contract and starting-identifier selector, keeps the existing `/v1/cases/run-converged` request body unchanged, and gives domain input the bare-domain example `example.com`.
 
-The shared materializer keeps the existing limits and M1-backed canonicalization used by the consented runner. It builds the same `M10GraphFixture` contract and accepts the evidence basis only from the executable caller. Input JSON cannot select its own basis: top-level or fixture-level `basis` / `label_basis` fields are rejected.
+The UI states the policy boundary directly: domain research is explicit-seed only. Domain clues discovered during another case remain `DISPLAY_ONLY`; this block does not add domain auto-pivoting or alter recursion policy.
 
-The consented runner now calls the shared materializer with `CONSENTED`. A new reviewed runner calls it with `INDEPENDENTLY_REVIEWED`. Synthetic provenance is rejected by this evidence-backed local path.
+A cross-layer regression test now imports the live backend `ResearchKind` enum and compares it with both the TypeScript research-kind union and the selector option set. A future backend kind addition or UI refactor therefore fails CI if the operator surface silently loses an executable research kind.
 
-Both runners:
+Stored DOMAIN cases require no separate rendering branch. They use the existing retained-case header, research-node kind/value display, typed source-run summary, canonical observation source locators and recent-case list. The regression contract explicitly checks those paths remain present.
 
-- keep the 1 MiB input, 256-fixture and 2,048-node bounds;
-- use the same production depth-2 / 12-node baseline and depth-3 / 12-node diagnostic candidate;
-- require an opaque lowercase SHA-256 reference to the external consent/review record;
-- require complete labels for admitted pivots at the matching analysis boundary;
-- emit aggregate scenario accounting and experiment/provenance digests only;
-- return generic CLI validation failures instead of echoing private values.
+No new network provider, RDAP field, permission, retention field or evidence semantic is added here.
 
-The two entry points stay separate intentionally. The operator chooses the evidence basis by choosing the consented or reviewed command, not through an input-file flag.
-
-ADR 0079 records this design. `docs/M10_CONSENTED_COHORT_RUNBOOK.md` and `docs/M10_REVIEWED_COHORT_RUNBOOK.md` describe the two workflows.
-
-## RDAP activation checkpoint
+## RDAP checkpoint
 
 The live path remains:
 
@@ -76,7 +66,15 @@ RDAP remains metadata-only. Registrant/contact names, organizations, addresses, 
 
 Existing persistent SQLite databases created before DOMAIN was added to the M1 enum constraint may require deliberate recreation/migration before persisting DOMAIN identifiers.
 
-## Current controlled evaluation checkpoint
+## M10 checkpoint
+
+The two private evidence-backed entry points share one bounded local materializer. The consented command fixes provenance to `CONSENTED`; the reviewed command fixes it to `INDEPENDENTLY_REVIEWED`. Input JSON cannot promote its own evidence basis.
+
+The runners keep the 1 MiB input, 256-fixture and 2,048-node bounds, M1-backed normalization, production depth-2 / 12-node baseline and depth-3 / 12-node diagnostic candidate. They emit aggregate accounting and cryptographic replay/provenance digests rather than raw private identifiers.
+
+The engineering bottleneck is now real lawful evidence, not another parser or synthetic metric.
+
+## Controlled evaluation checkpoint
 
 Production depth 2 / 12 nodes: 9 labelled admitted pivots (8 relevant, 1 wrong), 11 simulated attempts.
 
@@ -95,12 +93,11 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Put the current shared-materializer/reviewed-runner head through exact-head CI; repair any consented-runner regression instead of maintaining two parsers.
-2. Merge only when API 3.11/3.13, audits/Ruff, web and production-image checks pass.
-3. After merge, the M10 ingestion bottleneck is real evidence. Use the consented command only for genuine consent records and the reviewed command only for genuine independent review records.
-4. Do not manufacture either evidence basis or publish population/calibration claims from a convenience cohort.
-5. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
-6. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
+1. Put the DOMAIN operator branch through exact-head CI and repair any web/API regression rather than weakening the parity contract.
+2. Merge only when API 3.11/3.13, audits/Ruff, web and production-image checks pass; close Issue #141 with the merge.
+3. After that, prioritize real consented/reviewed M10 evidence and operator evidence/provenance usability. Do not invent a convenience cohort to claim evaluation progress.
+4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
+5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
 
 ## Update discipline
 
