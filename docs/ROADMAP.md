@@ -1,169 +1,95 @@
 # Roadmap
 
-PersonaLattice is a private, evidence-first research workbench. The public route is a demo surface. Real intake, provider execution and retained case data belong to one authenticated operator account unless a future security/privacy review changes that model.
+PersonaLattice is a private, evidence-first research workbench. The public route is a demo surface; real research, provider execution and retained cases belong to the authenticated operator workflow.
 
-## Product rules
+## Permanent product rules
 
-- Observations, factual claims and correlation results stay separate.
-- Every lead and conclusion keeps provenance.
-- A lead is a research direction, not proof of identity.
-- Same-handle reuse alone is weak evidence.
-- M5 remains uncalibrated evidence-strength triage, not identity probability.
-- Contradictions, vetoes and stale evidence remain visible.
-- No biometric/embedding/ML identity decision is authorized.
-- No private-account bypass, credential/account-recovery probing, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking or regulated eligibility decisioning is a product capability.
-- The required operating baseline stays free: no paid API, hosting, database, proxy or enrichment dependency.
+- Keep observations, factual claims and correlation results separate.
+- Keep provenance for every retained observation, admitted lead and triage result.
+- Treat a lead as a research direction, not proof that two records belong to the same person.
+- M5 stays uncalibrated and non-probabilistic. `hard_contradiction` remains a production veto.
+- Keep production convergence at depth 2 / 12 nodes until real labelled evidence supports a change.
+- No biometric identity model, private-account bypass, credential/account-recovery probing, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking, contact harvesting or regulated eligibility decisioning.
+- The required operating baseline stays ₹0: no paid API, hosting, database, proxy or enrichment dependency.
 
-## Core platform — M0 through M6
+## Engineering foundation
 
-**Complete.**
+**Complete as of 2026-08-20.**
 
-Repository/CI, evidence and provenance storage, deterministic normalization, bounded file intake, the governed provider framework, reviewed Sherlock discovery, deterministic M5 correlation and the local evidence dashboard are implemented.
+The completion gate is met for the current private one-admin product:
 
-M5 permanent outputs remain `calibration_status=uncalibrated` and `is_identity_claim=false`.
+- M0-M6 evidence, provenance, normalization, provider governance and local dashboard are complete.
+- M7-M9 authentication, CSRF, private operator flow, reviewed document intake, retained cases, expiry/delete controls and bounded live research are implemented.
+- V2-A through V2-D typed leads, deterministic frontier, source capability registry and ProviderRuntime consistency are complete.
+- Every active explicit research kind is reachable from the operator UI, including explicit DOMAIN research.
+- Retained-case listing is metadata-only and cursor-bounded; full evidence loads only when one case is opened. Open/delete/list ordering regressions cover stale asynchronous responses.
+- Operator views expose retained observation fields, source-run outcomes, exact pivot provenance and retained M5 factor rationale without recreating provider or M5 policy in the browser.
+- Historical SQLite evidence stores have a tested, idempotent DOMAIN migration; current schemas are left unchanged and unknown schemas fail closed.
+- The local one-admin baseline runs without a paid service. `docs/ZERO_SPEND_RUNBOOK.md` is the authoritative zero-spend operating path.
+- Current required CI covers Python 3.11/3.13, dependency and lint checks, web lint/typecheck/build and the production API image.
 
-## Private operator product — M7 through M9
+This is an engineering freeze, not a claim that PersonaLattice is validated in the population. New engineering work should now be justified by source coverage, real M10 evidence, a concrete correctness defect or a specific operator investigation bottleneck. Do not keep polishing completed foundations because there is spare implementation time.
 
-**Implemented; local one-admin flow manually accepted.**
+## Active source baseline
 
-The private product has one deployment-configured admin, Argon2 password verification, HttpOnly sessions, CSRF protection, a private `/admin` route, same-origin API proxying, retained cases, expiry/delete controls and bounded live research.
-
-Current live sources:
+Current executable sources are:
 
 - reviewed Sherlock username discovery;
 - GitHub, GitLab and Codeforces public profiles;
 - Bluesky public profiles for valid AT handles;
-- phone numbering-plan metadata;
+- local phone numbering-plan metadata;
 - public DNS infrastructure metadata;
-- authoritative metadata-only RDAP for explicit domain seeds;
+- authoritative metadata-only RDAP for explicit DOMAIN seeds;
 - optional Brave exact public-web search when configured.
 
-Local operation is the zero-spend baseline. The paid Render topology remains an optional reference at `deploy/render-paid.yaml`.
+RDAP emits no subject leads. Registrant/contact fields are not admitted. Discovered domain clues remain `DISPLAY_ONLY`; only explicit DOMAIN seeds run RDAP.
 
-Privacy/operations include a 30-day default retained-case lifecycle, automatic expiry purge, explicit deletion, privacy-safe audit events, secrets outside Git and bounded request/concurrency/timeout/response limits. Backup/restore remains deferred until a persistent hosted production store is chosen.
-
-The retained-case navigator uses a metadata-only index. Listing cases selects only case ID, timestamps and seed metadata; it does not select or decode retained `report_json`. Pages are bounded and deterministically ordered. The console starts with eight summaries and offers one restrained **Load older cases** action when a continuation cursor exists; older pages append by case ID without bulk-loading evidence. Opening one case still fetches only that case's full retained report.
-
-The operator case view resolves retained canonical references rather than duplicating provider evidence. Evidence-pivot cards expose the source, exact observation field and observation summary that caused a pivot when canonical reference data is available; historical self-contained cases remain read-only compatible and do not gain invented field attribution.
-
-Source-run summaries consume retained evaluation counters directly. Alongside attempts and observations, the operator can see non-zero reasons why evidence may be absent: neutral withheld states, attempted provider failures, routing/bootstrap unavailability, local budget stops and configuration or policy blocks. Routing unavailability is labelled as **no provider attempt** so the UI does not turn a prerequisite routing failure into a provider failure.
-
-M5 cards consume the retained engine output directly. They show the evaluated observation source/locator, positive independence-group count, policy version and each retained factor's group, base/applied weight, status, rationale and veto flag. The browser does not recreate M5 thresholds or scoring logic.
-
-## Recursive evidence graph — V2
-
-### V2-A — typed lead graph
-
-**Complete — PR #20.** Typed lead kinds/dispositions, exact-field extraction, M1-consistent normalization and fail-closed handling for sensitive fields.
-
-### V2-B — deterministic frontier
-
-**Complete — PR #21.** Reservation-safe scheduling, duplicate/cycle suppression, reason-coded outcomes and retained graph state.
-
-Production limits remain **depth 2 / 12 nodes**. Raising them requires evaluation evidence.
-
-### V2-C — source capability registry
-
-**Complete — PR #22.** Capability, execution authority, lifecycle state, cost class, credential class, source-policy review and recursive eligibility are explicit. Planned sources remain non-executable by construction.
-
-### V2-D — runtime consistency and architecture closure
-
-**Complete — PRs #89-#90.** Every executable network source is behind the governed runtime. Catalog, binding, provider registry and process runtime ownership are checked symmetrically. Required active recursive sources must remain zero-spend eligible; non-zero-spend recursive sources can only be optional.
-
-Source-run accounting is phase-proven, retained evidence/provenance has canonical owners, historical retained formats remain read-only compatible, and the reviewed-document chain is server-owned from extraction through explicit case execution.
+Brave remains optional and metered. It is not part of the required ₹0 baseline.
 
 ## Source expansion
 
-New sources must use the existing catalog → binding → provider registry → process-wide `ProviderRuntime` → typed source-run → canonical evidence path.
+Source expansion is now the primary engineering stream alongside real M10 evaluation.
 
-### Bluesky
+Every external source must pass a fresh preflight from primary provider documentation immediately before activation. The preflight must cover current terms/data-use rules, authentication, quota/backoff, returned fields, contact risk, retention implications, operational stability and actual cost.
 
-**Active — PR #98.** Credentialless and zero-direct-cost. Only valid AT handles are applicable. Retained fields are limited to DID, normalized handle and optional display name plus non-identity/public-visibility metadata. Public-web opt-out and suspended/deactivated accounts are neutral attempted `withheld` outcomes.
+Community API directories and GitHub lists are discovery indexes only. They are not evidence that a provider permits PersonaLattice use.
 
-### RDAP
+Activation follows the existing path:
 
-**Active — PR #137.** Credentialless, zero-direct-cost registration metadata for explicit DOMAIN seeds. The source emits no recursive subject leads. Registrant/registrar/contact names, organizations, addresses, email addresses and telephone numbers are excluded from admitted observations.
+`catalog → binding → DEVELOPMENT provider registry → process-wide ProviderRuntime → typed source-run reporting → canonical evidence`
 
-The live path uses IANA longest-match bootstrap routing, one process-wide bootstrap cache, fresh DNS/global-address checks, IP-pinned HTTPS with hostname TLS validation, bounded redirects/response size and separate validation of canonical query URL versus final evidence locator.
+Activate at most one external source per PR. A source must degrade through typed unavailable/rate-limited/not-applicable outcomes rather than weakening the rest of the investigation pipeline.
 
-`routing_unavailable` remains a non-attempt outcome when prerequisite routing authority is unavailable. Once an authoritative RDAP provider is contacted, rate limits, transient failures and malformed results use attempted-failure semantics. Discovered domain clues remain **display-only**; only explicit DOMAIN seeds run RDAP.
+Current source-admission decisions are tracked in `docs/SOURCE_ADMISSION_QUEUE.md`.
 
-The private operator console exposes DOMAIN as an explicit starting identifier with a bare-domain example. DOMAIN cases use the same retained source-state, observation and provenance views as other research kinds. A regression contract compares the live backend research-kind enum with the operator selector so future UI changes cannot silently hide an executable kind.
+### Immediate candidate
 
-Persistent SQLite evidence stores created before DOMAIN was added are covered by a narrow, versioned migration. The upgrade recognizes only the known pre-DOMAIN identifier constraint, preserves existing identifiers and evidence/correlation references, verifies foreign-key integrity before commit and fails closed on unknown table shapes. Current/new databases are left unchanged.
+**Internet Archive Wayback availability metadata — approved for implementation review, not active yet.**
 
-No WHOIS fallback, RDRS/nonpublic workflow, reverse/bulk lookup or contact harvesting is approved.
+The reviewed scope is deliberately narrow: exact URL availability/capture metadata from the official Wayback availability endpoint, no archived-page content fetch, no person attribution and no emitted leads. Automated requests must identify PersonaLattice with a descriptive User-Agent and honor `429`/`Retry-After`. Activation still requires adapter/runtime fixtures and exact-head CI.
 
-### Gravatar
+### Explicit rejections/deferments
 
-**Planned.** Admission preflight exists, but activation remains blocked by provider privacy-policy requirements and the need for a free server-side key outside Git. It must remain unnecessary to the zero-spend baseline.
+- **ORCID Public API:** rejected for the product baseline because the current Public API terms prohibit use in connection with a revenue-generating product or service. A free endpoint with incompatible commercial terms is not a PersonaLattice source.
+- **Stack Exchange user search:** deferred as a generic username source because `inname` is substring matching, not identity-quality exact matching. Do not turn fuzzy search results into recursive pivots.
+- **Gravatar:** remains blocked until provider privacy-policy/terms requirements and the free server-side-key boundary are satisfied.
+- **WebFinger:** remains blocked until a specific host passes the existing host-policy review.
 
-### WebFinger
+## M10 evaluation
 
-**Planned.** Parser/admission, SSRF-safe transport, URL-only semantics and an exact-host policy gate exist. The production host-approval registry remains empty because no reviewed host has yet met the required current terms/privacy basis. ActivityPub actor fetching is separate and unapproved.
+**Infrastructure complete; representative evidence remains the bottleneck.**
 
-## M10 — evaluation and calibration laboratory
+PersonaLattice has separate synthetic, consented and independently reviewed label provenance. The private consented/reviewed runners share one bounded materializer but fix their provenance basis in code; input JSON cannot upgrade its own evidence status. Outputs are aggregate accounting and digests, not raw private identifiers.
 
-**Infrastructure established; representative evidence remains the bottleneck.**
+Current synthetic graph evidence still favors production depth 2 / 12 over the depth-3 diagnostic candidate: the deeper candidate adds wrong labelled pivots without additional relevant pivots. This is regression evidence, not a population-performance claim.
 
-Implemented:
+The next meaningful M10 step is a genuine lawful consented or independently reviewed cohort. Do not manufacture one from repository fixtures or rename synthetic evidence.
 
-- deterministic source-state/failure fixtures;
-- provider attempt/failure/no-match/yield counters with explicit denominators;
-- graph growth, depth, duplicate and budget-stop counters;
-- label-gated wrong-pivot measurement;
-- controlled graph-limit comparison through the production `LeadFrontier`;
-- a six-fixture synthetic cohort spanning username, email, URL and reviewed-phone seeds;
-- provider-boundary request-cost and observation-yield accounting;
-- replay fingerprints for exact cohort inputs/results;
-- replay-anchored real-engine M5 factor ablations;
-- rollback-only diagnostic M5 execution;
-- UUID-independent semantic fixture/result fingerprints;
-- explicit label-provenance manifests;
-- consented-only scenario accounting with exact numerator/denominator counts;
-- an explicit **independently reviewed** label basis and reviewed-only accounting boundary, separate from consent and synthetic regression data;
-- one shared bounded private local cohort materializer used by separate consented and independently reviewed runner entry points;
-- local consented and reviewed runners so private evidence-backed identifiers do not need to become repository fixtures.
+## Next gate
 
-M10 distinguishes three provenance bases: `synthetic`, `consented` and `independently_reviewed`. None can silently satisfy another basis. Both evidence-backed local runners fix their provenance basis in code; input JSON files cannot select or upgrade their own basis.
+1. Implement and independently review one high-value ₹0 source at a time, starting with the Wayback availability candidate unless its preflight changes.
+2. Run real consented or independently reviewed M10 evidence when it exists and use those results to decide whether source coverage, graph limits or triage policy need changes.
+3. Fix newly discovered correctness/security/operator defects when they are concrete; do not reopen frozen architecture without evidence.
+4. Keep `docs/CONTINUITY.md`, source-admission notes and operator docs truthful in the same PR as behavior changes.
 
-Both consented-only and reviewed-only analysis require complete labels for admitted pivots and report exact corpus counts/fractions rather than unsupported population rates. The runners retain only aggregate output and cryptographic experiment/provenance digests; raw review/consent records and private identifiers remain outside Git.
-
-### Current synthetic graph result
-
-Production depth 2 / 12 nodes admits 9 labelled pivots: **8 relevant, 1 wrong**, with 11 simulated source attempts.
-
-The depth-3 / 12-node diagnostic candidate admits 12 labelled pivots: **8 relevant, 4 wrong**, with 14 simulated attempts.
-
-In this synthetic cohort, the extra depth adds three attempts and three wrong-labelled pivots with no additional relevant pivot. This is regression evidence, not population evidence. Production stays depth 2 / 12 nodes.
-
-### Current M5 ablation result
-
-- compatible profile metadata omission: `possible_match` 35 → `insufficient_evidence` 20;
-- exact confirmed identifier omission: `strong_candidate` 75 → `insufficient_evidence` 20;
-- independent cross-link omission: `strong_candidate` 70 → `possible_match` 35;
-- diagnostic hard-contradiction omission: `contradicted` 0 → `strong_candidate` 90.
-
-The contradiction omission is safety-critical diagnostic work only. Production factor weights, thresholds and vetoes are unchanged.
-
-### Remaining M10 gate
-
-The bottleneck is real evidence, not another synthetic metric or another ingestion parser.
-
-Use the consented runner only when genuine consent records support the labels. Use the reviewed runner only when a real external review record supports the labels. Do not manufacture either basis from repository fixtures, an input flag or a bare hash of an identifier.
-
-Do not publish false-positive/false-negative, calibration, probability or population-performance claims until cohort design and denominators genuinely support those terms.
-
-## Immediate next gate
-
-1. Keep retained-case summary navigation metadata-only, bounded and cursor-driven; full evidence should load only when the operator opens a case.
-2. Keep the operator research-kind parity regression green as backend capabilities evolve; explicit DOMAIN research must remain reachable without changing display-only domain-pivot policy.
-3. Keep the SQLite DOMAIN migration regression green so old evidence stores remain upgradeable without destructive resets or broken provenance references.
-4. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching runner. The blocker is the evidence itself, not ingestion code.
-5. Continue operator explainability work only where it removes a specific investigation step. The case view now explains the evidence field behind a pivot, the retained M5 factor rationale behind a triage result, and the retained source-run reasons behind missing evidence.
-6. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
-7. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
-
-Success means the operator can answer for every hop:
-
-> What source produced this clue, which field caused the pivot, why was it allowed to become a lead, what evidence changed the triage result, why might expected evidence be absent, what did the system do with it, and what remains unknown?
+Success means an operator can answer: what source produced a clue, which retained field caused a pivot, why it was admitted, what evidence affected triage, why expected evidence may be absent, and what remains unknown.
