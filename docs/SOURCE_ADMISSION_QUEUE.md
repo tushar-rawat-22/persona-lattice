@@ -76,6 +76,23 @@ OpenAlex currently requires a free API key. PersonaLattice keeps it server-side 
 
 If OpenAlex responds with a different author ID than the exact ID supplied by the operator, the adapter fails closed rather than silently substituting another profile. This includes merged-ID behavior: identity reconciliation must remain explicit, not hidden inside a source adapter.
 
+### Wikidata exact entity
+
+**Decision:** admitted only for an exact Wikidata item URL carrying a `Q<positive-digits>` entity ID.
+
+Primary Wikimedia/Wikidata documentation re-checked on 2026-08-21:
+
+- Wikidata licensing and copyright policy for structured data;
+- Wikibase Action API `wbgetentities` documentation;
+- Wikimedia Foundation API Usage Guidelines and User-Agent policy;
+- Wikimedia's 2026 API rate-limit documentation.
+
+PersonaLattice accepts only canonical `https://www.wikidata.org/wiki/Q<positive-digits>` item URLs. It does not search by person name, alias, property, statement, sitelink or external identifier. The operator-supplied URL identifies the knowledge-graph entity before provider execution.
+
+The provider calls official `wbgetentities` with the exact QID and requests only English labels/descriptions. Retained evidence is limited to QID, bounded English label/description when present, `data_license=CC0`, Wikidata attribution and `identity_claim=false`. Claims, aliases, sitelinks, external identifiers, dates, places, occupations, organizations, contact data and linked entities are not admitted. No Wikidata field becomes a recursive lead.
+
+The source is credentialless and zero-direct-cost. Requests use a meaningful PersonaLattice User-Agent with the repository URL, run serially through a one-concurrency provider budget, stay well below Wikimedia's current User-Agent-only allowance and preserve `429`/`Retry-After`. Provider errors after contact remain attempted outcomes; malformed or mismatched entity results fail closed.
+
 ## Rejected for the baseline
 
 ### ORCID Public API
