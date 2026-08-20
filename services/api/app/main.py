@@ -18,7 +18,7 @@ from .admin_auth import (
 )
 from .audit import AUDIT_STORE, AuditEvent
 from .authz import AuthenticatedPrincipal
-from .cases import CASE_STORE, StoredCase
+from .cases import CASE_STORE, StoredCase, StoredCaseSummary
 from .convergence import build_converged_payload, run_converged_research
 from .evidence import IdentifierKind, InvalidIdentifier, normalize_collection, normalize_identifier
 from .models import CaseIntake, IntakePreview, ProviderPlan, Purpose
@@ -102,6 +102,14 @@ class StoredCaseResponse(BaseModel):
     report: dict[str, Any]
 
 
+class StoredCaseSummaryResponse(BaseModel):
+    id: UUID
+    created_at: str
+    expires_at: str
+    seed_kind: ResearchKind
+    seed_value: str
+
+
 class MutationCountResponse(BaseModel):
     count: int
 
@@ -122,6 +130,16 @@ def _stored_case_response(record: StoredCase) -> StoredCaseResponse:
         seed_kind=record.seed_kind,
         seed_value=record.seed_value,
         report=record.report,
+    )
+
+
+def _stored_case_summary_response(record: StoredCaseSummary) -> StoredCaseSummaryResponse:
+    return StoredCaseSummaryResponse(
+        id=record.id,
+        created_at=record.created_at.isoformat(),
+        expires_at=record.expires_at.isoformat(),
+        seed_kind=record.seed_kind,
+        seed_value=record.seed_value,
     )
 
 
@@ -406,17 +424,24 @@ async def run_converged_case(
     return _stored_case_response(record)
 
 
-@app.get("/v1/cases", response_model=list[StoredCaseResponse])
+@app.get("/v1/cases", response_model=list[StoredCaseSummaryResponse])
 def list_cases(
+    response: Response,
     limit: int = 20,
+    cursor: str | None = None,
     _principal: AuthenticatedPrincipal = Depends(require_admin),
-) -> list[StoredCaseResponse]:
+) -> list[StoredCaseSummaryResponse]:
     try:
-        records = CASE_STORE.list_recent(limit=limit)
+        records, next_cursor = CASE_STORE.list_summaries(limit=limit, cursor=cursor)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
-    AUDIT_STORE.record("case.list", details={"result_count": len(records)})
-    return [_stored_case_response(record) for record in records]
+    if next_cursor is not None:
+        response.headers["X-PersonaLattice-Next-Cursor"] = next_cursor
+    AUDIT_STORE.record(
+        "case.list",
+        details={"result_count": len(records), "has_more": next_cursor is not None},
+    )
+    return [_stored_case_summary_response(record) for record in records]
 
 
 @app.post("/v1/cases/purge-expired", response_model=MutationCountResponse)

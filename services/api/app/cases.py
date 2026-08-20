@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+import base64
+import binascii
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 import json
@@ -16,6 +18,7 @@ from .research import QuickResearchReport, ResearchKind
 
 _DEFAULT_RETENTION_DAYS = 30
 _MAX_RETENTION_DAYS = 365
+_MAX_SUMMARY_PAGE_SIZE = 50
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +29,15 @@ class StoredCase:
     seed_kind: ResearchKind
     seed_value: str
     report: dict[str, object]
+
+
+@dataclass(frozen=True, slots=True)
+class StoredCaseSummary:
+    id: UUID
+    created_at: datetime
+    expires_at: datetime
+    seed_kind: ResearchKind
+    seed_value: str
 
 
 def _database_path() -> Path:
@@ -106,6 +118,35 @@ def _decode_row(row: sqlite3.Row) -> StoredCase:
         seed_value=row["seed_value"],
         report=json.loads(row["report_json"]),
     )
+
+
+def _decode_summary_row(row: sqlite3.Row) -> StoredCaseSummary:
+    return StoredCaseSummary(
+        id=UUID(row["id"]),
+        created_at=datetime.fromisoformat(row["created_at"]),
+        expires_at=datetime.fromisoformat(row["expires_at"]),
+        seed_kind=ResearchKind(row["seed_kind"]),
+        seed_value=row["seed_value"],
+    )
+
+
+def _encode_summary_cursor(record: StoredCaseSummary) -> str:
+    payload = f"{record.created_at.isoformat()}\n{record.id}".encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+
+
+def _decode_summary_cursor(cursor: str) -> tuple[str, str]:
+    if not cursor or len(cursor) > 256:
+        raise ValueError("Case list cursor is invalid.")
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        raw = base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
+        created_at_raw, case_id_raw = raw.split("\n", maxsplit=1)
+        created_at = datetime.fromisoformat(created_at_raw)
+        case_id = UUID(case_id_raw)
+    except (ValueError, UnicodeDecodeError, binascii.Error) as exc:
+        raise ValueError("Case list cursor is invalid.") from exc
+    return created_at.isoformat(), str(case_id)
 
 
 class CaseStore:
@@ -203,6 +244,49 @@ class CaseStore:
                 (limit,),
             ).fetchall()
         return [_decode_row(row) for row in rows]
+
+    def list_summaries(
+        self,
+        *,
+        limit: int = 20,
+        cursor: str | None = None,
+        now: datetime | None = None,
+    ) -> tuple[list[StoredCaseSummary], str | None]:
+        if not 1 <= limit <= _MAX_SUMMARY_PAGE_SIZE:
+            raise ValueError("Case summary limit must be between 1 and 50.")
+        cursor_values = _decode_summary_cursor(cursor) if cursor is not None else None
+        self.purge_expired(now=now)
+        with _connect() as connection:
+            _initialize(connection)
+            if cursor_values is None:
+                rows = connection.execute(
+                    """
+                    SELECT id, created_at, expires_at, seed_kind, seed_value
+                    FROM research_cases
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT ?
+                    """,
+                    (limit + 1,),
+                ).fetchall()
+            else:
+                created_at_cursor, id_cursor = cursor_values
+                rows = connection.execute(
+                    """
+                    SELECT id, created_at, expires_at, seed_kind, seed_value
+                    FROM research_cases
+                    WHERE created_at < ? OR (created_at = ? AND id < ?)
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT ?
+                    """,
+                    (created_at_cursor, created_at_cursor, id_cursor, limit + 1),
+                ).fetchall()
+
+        page_rows = rows[:limit]
+        records = [_decode_summary_row(row) for row in page_rows]
+        next_cursor = None
+        if len(rows) > limit and records:
+            next_cursor = _encode_summary_cursor(records[-1])
+        return records, next_cursor
 
     def delete(self, case_id: UUID) -> bool:
         with _connect() as connection:
