@@ -282,6 +282,51 @@ function sourceOutcomeDetails(aggregate: SourceEvaluationAggregate): SourceOutco
   ].filter((item) => item.count > 0);
 }
 
+function stableObservationValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stableObservationValue);
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, stableObservationValue(nested)]),
+    );
+  }
+  return value;
+}
+
+function renderObservationValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null) return "null";
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(stableObservationValue(value));
+}
+
+function ObservationDetails({ observation }: { observation: Observation }) {
+  const entries = Object.entries(observation.details).sort(([left], [right]) => left.localeCompare(right));
+  return (
+    <>
+      {entries.length === 0 ? (
+        <p className="muted">No retained fields were returned by this observation.</p>
+      ) : (
+        <div className="connectedGrid">
+          {entries.map(([field, fieldValue]) => (
+            <div className="connectedField" key={field}>
+              <span>{field}</span>
+              <strong>{renderObservationValue(fieldValue)}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+      <details>
+        <summary>Raw retained JSON</summary>
+        <pre>{JSON.stringify(observation.details, null, 2)}</pre>
+      </details>
+    </>
+  );
+}
+
 function resolveConnectedIdentifier(
   report: QuickReport,
   item: ConnectedIdentifier,
@@ -778,7 +823,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                             <strong>{observation.source}</strong>
                             <span>{observation.summary}</span>
                             <small>{observation.source_locator}</small>
-                            <pre>{JSON.stringify(observation.details, null, 2)}</pre>
+                            <ObservationDetails observation={observation} />
                           </div>
                         ))
                       )}
@@ -845,7 +890,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                       <span>{observation.source_locator}</span>
                     </div>
                   </div>
-                  <pre>{JSON.stringify(observation.details, null, 2)}</pre>
+                  <ObservationDetails observation={observation} />
                 </article>
               ))}
             </div>
