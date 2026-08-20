@@ -120,6 +120,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="openalex_exact_author",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="openalex_exact_author",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact OpenAlex author URLs execute singleton author-id lookup through ProviderRuntime; "
+            "name search, affiliations and emitted leads are outside this source."
+        ),
+    ),
+    SourceBinding(
         source_name="rdap_domain_registry",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="rdap_domain_registry",

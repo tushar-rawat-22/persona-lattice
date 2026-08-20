@@ -254,6 +254,28 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="openalex_exact_author",
+        capability="public_scholarly_profile_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official OpenAlex singleton author lookup only for an exact supplied OpenAlex author URL; "
+            "bounded scholarly-profile metadata with no name search or emitted leads."
+        ),
+        version="authors-singleton-2026-08",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        auth_mode=AuthMode.API_KEY,
+        secret_env="OPENALEX_API_KEY",
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=32 * 1024,
+        max_concurrency=1,
+        rate_limit=20,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="brave_public_web_index",
         capability="exact_public_web_search",
         status=ProviderStatus.DEVELOPMENT.value,

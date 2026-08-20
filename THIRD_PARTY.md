@@ -14,6 +14,7 @@ license, terms, technical behavior, and privacy impact are reviewed.
 | socialscan | MPL-2.0 | Evaluation only; no copied/modified MPL files in the core |
 | PhoneInfoga | GPL-3.0 | Reference only; no copied GPL code in the Apache core |
 | Stack Exchange API / Stack Overflow | Stack Exchange API Terms of Use | Active only for exact numeric Stack Overflow profile URLs. Uses anonymous official `/users/{id}` reads, keeps visible Stack Overflow attribution and canonical provenance, retains bounded account metadata only, and never uses fuzzy `inname` search. No API content or code is vendored. |
+| OpenAlex | CC0 data; OpenAlex API terms/pricing | Active only for exact `https://openalex.org/A…` author URLs when a free server-side API key is configured. Uses the official singleton author endpoint with bearer authentication, retains bounded CC0 scholarly-profile metadata only, and performs no name/ORCID search, affiliation expansion, work enumeration or emitted-lead discovery. No OpenAlex data or code is vendored. |
 | Hacker News API | Y Combinator Terms of Use | Rejected for the intended commercial product path under current terms; do not activate merely because the API is public and credentialless. |
 | Numverify | Provider terms | Development adapter only after provider contract review |
 | Abstract | Provider terms | Development adapter only after provider contract review |

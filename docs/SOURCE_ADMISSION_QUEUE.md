@@ -56,6 +56,26 @@ PersonaLattice retains only bounded account-verification context: numeric Stack 
 
 The source uses anonymous reads only, stays inside a conservative local budget, honors provider `429`/`Retry-After` and API `backoff`, and keeps Stack Overflow attribution visible with the canonical source locator. The account is evidence about the supplied profile URL, not proof of subject identity.
 
+### OpenAlex exact author
+
+**Decision:** admitted only for an exact OpenAlex author URL when the free server-side API key is configured.
+
+Primary OpenAlex documentation re-checked on 2026-08-21:
+
+- single-author retrieval (`GET /authors/{id}`);
+- API authentication and pricing;
+- API changelog for the 2026 API-key requirement;
+- OpenAlex ID guidance and author-name ambiguity;
+- CC0 data/reuse documentation.
+
+PersonaLattice accepts only canonical `https://openalex.org/A<positive-digits>` author URLs. It does not search by author name, ORCID, institution, work, topic or other person-like text. The URL already identifies the scholarly entity before provider execution.
+
+The provider calls only the singleton author endpoint and requests four fields: canonical ID, display name, works count and cited-by count. Retained evidence adds `data_license=CC0`, OpenAlex attribution and `identity_claim=false`. ORCID/Scopus/MAG IDs, affiliations, locations, topics, alternative names, work lists, abstracts/full text and contact details are not retained. No OpenAlex field becomes a recursive lead.
+
+OpenAlex currently requires a free API key. PersonaLattice keeps it server-side in `OPENALEX_API_KEY` and sends it as bearer authorization rather than putting it in the URL. A missing key is a pre-attempt `credential_not_configured` state. Provider `429`, transient failures and malformed responses retain their existing attempted-failure semantics.
+
+If OpenAlex responds with a different author ID than the exact ID supplied by the operator, the adapter fails closed rather than silently substituting another profile. This includes merged-ID behavior: identity reconciliation must remain explicit, not hidden inside a source adapter.
+
 ## Rejected for the baseline
 
 ### ORCID Public API
