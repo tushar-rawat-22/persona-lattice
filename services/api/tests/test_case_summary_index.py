@@ -145,6 +145,11 @@ def test_private_web_uses_summary_list_then_full_case_fetch() -> None:
 
     assert 'request("/v1/cases?limit=8")' in source
     assert "request(`/v1/cases/${caseId}`)" in source
+
+    recent_section = source[source.index('<div className="recentCases">') :]
+    assert "recentCases.map" in recent_section
+    assert "item.report" not in recent_section
+
     open_case_start = source.index("async function openCase")
     delete_case_start = source.index("async function deleteCase")
     open_case = source[open_case_start:delete_case_start]
