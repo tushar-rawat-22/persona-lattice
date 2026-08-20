@@ -278,6 +278,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="openalex_exact_author",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.FREE_TIER,
+        credential_class=SourceCredentialClass.FREE_API_KEY,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=44,
+        note=(
+            "Official OpenAlex singleton author metadata for exact OpenAlex author URLs only; "
+            "free API key, no name search, affiliations, work expansion or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="rdap_domain_registry",
         accepts=frozenset({LeadKind.DOMAIN}),
         emits=frozenset(),
