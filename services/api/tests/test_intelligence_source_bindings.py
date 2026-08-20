@@ -94,6 +94,23 @@ def test_public_dns_is_governed_for_url_only_and_never_domain_seed_today() -> No
         source_binding_for("public_dns_infrastructure", kind=LeadKind.DOMAIN)
 
 
+def test_wayback_governed_binding_is_metadata_only_url_execution() -> None:
+    capability = SOURCE_BY_NAME["wayback_url_availability"]
+    descriptor = PROVIDER_BY_NAME["wayback_url_availability"]
+    binding = source_binding_for("wayback_url_availability", kind=LeadKind.URL)
+
+    assert capability.status is SourceStatus.ACTIVE
+    assert capability.accepts == frozenset({LeadKind.URL})
+    assert capability.emits == frozenset()
+    assert capability.source_policy_reviewed is True
+    assert capability.zero_spend_eligible is True
+    assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
+    assert binding.provider_name == "wayback_url_availability"
+    assert descriptor.status == ProviderStatus.DEVELOPMENT.value
+    assert descriptor.contact_risk is ContactRisk.NONE_KNOWN
+    assert descriptor.supported_identifier_kinds == frozenset({"url"})
+
+
 def test_rdap_governed_binding_is_metadata_only_domain_execution() -> None:
     capability = SOURCE_BY_NAME["rdap_domain_registry"]
     descriptor = PROVIDER_BY_NAME["rdap_domain_registry"]
