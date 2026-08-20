@@ -7,7 +7,8 @@ CASE_UI = ROOT / "apps/web/app/admin/quick-research.tsx"
 
 
 def _section(source: str, start: str, end: str) -> str:
-    return source[source.index(start) : source.index(end)]
+    start_index = source.index(start)
+    return source[start_index : source.index(end, start_index)]
 
 
 def test_case_opening_is_latest_selection_wins() -> None:
@@ -18,6 +19,7 @@ def test_case_opening_is_latest_selection_wins() -> None:
     assert "const generation = startCaseContextChange();" in open_case
     assert "request(`/v1/cases/${caseId}`)" in open_case
     assert open_case.count("isCurrentCaseContext(generation)") >= 3
+    assert "const stored = (await response.json()) as StoredCase;" in open_case
     assert "setActiveCase(stored);" in open_case
     assert 'setError("Stored case could not be loaded.")' in open_case
 
@@ -44,7 +46,7 @@ def test_destructive_case_actions_invalidate_pending_case_loads() -> None:
 def test_request_ordering_does_not_change_report_loading_boundary() -> None:
     source = CASE_UI.read_text(encoding="utf-8")
     open_case = _section(source, "async function openCase", "async function deleteCase")
-    refresh = _section(source, "const refreshCases", "useEffect")
+    refresh = _section(source, "const refreshCases", "useEffect(() =>")
 
     assert "request(`/v1/cases/${caseId}`)" in open_case
     assert 'request("/v1/cases?limit=8")' in refresh
