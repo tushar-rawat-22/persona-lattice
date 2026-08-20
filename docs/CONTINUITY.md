@@ -31,7 +31,8 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - PR #159 final CI: run `32344988541`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
 - Issue #158: closed as completed by PR #159
 - PR #162: retained-case summary-page ordering — merged at `dd2d00bd069efa596724c19aca5922c44e8360df`
-- PR #164: readable retained observation-field presentation
+- PR #164: readable retained observation-field presentation — merged at `87edb016648a8017f7d7e16b2299239cd7ec85ad`
+- PR #166: safe canonical web provenance links — open; exact-head CI required before merge
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -81,6 +82,14 @@ PR #164 replaces raw-JSON-only observation reading with one shared read-only ren
 The renderer is deliberately provider-agnostic. String, number, boolean and null values are shown truthfully; arrays and objects use deterministic JSON with recursively sorted object keys while array order is preserved. Historical or unknown field names flow through the same `Object.entries()` path rather than depending on a provider-specific frontend schema.
 
 Returned field values remain plain text. The browser does not auto-link URL-like strings and does not assign confidence, identity significance, lead eligibility or other research meaning. A collapsed `Raw retained JSON` disclosure keeps the exact retained payload available for audit/debug. This block adds no retained data and changes no provider, runtime, source-run, M5, recursion, RDAP, retention, authentication or CSRF behavior.
+
+## Operator provenance links
+
+PR #166 adds one shared renderer for canonical source locators shown in the private evidence view. It promotes only absolute `http://` and `https://` locators with a hostname and no embedded username/password to outbound links. Relative, malformed, credentials-bearing and non-web locators stay readable as plain text, which preserves historical and non-web provenance instead of treating every locator as a browser destination.
+
+Link text is the retained locator itself. Web links open in a new tab with `noopener noreferrer`; the renderer does not rewrite the displayed provenance value. Reviewed seed provenance, M5 candidate provenance, pivot provenance, connected-field provenance and canonical observation locators use the same rule.
+
+This is intentionally separate from retained observation fields. URL-looking strings inside `Observation.details` remain plain text and never pass through the source-locator renderer. The change adds no retained data and changes no provider, runtime, source-run, M5, recursion, RDAP, retention, authentication or CSRF behavior.
 
 ## Operator source-outcome explainability
 
@@ -139,13 +148,12 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Keep retained-case navigation metadata-only, bounded and cursor-driven; keep full-case reads latest-selection-wins, successful destructive mutations reconciled, and stale summary-page continuations inert after a newest-page refresh.
+1. Merge PR #166 only after its exact final head passes the complete required CI matrix; canonical web locators may be openable, but arbitrary retained field values must remain plain text.
 2. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
-3. Keep observation-field presentation exact and provider-agnostic: no browser-side confidence, identity or lead semantics, and no auto-linking arbitrary returned strings.
-4. Continue operator evidence/provenance work only where it removes a specific investigation step; do not recreate provider or M5 policy in the browser.
-5. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
-6. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
-7. Keep the SQLite DOMAIN migration regression green; never replace the versioned upgrade with a destructive reset shortcut.
+3. Continue operator evidence/provenance work only where it removes a specific investigation step; do not recreate provider or M5 policy in the browser.
+4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
+5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
+6. Keep the SQLite DOMAIN migration regression green; never replace the versioned upgrade with a destructive reset shortcut.
 
 ## Update discipline
 
