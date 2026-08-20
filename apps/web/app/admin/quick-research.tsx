@@ -300,7 +300,8 @@ function renderObservationValue(value: unknown): string {
   if (typeof value === "string") return value;
   if (value === null) return "null";
   if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return JSON.stringify(stableObservationValue(value));
+  const encoded = JSON.stringify(stableObservationValue(value));
+  return encoded === undefined ? String(value) : encoded;
 }
 
 function ObservationDetails({ observation }: { observation: Observation }) {
