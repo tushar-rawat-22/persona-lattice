@@ -32,7 +32,10 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Issue #158: closed as completed by PR #159
 - PR #162: retained-case summary-page ordering — merged at `dd2d00bd069efa596724c19aca5922c44e8360df`
 - PR #164: readable retained observation-field presentation — merged at `87edb016648a8017f7d7e16b2299239cd7ec85ad`
-- PR #166: safe canonical web provenance links — open; exact-head CI required before merge
+- PR #166: safe canonical web provenance links — merged at `a0ca43193df09714b4b9d7872f373b6525852d88`
+- PR #166 exact tested final head: `37c6b95a1641ab8175cbfcad6a5ec59e3058fbca`
+- PR #166 final CI: run `32369415130`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- Issue #165: closed as completed by PR #166
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -148,8 +151,8 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Merge PR #166 only after its exact final head passes the complete required CI matrix; canonical web locators may be openable, but arbitrary retained field values must remain plain text.
-2. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
+1. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
+2. Keep canonical web provenance links separate from arbitrary retained field values; historical and non-web source locators must remain readable without being promoted to browser destinations.
 3. Continue operator evidence/provenance work only where it removes a specific investigation step; do not recreate provider or M5 policy in the browser.
 4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
 5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
