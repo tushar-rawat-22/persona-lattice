@@ -55,6 +55,7 @@ Required/zero-spend baseline:
 - Internet Archive Wayback capture-availability metadata for canonical URLs;
 - Stack Overflow exact public-profile metadata for explicit numeric profile URLs;
 - OpenAlex exact-author metadata when a free server-side key is configured;
+- Wikidata exact-item CC0 metadata for explicit item URLs;
 - authoritative RDAP for explicit DOMAIN seeds.
 
 Optional:
@@ -66,6 +67,8 @@ Wayback is intentionally metadata-only. It queries the official availability end
 Stack Overflow is exact-URL account metadata only. Applicability requires a supplied `stackoverflow.com/users/<positive-id>` profile URL; the provider then calls the official exact-user API. It retains only prefixed user ID/display name/reputation/creation metadata, API attribution, `identity_claim=false`, and the canonical returned profile locator. It does not retain profile prose, posts/comments, location, website, image or contact fields, and it emits no leads. Generic Stack Exchange `inname` user search remains outside the product.
 
 OpenAlex is exact-author-URL metadata only. Applicability requires `https://openalex.org/A<positive-digits>` with no credentials, port, query or fragment. The provider calls only the official singleton author endpoint and retains author ID, display name, works count, cited-by count, CC0 attribution and `identity_claim=false`. It does not retain ORCID/Scopus/MAG identifiers, affiliations, locations, topics, alternative names, publications, full text or contact fields and emits no leads. The free key stays server-side in `OPENALEX_API_KEY` and is sent as bearer authorization, never in a URL. Missing key is `credential_not_configured` with no provider attempt. A returned author ID mismatch fails closed rather than silently switching scholarly identities.
+
+Wikidata is exact-item-URL metadata only. Applicability requires `https://www.wikidata.org/wiki/Q<positive-digits>` with no credentials, port, query or fragment. The provider calls official `wbgetentities` for that QID and requests English labels/descriptions only. It retains the QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`; it does not request or retain structured claims, aliases, sitelinks, external identifiers or linked entities, and emits no leads. The bounded description is public descriptive text and is never parsed into identity claims or recursive leads. Requests are credentialless, use an identifying User-Agent, one-concurrency/30-per-minute local budget, `maxlag=5`, and typed HTTP/API-level rate/backoff handling.
 
 Planned/review-gated entries in the source catalog are not executable merely because code or a catalog record exists.
 
@@ -87,7 +90,9 @@ Wayback was the first post-freeze source admission. Its contract is exact-URL hi
 
 Stack Overflow is the second admitted post-freeze source. Its applicability boundary is an exact profile URL with a numeric user ID, not a username/display-name query. Anonymous requests use the official Stack Exchange API, stay under a conservative local budget, preserve provider `Retry-After`/API `backoff`, and keep Stack Overflow attribution visible with canonical provenance.
 
-OpenAlex is the next admitted source in this code state. Its applicability is an exact author entity URL, not a person-name search. Current primary documentation was re-checked on 2026-08-21: API keys are required and free, bearer authentication is supported, singleton-by-ID retrieval is a free operation, author names are not safe identifiers, and the data is CC0. Re-check those provider facts before future source-policy changes.
+OpenAlex is the third admitted post-freeze source. Its applicability is an exact author entity URL, not a person-name search. Current primary documentation was re-checked on 2026-08-21: API keys are required and free, bearer authentication is supported, singleton-by-ID retrieval is a free operation, author names are not safe identifiers, and the data is CC0. Re-check those provider facts before future source-policy changes.
+
+Wikidata is the next admitted source in this code state. Its applicability is an exact item URL, not a person/entity-name search. Current primary documentation was re-checked on 2026-08-21: structured data is CC0; `wbgetentities` supports exact QID retrieval; automated clients must identify themselves and respect rate/backoff policy. PersonaLattice stays far below the current identified-client allowance and requests no claims or linked-entity expansion.
 
 Current explicit rejections/deferments include:
 
@@ -99,7 +104,7 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Keep Wayback, Stack Overflow and OpenAlex source boundaries/tests green; do not expand them into content scraping, fuzzy person search or hidden identity reconciliation.
+1. Keep Wayback, Stack Overflow, OpenAlex and Wikidata source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
 2. Review the next high-value ₹0 source from primary documentation before writing an adapter. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
 3. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 4. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
