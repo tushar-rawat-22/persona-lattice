@@ -49,9 +49,21 @@ def _user(username: str = "maxtaco") -> dict[str, object]:
 
 
 def test_username_admission_requires_keybase_canonical_form() -> None:
+    assert keybase_username_from_seed("ab") == "ab"
     assert keybase_username_from_seed("maxtaco") == "maxtaco"
     assert keybase_username_from_seed("user_123") == "user_123"
-    for value in ("MaxTaco", "user-name", "user.name", " user", "", "ümlaut"):
+    assert keybase_username_from_seed("a123456789012345") == "a123456789012345"
+    for value in (
+        "a",
+        "a1234567890123456",
+        "_user",
+        "MaxTaco",
+        "user-name",
+        "user.name",
+        " user",
+        "",
+        "ümlaut",
+    ):
         assert keybase_username_from_seed(value) is None
 
 
