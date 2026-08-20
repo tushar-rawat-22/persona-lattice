@@ -262,6 +262,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="stack_overflow_public_profile",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=43,
+        note=(
+            "Official Stack Exchange API metadata for exact Stack Overflow profile URLs only; "
+            "attributed account context, no fuzzy search, contact fields or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="rdap_domain_registry",
         accepts=frozenset({LeadKind.DOMAIN}),
         emits=frozenset(),
