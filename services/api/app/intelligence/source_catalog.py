@@ -111,11 +111,7 @@ class SourceCapability:
 
     @property
     def zero_spend_eligible(self) -> bool:
-        """Whether current source policy requires no paid credential/service tier.
-
-        This is a planning hint, not a permanent pricing promise. Planned sources
-        must still pass source-policy review immediately before activation.
-        """
+        """Whether current source policy requires no paid credential/service tier."""
 
         return (
             self.cost_class in _ZERO_SPEND_COST_CLASSES
@@ -123,10 +119,6 @@ class SourceCapability:
         )
 
 
-# The catalog describes current logical sources plus integration targets.
-# PLANNED/REVIEW_REQUIRED/MANUAL_ONLY/REFERENCE_ONLY entries are architecture
-# declarations only: they cannot execute recursively until a real adapter, current
-# source-policy review, fixtures and execution gate exist.
 SOURCE_CATALOG: tuple[SourceCapability, ...] = (
     SourceCapability(
         name="local_normalization",
@@ -254,10 +246,40 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         note="Public hostname infrastructure only; never a subject/device IP lead.",
     ),
     SourceCapability(
-        name="brave_public_web_index",
-        accepts=frozenset(
-            {LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.PHONE, LeadKind.URL}
+        name="wayback_url_availability",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=42,
+        note=(
+            "Internet Archive Wayback capture availability metadata for canonical URLs only; "
+            "no archived content fetch, person attribution or emitted leads."
         ),
+    ),
+    SourceCapability(
+        name="rdap_domain_registry",
+        accepts=frozenset({LeadKind.DOMAIN}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.OPEN_STANDARD,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=45,
+        note=(
+            "Authoritative IANA-bootstrap-selected RDAP metadata for explicit DOMAIN seeds only; "
+            "emitted subject leads are empty and discovered domains remain display-only."
+        ),
+    ),
+    SourceCapability(
+        name="brave_public_web_index",
+        accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.PHONE, LeadKind.URL}),
         emits=frozenset(),
         status=SourceStatus.OPTIONAL,
         mode=SourceMode.LICENSED_SEARCH,
@@ -362,9 +384,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
     SourceCapability(
         name="gravatar_public_profile",
         accepts=frozenset({LeadKind.EMAIL}),
-        emits=frozenset(
-            {LeadKind.URL, LeadKind.NAME, LeadKind.ORGANIZATION, LeadKind.LOCATION}
-        ),
+        emits=frozenset({LeadKind.URL, LeadKind.NAME, LeadKind.ORGANIZATION, LeadKind.LOCATION}),
         status=SourceStatus.PLANNED,
         mode=SourceMode.PUBLIC_API,
         cost_class=SourceCostClass.FREE_TIER,
@@ -395,27 +415,9 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
-        name="rdap_domain_registry",
-        accepts=frozenset({LeadKind.DOMAIN}),
-        emits=frozenset(),
-        status=SourceStatus.ACTIVE,
-        mode=SourceMode.OPEN_STANDARD,
-        cost_class=SourceCostClass.ZERO_DIRECT_COST,
-        credential_class=SourceCredentialClass.NONE,
-        source_policy_reviewed=True,
-        recursive_eligible=True,
-        priority=45,
-        note=(
-            "Authoritative IANA-bootstrap-selected RDAP metadata for explicit DOMAIN seeds only; "
-            "emitted subject leads are empty and discovered domains remain display-only."
-        ),
-    ),
-    SourceCapability(
         name="google_people_authorized",
         accepts=frozenset({LeadKind.EMAIL, LeadKind.PHONE, LeadKind.NAME}),
-        emits=frozenset(
-            {LeadKind.EMAIL, LeadKind.PHONE, LeadKind.NAME, LeadKind.ORGANIZATION}
-        ),
+        emits=frozenset({LeadKind.EMAIL, LeadKind.PHONE, LeadKind.NAME, LeadKind.ORGANIZATION}),
         status=SourceStatus.PLANNED,
         mode=SourceMode.USER_AUTHORIZED,
         cost_class=SourceCostClass.UNKNOWN,
