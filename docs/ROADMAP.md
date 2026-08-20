@@ -41,12 +41,15 @@ Current executable sources are:
 - public DNS infrastructure metadata;
 - Internet Archive Wayback capture-availability metadata for canonical URLs;
 - Stack Overflow public-account metadata for exact numeric profile URLs;
+- OpenAlex scholarly-profile metadata for exact author URLs when a free server-side key is configured;
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
 - optional Brave exact public-web search when configured.
 
 Wayback retains capture metadata only. It fetches no archived page content, emits no new leads and makes no person-attribution claim.
 
 Stack Overflow runs only when an already-supplied URL matches an exact `stackoverflow.com/users/<id>` profile. It uses the official exact-user API endpoint, retains a narrow attributed account-metadata record and emits no leads. Generic Stack Exchange `inname` search remains rejected because substring display-name matching is too ambiguous for identity evidence.
+
+OpenAlex runs only when the supplied URL is exactly an `openalex.org/A<id>` author entity. It calls the official singleton author endpoint with a free server-side key, retains only author ID, display name, works/citation counts, CC0 attribution and `identity_claim=false`, and emits no leads. Name/ORCID search, affiliations, topics and work expansion are deliberately excluded. Missing key is a non-attempt configuration state.
 
 RDAP emits no subject leads. Registrant/contact fields are not admitted. Discovered domain clues remain `DISPLAY_ONLY`; only explicit DOMAIN seeds run RDAP.
 
@@ -78,13 +81,23 @@ The adapter stores only queried URL, capture availability/status/timestamp and c
 
 ### Stack Overflow exact public profile
 
-**Active in this code state.**
+**Active.**
 
 The source parses an exact Stack Overflow profile URL locally, extracts the numeric user ID and calls the official Stack Exchange API v2.3 `/users/{id}` path for `site=stackoverflow`. It does not call `/users?inname=` or perform display-name search.
 
 Retained fields are intentionally narrow: Stack Overflow user ID, public display name, reputation, creation timestamp, explicit API attribution, `identity_claim=false`, and the canonical returned profile locator. `about`, posts/comments, location, website, profile image and contact fields are not admitted. No recursive leads are emitted.
 
 Anonymous API reads keep the source at zero direct cost. PersonaLattice applies a tighter local rate budget than the provider's documented quota and honors remote `429`/`Retry-After` plus API `backoff` signals.
+
+### OpenAlex exact author
+
+**Active when configured.**
+
+The source admits only an exact HTTPS OpenAlex author URL with an `A<positive-digits>` ID. It uses the official singleton-author API call with `Authorization: Bearer <OPENALEX_API_KEY>` and never places the key in a request URL. Current OpenAlex documentation describes the key as free and singleton-by-ID retrieval as a free operation; those provider facts must be re-checked before future release changes.
+
+Retained evidence is limited to the canonical author ID, public display name, works count, cited-by count, CC0 attribution and `identity_claim=false`. No ORCID/Scopus/MAG IDs, affiliations, locations, topics, alternative names, publications, abstracts/full text or contact data are admitted. No recursive leads are emitted.
+
+A missing key is reported as `credential_not_configured` before a provider attempt. If the returned author ID differs from the exact ID requested, the result fails closed rather than silently following a merged/reassigned scholarly identity.
 
 ### Explicit rejections/deferments
 
