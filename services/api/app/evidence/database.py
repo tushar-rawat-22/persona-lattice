@@ -7,6 +7,7 @@ from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from .migrations import migrate_sqlite_schema
 from .models import Base
 
 
@@ -41,6 +42,7 @@ def create_database_engine(url: str) -> Engine:
 def create_schema(engine: Engine) -> None:
     # Correlation has its own ORM domain but shares the evidence metadata/transaction.
     import_module("app.correlation.models")
+    migrate_sqlite_schema(engine)
     Base.metadata.create_all(engine)
 
 

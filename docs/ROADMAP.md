@@ -86,6 +86,8 @@ The live path uses IANA longest-match bootstrap routing, one process-wide bootst
 
 The private operator console exposes DOMAIN as an explicit starting identifier with a bare-domain example. DOMAIN cases use the same retained source-state, observation and provenance views as other research kinds. A regression contract compares the live backend research-kind enum with the operator selector so future UI changes cannot silently hide an executable kind.
 
+Persistent SQLite evidence stores created before DOMAIN was added are covered by a narrow, versioned migration. The upgrade recognizes only the known pre-DOMAIN identifier constraint, preserves existing identifiers and evidence/correlation references, verifies foreign-key integrity before commit and fails closed on unknown table shapes. Current/new databases are left unchanged.
+
 No WHOIS fallback, RDRS/nonpublic workflow, reverse/bulk lookup or contact harvesting is approved.
 
 ### Gravatar
@@ -151,10 +153,11 @@ Do not publish false-positive/false-negative, calibration, probability or popula
 ## Immediate next gate
 
 1. Keep the operator research-kind parity regression green as backend capabilities evolve; explicit DOMAIN research must remain reachable without changing display-only domain-pivot policy.
-2. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching runner. The blocker is the evidence itself, not ingestion code.
-3. Continue operator explainability work only where it removes a specific investigation step. The case view now explains both the evidence field behind a pivot and the retained M5 factor rationale behind a triage result.
-4. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
-5. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
+2. Keep the SQLite DOMAIN migration regression green so old evidence stores remain upgradeable without destructive resets or broken provenance references.
+3. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching runner. The blocker is the evidence itself, not ingestion code.
+4. Continue operator explainability work only where it removes a specific investigation step. The case view now explains both the evidence field behind a pivot and the retained M5 factor rationale behind a triage result.
+5. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
+6. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
 
 Success means the operator can answer for every hop:
 

@@ -85,6 +85,20 @@ The SQLite database in the commands above lives under `.local/` and is excluded 
 
 Cases use the configured retention policy and explicit deletion controls. Upload review state is short-lived. Uploaded content remains untrusted input and does not authorize research until a candidate is explicitly confirmed and a separate run action is performed.
 
+## SQLite upgrades
+
+Stop the API before copying or moving the SQLite evidence database. For a persistent store with retained cases, make a local backup before upgrading application code:
+
+```bash
+cp "$PERSONALATTICE_DB_PATH" "$PERSONALATTICE_DB_PATH.pre-upgrade"
+```
+
+On startup, PersonaLattice checks the known pre-DOMAIN `identifiers.kind` constraint before creating missing tables. Migration `2026-08-20-domain-identifier-kind-v1` rebuilds only the `identifiers` table inside one SQLite transaction, verifies copied rows and `PRAGMA foreign_key_check`, then restores foreign-key enforcement. Existing UUIDs and evidence/correlation references are preserved.
+
+The migration is idempotent. A current database is left alone. An unknown identifier-table shape, an unexpected enum constraint or a reserved migration table causes startup to fail closed instead of guessing how to rewrite the database.
+
+If migration fails, keep the failed database untouched for diagnosis. Restore the pre-upgrade copy only after stopping the API and only if you need to return to the previous application version. Do not delete or recreate the database as a normal upgrade step.
+
 ## What zero-spend means
 
 The baseline must continue to work when all optional paid or metered integrations are absent. In particular:
