@@ -48,7 +48,9 @@ def test_full_report_is_still_loaded_only_when_case_is_opened() -> None:
     open_case = source[open_start:delete_start]
 
     assert "request(`/v1/cases/${caseId}`)" in open_case
-    assert "setActiveCase((await response.json()) as StoredCase);" in open_case
+    assert "const stored = (await response.json()) as StoredCase;" in open_case
+    assert "setActiveCase(stored);" in open_case
+    assert "isCurrentCaseContext(generation)" in open_case
 
     refresh_start = source.index("const refreshCases")
     submit_start = source.index("async function submit")
