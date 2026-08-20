@@ -44,6 +44,7 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
     assert recursive_registry_sources == {
         "sherlock",
         "github_public_api",
+        "keybase_public_user",
         "gitlab_public_api",
         "codeforces_public_api",
         "bluesky_public_profile",
@@ -62,6 +63,22 @@ def test_github_public_api_budget_keeps_hourly_headroom() -> None:
     assert descriptor.rate_window_seconds == 3600.0
     assert descriptor.rate_limit == 50
     assert descriptor.rate_limit < GITHUB_UNAUTHENTICATED_PRIMARY_LIMIT_PER_HOUR
+
+
+def test_keybase_is_zero_spend_credentialless_basics_only_and_username_only() -> None:
+    descriptor = PROVIDER_BY_NAME["keybase_public_user"]
+    capability = SOURCE_BY_NAME["keybase_public_user"]
+    assert capability.status is SourceStatus.ACTIVE
+    assert capability.zero_spend_eligible is True
+    assert capability.emits == frozenset()
+    assert descriptor.auth_mode is AuthMode.NONE
+    assert descriptor.supported_identifier_kinds == frozenset({"username"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 16 * 1024
+    assert descriptor.max_concurrency == 1
+    assert descriptor.rate_limit == 20
+    assert descriptor.rate_window_seconds == 60.0
 
 
 def test_gitlab_public_api_keeps_the_existing_conservative_local_budget() -> None:
