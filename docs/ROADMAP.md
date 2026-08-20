@@ -52,7 +52,7 @@ Stack Overflow runs only when an already-supplied URL matches an exact `stackove
 
 OpenAlex runs only when the supplied URL is exactly an `openalex.org/A<id>` author entity. It calls the official singleton author endpoint with a free server-side key, retains only author ID, display name, works/citation counts, CC0 attribution and `identity_claim=false`, and emits no leads. Name/ORCID search, affiliations, topics and work expansion are deliberately excluded. Missing key is a non-attempt configuration state.
 
-Wikidata runs only for an exact `www.wikidata.org/wiki/Q<id>` item URL. It uses official `wbgetentities` reads and retains only the QID plus bounded English label/description metadata, CC0 attribution and `identity_claim=false`. Entity search, claims, aliases, sitelinks, external identifiers and recursive leads are excluded.
+Wikidata runs only for an exact `www.wikidata.org/wiki/Q<id>` item URL. It uses official `wbgetentities` reads and retains only the QID plus bounded English label/description metadata, CC0 attribution and `identity_claim=false`. It does not request structured claims, aliases, sitelinks, external identifiers or linked entities. The optional description remains bounded public descriptive text and is never parsed into identity claims or recursive leads.
 
 RDAP emits no subject leads. Registrant/contact fields are not admitted. Discovered domain clues remain `DISPLAY_ONLY`; only explicit DOMAIN seeds run RDAP.
 
@@ -108,9 +108,9 @@ A missing key is reported as `credential_not_configured` before a provider attem
 
 The source admits only an exact HTTPS Wikidata item URL with a `Q<positive-digits>` ID. It uses the official Wikibase Action API `wbgetentities` operation with the exact QID and requests English labels/descriptions only. Current Wikidata policy makes structured item data CC0.
 
-Retained evidence is limited to the canonical QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`. It does not retain claims, aliases, sitelinks, external IDs, dates, locations, occupations, organizations, contacts or linked entities and emits no recursive leads.
+Retained evidence is limited to the canonical QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`. Structured claims, aliases, sitelinks, external IDs and linked entities are not requested or admitted. The optional English description can contain ordinary public biographical wording, but PersonaLattice does not parse that prose into dates, locations, occupations, organizations, identity claims or recursive leads.
 
-The source is credentialless and zero-direct-cost. Requests carry a meaningful PersonaLattice User-Agent, use a one-concurrency local budget of 30 requests/minute, and preserve provider `429`/`Retry-After`. Returned entity-ID mismatch, non-item results and malformed provider data fail closed rather than silently changing entity context.
+The source is credentialless and zero-direct-cost. Requests carry a meaningful PersonaLattice User-Agent, use a one-concurrency local budget of 30 requests/minute, send `maxlag=5`, and preserve provider `429`/`Retry-After`. API-level `ratelimited` and `maxlag` errors map to typed rate/backoff outcomes. Returned entity-ID mismatch, non-item results and malformed provider data fail closed rather than silently changing entity context.
 
 ### Explicit rejections/deferments
 
