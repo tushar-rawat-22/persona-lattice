@@ -69,6 +69,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         migration_note="Quick research executes GitHub public-profile lookup through ProviderRuntime.",
     ),
     SourceBinding(
+        source_name="keybase_public_user",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="keybase_public_user",
+        accepts=frozenset({LeadKind.USERNAME}),
+        migration_note=(
+            "Canonical lowercase Keybase usernames execute public basics-only lookup through ProviderRuntime; "
+            "profile, proof, key and external-identity expansion are outside this source."
+        ),
+    ),
+    SourceBinding(
         source_name="gitlab_public_api",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="gitlab_public_api",
