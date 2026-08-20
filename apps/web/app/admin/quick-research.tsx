@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -440,6 +440,16 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
   const [loadingOlderCases, setLoadingOlderCases] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const caseContextGeneration = useRef(0);
+
+  const startCaseContextChange = useCallback(() => {
+    caseContextGeneration.current += 1;
+    return caseContextGeneration.current;
+  }, []);
+
+  const isCurrentCaseContext = useCallback((generation: number) => (
+    caseContextGeneration.current === generation
+  ), []);
 
   const refreshCases = useCallback(async () => {
     const response = await request("/v1/cases?limit=8");
@@ -472,6 +482,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const generation = startCaseContextChange();
     setError("");
     setActiveCase(null);
     setBusy(true);
@@ -496,33 +507,48 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
           typeof body.detail === "string" ? body.detail : "Research request failed.",
         );
       }
+      if (!isCurrentCaseContext(generation)) return;
       const stored = body as StoredCase;
       setActiveCase(stored);
       setValue(stored.seed_value);
       await refreshCases();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Research request failed.");
+      if (isCurrentCaseContext(generation)) {
+        setError(caught instanceof Error ? caught.message : "Research request failed.");
+      }
     } finally {
       setBusy(false);
     }
   }
 
   async function openCase(caseId: string) {
+    const generation = startCaseContextChange();
     setError("");
-    const response = await request(`/v1/cases/${caseId}`);
-    if (!response.ok) {
-      setError("Stored case could not be loaded.");
-      return;
+    try {
+      const response = await request(`/v1/cases/${caseId}`);
+      if (!isCurrentCaseContext(generation)) return;
+      if (!response.ok) {
+        setError("Stored case could not be loaded.");
+        return;
+      }
+      const stored = (await response.json()) as StoredCase;
+      if (!isCurrentCaseContext(generation)) return;
+      setActiveCase(stored);
+    } catch {
+      if (isCurrentCaseContext(generation)) {
+        setError("Stored case could not be loaded.");
+      }
     }
-    setActiveCase((await response.json()) as StoredCase);
   }
 
   async function deleteCase(caseId: string) {
+    const generation = startCaseContextChange();
     const response = await request(
       `/v1/cases/${caseId}`,
       { method: "DELETE" },
       csrfToken,
     );
+    if (!isCurrentCaseContext(generation)) return;
     if (!response.ok && response.status !== 404) {
       setError("Stored case could not be deleted.");
       return;
@@ -556,7 +582,9 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
 
   async function deleteAllCases() {
     if (!window.confirm("Delete every retained private research case?")) return;
+    const generation = startCaseContextChange();
     const response = await request("/v1/cases", { method: "DELETE" }, csrfToken);
+    if (!isCurrentCaseContext(generation)) return;
     if (!response.ok) {
       setError("Stored cases could not be deleted.");
       return;
