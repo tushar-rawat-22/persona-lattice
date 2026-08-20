@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.intelligence.source_states import SourceRunReason, SourceRunState
 from app.models import Purpose
 from app.providers import ProviderObservationData, ProviderResult, ProviderRuntime
 from app.providers.errors import ProviderResultValidationError
@@ -74,7 +75,9 @@ async def test_canonical_keybase_username_runs_through_shared_runtime(monkeypatc
     assert keybase[0].source_locator == "https://keybase.io/maxtaco"
     assert keybase[0].details["identity_claim"] is False
     source_run = next(item for item in report.source_runs if item.source_name == "keybase_public_user")
-    assert source_run.attempt_count == 1
+    assert source_run.execution_attempted is True
+    assert source_run.state is SourceRunState.EXECUTED
+    assert source_run.reason is SourceRunReason.RESULTS_RETURNED
     assert source_run.observation_count == 1
 
 
@@ -131,5 +134,7 @@ async def test_post_attempt_keybase_validation_failure_is_reported(monkeypatch) 
 
     assert "Keybase public account basics were temporarily unavailable." in report.warnings
     source_run = next(item for item in report.source_runs if item.source_name == "keybase_public_user")
-    assert source_run.attempt_count == 1
-    assert source_run.failed_attempt_count == 1
+    assert source_run.execution_attempted is True
+    assert source_run.state is SourceRunState.UNAVAILABLE
+    assert source_run.reason is SourceRunReason.MALFORMED_RESULT
+    assert source_run.observation_count == 0
