@@ -6,6 +6,7 @@ from .brave_search import BravePublicWebSearchProvider
 from .codeforces_public import CodeforcesPublicProfileProvider
 from .github_public import GitHubPublicProfileProvider
 from .gitlab_public import GitLabPublicProfileProvider
+from .keybase_public import KeybasePublicUserProvider
 from .openalex_author import OpenAlexExactAuthorProvider
 from .public_dns import PublicDnsInfrastructureProvider
 from .rdap_domain import RdapDomainRegistryProvider
@@ -23,6 +24,7 @@ DEFAULT_GITHUB_PROVIDER = GitHubPublicProfileProvider()
 DEFAULT_GITLAB_PROVIDER = GitLabPublicProfileProvider()
 DEFAULT_CODEFORCES_PROVIDER = CodeforcesPublicProfileProvider()
 DEFAULT_BLUESKY_PROVIDER = BlueskyPublicProfileProvider()
+DEFAULT_KEYBASE_PROVIDER = KeybasePublicUserProvider()
 DEFAULT_DNS_PROVIDER = PublicDnsInfrastructureProvider()
 DEFAULT_WAYBACK_PROVIDER = WaybackAvailabilityProvider()
 DEFAULT_STACK_OVERFLOW_PROVIDER = StackOverflowPublicProfileProvider()
@@ -37,6 +39,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_GITLAB_PROVIDER,
         DEFAULT_CODEFORCES_PROVIDER,
         DEFAULT_BLUESKY_PROVIDER,
+        DEFAULT_KEYBASE_PROVIDER,
         DEFAULT_DNS_PROVIDER,
         DEFAULT_WAYBACK_PROVIDER,
         DEFAULT_STACK_OVERFLOW_PROVIDER,
