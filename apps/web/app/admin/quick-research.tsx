@@ -47,10 +47,14 @@ type SourceEvaluationAggregate = {
   unclassified_attempt_count: number;
   result_record_count: number;
   no_match_count: number;
+  withheld_count: number;
   observation_count: number;
+  public_web_opt_out_count: number;
+  account_unavailable_count: number;
   remote_rate_limit_count: number;
   execution_failure_count: number;
   malformed_result_count: number;
+  routing_unavailable_count: number;
   local_budget_stop_count: number;
   optional_not_configured_count: number;
   missing_secret_config_count: number;
@@ -233,6 +237,12 @@ type ResolvedConnectedIdentifier = ResolvedProvenance & {
   value: string;
 };
 
+type SourceOutcomeDetail = {
+  label: string;
+  count: number;
+  note: string;
+};
+
 async function request(path: string, init?: RequestInit, csrfToken?: string) {
   const method = (init?.method ?? "GET").toUpperCase();
   const unsafe = !["GET", "HEAD", "OPTIONS"].includes(method);
@@ -248,6 +258,25 @@ async function request(path: string, init?: RequestInit, csrfToken?: string) {
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function sourceOutcomeDetails(aggregate: SourceEvaluationAggregate): SourceOutcomeDetail[] {
+  return [
+    { label: "Public-web opt-out", count: aggregate.public_web_opt_out_count, note: "neutral withheld result" },
+    { label: "Account unavailable", count: aggregate.account_unavailable_count, note: "neutral withheld result" },
+    { label: "Remote rate limit", count: aggregate.remote_rate_limit_count, note: "provider attempt failed" },
+    { label: "Execution failure", count: aggregate.execution_failure_count, note: "provider attempt failed" },
+    { label: "Malformed provider result", count: aggregate.malformed_result_count, note: "provider attempt failed" },
+    { label: "Routing unavailable", count: aggregate.routing_unavailable_count, note: "routing authority unavailable · no provider attempt" },
+    { label: "Local budget stop", count: aggregate.local_budget_stop_count, note: "no provider attempt" },
+    { label: "Optional source not configured", count: aggregate.optional_not_configured_count, note: "no provider attempt" },
+    { label: "Credential not configured", count: aggregate.missing_secret_config_count, note: "no provider attempt" },
+    { label: "Provider policy block", count: aggregate.provider_policy_block_count, note: "no provider attempt" },
+    { label: "Queued", count: aggregate.queued_count, note: "not executed in this scope" },
+    { label: "Review required", count: aggregate.review_required_count, note: "not executed in this scope" },
+    { label: "Display only", count: aggregate.display_only_count, note: "not executable by policy" },
+    { label: "Blocked", count: aggregate.blocked_count, note: "not executed in this scope" },
+  ].filter((item) => item.count > 0);
 }
 
 function resolveConnectedIdentifier(
@@ -356,6 +385,7 @@ function SourceRunSummary({ sourceRuns, title }: { sourceRuns?: SourceRunReport;
   }
 
   const aggregate = sourceRuns.evaluation?.aggregate;
+  const missingEvidenceReasons = aggregate ? sourceOutcomeDetails(aggregate) : [];
   return (
     <div className="reportSection">
       <h3>{title}</h3>
@@ -367,8 +397,18 @@ function SourceRunSummary({ sourceRuns, title }: { sourceRuns?: SourceRunReport;
       </div>
       {aggregate && (
         <p className="muted">
-          {aggregate.observation_count} observations · {aggregate.no_match_count} no-match results · {aggregate.local_budget_stop_count} local budget stops · {aggregate.optional_not_configured_count} optional sources not configured
+          {aggregate.observation_count} observations · {aggregate.no_match_count} no-match results · {aggregate.withheld_count} withheld results
         </p>
+      )}
+      {missingEvidenceReasons.length > 0 && (
+        <div>
+          <strong>Why evidence may be missing</strong>
+          <ul className="coverageList">
+            {missingEvidenceReasons.map((item) => (
+              <li key={item.label}>{item.count} {item.label.toLowerCase()} · {item.note}</li>
+            ))}
+          </ul>
+        </div>
       )}
       {sourceRuns.records.length === 0 ? (
         <p className="muted">No typed source-run records were retained for this scope.</p>
