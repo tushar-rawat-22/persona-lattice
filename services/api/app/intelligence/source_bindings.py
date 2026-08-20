@@ -110,6 +110,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="stack_overflow_public_profile",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="stack_overflow_public_profile",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact Stack Overflow profile URLs execute official API user-id lookup through "
+            "ProviderRuntime; fuzzy user search is not part of the source."
+        ),
+    ),
+    SourceBinding(
         source_name="rdap_domain_registry",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="rdap_domain_registry",
