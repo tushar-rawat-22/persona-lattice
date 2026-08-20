@@ -27,6 +27,7 @@ from .providers.bluesky_admission import BlueskyAdmissionError, normalize_bluesk
 from .providers.contracts import ExecutionRequest
 from .providers.errors import ProviderRateBudgetExceeded
 from .providers.github_public import fetch_github_public_profile
+from .providers.keybase_public import keybase_username_from_seed
 from .providers.openalex_author import openalex_author_id_from_url
 from .providers.runtime import ProviderRuntime
 from .providers.shared_runtime import (
@@ -36,6 +37,7 @@ from .providers.shared_runtime import (
     DEFAULT_DNS_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
+    DEFAULT_KEYBASE_PROVIDER,
     DEFAULT_OPENALEX_PROVIDER,
     DEFAULT_PROVIDER_RUNTIME,
     DEFAULT_RDAP_PROVIDER,
@@ -134,6 +136,16 @@ def _github_observation_from_provider(item: ProviderObservationData) -> QuickObs
         source="github_public_api",
         source_locator=item.source_locator,
         summary=f"GitHub public profile for @{login}; same-handle account candidate only.",
+        details=dict(item.payload),
+    )
+
+
+def _keybase_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    username = str(item.payload.get("keybase_username", "public account"))
+    return QuickObservation(
+        source="keybase_public_user",
+        source_locator=item.source_locator,
+        summary=f"Keybase public account basics for @{username}; same-handle account candidate only.",
         details=dict(item.payload),
     )
 
@@ -441,6 +453,33 @@ async def _github_observations(
         ),
     )
     return [_github_observation_from_provider(item) for item in result.observations]
+
+
+async def _keybase_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_KEYBASE_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.USERNAME.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_keybase_observation_from_provider(item) for item in result.observations]
 
 
 def _legacy_gitlab_observation(
@@ -859,6 +898,36 @@ async def _research_username(
                 observation_count=len(outcome),
             )
         )
+
+    keybase_username = keybase_username_from_seed(normalized_value)
+    if keybase_username is not None:
+        try:
+            keybase_observations = await _keybase_observations(
+                keybase_username,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            keybase_observations = []
+            source_run = _source_run_for_exception(
+                source_name="keybase_public_user",
+                lead_kind=LeadKind.USERNAME,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+            warnings.append("Keybase public account basics were temporarily unavailable.")
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="keybase_public_user",
+                    lead_kind=LeadKind.USERNAME,
+                    observation_count=len(keybase_observations),
+                )
+            )
+        observations.extend(keybase_observations)
 
     try:
         bluesky_handle = normalize_bluesky_handle(normalized_value)
