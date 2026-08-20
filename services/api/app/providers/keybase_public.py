@@ -23,7 +23,10 @@ from .registry import PROVIDER_BY_NAME
 
 _API_ENDPOINT = "https://keybase.io/_/api/1.0/user/lookup.json"
 _MAX_RAW_RESPONSE_BYTES = 16 * 1024
-_USERNAME_RE = re.compile(r"^[a-z0-9_]+$")
+# Keybase documents usernames as 2-16 lowercase alphanumeric/underscore
+# characters, with an alphanumeric first character. Do not normalize into
+# this provider-specific namespace; only already-canonical seeds apply.
+_USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9_]{1,15}$")
 _UID_RE = re.compile(r"^[0-9a-f]{32}$")
 
 KeybaseFetch = Callable[[str], Awaitable[dict[str, object] | None]]
