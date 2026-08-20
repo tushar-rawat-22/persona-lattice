@@ -151,7 +151,7 @@ type ConvergedEdge = {
   child_key: string;
   reason: string;
   lead_decision_index?: number;
-  // Read-only compatibility for retained cases before ADR 0044.
+  // Read-only compatibility for cases retained before ADR 0044.
   source?: string;
   source_locator?: string;
 };
@@ -452,10 +452,8 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     caseContextGeneration.current === generation
   ), []);
 
-  const startCaseListRefresh = useCallback(() => {
+  const advanceCaseListGeneration = useCallback(() => {
     caseListGeneration.current += 1;
-    setLoadingOlderCases(false);
-    setNextCaseCursor(null);
     return caseListGeneration.current;
   }, []);
 
@@ -464,18 +462,20 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
   ), []);
 
   const refreshCases = useCallback(async () => {
-    const generation = startCaseListRefresh();
+    const generation = advanceCaseListGeneration();
+    setLoadingOlderCases(false);
+    setNextCaseCursor(null);
     const response = await request("/v1/cases?limit=8");
     if (!response.ok || !isCurrentCaseList(generation)) return;
     const page = (await response.json()) as StoredCaseSummary[];
     if (!isCurrentCaseList(generation)) return;
     setRecentCases(page);
     setNextCaseCursor(response.headers.get("X-PersonaLattice-Next-Cursor"));
-  }, [isCurrentCaseList, startCaseListRefresh]);
+  }, [advanceCaseListGeneration, isCurrentCaseList]);
 
   useEffect(() => {
     let active = true;
-    const generation = startCaseListRefresh();
+    const generation = advanceCaseListGeneration();
     request("/v1/cases?limit=8")
       .then(async (response) => {
         if (!response.ok) return null;
@@ -494,7 +494,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     return () => {
       active = false;
     };
-  }, [isCurrentCaseList, startCaseListRefresh]);
+  }, [advanceCaseListGeneration, isCurrentCaseList]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
