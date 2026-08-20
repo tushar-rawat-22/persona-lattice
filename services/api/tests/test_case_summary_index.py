@@ -153,4 +153,6 @@ def test_private_web_uses_summary_list_then_full_case_fetch() -> None:
     open_case_start = source.index("async function openCase")
     delete_case_start = source.index("async function deleteCase")
     open_case = source[open_case_start:delete_case_start]
-    assert "setActiveCase((await response.json()) as StoredCase);" in open_case
+    assert "const stored = (await response.json()) as StoredCase;" in open_case
+    assert "setActiveCase(stored);" in open_case
+    assert "isCurrentCaseContext(generation)" in open_case
