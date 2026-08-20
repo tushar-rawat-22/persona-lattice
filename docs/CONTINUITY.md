@@ -10,6 +10,8 @@ Authoritative branch: `main`
 
 Engineering-freeze baseline: PR #168, merged as `5d774a9fadc336d43e06491183d9035d016db04f` after exact-head CI passed.
 
+Current source-expansion work: branch `source-keybase-exact-user` adds a reviewed Keybase public-basics source. This line is a pre-merge checkpoint and must be replaced with the verified PR/head/CI/merge state before treating the handover as final.
+
 ## Engineering state
 
 **The current private one-admin engineering foundation is complete.**
@@ -51,6 +53,7 @@ Required/zero-spend baseline:
 - GitLab public profile API;
 - Codeforces `user.info`;
 - Bluesky public AppView profile lookup for valid AT handles;
+- Keybase public account basics for canonical Keybase usernames on the current source branch;
 - public DNS infrastructure metadata;
 - Internet Archive Wayback capture-availability metadata for canonical URLs;
 - Stack Overflow exact public-profile metadata for explicit numeric profile URLs;
@@ -61,6 +64,8 @@ Required/zero-spend baseline:
 Optional:
 
 - Brave exact public-web search when configured. It is metered and must never become a required dependency.
+
+Keybase is exact-username account metadata only. Applicability requires an already-canonical Keybase username: 2-16 lowercase alphanumeric/underscore characters with an alphanumeric first character. The source requests only the official API `basics` object and retains exact username, public UID, account creation timestamp, `account_candidate=true`, `identity_claim=false` and canonical `https://keybase.io/<username>` provenance. Profile text/full name, proofs, linked external identities, public keys, cryptocurrency addresses and contact-like data are not requested or admitted. It emits no leads. Noncanonical usernames skip Keybase before provider execution.
 
 Wayback is intentionally metadata-only. It queries the official availability endpoint, sends a descriptive PersonaLattice User-Agent, validates the returned `web.archive.org` snapshot locator, and retains only queried URL plus capture availability/status/timestamp. It does not fetch archived page content, emit leads or make a person-attribution claim. Provider rate limits and malformed outputs stay visible through typed source-run reporting.
 
@@ -92,7 +97,9 @@ Stack Overflow is the second admitted post-freeze source. Its applicability boun
 
 OpenAlex is the third admitted post-freeze source. Its applicability is an exact author entity URL, not a person-name search. Current primary documentation was re-checked on 2026-08-21: API keys are required and free, bearer authentication is supported, singleton-by-ID retrieval is a free operation, author names are not safe identifiers, and the data is CC0. Re-check those provider facts before future source-policy changes.
 
-Wikidata is the next admitted source in this code state. Its applicability is an exact item URL, not a person/entity-name search. Current primary documentation was re-checked on 2026-08-21: structured data is CC0; `wbgetentities` supports exact QID retrieval; automated clients must identify themselves and respect rate/backoff policy. PersonaLattice stays far below the current identified-client allowance and requests no claims or linked-entity expansion.
+Wikidata is the next admitted source in `main`. Its applicability is an exact item URL, not a person/entity-name search. Current primary documentation was re-checked on 2026-08-21: structured data is CC0; `wbgetentities` supports exact QID retrieval; automated clients must identify themselves and respect rate/backoff policy. PersonaLattice stays far below the current identified-client allowance and requests no claims or linked-entity expansion.
+
+Keybase is the current source branch under review. Primary documentation was re-checked on 2026-08-21: usernames are public/immutable and restricted to the canonical 2-16-character lowercase namespace; the public lookup API supports requesting only `basics`; current terms contemplate organizational/business use, while the acceptable-use policy forbids collecting private information without permission. The implementation therefore keeps only public basics, sends no credentials, emits no leads and deliberately excludes profiles, proofs, keys and external-identity expansion. The API is documented as evolving, so shape/username/UID validation fails closed.
 
 Current explicit rejections/deferments include:
 
@@ -104,9 +111,10 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Keep Wayback, Stack Overflow, OpenAlex and Wikidata source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
-2. Review the next high-value ₹0 source from primary documentation before writing an adapter. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
-3. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
-4. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
+1. Finish the Keybase source branch only after exact-head CI proves catalog/binding/registry/runtime/source-run consistency and the public-basics privacy boundary.
+2. Keep Wayback, Stack Overflow, OpenAlex and Wikidata source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
+3. Review the next high-value ₹0 source from primary documentation before writing an adapter. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
+4. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
+5. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
 
 A new block must improve defensible source coverage, real evaluation, correctness, security or a concrete investigator task.

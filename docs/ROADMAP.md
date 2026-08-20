@@ -36,6 +36,7 @@ Current executable sources are:
 
 - reviewed Sherlock username discovery;
 - GitHub, GitLab and Codeforces public profiles;
+- Keybase public account basics for already-canonical Keybase usernames;
 - Bluesky public profiles for valid AT handles;
 - local phone numbering-plan metadata;
 - public DNS infrastructure metadata;
@@ -45,6 +46,8 @@ Current executable sources are:
 - Wikidata CC0 entity metadata for exact item URLs;
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
 - optional Brave exact public-web search when configured.
+
+Keybase runs only when the normalized username is already valid in Keybase's public namespace: 2-16 lowercase alphanumeric/underscore characters with an alphanumeric first character. The adapter requests only the API `basics` object and retains username, public UID, account creation timestamp and canonical profile provenance. It does not request profile text, proofs, external identities, public keys, cryptocurrency addresses or contact-like material. It emits no leads; a same-handle result remains an account candidate rather than an identity claim.
 
 Wayback retains capture metadata only. It fetches no archived page content, emits no new leads and makes no person-attribution claim.
 
@@ -73,6 +76,16 @@ Activation follows the existing path:
 Activate at most one external source per PR. A source must degrade through typed unavailable/rate-limited/not-applicable outcomes rather than weakening the rest of the investigation pipeline.
 
 Current source-admission decisions are tracked in `docs/SOURCE_ADMISSION_QUEUE.md`.
+
+### Keybase public account basics
+
+**Active.**
+
+The source accepts only already-canonical Keybase usernames. PersonaLattice does not lowercase, trim into, or otherwise coerce a generic username into Keybase's provider namespace. Noncanonical usernames are not applicable and cause no Keybase provider attempt.
+
+The official credentialless lookup is called with `fields=basics`. Retained evidence is limited to exact username, public UID, account creation timestamp, canonical profile locator, `account_candidate=true` and `identity_claim=false`. Profile data, proofs, linked external identities, public keys, cryptocurrency addresses and contact-like data are outside this source. No recursive leads are emitted.
+
+Keybase's API documentation describes the API as evolving/alpha, so response shape and exact returned username/UID are validated fail-closed. PersonaLattice adds its own 4-second timeout, 16 KiB response ceiling, one-concurrency budget and 20-request/minute local rate budget even though no provider quota is relied on for the zero-spend contract.
 
 ### Internet Archive Wayback
 

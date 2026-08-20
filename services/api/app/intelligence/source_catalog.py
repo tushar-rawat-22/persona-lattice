@@ -182,6 +182,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         note="Public profile fields only; same-handle remains insufficient identity evidence.",
     ),
     SourceCapability(
+        name="keybase_public_user",
+        accepts=frozenset({LeadKind.USERNAME}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=27,
+        note=(
+            "Exact canonical Keybase usernames; public basics only, with no profile, proof, key "
+            "or external-identity expansion."
+        ),
+    ),
+    SourceCapability(
         name="gitlab_public_api",
         accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL}),
         emits=frozenset(

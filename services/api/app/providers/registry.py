@@ -134,6 +134,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=3600.0,
     ),
     ProviderDescriptor(
+        name="keybase_public_user",
+        capability="public_profile_enrichment",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official credentialless Keybase username lookup restricted to the public basics object; "
+            "same-handle evidence remains an account candidate and no proofs/profile data are requested."
+        ),
+        version="api-1.0-user-lookup-basics-2026-08",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=USERNAME_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=16 * 1024,
+        max_concurrency=1,
+        rate_limit=20,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="gitlab_public_api",
         capability="public_profile_enrichment",
         status=ProviderStatus.DEVELOPMENT.value,
