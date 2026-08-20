@@ -30,6 +30,7 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - PR #159 exact tested final head: `e63ff281a007606bc4217ed9ff9678a0a2f063f4`
 - PR #159 final CI: run `32344988541`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
 - Issue #158: closed as completed by PR #159
+- Issue #161: retained-case summary-page ordering regression contract
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -64,9 +65,11 @@ PR #157 orders retained-case reads explicitly in the browser. Each active-case c
 
 PR #159 separates that read-order rule from destructive mutation completion. A successful single-case delete, including idempotent 404, refreshes the metadata-only case index even if the operator selected another case while the DELETE was in flight. It uses the current active-case state when clearing the deleted case, so an older delete cannot erase a newer selection. Delete-all also refreshes summaries after success; it clears the active case only if its initiating context is still current. Failed deletes surface an error only while their initiating context remains current. The server-side mutation result is therefore reconciled without allowing stale reads or stale failures to overwrite newer evidence context.
 
+Summary pagination has a separate monotonic generation from full-case selection. Starting a newest-page refresh invalidates continuation requests from the previous summary snapshot and clears that old continuation cursor while the refresh is in flight. An older-page response, failure or completion handler may append rows, replace the cursor or change the older-page loading state only while its summary generation is still current. This prevents a slow continuation request from reintroducing deleted/expired navigation rows or moving the browser back to a stale cursor after research, deletion or manual refresh has reconciled the newest page.
+
 These are presentation-order guards only: full reports still come from the single-case endpoint, summary navigation stays metadata-only, and no retained evidence is duplicated or prefetched.
 
-Regression coverage deliberately corrupts and enlarges a retained `report_json` value before listing summaries. The summary path must still work and must expose no report/evidence field. Additional tests cover bounded cursor pagination, invalid cursors/limits, authenticated summary response shape and the private web contract. UI contract tests lock summary typing, cursor consumption, duplicate suppression, no `item.report` access in navigation, full-case loading only from the single-case endpoint, stale retained-case response suppression and the separate mutation-reconciliation rules.
+Regression coverage deliberately corrupts and enlarges a retained `report_json` value before listing summaries. The summary path must still work and must expose no report/evidence field. Additional tests cover bounded cursor pagination, invalid cursors/limits, authenticated summary response shape and the private web contract. UI contract tests lock summary typing, cursor consumption, duplicate suppression, no `item.report` access in navigation, full-case loading only from the single-case endpoint, stale retained-case response suppression, mutation reconciliation and stale summary-page suppression.
 
 ADR 0080 records the metadata-index design. No retained database migration is required because the summary is projected from existing columns. The old full-report `CaseStore.list_recent()` method remains available for internal/historical compatibility but is not the operator navigation path.
 
@@ -127,7 +130,7 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Keep retained-case navigation metadata-only, bounded and cursor-driven; keep latest-selection-wins ordering for full-case reads while successful destructive mutations always reconcile the summary index without clearing a newer active case.
+1. Keep retained-case navigation metadata-only, bounded and cursor-driven; keep full-case reads latest-selection-wins, successful destructive mutations reconciled, and stale summary-page continuations inert after a newest-page refresh.
 2. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
 3. Continue operator evidence/provenance work only where it removes a specific investigation step; do not recreate provider or M5 policy in the browser.
 4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.

@@ -441,6 +441,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const caseContextGeneration = useRef(0);
+  const caseListGeneration = useRef(0);
 
   const startCaseContextChange = useCallback(() => {
     caseContextGeneration.current += 1;
@@ -451,15 +452,30 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     caseContextGeneration.current === generation
   ), []);
 
-  const refreshCases = useCallback(async () => {
-    const response = await request("/v1/cases?limit=8");
-    if (!response.ok) return;
-    setRecentCases((await response.json()) as StoredCaseSummary[]);
-    setNextCaseCursor(response.headers.get("X-PersonaLattice-Next-Cursor"));
+  const advanceCaseListGeneration = useCallback(() => {
+    caseListGeneration.current += 1;
+    return caseListGeneration.current;
   }, []);
+
+  const isCurrentCaseList = useCallback((generation: number) => (
+    caseListGeneration.current === generation
+  ), []);
+
+  const refreshCases = useCallback(async () => {
+    const generation = advanceCaseListGeneration();
+    setLoadingOlderCases(false);
+    setNextCaseCursor(null);
+    const response = await request("/v1/cases?limit=8");
+    if (!response.ok || !isCurrentCaseList(generation)) return;
+    const page = (await response.json()) as StoredCaseSummary[];
+    if (!isCurrentCaseList(generation)) return;
+    setRecentCases(page);
+    setNextCaseCursor(response.headers.get("X-PersonaLattice-Next-Cursor"));
+  }, [advanceCaseListGeneration, isCurrentCaseList]);
 
   useEffect(() => {
     let active = true;
+    const generation = advanceCaseListGeneration();
     request("/v1/cases?limit=8")
       .then(async (response) => {
         if (!response.ok) return null;
@@ -469,7 +485,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
         };
       })
       .then((page) => {
-        if (active && page) {
+        if (active && page && isCurrentCaseList(generation)) {
           setRecentCases(page.items);
           setNextCaseCursor(page.cursor);
         }
@@ -478,7 +494,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [advanceCaseListGeneration, isCurrentCaseList]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -560,24 +576,30 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
 
   async function loadOlderCases() {
     if (!nextCaseCursor || loadingOlderCases) return;
+    const generation = caseListGeneration.current;
+    const cursor = nextCaseCursor;
     setError("");
     setLoadingOlderCases(true);
     try {
       const response = await request(
-        `/v1/cases?limit=8&cursor=${encodeURIComponent(nextCaseCursor)}`,
+        `/v1/cases?limit=8&cursor=${encodeURIComponent(cursor)}`,
       );
+      if (!isCurrentCaseList(generation)) return;
       if (!response.ok) {
         setError("Older stored cases could not be loaded.");
         return;
       }
       const page = (await response.json()) as StoredCaseSummary[];
+      if (!isCurrentCaseList(generation)) return;
       setRecentCases((current) => {
         const existingIds = new Set(current.map((item) => item.id));
         return [...current, ...page.filter((item) => !existingIds.has(item.id))];
       });
       setNextCaseCursor(response.headers.get("X-PersonaLattice-Next-Cursor"));
     } finally {
-      setLoadingOlderCases(false);
+      if (isCurrentCaseList(generation)) {
+        setLoadingOlderCases(false);
+      }
     }
   }
 
