@@ -210,12 +210,15 @@ type QuickReport = {
   converged_report?: ConvergedReport;
 };
 
-type StoredCase = {
+type StoredCaseSummary = {
   id: string;
   created_at: string;
   expires_at: string;
   seed_kind: ResearchKind;
   seed_value: string;
+};
+
+type StoredCase = StoredCaseSummary & {
   report: QuickReport;
 };
 
@@ -432,14 +435,17 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
   const [kind, setKind] = useState<ResearchKind>("username");
   const [value, setValue] = useState("");
   const [activeCase, setActiveCase] = useState<StoredCase | null>(null);
-  const [recentCases, setRecentCases] = useState<StoredCase[]>([]);
+  const [recentCases, setRecentCases] = useState<StoredCaseSummary[]>([]);
+  const [nextCaseCursor, setNextCaseCursor] = useState<string | null>(null);
+  const [loadingOlderCases, setLoadingOlderCases] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   const refreshCases = useCallback(async () => {
     const response = await request("/v1/cases?limit=8");
     if (!response.ok) return;
-    setRecentCases((await response.json()) as StoredCase[]);
+    setRecentCases((await response.json()) as StoredCaseSummary[]);
+    setNextCaseCursor(response.headers.get("X-PersonaLattice-Next-Cursor"));
   }, []);
 
   useEffect(() => {
@@ -447,10 +453,16 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     request("/v1/cases?limit=8")
       .then(async (response) => {
         if (!response.ok) return null;
-        return (await response.json()) as StoredCase[];
+        return {
+          items: (await response.json()) as StoredCaseSummary[],
+          cursor: response.headers.get("X-PersonaLattice-Next-Cursor"),
+        };
       })
-      .then((items) => {
-        if (active && items) setRecentCases(items);
+      .then((page) => {
+        if (active && page) {
+          setRecentCases(page.items);
+          setNextCaseCursor(page.cursor);
+        }
       })
       .catch(() => undefined);
     return () => {
@@ -517,6 +529,29 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     }
     if (activeCase?.id === caseId) setActiveCase(null);
     await refreshCases();
+  }
+
+  async function loadOlderCases() {
+    if (!nextCaseCursor || loadingOlderCases) return;
+    setError("");
+    setLoadingOlderCases(true);
+    try {
+      const response = await request(
+        `/v1/cases?limit=8&cursor=${encodeURIComponent(nextCaseCursor)}`,
+      );
+      if (!response.ok) {
+        setError("Older stored cases could not be loaded.");
+        return;
+      }
+      const page = (await response.json()) as StoredCaseSummary[];
+      setRecentCases((current) => {
+        const existingIds = new Set(current.map((item) => item.id));
+        return [...current, ...page.filter((item) => !existingIds.has(item.id))];
+      });
+      setNextCaseCursor(response.headers.get("X-PersonaLattice-Next-Cursor"));
+    } finally {
+      setLoadingOlderCases(false);
+    }
   }
 
   async function deleteAllCases() {
@@ -788,6 +823,16 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                 <button className="dangerButton" type="button" onClick={() => deleteCase(item.id)}>Delete</button>
               </div>
             ))}
+            {nextCaseCursor && (
+              <button
+                className="secondaryButton"
+                type="button"
+                onClick={loadOlderCases}
+                disabled={loadingOlderCases}
+              >
+                {loadingOlderCases ? "Loading older cases…" : "Load older cases"}
+              </button>
+            )}
           </div>
         )}
       </div>
