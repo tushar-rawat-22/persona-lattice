@@ -48,6 +48,7 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         "codeforces_public_api",
         "bluesky_public_profile",
         "public_dns_infrastructure",
+        "wayback_url_availability",
         "rdap_domain_registry",
         "brave_public_web_index",
     }
@@ -99,6 +100,23 @@ def test_public_dns_policy_is_bounded_and_url_only() -> None:
     assert descriptor.max_response_bytes == 16 * 1024
     assert descriptor.max_concurrency == 2
     assert descriptor.rate_limit == 30
+    assert descriptor.rate_window_seconds == 60.0
+
+
+def test_wayback_is_zero_spend_credentialless_metadata_only_and_url_only() -> None:
+    descriptor = PROVIDER_BY_NAME["wayback_url_availability"]
+    capability = SOURCE_BY_NAME["wayback_url_availability"]
+
+    assert capability.status is SourceStatus.ACTIVE
+    assert capability.zero_spend_eligible is True
+    assert capability.emits == frozenset()
+    assert descriptor.auth_mode is AuthMode.NONE
+    assert descriptor.supported_identifier_kinds == frozenset({"url"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 32 * 1024
+    assert descriptor.max_concurrency == 1
+    assert descriptor.rate_limit == 15
     assert descriptor.rate_window_seconds == 60.0
 
 

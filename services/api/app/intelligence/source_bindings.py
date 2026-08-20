@@ -39,8 +39,6 @@ class SourceBinding:
             raise ValueError("Only M3 governed-adapter bindings may declare provider_name.")
 
 
-# V2-D has migrated every current network source behind ProviderRuntime. New code
-# must not reopen a legacy network execution path.
 _LEGACY_RESEARCH_ALLOWLIST = frozenset()
 _LOCAL_DETERMINISTIC_ALLOWLIST = frozenset({"local_normalization", "libphonenumber_metadata"})
 
@@ -75,7 +73,7 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="gitlab_public_api",
         accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL}),
-        migration_note="Username and exact-public-email lookups execute through ProviderRuntime.",
+        migration_note="Username and exact public-email lookups execute through ProviderRuntime.",
     ),
     SourceBinding(
         source_name="codeforces_public_api",
@@ -100,6 +98,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         provider_name="public_dns_infrastructure",
         accepts=frozenset({LeadKind.URL}),
         migration_note="Public URL hostname resolution executes through the shared ProviderRuntime.",
+    ),
+    SourceBinding(
+        source_name="wayback_url_availability",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="wayback_url_availability",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Canonical URL capture-availability metadata executes through ProviderRuntime; "
+            "the adapter fetches no archived page content and emits no new leads."
+        ),
     ),
     SourceBinding(
         source_name="rdap_domain_registry",

@@ -10,38 +10,35 @@ A source also needs a precise applicability rule. Free but fuzzy search is not u
 
 One external source is activated per PR. Activation uses the existing catalog → binding → DEVELOPMENT provider descriptor → process-wide `ProviderRuntime` → typed source-run → canonical evidence path.
 
-## Approved for implementation review
+## Active after current code is merged
 
 ### Internet Archive Wayback availability
 
-**Decision:** proceed to a bounded adapter PR; not active yet.
+**Decision:** admitted for exact URL capture-availability metadata.
 
-**Scope:** exact URL availability metadata only.
-
-Primary documentation reviewed on 2026-08-20:
+Primary documentation re-checked on 2026-08-20:
 
 - Internet Archive Developer Portal, “See whether a website exists in the archives”.
 - Internet Archive Developer Portal, “Bots, LLMs, and Automated Access”.
 - Internet Archive Developer Portal, “Tools and APIs”.
 
-The documented availability endpoint accepts a URL and returns the nearest available archived snapshot metadata. The current automated-access guidance requires a descriptive User-Agent and requires clients to respect `429 Too Many Requests` and `Retry-After`.
+The official availability endpoint returns nearest-capture metadata for a supplied URL. Internet Archive's automated-access guidance requires a descriptive User-Agent and requires clients to respect `429 Too Many Requests` and `Retry-After`.
 
-PersonaLattice implementation boundary:
+PersonaLattice keeps the integration deliberately narrow:
 
-- accept canonical `URL` leads only;
-- query the official `https://archive.org/wayback/available` endpoint;
-- retain only queried URL, capture availability, capture status, capture timestamp and a validated Wayback snapshot locator;
-- do not download archived page content;
-- emit no new leads;
-- do not infer that archived content belongs to a person;
-- validate the returned snapshot locator as HTTP(S), credential-free and hosted by `web.archive.org`;
-- cap response size and timeout through the existing provider/runtime boundary;
-- map no-capture to a completed zero-observation source result;
-- map `429` to the typed remote-rate-limit path and preserve `Retry-After` where valid;
-- map malformed provider output to post-attempt result validation, not a pre-attempt policy failure;
-- use a descriptive PersonaLattice User-Agent on every automated request.
+- canonical `URL` leads only;
+- official `https://archive.org/wayback/available` endpoint;
+- retain queried URL, capture availability/status/timestamp and a validated `web.archive.org` snapshot locator;
+- never download archived page content through this source;
+- emit no new leads and make no person-attribution claim;
+- reject malformed snapshot locators, including credentials-bearing or non-Wayback URLs;
+- cap timeout/response size and use the shared ProviderRuntime budget;
+- zero captures are valid completed no-match outcomes;
+- provider `429` is typed as remote rate limiting and valid `Retry-After` is preserved;
+- malformed provider output is a post-attempt result-validation failure;
+- automated requests carry a descriptive PersonaLattice User-Agent.
 
-Why this candidate ranks first: it adds historical context for URLs without introducing fuzzy person search, credentials, subscriber/contact data or new recursive leads.
+This source adds historical URL context without fuzzy person search, credentials, subscriber/contact data or recursive identity claims.
 
 ## Rejected for the baseline
 

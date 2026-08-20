@@ -8,9 +8,7 @@ Repository: `tushar-rawat-22/persona-lattice`
 
 Authoritative branch: `main`
 
-Checkpoint before this freeze block: `06878baed0af883e51000d2b362328a19002d5dd` (`Record PR 166 merge checkpoint (#167)`).
-
-At that checkpoint GitHub showed no open pull requests or issues. PR #166's exact tested head `37c6b95a1641ab8175cbfcad6a5ec59e3058fbca` passed CI run `32369415130` across Python 3.11, Python 3.13, dependency/Ruff checks, web audit/lint/typecheck/build and the production API image before merge.
+Engineering-freeze baseline: PR #168, merged as `5d774a9fadc336d43e06491183d9035d016db04f` after exact-head CI passed.
 
 ## Engineering state
 
@@ -42,7 +40,7 @@ These are not cleanup items:
 - Historical retained cases remain read-only compatible; migrations must fail closed on unknown schema shapes.
 - RDAP remains metadata-only. Discovered domain clues remain `DISPLAY_ONLY`.
 
-## Active sources
+## Active sources in the current code state
 
 Required/zero-direct-cost baseline:
 
@@ -54,11 +52,14 @@ Required/zero-direct-cost baseline:
 - Codeforces `user.info`;
 - Bluesky public AppView profile lookup for valid AT handles;
 - public DNS infrastructure metadata;
+- Internet Archive Wayback capture-availability metadata for canonical URLs;
 - authoritative RDAP for explicit DOMAIN seeds.
 
 Optional:
 
 - Brave exact public-web search when configured. It is metered and must never become a required dependency.
+
+Wayback is intentionally metadata-only. It queries the official availability endpoint, sends a descriptive PersonaLattice User-Agent, validates the returned `web.archive.org` snapshot locator, and retains only queried URL plus capture availability/status/timestamp. It does not fetch archived page content, emit leads or make a person-attribution claim. Provider rate limits and malformed outputs stay visible through typed source-run reporting.
 
 Planned/review-gated entries in the source catalog are not executable merely because code or a catalog record exists.
 
@@ -72,25 +73,24 @@ Production depth 2 / 12 currently beats the depth-3 diagnostic candidate on the 
 
 Do not publish false-positive/false-negative, probability, calibration or population-performance claims until cohort design and denominators support those terms.
 
-## Source expansion transition
+## Source expansion state
 
-Source expansion is now the main engineering stream alongside real M10 evaluation. `docs/SOURCE_ADMISSION_QUEUE.md` records current preflight decisions.
+Source expansion is the main engineering stream alongside real M10 evaluation. `docs/SOURCE_ADMISSION_QUEUE.md` records current preflight decisions.
 
-The first implementation candidate is Internet Archive Wayback **availability metadata for exact URL leads only**. Current primary documentation confirms a URL availability endpoint and requires automated clients to identify themselves with a descriptive User-Agent and honor rate limiting. The intended PersonaLattice scope is metadata-only: capture availability/status/timestamp and the canonical Wayback snapshot locator. Do not fetch archived page content and do not emit new leads from this source.
+Wayback is the first post-freeze source admission. Its contract is exact-URL historical availability metadata only. Treat zero capture as a valid no-match, `429` as a remote rate limit, malformed provider output as a post-attempt validation failure, and transient provider/network failure as unavailable. The source emits no recursive candidates.
 
-Two tempting sources were rejected/deferred during the freeze review:
+Two tempting sources remain rejected/deferred:
 
 - ORCID Public API is not suitable for a future revenue-generating PersonaLattice baseline under its current public API terms.
-- Stack Exchange `inname` user search is substring-based and is therefore too fuzzy to become generic recursive username evidence.
+- Stack Exchange `inname` user search is substring-based and therefore too fuzzy to become generic recursive username evidence.
 
-If the provider documentation changes, repeat the preflight instead of trusting this handover.
+If provider documentation changes, repeat the preflight instead of trusting this handover.
 
 ## Next engineering gate
 
-1. Merge the engineering-freeze documentation only after exact-head CI is green.
-2. Activate at most one external source per subsequent PR. For Wayback that means catalog → binding → DEVELOPMENT provider registry → process-wide `ProviderRuntime` → typed source-run accounting → canonical observation, with deterministic success/no-capture/malformed/rate-limit/unavailable tests.
-3. Use a descriptive PersonaLattice User-Agent for Internet Archive automated requests and honor `429`/`Retry-After`.
-4. Keep the Wayback adapter exact-URL and metadata-only; no archived content fetch, person attribution or emitted lead.
-5. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
+1. Keep Wayback's exact-URL metadata boundary and source-run tests green; do not expand it into archived-page scraping.
+2. Review the next high-value ₹0 source from primary documentation before writing an adapter. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
+3. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
+4. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
 
-Do not reopen completed architecture or generate cosmetic PRs simply to keep the repository moving. A new block needs to improve defensible source coverage, real evaluation, correctness, security or a concrete investigator task.
+A new block must improve defensible source coverage, real evaluation, correctness, security or a concrete investigator task.

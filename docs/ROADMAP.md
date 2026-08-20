@@ -39,8 +39,11 @@ Current executable sources are:
 - Bluesky public profiles for valid AT handles;
 - local phone numbering-plan metadata;
 - public DNS infrastructure metadata;
+- Internet Archive Wayback capture-availability metadata for canonical URLs;
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
 - optional Brave exact public-web search when configured.
+
+Wayback retains capture metadata only. It fetches no archived page content, emits no new leads and makes no person-attribution claim.
 
 RDAP emits no subject leads. Registrant/contact fields are not admitted. Discovered domain clues remain `DISPLAY_ONLY`; only explicit DOMAIN seeds run RDAP.
 
@@ -62,11 +65,13 @@ Activate at most one external source per PR. A source must degrade through typed
 
 Current source-admission decisions are tracked in `docs/SOURCE_ADMISSION_QUEUE.md`.
 
-### Immediate candidate
+### Internet Archive Wayback
 
-**Internet Archive Wayback availability metadata — approved for implementation review, not active yet.**
+**Active in this code state.**
 
-The reviewed scope is deliberately narrow: exact URL availability/capture metadata from the official Wayback availability endpoint, no archived-page content fetch, no person attribution and no emitted leads. Automated requests must identify PersonaLattice with a descriptive User-Agent and honor `429`/`Retry-After`. Activation still requires adapter/runtime fixtures and exact-head CI.
+The integration uses the official availability endpoint for exact canonical URL leads. Automated requests identify PersonaLattice with a descriptive User-Agent and map provider `429` responses through typed remote-rate-limit handling. Returned snapshot locators must be credential-free HTTP(S) URLs on `web.archive.org` with a timestamp-consistent archive path.
+
+The adapter stores only queried URL, capture availability/status/timestamp and canonical snapshot provenance. It never fetches archived page content and intentionally emits no recursive leads.
 
 ### Explicit rejections/deferments
 
@@ -87,7 +92,7 @@ The next meaningful M10 step is a genuine lawful consented or independently revi
 
 ## Next gate
 
-1. Implement and independently review one high-value ₹0 source at a time, starting with the Wayback availability candidate unless its preflight changes.
+1. Independently review and activate one high-value ₹0 source at a time; Wayback is the first post-freeze source and establishes the admission pattern.
 2. Run real consented or independently reviewed M10 evidence when it exists and use those results to decide whether source coverage, graph limits or triage policy need changes.
 3. Fix newly discovered correctness/security/operator defects when they are concrete; do not reopen frozen architecture without evidence.
 4. Keep `docs/CONTINUITY.md`, source-admission notes and operator docs truthful in the same PR as behavior changes.
