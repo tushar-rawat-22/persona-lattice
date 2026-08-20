@@ -23,7 +23,8 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - PR #148 final CI: run `32318165893`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
 - Issue #147: closed as completed by PR #148
 - PR #151: operator source-outcome explainability — merged
-- PR #153: metadata-only retained-case index
+- PR #153: metadata-only retained-case index — merged at `24a3d7ee16a090b0e37c87067dc78f957423a5ba`
+- PR #155: bounded older-case summary navigation
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -52,9 +53,11 @@ PR #153 replaces that list path with a dedicated summary projection. Storage sel
 
 The authenticated `GET /v1/cases` response contains navigation metadata only. When a next page exists the API returns `X-PersonaLattice-Next-Cursor`. `GET /v1/cases/{case_id}` remains the full-report read path, so evidence is loaded only when the operator opens a case. Existing delete, purge, expiry, audit and 30-day retention behavior is unchanged.
 
-Regression coverage deliberately corrupts and enlarges a retained `report_json` value before listing summaries. The summary path must still work and must expose no report/evidence field. Additional tests cover bounded cursor pagination, invalid cursors/limits, authenticated summary response shape and the private web contract that uses the list endpoint for navigation and the single-case endpoint for the opened report. The recent-case rendering contract also forbids reading `item.report` from summary rows.
+PR #155 completes the operator side of that continuation contract. Recent rows are typed as `StoredCaseSummary`, the console records the response cursor, and one compact `Load older cases` action requests the next eight summaries. Older pages append after deduplication by case ID. Create/delete/refresh returns the list to the newest page, and the active full report remains separate from the summary collection.
 
-ADR 0080 records the design. No retained database migration is required because the summary is projected from existing columns. The old full-report `CaseStore.list_recent()` method is left available for internal/historical compatibility but is no longer the operator navigation path.
+Regression coverage deliberately corrupts and enlarges a retained `report_json` value before listing summaries. The summary path must still work and must expose no report/evidence field. Additional tests cover bounded cursor pagination, invalid cursors/limits, authenticated summary response shape and the private web contract. UI contract tests lock summary typing, cursor consumption, duplicate suppression, no `item.report` access in navigation and full-case loading only from the single-case endpoint.
+
+ADR 0080 records the design. No retained database migration is required because the summary is projected from existing columns. The old full-report `CaseStore.list_recent()` method remains available for internal/historical compatibility but is not the operator navigation path.
 
 ## Operator source-outcome explainability
 
@@ -113,7 +116,7 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Keep the retained-case index metadata-only, bounded and covered by exact storage/API/web regressions; do not reintroduce bulk report loading for navigation.
+1. Keep retained-case navigation metadata-only, bounded and cursor-driven; do not reintroduce bulk report loading or make summary rows depend on report content.
 2. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
 3. Continue operator evidence/provenance work only where it removes a specific investigation step; do not recreate provider or M5 policy in the browser.
 4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
