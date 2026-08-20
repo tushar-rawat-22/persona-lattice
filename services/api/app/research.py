@@ -38,9 +38,11 @@ from .providers.shared_runtime import (
     DEFAULT_PROVIDER_RUNTIME,
     DEFAULT_RDAP_PROVIDER,
     DEFAULT_SHERLOCK_PROVIDER,
+    DEFAULT_STACK_OVERFLOW_PROVIDER,
     DEFAULT_WAYBACK_PROVIDER,
 )
 from .providers.sherlock import SherlockProvider
+from .providers.stack_overflow_public import stack_overflow_user_id_from_url
 from .public_profiles import (
     codeforces_public_observation_fields,
     gitlab_public_observation_fields,
@@ -181,6 +183,19 @@ def _wayback_observation_from_provider(item: ProviderObservationData) -> QuickOb
         source="wayback_url_availability",
         source_locator=item.source_locator,
         summary=f"Wayback capture metadata for this exact URL at {timestamp}; archived content not fetched.",
+        details=dict(item.payload),
+    )
+
+
+def _stack_overflow_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    user_id = str(item.payload.get("stack_overflow_user_id", "unknown"))
+    return QuickObservation(
+        source="stack_overflow_public_profile",
+        source_locator=item.source_locator,
+        summary=(
+            f"Stack Overflow public profile for user {user_id}; "
+            "exact profile-URL account evidence only."
+        ),
         details=dict(item.payload),
     )
 
@@ -626,6 +641,33 @@ async def _wayback_observations(
     return [_wayback_observation_from_provider(item) for item in result.observations]
 
 
+async def _stack_overflow_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_STACK_OVERFLOW_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_stack_overflow_observation_from_provider(item) for item in result.observations]
+
+
 async def _research_username(
     normalized_value: str,
     *,
@@ -1029,6 +1071,35 @@ async def _research_url(
             )
         )
     observations.extend(wayback_observations)
+
+    if stack_overflow_user_id_from_url(normalized_value) is not None:
+        try:
+            stack_overflow_observations = await _stack_overflow_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            stack_overflow_observations = []
+            warnings.append("Stack Overflow public-profile metadata was temporarily unavailable.")
+            source_run = _source_run_for_exception(
+                source_name="stack_overflow_public_profile",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="stack_overflow_public_profile",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(stack_overflow_observations),
+                )
+            )
+        observations.extend(stack_overflow_observations)
 
     search_observations, search_warning, search_run = await _public_search(
         normalized_value,
