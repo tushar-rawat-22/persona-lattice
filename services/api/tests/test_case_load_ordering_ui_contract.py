@@ -69,6 +69,34 @@ def test_successful_delete_all_reconciles_navigation_without_clearing_newer_cont
     assert "if (!isCurrentCaseContext(generation)) return;" not in delete_all
 
 
+def test_summary_refresh_invalidates_stale_older_page_responses() -> None:
+    source = CASE_UI.read_text(encoding="utf-8")
+    refresh = _section(source, "const refreshCases", "useEffect(() =>")
+    older = _section(source, "async function loadOlderCases", "async function deleteAllCases")
+
+    assert "caseListGeneration = useRef(0)" in source
+    assert "const generation = advanceCaseListGeneration();" in refresh
+    assert "setLoadingOlderCases(false);" in refresh
+    assert "setNextCaseCursor(null);" in refresh
+    assert refresh.count("isCurrentCaseList(generation)") >= 2
+
+    assert "const generation = caseListGeneration.current;" in older
+    assert "const cursor = nextCaseCursor;" in older
+    assert "encodeURIComponent(cursor)" in older
+    assert older.count("isCurrentCaseList(generation)") >= 3
+    assert older.index("if (!isCurrentCaseList(generation)) return;") < older.index("if (!response.ok)")
+    assert "setNextCaseCursor(response.headers.get(\"X-PersonaLattice-Next-Cursor\"));" in older
+
+
+def test_stale_older_page_completion_cannot_clear_current_loading_state() -> None:
+    source = CASE_UI.read_text(encoding="utf-8")
+    older = _section(source, "async function loadOlderCases", "async function deleteAllCases")
+
+    assert "finally" in older
+    assert "if (isCurrentCaseList(generation))" in older
+    assert "setLoadingOlderCases(false);" in older
+
+
 def test_request_ordering_does_not_change_report_loading_boundary() -> None:
     source = CASE_UI.read_text(encoding="utf-8")
     open_case = _section(source, "async function openCase", "async function deleteCase")
