@@ -234,6 +234,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="stack_overflow_public_profile",
+        capability="public_profile_enrichment",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official Stack Exchange API lookup only for an exact numeric Stack Overflow user ID "
+            "parsed from a supplied public profile URL; bounded account metadata only."
+        ),
+        version="api-v2.3-users",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=32 * 1024,
+        max_concurrency=1,
+        rate_limit=20,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="brave_public_web_index",
         capability="exact_public_web_search",
         status=ProviderStatus.DEVELOPMENT.value,

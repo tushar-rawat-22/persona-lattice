@@ -40,6 +40,22 @@ PersonaLattice keeps the integration deliberately narrow:
 
 This source adds historical URL context without fuzzy person search, credentials, subscriber/contact data or recursive identity claims.
 
+### Stack Overflow exact public profile
+
+**Decision:** admitted only for an exact Stack Overflow profile URL carrying a numeric user ID.
+
+Primary documentation re-checked on 2026-08-20:
+
+- Stack Exchange API Terms of Use;
+- Stack Exchange API `/users/{ids}` documentation;
+- Stack Exchange API throttling documentation.
+
+The source parses `stackoverflow.com/users/<positive-id>` locally and then calls the official API v2.3 exact-user endpoint with `site=stackoverflow`. It never uses `inname`, display-name search or another fuzzy person lookup.
+
+PersonaLattice retains only bounded account-verification context: numeric Stack Overflow user ID, public display name, reputation, creation timestamp, `identity_claim=false`, explicit Stack Overflow attribution and the canonical returned profile locator. It does not retain `about`, posts/comments, location, website, profile image, email or other contact fields. It emits no leads.
+
+The source uses anonymous reads only, stays inside a conservative local budget, honors provider `429`/`Retry-After` and API `backoff`, and keeps Stack Overflow attribution visible with the canonical source locator. The account is evidence about the supplied profile URL, not proof of subject identity.
+
 ## Rejected for the baseline
 
 ### ORCID Public API
@@ -50,6 +66,14 @@ The public API is free for non-commercial use, but the current terms prohibit us
 
 Revisit only if ORCID terms or the product's usage model materially change. Do not substitute scraping for the rejected API path.
 
+### Hacker News public user API
+
+**Decision:** reject under the current Y Combinator terms for PersonaLattice's intended commercial path.
+
+The API is technically attractive: exact case-sensitive user IDs, credentialless public reads and no documented API rate limit. A deeper terms review found broad current commercial-use restrictions covering site use/access and account/karma/content material. The API announcement does not provide a clear commercial-use grant that is safe to treat as overriding those terms.
+
+Do not activate Hacker News account metadata merely because the endpoint is free. Revisit only if current primary terms change or written permission makes the commercial-use boundary clear enough.
+
 ## Deferred
 
 ### Stack Exchange user search
@@ -58,7 +82,7 @@ Revisit only if ORCID terms or the product's usage model materially change. Do n
 
 The official `/users` API supports `inname`, but that parameter is substring search over display names. It is not an exact global username lookup. Turning those results into account evidence or recursive pivots would increase false candidates.
 
-A future explicit Stack Exchange account URL or numeric user-ID source could be reconsidered because that would have a precise applicability rule. If used, honor Stack Exchange's documented request quota, per-IP throttling and `backoff` field.
+This does not apply to the admitted exact Stack Overflow profile-URL source above. That path derives a numeric user ID from an already-supplied profile URL and never performs fuzzy search.
 
 ### Gravatar
 

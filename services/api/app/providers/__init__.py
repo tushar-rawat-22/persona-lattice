@@ -40,6 +40,11 @@ from .sherlock import (
     SherlockResult,
     load_reviewed_sherlock_sites,
 )
+from .stack_overflow_public import (
+    StackOverflowPublicProfileProvider,
+    fetch_stack_overflow_profile,
+    stack_overflow_user_id_from_url,
+)
 
 __all__ = [
     "AccountDiscoveryState",
@@ -77,11 +82,14 @@ __all__ = [
     "SherlockProvider",
     "SherlockResult",
     "SourceCategory",
+    "StackOverflowPublicProfileProvider",
     "SyntheticEchoProvider",
     "authorize_execution",
     "fetch_codeforces_public_profile",
     "fetch_github_public_profile",
     "fetch_gitlab_public_profile",
+    "fetch_stack_overflow_profile",
     "load_reviewed_sherlock_sites",
     "sanitize_provider_log",
+    "stack_overflow_user_id_from_url",
 ]

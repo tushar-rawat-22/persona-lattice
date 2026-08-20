@@ -49,6 +49,7 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         "bluesky_public_profile",
         "public_dns_infrastructure",
         "wayback_url_availability",
+        "stack_overflow_public_profile",
         "rdap_domain_registry",
         "brave_public_web_index",
     }
@@ -117,6 +118,23 @@ def test_wayback_is_zero_spend_credentialless_metadata_only_and_url_only() -> No
     assert descriptor.max_response_bytes == 32 * 1024
     assert descriptor.max_concurrency == 1
     assert descriptor.rate_limit == 15
+    assert descriptor.rate_window_seconds == 60.0
+
+
+def test_stack_overflow_is_zero_spend_exact_url_only_and_locally_bounded() -> None:
+    descriptor = PROVIDER_BY_NAME["stack_overflow_public_profile"]
+    capability = SOURCE_BY_NAME["stack_overflow_public_profile"]
+
+    assert capability.status is SourceStatus.ACTIVE
+    assert capability.zero_spend_eligible is True
+    assert capability.emits == frozenset()
+    assert descriptor.auth_mode is AuthMode.NONE
+    assert descriptor.supported_identifier_kinds == frozenset({"url"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 32 * 1024
+    assert descriptor.max_concurrency == 1
+    assert descriptor.rate_limit == 20
     assert descriptor.rate_window_seconds == 60.0
 
 

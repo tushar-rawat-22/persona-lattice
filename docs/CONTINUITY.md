@@ -53,6 +53,7 @@ Required/zero-direct-cost baseline:
 - Bluesky public AppView profile lookup for valid AT handles;
 - public DNS infrastructure metadata;
 - Internet Archive Wayback capture-availability metadata for canonical URLs;
+- Stack Overflow exact public-profile metadata for explicit numeric profile URLs;
 - authoritative RDAP for explicit DOMAIN seeds.
 
 Optional:
@@ -60,6 +61,8 @@ Optional:
 - Brave exact public-web search when configured. It is metered and must never become a required dependency.
 
 Wayback is intentionally metadata-only. It queries the official availability endpoint, sends a descriptive PersonaLattice User-Agent, validates the returned `web.archive.org` snapshot locator, and retains only queried URL plus capture availability/status/timestamp. It does not fetch archived page content, emit leads or make a person-attribution claim. Provider rate limits and malformed outputs stay visible through typed source-run reporting.
+
+Stack Overflow is exact-URL account metadata only. Applicability requires a supplied `stackoverflow.com/users/<positive-id>` profile URL; the provider then calls the official exact-user API. It retains only prefixed user ID/display name/reputation/creation metadata, API attribution, `identity_claim=false`, and the canonical returned profile locator. It does not retain profile prose, posts/comments, location, website, image or contact fields, and it emits no leads. Generic Stack Exchange `inname` user search remains outside the product.
 
 Planned/review-gated entries in the source catalog are not executable merely because code or a catalog record exists.
 
@@ -77,18 +80,21 @@ Do not publish false-positive/false-negative, probability, calibration or popula
 
 Source expansion is the main engineering stream alongside real M10 evaluation. `docs/SOURCE_ADMISSION_QUEUE.md` records current preflight decisions.
 
-Wayback is the first post-freeze source admission. Its contract is exact-URL historical availability metadata only. Treat zero capture as a valid no-match, `429` as a remote rate limit, malformed provider output as a post-attempt validation failure, and transient provider/network failure as unavailable. The source emits no recursive candidates.
+Wayback was the first post-freeze source admission. Its contract is exact-URL historical availability metadata only. Treat zero capture as a valid no-match, `429` as a remote rate limit, malformed provider output as a post-attempt validation failure, and transient provider/network failure as unavailable. The source emits no recursive candidates.
 
-Two tempting sources remain rejected/deferred:
+Stack Overflow is the next admitted source in this code state. Its applicability boundary is an exact profile URL with a numeric user ID, not a username/display-name query. Anonymous requests use the official Stack Exchange API, stay under a conservative local budget, preserve provider `Retry-After`/API `backoff`, and keep Stack Overflow attribution visible with canonical provenance.
+
+Current explicit rejections/deferments include:
 
 - ORCID Public API is not suitable for a future revenue-generating PersonaLattice baseline under its current public API terms.
-- Stack Exchange `inname` user search is substring-based and therefore too fuzzy to become generic recursive username evidence.
+- Hacker News public-user metadata is rejected under current Y Combinator commercial-use terms despite a technically attractive free API.
+- Stack Exchange `inname` user search is substring-based and therefore too fuzzy to become generic recursive username evidence; this does not affect the exact Stack Overflow profile-URL source.
 
 If provider documentation changes, repeat the preflight instead of trusting this handover.
 
 ## Next engineering gate
 
-1. Keep Wayback's exact-URL metadata boundary and source-run tests green; do not expand it into archived-page scraping.
+1. Keep Wayback and Stack Overflow source boundaries/tests green; do not expand either into content scraping or fuzzy person search.
 2. Review the next high-value ₹0 source from primary documentation before writing an adapter. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
 3. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 4. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.

@@ -40,10 +40,13 @@ Current executable sources are:
 - local phone numbering-plan metadata;
 - public DNS infrastructure metadata;
 - Internet Archive Wayback capture-availability metadata for canonical URLs;
+- Stack Overflow public-account metadata for exact numeric profile URLs;
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
 - optional Brave exact public-web search when configured.
 
 Wayback retains capture metadata only. It fetches no archived page content, emits no new leads and makes no person-attribution claim.
+
+Stack Overflow runs only when an already-supplied URL matches an exact `stackoverflow.com/users/<id>` profile. It uses the official exact-user API endpoint, retains a narrow attributed account-metadata record and emits no leads. Generic Stack Exchange `inname` search remains rejected because substring display-name matching is too ambiguous for identity evidence.
 
 RDAP emits no subject leads. Registrant/contact fields are not admitted. Discovered domain clues remain `DISPLAY_ONLY`; only explicit DOMAIN seeds run RDAP.
 
@@ -67,16 +70,27 @@ Current source-admission decisions are tracked in `docs/SOURCE_ADMISSION_QUEUE.m
 
 ### Internet Archive Wayback
 
-**Active in this code state.**
+**Active.**
 
 The integration uses the official availability endpoint for exact canonical URL leads. Automated requests identify PersonaLattice with a descriptive User-Agent and map provider `429` responses through typed remote-rate-limit handling. Returned snapshot locators must be credential-free HTTP(S) URLs on `web.archive.org` with a timestamp-consistent archive path.
 
 The adapter stores only queried URL, capture availability/status/timestamp and canonical snapshot provenance. It never fetches archived page content and intentionally emits no recursive leads.
 
+### Stack Overflow exact public profile
+
+**Active in this code state.**
+
+The source parses an exact Stack Overflow profile URL locally, extracts the numeric user ID and calls the official Stack Exchange API v2.3 `/users/{id}` path for `site=stackoverflow`. It does not call `/users?inname=` or perform display-name search.
+
+Retained fields are intentionally narrow: Stack Overflow user ID, public display name, reputation, creation timestamp, explicit API attribution, `identity_claim=false`, and the canonical returned profile locator. `about`, posts/comments, location, website, profile image and contact fields are not admitted. No recursive leads are emitted.
+
+Anonymous API reads keep the source at zero direct cost. PersonaLattice applies a tighter local rate budget than the provider's documented quota and honors remote `429`/`Retry-After` plus API `backoff` signals.
+
 ### Explicit rejections/deferments
 
 - **ORCID Public API:** rejected for the product baseline because the current Public API terms prohibit use in connection with a revenue-generating product or service. A free endpoint with incompatible commercial terms is not a PersonaLattice source.
-- **Stack Exchange user search:** deferred as a generic username source because `inname` is substring matching, not identity-quality exact matching. Do not turn fuzzy search results into recursive pivots.
+- **Hacker News public user API:** rejected under current Y Combinator commercial-use terms. Its technical API fit does not override the product/legal boundary.
+- **Stack Exchange generic user search:** rejected as a generic username source because `inname` is substring matching, not identity-quality exact matching. The exact Stack Overflow profile-URL path above is a separate, deterministic applicability rule.
 - **Gravatar:** remains blocked until provider privacy-policy/terms requirements and the free server-side-key boundary are satisfied.
 - **WebFinger:** remains blocked until a specific host passes the existing host-policy review.
 
@@ -92,7 +106,7 @@ The next meaningful M10 step is a genuine lawful consented or independently revi
 
 ## Next gate
 
-1. Independently review and activate one high-value ₹0 source at a time; Wayback is the first post-freeze source and establishes the admission pattern.
+1. Continue reviewed source expansion one source at a time, preferring exact applicability and strong provenance over provider count.
 2. Run real consented or independently reviewed M10 evidence when it exists and use those results to decide whether source coverage, graph limits or triage policy need changes.
 3. Fix newly discovered correctness/security/operator defects when they are concrete; do not reopen frozen architecture without evidence.
 4. Keep `docs/CONTINUITY.md`, source-admission notes and operator docs truthful in the same PR as behavior changes.
