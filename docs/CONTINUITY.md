@@ -24,7 +24,7 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - Issue #147: closed as completed by PR #148
 - PR #151: operator source-outcome explainability — merged
 - PR #153: metadata-only retained-case index — merged at `24a3d7ee16a090b0e37c87067dc78f957423a5ba`
-- PR #155: bounded older-case summary navigation
+- PR #155: bounded older-case summary navigation — merged at `cd2c3986bc16366e6fc20840366db95afe0cc5d2`
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -55,9 +55,11 @@ The authenticated `GET /v1/cases` response contains navigation metadata only. Wh
 
 PR #155 completes the operator side of that continuation contract. Recent rows are typed as `StoredCaseSummary`, the console records the response cursor, and one compact `Load older cases` action requests the next eight summaries. Older pages append after deduplication by case ID. Create/delete/refresh returns the list to the newest page, and the active full report remains separate from the summary collection.
 
-Regression coverage deliberately corrupts and enlarges a retained `report_json` value before listing summaries. The summary path must still work and must expose no report/evidence field. Additional tests cover bounded cursor pagination, invalid cursors/limits, authenticated summary response shape and the private web contract. UI contract tests lock summary typing, cursor consumption, duplicate suppression, no `item.report` access in navigation and full-case loading only from the single-case endpoint.
+Retained-case opening is also ordered explicitly in the browser. Each active-case context change advances a monotonic request generation. A full-case response or load error may update the visible case only while its generation is still current, so a slower response for an earlier click cannot replace a newer selection. Starting new research or a destructive case action invalidates pending case loads. This is a presentation-order guard only: full reports still come from the single-case endpoint, summary navigation stays metadata-only, and no retained evidence is duplicated or prefetched.
 
-ADR 0080 records the design. No retained database migration is required because the summary is projected from existing columns. The old full-report `CaseStore.list_recent()` method remains available for internal/historical compatibility but is not the operator navigation path.
+Regression coverage deliberately corrupts and enlarges a retained `report_json` value before listing summaries. The summary path must still work and must expose no report/evidence field. Additional tests cover bounded cursor pagination, invalid cursors/limits, authenticated summary response shape and the private web contract. UI contract tests lock summary typing, cursor consumption, duplicate suppression, no `item.report` access in navigation, full-case loading only from the single-case endpoint and stale retained-case response suppression.
+
+ADR 0080 records the metadata-index design. No retained database migration is required because the summary is projected from existing columns. The old full-report `CaseStore.list_recent()` method remains available for internal/historical compatibility but is not the operator navigation path.
 
 ## Operator source-outcome explainability
 
@@ -116,7 +118,7 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Keep retained-case navigation metadata-only, bounded and cursor-driven; do not reintroduce bulk report loading or make summary rows depend on report content.
+1. Keep retained-case navigation metadata-only, bounded and cursor-driven; keep latest-selection-wins ordering for full-case reads and do not let stale responses replace the operator's newer case context.
 2. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
 3. Continue operator evidence/provenance work only where it removes a specific investigation step; do not recreate provider or M5 policy in the browser.
 4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
