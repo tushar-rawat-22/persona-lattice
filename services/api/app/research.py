@@ -38,6 +38,7 @@ from .providers.shared_runtime import (
     DEFAULT_PROVIDER_RUNTIME,
     DEFAULT_RDAP_PROVIDER,
     DEFAULT_SHERLOCK_PROVIDER,
+    DEFAULT_WAYBACK_PROVIDER,
 )
 from .providers.sherlock import SherlockProvider
 from .public_profiles import (
@@ -170,6 +171,16 @@ def _dns_observation_from_provider(item: ProviderObservationData) -> QuickObserv
         source="public_dns_infrastructure",
         source_locator=item.source_locator,
         summary="Globally reachable addresses for the public hostname; website infrastructure only.",
+        details=dict(item.payload),
+    )
+
+
+def _wayback_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    timestamp = str(item.payload.get("capture_timestamp", "unknown capture"))
+    return QuickObservation(
+        source="wayback_url_availability",
+        source_locator=item.source_locator,
+        summary=f"Wayback capture metadata for this exact URL at {timestamp}; archived content not fetched.",
         details=dict(item.payload),
     )
 
@@ -430,9 +441,7 @@ async def _gitlab_observations(
         payload = await injected_lookup(normalized_value)
         if payload is None:
             return []
-        matched_by = (
-            "username" if identifier_kind is IdentifierKind.USERNAME else "exact_public_email"
-        )
+        matched_by = "username" if identifier_kind is IdentifierKind.USERNAME else "exact_public_email"
         observation = _legacy_gitlab_observation(payload, matched_by=matched_by)
         return [] if observation is None else [observation]
 
@@ -588,6 +597,33 @@ async def _dns_observations(
         ),
     )
     return [_dns_observation_from_provider(item) for item in result.observations]
+
+
+async def _wayback_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_WAYBACK_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_wayback_observation_from_provider(item) for item in result.observations]
 
 
 async def _research_username(
@@ -846,9 +882,7 @@ async def _research_email(
     warnings: list[str] = []
     subject_id = uuid4()
     identifier_id = uuid4()
-    injected_gitlab = (
-        None if gitlab_email_lookup is lookup_gitlab_public_email else gitlab_email_lookup
-    )
+    injected_gitlab = None if gitlab_email_lookup is lookup_gitlab_public_email else gitlab_email_lookup
     try:
         gitlab_observations = await _gitlab_observations(
             normalized_value,
@@ -967,6 +1001,35 @@ async def _research_url(
             )
         )
     observations.extend(dns_observations)
+
+    try:
+        wayback_observations = await _wayback_observations(
+            normalized_value,
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
+        )
+    except Exception as exc:
+        wayback_observations = []
+        warnings.append("Wayback capture availability metadata was temporarily unavailable.")
+        source_run = _source_run_for_exception(
+            source_name="wayback_url_availability",
+            lead_kind=LeadKind.URL,
+            exc=exc,
+        )
+        if source_run is not None:
+            source_runs.append(source_run)
+    else:
+        source_runs.append(
+            source_result_record(
+                source_name="wayback_url_availability",
+                lead_kind=LeadKind.URL,
+                observation_count=len(wayback_observations),
+            )
+        )
+    observations.extend(wayback_observations)
+
     search_observations, search_warning, search_run = await _public_search(
         normalized_value,
         public_search_lookup,
