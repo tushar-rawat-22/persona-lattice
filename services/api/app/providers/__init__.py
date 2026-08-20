@@ -28,6 +28,7 @@ from .github_public import GitHubPublicProfileProvider, fetch_github_public_prof
 from .gitlab_public import GitLabPublicProfileProvider, fetch_gitlab_public_profile
 from .logging import REDACTED_SECRET, sanitize_provider_log
 from .mock import SyntheticEchoProvider
+from .openalex_author import OpenAlexExactAuthorProvider, fetch_openalex_author, openalex_author_id_from_url
 from .policy import authorize_execution
 from .registry import PROVIDERS, PROVIDER_BY_NAME
 from .runtime import PreparedProviderExecution, ProviderRuntime
@@ -55,6 +56,7 @@ __all__ = [
     "GitHubPublicProfileProvider",
     "GitLabPublicProfileProvider",
     "MAX_SHERLOCK_SITES",
+    "OpenAlexExactAuthorProvider",
     "PROVIDERS",
     "PROVIDER_BY_NAME",
     "PreparedProviderExecution",
@@ -88,8 +90,10 @@ __all__ = [
     "fetch_codeforces_public_profile",
     "fetch_github_public_profile",
     "fetch_gitlab_public_profile",
+    "fetch_openalex_author",
     "fetch_stack_overflow_profile",
     "load_reviewed_sherlock_sites",
+    "openalex_author_id_from_url",
     "sanitize_provider_log",
     "stack_overflow_user_id_from_url",
 ]
