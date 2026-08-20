@@ -13,6 +13,7 @@ from .runtime import ProviderRuntime
 from .sherlock import SherlockProvider
 from .stack_overflow_public import StackOverflowPublicProfileProvider
 from .wayback_availability import WaybackAvailabilityProvider
+from .wikidata_entity import WikidataExactEntityProvider
 
 
 # Production quick-research providers share one process-wide runtime so provider
@@ -26,6 +27,7 @@ DEFAULT_DNS_PROVIDER = PublicDnsInfrastructureProvider()
 DEFAULT_WAYBACK_PROVIDER = WaybackAvailabilityProvider()
 DEFAULT_STACK_OVERFLOW_PROVIDER = StackOverflowPublicProfileProvider()
 DEFAULT_OPENALEX_PROVIDER = OpenAlexExactAuthorProvider()
+DEFAULT_WIKIDATA_PROVIDER = WikidataExactEntityProvider()
 DEFAULT_RDAP_PROVIDER = RdapDomainRegistryProvider()
 DEFAULT_BRAVE_PROVIDER = BravePublicWebSearchProvider()
 DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
@@ -39,6 +41,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_WAYBACK_PROVIDER,
         DEFAULT_STACK_OVERFLOW_PROVIDER,
         DEFAULT_OPENALEX_PROVIDER,
+        DEFAULT_WIKIDATA_PROVIDER,
         DEFAULT_RDAP_PROVIDER,
         DEFAULT_BRAVE_PROVIDER,
     ]

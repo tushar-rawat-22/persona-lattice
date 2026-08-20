@@ -294,6 +294,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="wikidata_exact_entity",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=44,
+        note=(
+            "Official Wikidata wbgetentities metadata for exact item URLs only; English label/description "
+            "only, no entity search, claims expansion, external IDs or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="rdap_domain_registry",
         accepts=frozenset({LeadKind.DOMAIN}),
         emits=frozenset(),

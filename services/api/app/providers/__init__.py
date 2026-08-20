@@ -46,6 +46,7 @@ from .stack_overflow_public import (
     fetch_stack_overflow_profile,
     stack_overflow_user_id_from_url,
 )
+from .wikidata_entity import WikidataExactEntityProvider, fetch_wikidata_entity, wikidata_entity_id_from_url
 
 __all__ = [
     "AccountDiscoveryState",
@@ -86,14 +87,17 @@ __all__ = [
     "SourceCategory",
     "StackOverflowPublicProfileProvider",
     "SyntheticEchoProvider",
+    "WikidataExactEntityProvider",
     "authorize_execution",
     "fetch_codeforces_public_profile",
     "fetch_github_public_profile",
     "fetch_gitlab_public_profile",
     "fetch_openalex_author",
     "fetch_stack_overflow_profile",
+    "fetch_wikidata_entity",
     "load_reviewed_sherlock_sites",
     "openalex_author_id_from_url",
     "sanitize_provider_log",
     "stack_overflow_user_id_from_url",
+    "wikidata_entity_id_from_url",
 ]

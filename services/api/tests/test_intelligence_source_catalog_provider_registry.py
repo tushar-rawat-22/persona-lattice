@@ -51,6 +51,7 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         "wayback_url_availability",
         "stack_overflow_public_profile",
         "openalex_exact_author",
+        "wikidata_exact_entity",
         "rdap_domain_registry",
         "brave_public_web_index",
     }
@@ -81,7 +82,6 @@ def test_codeforces_budget_matches_documented_minimum_request_interval() -> None
 def test_bluesky_is_zero_spend_credentialless_and_locally_bounded() -> None:
     descriptor = PROVIDER_BY_NAME["bluesky_public_profile"]
     capability = SOURCE_BY_NAME["bluesky_public_profile"]
-
     assert capability.status is SourceStatus.ACTIVE
     assert capability.zero_spend_eligible is True
     assert descriptor.auth_mode is AuthMode.NONE
@@ -108,7 +108,6 @@ def test_public_dns_policy_is_bounded_and_url_only() -> None:
 def test_wayback_is_zero_spend_credentialless_metadata_only_and_url_only() -> None:
     descriptor = PROVIDER_BY_NAME["wayback_url_availability"]
     capability = SOURCE_BY_NAME["wayback_url_availability"]
-
     assert capability.status is SourceStatus.ACTIVE
     assert capability.zero_spend_eligible is True
     assert capability.emits == frozenset()
@@ -125,7 +124,6 @@ def test_wayback_is_zero_spend_credentialless_metadata_only_and_url_only() -> No
 def test_stack_overflow_is_zero_spend_exact_url_only_and_locally_bounded() -> None:
     descriptor = PROVIDER_BY_NAME["stack_overflow_public_profile"]
     capability = SOURCE_BY_NAME["stack_overflow_public_profile"]
-
     assert capability.status is SourceStatus.ACTIVE
     assert capability.zero_spend_eligible is True
     assert capability.emits == frozenset()
@@ -142,7 +140,6 @@ def test_stack_overflow_is_zero_spend_exact_url_only_and_locally_bounded() -> No
 def test_openalex_is_zero_spend_exact_url_only_and_locally_bounded() -> None:
     descriptor = PROVIDER_BY_NAME["openalex_exact_author"]
     capability = SOURCE_BY_NAME["openalex_exact_author"]
-
     assert capability.status is SourceStatus.ACTIVE
     assert capability.zero_spend_eligible is True
     assert capability.emits == frozenset()
@@ -157,10 +154,25 @@ def test_openalex_is_zero_spend_exact_url_only_and_locally_bounded() -> None:
     assert descriptor.rate_window_seconds == 60.0
 
 
+def test_wikidata_is_zero_spend_exact_url_only_and_locally_bounded() -> None:
+    descriptor = PROVIDER_BY_NAME["wikidata_exact_entity"]
+    capability = SOURCE_BY_NAME["wikidata_exact_entity"]
+    assert capability.status is SourceStatus.ACTIVE
+    assert capability.zero_spend_eligible is True
+    assert capability.emits == frozenset()
+    assert descriptor.auth_mode is AuthMode.NONE
+    assert descriptor.supported_identifier_kinds == frozenset({"url"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 32 * 1024
+    assert descriptor.max_concurrency == 1
+    assert descriptor.rate_limit == 30
+    assert descriptor.rate_window_seconds == 60.0
+
+
 def test_rdap_is_zero_spend_credentialless_and_domain_only() -> None:
     descriptor = PROVIDER_BY_NAME["rdap_domain_registry"]
     capability = SOURCE_BY_NAME["rdap_domain_registry"]
-
     assert capability.status is SourceStatus.ACTIVE
     assert capability.zero_spend_eligible is True
     assert capability.emits == frozenset()

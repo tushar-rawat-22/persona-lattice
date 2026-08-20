@@ -130,6 +130,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="wikidata_exact_entity",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="wikidata_exact_entity",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact Wikidata item URLs execute bounded wbgetentities metadata through ProviderRuntime; "
+            "entity search, claims expansion and emitted leads are outside this source."
+        ),
+    ),
+    SourceBinding(
         source_name="rdap_domain_registry",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="rdap_domain_registry",
