@@ -21,11 +21,14 @@ def test_recent_cases_are_typed_as_summaries_not_full_reports() -> None:
 
 def test_recent_cases_consume_bounded_continuation_cursor() -> None:
     source = CASE_UI.read_text(encoding="utf-8")
+    load_start = source.index("async function loadOlderCases")
+    delete_all_start = source.index("async function deleteAllCases")
+    load_older = source[load_start:delete_all_start]
 
     assert 'response.headers.get("X-PersonaLattice-Next-Cursor")' in source
     assert "const [nextCaseCursor, setNextCaseCursor] = useState<string | null>(null);" in source
-    assert "async function loadOlderCases()" in source
-    assert "encodeURIComponent(nextCaseCursor)" in source
+    assert "const cursor = nextCaseCursor;" in load_older
+    assert "encodeURIComponent(cursor)" in load_older
     assert '"Load older cases"' in source
     assert "loadingOlderCases" in source
 
