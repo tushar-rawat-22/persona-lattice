@@ -263,6 +263,28 @@ function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function safeWebSourceLocator(locator: string): string | null {
+  if (!locator || locator !== locator.trim()) return null;
+  try {
+    const parsed = new URL(locator);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (parsed.username || parsed.password || !parsed.hostname) return null;
+    return locator;
+  } catch {
+    return null;
+  }
+}
+
+function SourceLocator({ locator }: { locator: string }) {
+  const href = safeWebSourceLocator(locator);
+  if (!href) return <>{locator}</>;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {locator}
+    </a>
+  );
+}
+
 function sourceOutcomeDetails(aggregate: SourceEvaluationAggregate): SourceOutcomeDetail[] {
   return [
     { label: "Public-web opt-out", count: aggregate.public_web_opt_out_count, note: "neutral withheld result" },
@@ -720,7 +742,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
               <div className="connectedField">
                 <span>{report.seed_provenance.human_reviewed ? "human reviewed" : "review state unavailable"}</span>
                 <strong>{report.seed_provenance.source}</strong>
-                <small>{report.seed_provenance.source_locator}</small>
+                <small><SourceLocator locator={report.seed_provenance.source_locator} /></small>
               </div>
             </div>
           )}
@@ -751,7 +773,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                           <span>{evaluation.outcome}</span>
                           <strong>{evaluation.evidence_score} / 100</strong>
                           <small>{candidateSource} · {evaluation.calibration_status} · not an identity probability</small>
-                          {candidateLocator && <small>{candidateLocator}</small>}
+                          {candidateLocator && <small><SourceLocator locator={candidateLocator} /></small>}
                           <small>
                             {evaluation.positive_independence_groups} positive independence groups · policy {evaluation.policy_version}
                           </small>
@@ -790,7 +812,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                                   : `${provenance.source} · historical field unavailable`}
                               </small>
                               {provenance.observation_summary && <small>{provenance.observation_summary}</small>}
-                              <small>{provenance.source_locator}</small>
+                              <small><SourceLocator locator={provenance.source_locator} /></small>
                             </>
                           ) : (
                             <small>Canonical pivot provenance could not be resolved safely.</small>
@@ -823,7 +845,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                           <div className="nestedObservation" key={`${observation.source_locator}-${index}`}>
                             <strong>{observation.source}</strong>
                             <span>{observation.summary}</span>
-                            <small>{observation.source_locator}</small>
+                            <small><SourceLocator locator={observation.source_locator} /></small>
                             <ObservationDetails observation={observation} />
                           </div>
                         ))
@@ -856,11 +878,14 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                         <div className="connectedField" key={`${item.kind}-${index}`}>
                           <span>{item.kind}</span>
                           <strong>{resolved?.value ?? "Reference unavailable"}</strong>
-                          <small>
-                            {resolved
-                              ? `${resolved.source} · ${resolved.source_locator}`
-                              : "Stored connected-field reference could not be resolved safely."}
-                          </small>
+                          {resolved ? (
+                            <>
+                              <small>{resolved.source}</small>
+                              <small><SourceLocator locator={resolved.source_locator} /></small>
+                            </>
+                          ) : (
+                            <small>Stored connected-field reference could not be resolved safely.</small>
+                          )}
                         </div>
                       );
                     })}
@@ -888,7 +913,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                     <div>
                       <strong>{observation.source}</strong>
                       <span>{observation.summary}</span>
-                      <span>{observation.source_locator}</span>
+                      <span><SourceLocator locator={observation.source_locator} /></span>
                     </div>
                   </div>
                   <ObservationDetails observation={observation} />
