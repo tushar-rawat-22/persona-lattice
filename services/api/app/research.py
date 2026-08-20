@@ -27,6 +27,7 @@ from .providers.bluesky_admission import BlueskyAdmissionError, normalize_bluesk
 from .providers.contracts import ExecutionRequest
 from .providers.errors import ProviderRateBudgetExceeded
 from .providers.github_public import fetch_github_public_profile
+from .providers.openalex_author import openalex_author_id_from_url
 from .providers.runtime import ProviderRuntime
 from .providers.shared_runtime import (
     DEFAULT_BLUESKY_PROVIDER,
@@ -35,6 +36,7 @@ from .providers.shared_runtime import (
     DEFAULT_DNS_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
+    DEFAULT_OPENALEX_PROVIDER,
     DEFAULT_PROVIDER_RUNTIME,
     DEFAULT_RDAP_PROVIDER,
     DEFAULT_SHERLOCK_PROVIDER,
@@ -195,6 +197,19 @@ def _stack_overflow_observation_from_provider(item: ProviderObservationData) -> 
         summary=(
             f"Stack Overflow public profile for user {user_id}; "
             "exact profile-URL account evidence only."
+        ),
+        details=dict(item.payload),
+    )
+
+
+def _openalex_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    author_id = str(item.payload.get("openalex_author_id", "unknown"))
+    return QuickObservation(
+        source="openalex_exact_author",
+        source_locator=item.source_locator,
+        summary=(
+            f"OpenAlex public scholarly metadata for author {author_id}; "
+            "exact supplied-author evidence only."
         ),
         details=dict(item.payload),
     )
@@ -668,6 +683,33 @@ async def _stack_overflow_observations(
     return [_stack_overflow_observation_from_provider(item) for item in result.observations]
 
 
+async def _openalex_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_OPENALEX_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_openalex_observation_from_provider(item) for item in result.observations]
+
+
 async def _research_username(
     normalized_value: str,
     *,
@@ -1100,6 +1142,36 @@ async def _research_url(
                 )
             )
         observations.extend(stack_overflow_observations)
+
+    if openalex_author_id_from_url(normalized_value) is not None:
+        try:
+            openalex_observations = await _openalex_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            openalex_observations = []
+            source_run = _source_run_for_exception(
+                source_name="openalex_exact_author",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+            if source_run is None or source_run.reason.value != "credential_not_configured":
+                warnings.append("OpenAlex exact-author metadata was temporarily unavailable.")
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="openalex_exact_author",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(openalex_observations),
+                )
+            )
+        observations.extend(openalex_observations)
 
     search_observations, search_warning, search_run = await _public_search(
         normalized_value,
