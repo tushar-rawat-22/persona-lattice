@@ -47,6 +47,42 @@ def test_source_visibility_ui_does_not_recreate_provider_policy() -> None:
     assert "identity probability" not in source[source.index("function SourceRunSummary"):source.index("export function QuickResearch")].casefold()
 
 
+def test_private_case_view_explains_missing_evidence_from_retained_counters() -> None:
+    source = CASE_UI.read_text(encoding="utf-8")
+
+    for field in (
+        "withheld_count: number;",
+        "public_web_opt_out_count: number;",
+        "account_unavailable_count: number;",
+        "routing_unavailable_count: number;",
+    ):
+        assert field in source
+
+    details_start = source.index("function sourceOutcomeDetails")
+    details_end = source.index("function resolveConnectedIdentifier")
+    details = source[details_start:details_end]
+    assert "aggregate.public_web_opt_out_count" in details
+    assert "aggregate.account_unavailable_count" in details
+    assert "aggregate.remote_rate_limit_count" in details
+    assert "aggregate.execution_failure_count" in details
+    assert "aggregate.malformed_result_count" in details
+    assert "aggregate.routing_unavailable_count" in details
+    assert "aggregate.local_budget_stop_count" in details
+    assert "aggregate.optional_not_configured_count" in details
+    assert "aggregate.missing_secret_config_count" in details
+    assert "aggregate.provider_policy_block_count" in details
+    assert "routing authority unavailable · no provider attempt" in details
+    assert "provider attempt failed" in details
+
+    summary_start = source.index("function SourceRunSummary")
+    summary_end = source.index("export function QuickResearch")
+    summary = source[summary_start:summary_end]
+    assert "Why evidence may be missing" in summary
+    assert "sourceOutcomeDetails(aggregate)" in summary
+    assert "aggregate.withheld_count" in summary
+    assert ".warnings" not in summary
+
+
 def test_private_quick_research_exposes_every_live_backend_research_kind() -> None:
     source = CASE_UI.read_text(encoding="utf-8")
 
