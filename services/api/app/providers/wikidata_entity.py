@@ -72,8 +72,22 @@ def _retry_after(exc: HTTPError) -> float | None:
     return value if value >= 0 else None
 
 
+def _handle_api_error(payload: dict[str, object]) -> None:
+    error = payload.get("error")
+    if error is None:
+        return
+    if not isinstance(error, dict):
+        raise ProviderResultValidationError("Wikidata entity API returned an invalid error shape.")
+    code = error.get("code")
+    if code == "ratelimited":
+        raise ProviderRemoteRateLimitError(retry_after=None)
+    if code == "maxlag":
+        raise ProviderTransientError("Wikidata entity API requested backoff because replication lag is high.")
+    raise ProviderExecutionError("Wikidata entity API returned an execution error.")
+
+
 def _fetch_wikidata_entity_sync(entity_id: str) -> dict[str, object] | None:
-    request_url = f"{_API_ENDPOINT}?{urlencode({'action': 'wbgetentities', 'ids': entity_id, 'props': 'labels|descriptions', 'languages': 'en', 'format': 'json', 'formatversion': '2'})}"
+    request_url = f"{_API_ENDPOINT}?{urlencode({'action': 'wbgetentities', 'ids': entity_id, 'props': 'labels|descriptions', 'languages': 'en', 'format': 'json', 'formatversion': '2', 'maxlag': '5'})}"
     request = Request(
         request_url,
         headers={
@@ -104,6 +118,7 @@ def _fetch_wikidata_entity_sync(entity_id: str) -> dict[str, object] | None:
         raise ProviderResultValidationError("Wikidata entity API returned invalid JSON.") from exc
     if not isinstance(payload, dict):
         raise ProviderResultValidationError("Wikidata entity API returned an invalid response shape.")
+    _handle_api_error(payload)
     return payload
 
 
