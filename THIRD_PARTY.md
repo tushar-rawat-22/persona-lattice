@@ -5,7 +5,7 @@ PersonaLattice starts with **no vendored third-party OSINT source code or datase
 The project may integrate with external tools through adapters after their
 license, terms, technical behavior, and privacy impact are reviewed.
 
-| Project / source | Upstream license | Current treatment |
+| Project / source | Upstream license / terms | Current treatment |
 | --- | --- | --- |
 | Maigret 0.6.3 | MIT | Reviewed M4 enrichment candidate only; not installed or executable. Any later adapter must disable recursion, AI, auto-update, proxies/Tor/I2P, bypass tooling and unrestricted all-site scans. |
 | Sherlock 0.16.0 | MIT | Pinned published runtime dependency for M4. Upstream source/data are not copied into this repository. PersonaLattice reads the package's bundled dataset in place and filters it to an eight-site reviewed allowlist; it does not use Sherlock's live manifest/exclusions loader. |
@@ -13,6 +13,8 @@ license, terms, technical behavior, and privacy impact are reviewed.
 | WhatsMyName | CC BY-SA 4.0 | Do not bundle into the Apache-2.0 tree until attribution/share-alike boundary is reviewed |
 | socialscan | MPL-2.0 | Evaluation only; no copied/modified MPL files in the core |
 | PhoneInfoga | GPL-3.0 | Reference only; no copied GPL code in the Apache core |
+| Stack Exchange API / Stack Overflow | Stack Exchange API Terms of Use | Active only for exact numeric Stack Overflow profile URLs. Uses anonymous official `/users/{id}` reads, keeps visible Stack Overflow attribution and canonical provenance, retains bounded account metadata only, and never uses fuzzy `inname` search. No API content or code is vendored. |
+| Hacker News API | Y Combinator Terms of Use | Rejected for the intended commercial product path under current terms; do not activate merely because the API is public and credentialless. |
 | Numverify | Provider terms | Development adapter only after provider contract review |
 | Abstract | Provider terms | Development adapter only after provider contract review |
 | IPQualityScore | Provider terms | Development adapter only after provider contract review |
