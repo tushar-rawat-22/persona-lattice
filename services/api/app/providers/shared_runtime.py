@@ -10,6 +10,7 @@ from .public_dns import PublicDnsInfrastructureProvider
 from .rdap_domain import RdapDomainRegistryProvider
 from .runtime import ProviderRuntime
 from .sherlock import SherlockProvider
+from .stack_overflow_public import StackOverflowPublicProfileProvider
 from .wayback_availability import WaybackAvailabilityProvider
 
 
@@ -22,6 +23,7 @@ DEFAULT_CODEFORCES_PROVIDER = CodeforcesPublicProfileProvider()
 DEFAULT_BLUESKY_PROVIDER = BlueskyPublicProfileProvider()
 DEFAULT_DNS_PROVIDER = PublicDnsInfrastructureProvider()
 DEFAULT_WAYBACK_PROVIDER = WaybackAvailabilityProvider()
+DEFAULT_STACK_OVERFLOW_PROVIDER = StackOverflowPublicProfileProvider()
 DEFAULT_RDAP_PROVIDER = RdapDomainRegistryProvider()
 DEFAULT_BRAVE_PROVIDER = BravePublicWebSearchProvider()
 DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
@@ -33,6 +35,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_BLUESKY_PROVIDER,
         DEFAULT_DNS_PROVIDER,
         DEFAULT_WAYBACK_PROVIDER,
+        DEFAULT_STACK_OVERFLOW_PROVIDER,
         DEFAULT_RDAP_PROVIDER,
         DEFAULT_BRAVE_PROVIDER,
     ]
