@@ -10,7 +10,7 @@ Authoritative branch: `main`
 
 Engineering-freeze baseline: PR #168, merged as `5d774a9fadc336d43e06491183d9035d016db04f` after exact-head CI passed.
 
-Current source-expansion work: branch `source-keybase-exact-user` adds a reviewed Keybase public-basics source. This line is a pre-merge checkpoint and must be replaced with the verified PR/head/CI/merge state before treating the handover as final.
+Keybase source activation: PR #177 merged as `611ef00cd14858f5e60e2d32add3ec4cee47b025` after exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` across Python 3.11/3.13, web and the production API image.
 
 ## Engineering state
 
@@ -53,7 +53,7 @@ Required/zero-spend baseline:
 - GitLab public profile API;
 - Codeforces `user.info`;
 - Bluesky public AppView profile lookup for valid AT handles;
-- Keybase public account basics for canonical Keybase usernames on the current source branch;
+- Keybase public account basics for canonical Keybase usernames;
 - public DNS infrastructure metadata;
 - Internet Archive Wayback capture-availability metadata for canonical URLs;
 - Stack Overflow exact public-profile metadata for explicit numeric profile URLs;
@@ -99,7 +99,7 @@ OpenAlex is the third admitted post-freeze source. Its applicability is an exact
 
 Wikidata is the next admitted source in `main`. Its applicability is an exact item URL, not a person/entity-name search. Current primary documentation was re-checked on 2026-08-21: structured data is CC0; `wbgetentities` supports exact QID retrieval; automated clients must identify themselves and respect rate/backoff policy. PersonaLattice stays far below the current identified-client allowance and requests no claims or linked-entity expansion.
 
-Keybase is the current source branch under review. Primary documentation was re-checked on 2026-08-21: usernames are public/immutable and restricted to the canonical 2-16-character lowercase namespace; the public lookup API supports requesting only `basics`; current terms contemplate organizational/business use, while the acceptable-use policy forbids collecting private information without permission. The implementation therefore keeps only public basics, sends no credentials, emits no leads and deliberately excludes profiles, proofs, keys and external-identity expansion. The API is documented as evolving, so shape/username/UID validation fails closed.
+Keybase is now admitted via PR #177. Primary documentation was re-checked on 2026-08-21: usernames are public/immutable and restricted to the canonical 2-16-character lowercase namespace; the public lookup API supports requesting only `basics`; current terms contemplate organizational/business use, while the acceptable-use policy forbids collecting private information without permission. The implementation therefore keeps only public basics, sends no credentials, emits no leads and deliberately excludes profiles, proofs, keys and external-identity expansion. The API is documented as evolving, so shape/username/UID validation fails closed. Exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` before the expected-head squash merge.
 
 Current explicit rejections/deferments include:
 
@@ -111,7 +111,7 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Finish the Keybase source branch only after exact-head CI proves catalog/binding/registry/runtime/source-run consistency and the public-basics privacy boundary.
+1. Keep the Keybase public-basics boundary and exact-head runtime/source-run regressions green; do not expand it into profile, proof, key or external-identity harvesting.
 2. Keep Wayback, Stack Overflow, OpenAlex and Wikidata source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
 3. Review the next high-value ₹0 source from primary documentation before writing an adapter. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
 4. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
