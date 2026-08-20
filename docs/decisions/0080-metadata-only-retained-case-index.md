@@ -12,6 +12,8 @@ The storage path uses an explicit five-column `SELECT`; it does not select or de
 
 The next cursor is returned in `X-PersonaLattice-Next-Cursor`. Opening one case continues to use `GET /v1/cases/{case_id}`, which is the only navigation path that loads the retained report.
 
+The private console consumes that cursor through one compact `Load older cases` action. Older pages append metadata-only summaries and are deduplicated by case ID. Refreshing after create/delete returns navigation to the newest page rather than retaining a stale cursor chain.
+
 ## Consequences
 
 Malformed or unusually large retained report JSON cannot break or inflate case-index reads. Listing more case metadata does not deserialize the evidence payload. Authentication, privacy-safe audit events, expiry purge, explicit deletion and the 30-day default retention policy are unchanged.
@@ -22,4 +24,4 @@ The old `CaseStore.list_recent()` full-report method remains available for inter
 
 ## Out of scope
 
-This change does not add case search, export, bulk evidence loading, a new retained field, a source integration, an M5 semantic change or a recursion-policy change. The operator UI remains deliberately simple; pagination controls can be added when case volume makes them useful without changing the storage/API contract.
+This change does not add case search, export, bulk evidence loading, a new retained field, a source integration, an M5 semantic change or a recursion-policy change. The operator navigation remains deliberately simple: no infinite scroll and no decorative pagination framework.
