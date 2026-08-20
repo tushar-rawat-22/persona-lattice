@@ -30,7 +30,8 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - PR #159 exact tested final head: `e63ff281a007606bc4217ed9ff9678a0a2f063f4`
 - PR #159 final CI: run `32344988541`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
 - Issue #158: closed as completed by PR #159
-- Issue #161: retained-case summary-page ordering regression contract
+- PR #162: retained-case summary-page ordering — merged at `dd2d00bd069efa596724c19aca5922c44e8360df`
+- PR #164: readable retained observation-field presentation
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -72,6 +73,14 @@ These are presentation-order guards only: full reports still come from the singl
 Regression coverage deliberately corrupts and enlarges a retained `report_json` value before listing summaries. The summary path must still work and must expose no report/evidence field. Additional tests cover bounded cursor pagination, invalid cursors/limits, authenticated summary response shape and the private web contract. UI contract tests lock summary typing, cursor consumption, duplicate suppression, no `item.report` access in navigation, full-case loading only from the single-case endpoint, stale retained-case response suppression, mutation reconciliation and stale summary-page suppression.
 
 ADR 0080 records the metadata-index design. No retained database migration is required because the summary is projected from existing columns. The old full-report `CaseStore.list_recent()` method remains available for internal/historical compatibility but is not the operator navigation path.
+
+## Operator observation-field presentation
+
+PR #164 replaces raw-JSON-only observation reading with one shared read-only renderer for both converged and non-converged case paths. The operator still sees the canonical observation source, summary and source locator, but retained `Observation.details` fields are also presented directly as field/value rows so ordinary evidence inspection does not require scanning a JSON blob.
+
+The renderer is deliberately provider-agnostic. String, number, boolean and null values are shown truthfully; arrays and objects use deterministic JSON with recursively sorted object keys while array order is preserved. Historical or unknown field names flow through the same `Object.entries()` path rather than depending on a provider-specific frontend schema.
+
+Returned field values remain plain text. The browser does not auto-link URL-like strings and does not assign confidence, identity significance, lead eligibility or other research meaning. A collapsed `Raw retained JSON` disclosure keeps the exact retained payload available for audit/debug. This block adds no retained data and changes no provider, runtime, source-run, M5, recursion, RDAP, retention, authentication or CSRF behavior.
 
 ## Operator source-outcome explainability
 
@@ -132,10 +141,11 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 1. Keep retained-case navigation metadata-only, bounded and cursor-driven; keep full-case reads latest-selection-wins, successful destructive mutations reconciled, and stale summary-page continuations inert after a newest-page refresh.
 2. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
-3. Continue operator evidence/provenance work only where it removes a specific investigation step; do not recreate provider or M5 policy in the browser.
-4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
-5. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
-6. Keep the SQLite DOMAIN migration regression green; never replace the versioned upgrade with a destructive reset shortcut.
+3. Keep observation-field presentation exact and provider-agnostic: no browser-side confidence, identity or lead semantics, and no auto-linking arbitrary returned strings.
+4. Continue operator evidence/provenance work only where it removes a specific investigation step; do not recreate provider or M5 policy in the browser.
+5. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
+6. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
+7. Keep the SQLite DOMAIN migration regression green; never replace the versioned upgrade with a destructive reset shortcut.
 
 ## Update discipline
 
