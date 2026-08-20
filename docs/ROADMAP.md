@@ -44,6 +44,8 @@ Privacy/operations include a 30-day default retained-case lifecycle, automatic e
 
 The operator case view resolves retained canonical references rather than duplicating provider evidence. Evidence-pivot cards expose the source, exact observation field and observation summary that caused a pivot when canonical reference data is available; historical self-contained cases remain read-only compatible and do not gain invented field attribution.
 
+Source-run summaries consume retained evaluation counters directly. Alongside attempts and observations, the operator can see non-zero reasons why evidence may be absent: neutral withheld states, attempted provider failures, routing/bootstrap unavailability, local budget stops and configuration or policy blocks. Routing unavailability is labelled as **no provider attempt** so the UI does not turn a prerequisite routing failure into a provider failure.
+
 M5 cards consume the retained engine output directly. They show the evaluated observation source/locator, positive independence-group count, policy version and each retained factor's group, base/applied weight, status, rationale and veto flag. The browser does not recreate M5 thresholds or scoring logic.
 
 ## Recursive evidence graph — V2
@@ -155,10 +157,10 @@ Do not publish false-positive/false-negative, calibration, probability or popula
 1. Keep the operator research-kind parity regression green as backend capabilities evolve; explicit DOMAIN research must remain reachable without changing display-only domain-pivot policy.
 2. Keep the SQLite DOMAIN migration regression green so old evidence stores remain upgradeable without destructive resets or broken provenance references.
 3. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching runner. The blocker is the evidence itself, not ingestion code.
-4. Continue operator explainability work only where it removes a specific investigation step. The case view now explains both the evidence field behind a pivot and the retained M5 factor rationale behind a triage result.
+4. Continue operator explainability work only where it removes a specific investigation step. The case view now explains the evidence field behind a pivot, the retained M5 factor rationale behind a triage result, and the retained source-run reasons behind missing evidence.
 5. Add another external source only if it materially improves coverage and its current terms, privacy, authentication, provenance and zero-spend status are defensible.
 6. Keep production recursion at depth 2 / 12 nodes and keep `hard_contradiction` as a production veto.
 
 Success means the operator can answer for every hop:
 
-> What source produced this clue, which field caused the pivot, why was it allowed to become a lead, what evidence changed the triage result, what did the system do with it, and what remains unknown?
+> What source produced this clue, which field caused the pivot, why was it allowed to become a lead, what evidence changed the triage result, why might expected evidence be absent, what did the system do with it, and what remains unknown?
