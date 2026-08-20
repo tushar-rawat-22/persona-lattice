@@ -12,6 +12,26 @@ One external source is activated per PR. Activation uses the existing catalog â†
 
 ## Active after current code is merged
 
+### Keybase public account basics
+
+**Decision:** admit only for an already-canonical Keybase username and only the public `basics` object.
+
+Primary Keybase documentation re-checked on 2026-08-21:
+
+- Keybase username/public-directory documentation;
+- Keybase user lookup API documentation;
+- Keybase user-object documentation;
+- current Keybase Terms of Service;
+- current Keybase Acceptable Use Policy.
+
+Keybase documents usernames as public and immutable, with a 2-16-character namespace made from lowercase letters, numbers and underscores and an alphanumeric first character. PersonaLattice does not coerce a generic username into that namespace; noncanonical values are not applicable and cause no Keybase provider attempt.
+
+The credentialless official lookup is called with `fields=basics`. Retained evidence is restricted to exact username, public UID, account creation timestamp, `account_candidate=true`, `identity_claim=false` and the canonical public profile locator. Profile/full-name data, proofs, external identities, public keys, cryptocurrency addresses and contact-like fields are not requested or admitted. The source emits no recursive leads.
+
+Current terms contemplate use on behalf of an organization/business, while the acceptable-use policy prohibits gathering private information without permission. That combination does not justify broad account enrichment: the source stays inside the explicitly public basics object. The API documentation also warns that the API is evolving, so PersonaLattice validates response shape, exact returned username and UID consistency and fails closed on drift.
+
+No provider quota is relied on. PersonaLattice imposes one attempt, a 4-second timeout, 16 KiB response ceiling, one concurrent request and a 20-request/minute local budget. HTTP `429` preserves `Retry-After`; transient network/5xx states and malformed provider results remain typed attempted outcomes.
+
 ### Internet Archive Wayback availability
 
 **Decision:** admitted for exact URL capture-availability metadata.
