@@ -26,7 +26,10 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - PR #153: metadata-only retained-case index — merged at `24a3d7ee16a090b0e37c87067dc78f957423a5ba`
 - PR #155: bounded older-case summary navigation — merged at `cd2c3986bc16366e6fc20840366db95afe0cc5d2`
 - PR #157: latest-selection-wins retained-case loading — merged at `3a04a8c5fbc0d600ffc3df14551890590b35e9ef`
-- PR #159: mutation-completion navigation reconciliation — active for Issue #158
+- PR #159: mutation-completion navigation reconciliation — merged at `bbe10dbd6a2dbc93ac92babc17f171f941134246`
+- PR #159 exact tested final head: `e63ff281a007606bc4217ed9ff9678a0a2f063f4`
+- PR #159 final CI: run `32344988541`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
+- Issue #158: closed as completed by PR #159
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
