@@ -548,12 +548,13 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
       { method: "DELETE" },
       csrfToken,
     );
-    if (!isCurrentCaseContext(generation)) return;
     if (!response.ok && response.status !== 404) {
-      setError("Stored case could not be deleted.");
+      if (isCurrentCaseContext(generation)) {
+        setError("Stored case could not be deleted.");
+      }
       return;
     }
-    if (activeCase?.id === caseId) setActiveCase(null);
+    setActiveCase((current) => current?.id === caseId ? null : current);
     await refreshCases();
   }
 
@@ -584,12 +585,13 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     if (!window.confirm("Delete every retained private research case?")) return;
     const generation = startCaseContextChange();
     const response = await request("/v1/cases", { method: "DELETE" }, csrfToken);
-    if (!isCurrentCaseContext(generation)) return;
     if (!response.ok) {
-      setError("Stored cases could not be deleted.");
+      if (isCurrentCaseContext(generation)) {
+        setError("Stored cases could not be deleted.");
+      }
       return;
     }
-    setActiveCase(null);
+    if (isCurrentCaseContext(generation)) setActiveCase(null);
     await refreshCases();
   }
 
