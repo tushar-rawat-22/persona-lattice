@@ -36,14 +36,18 @@ def stack_overflow_user_id_from_url(value: str) -> int | None:
     only justified when the supplied URL itself identifies one numeric account.
     """
 
-    parts = urlsplit(value)
+    try:
+        parts = urlsplit(value)
+        port = parts.port
+    except ValueError:
+        return None
     if (
         parts.scheme not in {"http", "https"}
         or parts.hostname is None
         or parts.hostname.casefold() != "stackoverflow.com"
         or parts.username is not None
         or parts.password is not None
-        or parts.port not in {None, 80, 443}
+        or port is not None
     ):
         return None
 
