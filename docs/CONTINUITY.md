@@ -23,7 +23,7 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - PR #148 final CI: run `32318165893`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
 - Issue #147: closed as completed by PR #148
 - PR #151: operator source-outcome explainability — merged
-- Issue #152: metadata-only retained-case navigation — active implementation on `case-summary-index-152`
+- PR #153: metadata-only retained-case index
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -44,15 +44,15 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - WebFinger: PLANNED; parser/admission, SSRF transport, URL-only semantics and exact-host policy are complete, but no concrete host is approved.
 - M10: deterministic replay, source/graph accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), strict consented/reviewed-only accounting and shared private local cohort ingestion are implemented. Representative real evaluation remains incomplete.
 
-## Active block — metadata-only retained-case navigation
+## Retained-case navigation
 
 The private console used `GET /v1/cases` only to render recent-case navigation, but that endpoint selected full rows and JSON-decoded every retained report. The browser then fetched the selected case again through `GET /v1/cases/{case_id}`. Raising the recent-case limit would therefore have increased personal-data deserialization and response payload without helping the investigation.
 
-Issue #152 replaces that list path with a dedicated summary projection. Storage selects only `id`, `created_at`, `expires_at`, `seed_kind` and `seed_value`; `report_json` is not selected or decoded. Results are bounded to 50 records per page and ordered by `(created_at DESC, id DESC)`. An opaque continuation cursor carries the final tuple, so records with identical timestamps remain deterministic.
+PR #153 replaces that list path with a dedicated summary projection. Storage selects only `id`, `created_at`, `expires_at`, `seed_kind` and `seed_value`; `report_json` is not selected or decoded. Results are bounded to 50 records per page and ordered by `(created_at DESC, id DESC)`. An opaque continuation cursor carries the final tuple, so records with identical timestamps remain deterministic.
 
-The authenticated `GET /v1/cases` response now contains navigation metadata only. When a next page exists the API returns `X-PersonaLattice-Next-Cursor`. `GET /v1/cases/{case_id}` remains the full-report read path, so evidence is loaded only when the operator opens a case. Existing delete, purge, expiry, audit and 30-day retention behavior is unchanged.
+The authenticated `GET /v1/cases` response contains navigation metadata only. When a next page exists the API returns `X-PersonaLattice-Next-Cursor`. `GET /v1/cases/{case_id}` remains the full-report read path, so evidence is loaded only when the operator opens a case. Existing delete, purge, expiry, audit and 30-day retention behavior is unchanged.
 
-Regression coverage deliberately corrupts and enlarges a retained `report_json` value before listing summaries. The summary path must still work and must expose no report/evidence field. Additional tests cover bounded cursor pagination, invalid cursors/limits, authenticated summary response shape and the private web contract that uses the list endpoint for navigation and the single-case endpoint for the opened report.
+Regression coverage deliberately corrupts and enlarges a retained `report_json` value before listing summaries. The summary path must still work and must expose no report/evidence field. Additional tests cover bounded cursor pagination, invalid cursors/limits, authenticated summary response shape and the private web contract that uses the list endpoint for navigation and the single-case endpoint for the opened report. The recent-case rendering contract also forbids reading `item.report` from summary rows.
 
 ADR 0080 records the design. No retained database migration is required because the summary is projected from existing columns. The old full-report `CaseStore.list_recent()` method is left available for internal/historical compatibility but is no longer the operator navigation path.
 
@@ -113,7 +113,7 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 
 ## Next gate
 
-1. Finish Issue #152 only after exact-head CI proves the metadata-only index, cursor bounds and existing case/auth/web behavior remain green.
+1. Keep the retained-case index metadata-only, bounded and covered by exact storage/API/web regressions; do not reintroduce bulk report loading for navigation.
 2. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
 3. Continue operator evidence/provenance work only where it removes a specific investigation step; do not recreate provider or M5 policy in the browser.
 4. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
