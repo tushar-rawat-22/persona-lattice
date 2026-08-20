@@ -22,6 +22,7 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - PR #148 exact tested final head: `60cd804416f82522e887e0d3993530f79cd59d26`
 - PR #148 final CI: run `32318165893`; API 3.11 PASS, API 3.13 PASS, web PASS, deployment-image PASS
 - Issue #147: closed as completed by PR #148
+- PR #151: operator source-outcome explainability
 - Documentation standard: `docs/DOCUMENTATION_STANDARD.md`
 - Zero-spend runbook: `docs/ZERO_SPEND_RUNBOOK.md`
 - Optional paid Render reference: `deploy/render-paid.yaml`
@@ -42,7 +43,17 @@ Never place API keys, real research identifiers, retained-case data, password ha
 - WebFinger: PLANNED; parser/admission, SSRF transport, URL-only semantics and exact-host policy are complete, but no concrete host is approved.
 - M10: deterministic replay, source/graph accounting, real-engine factor ablations, three-way label provenance (`synthetic`, `consented`, `independently_reviewed`), strict consented/reviewed-only accounting and shared private local cohort ingestion are implemented. Representative real evaluation remains incomplete.
 
-## Latest block — SQLite DOMAIN upgrade path
+## Latest block — operator source-outcome explainability
+
+The private case view already retained typed source-run records and deterministic evaluation counters, but its summary exposed only attempts, completed/failed attempts, observations, no-match results, local budget stops and optional-source configuration. That forced the operator to inspect raw reason codes to answer a routine question: why is expected evidence missing?
+
+PR #151 makes the retained counters readable without inventing a second policy layer. The view now surfaces non-zero neutral withheld reasons, attempted provider failures, routing/bootstrap unavailability, local budget stops, configuration gaps, policy blocks and non-executable planner states. It uses the retained evaluation projection directly and still ignores free-form warnings for source-state accounting.
+
+Attempt semantics stay explicit. Remote rate limits, execution failures and malformed results are labelled as provider-attempt failures. `routing_unavailable` is labelled `routing authority unavailable · no provider attempt`, preserving the RDAP bootstrap/routing contract instead of inflating provider failure counts. Historical retained cases without evaluation counters still fall back to the existing typed source-run view.
+
+No source was activated, no provider/runtime semantics changed, no new retained personal data was added and no M5 or recursion policy changed in this block.
+
+## SQLite DOMAIN upgrade path
 
 RDAP made DOMAIN a canonical M1 identifier. New SQLite evidence stores include `domain` in the `identifiers.kind` CHECK constraint, but an older persistent database keeps its original constraint because `create_all()` does not alter an existing SQLite table.
 
@@ -94,7 +105,7 @@ Controlled M5 omission results remain diagnostic only. `hard_contradiction` rema
 ## Next gate
 
 1. Prioritize genuine consented or independently reviewed M10 evidence when lawful evidence exists. Do not invent a convenience cohort to claim evaluation progress.
-2. Continue operator evidence/provenance work only where it removes a specific investigation step.
+2. Continue operator evidence/provenance work only where it removes a specific investigation step. Source-run missing-evidence reasons are now directly readable from retained counters; do not recreate provider policy in the browser.
 3. Add another external source only when it materially improves coverage and its current terms/privacy/cost/provenance boundary is defensible.
 4. Keep production depth 2 / 12 nodes, M5 uncalibrated/non-probabilistic and `hard_contradiction` active.
 5. Keep the SQLite DOMAIN migration regression green; never replace the versioned upgrade with a destructive reset shortcut.
