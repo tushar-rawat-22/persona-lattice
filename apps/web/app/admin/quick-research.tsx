@@ -449,8 +449,26 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
   }, []);
 
   useEffect(() => {
-    void refreshCases();
-  }, [refreshCases]);
+    let active = true;
+    request("/v1/cases?limit=8")
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return {
+          items: (await response.json()) as StoredCaseSummary[],
+          cursor: response.headers.get("X-PersonaLattice-Next-Cursor"),
+        };
+      })
+      .then((page) => {
+        if (active && page) {
+          setRecentCases(page.items);
+          setNextCaseCursor(page.cursor);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
