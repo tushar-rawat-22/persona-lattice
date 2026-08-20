@@ -42,7 +42,7 @@ Local operation is the zero-spend baseline. The paid Render topology remains an 
 
 Privacy/operations include a 30-day default retained-case lifecycle, automatic expiry purge, explicit deletion, privacy-safe audit events, secrets outside Git and bounded request/concurrency/timeout/response limits. Backup/restore remains deferred until a persistent hosted production store is chosen.
 
-The retained-case navigator uses a metadata-only index. Listing cases selects only case ID, timestamps and seed metadata; it does not select or decode retained `report_json`. Pages are bounded and deterministically ordered, while opening one case still fetches that case's full retained report. This keeps navigation lightweight without changing retention, deletion or historical report compatibility.
+The retained-case navigator uses a metadata-only index. Listing cases selects only case ID, timestamps and seed metadata; it does not select or decode retained `report_json`. Pages are bounded and deterministically ordered. The console starts with eight summaries and offers one restrained **Load older cases** action when a continuation cursor exists; older pages append by case ID without bulk-loading evidence. Opening one case still fetches only that case's full retained report.
 
 The operator case view resolves retained canonical references rather than duplicating provider evidence. Evidence-pivot cards expose the source, exact observation field and observation summary that caused a pivot when canonical reference data is available; historical self-contained cases remain read-only compatible and do not gain invented field attribution.
 
@@ -156,7 +156,7 @@ Do not publish false-positive/false-negative, calibration, probability or popula
 
 ## Immediate next gate
 
-1. Keep retained-case summary listing metadata-only and bounded; full evidence should load only when the operator opens a case.
+1. Keep retained-case summary navigation metadata-only, bounded and cursor-driven; full evidence should load only when the operator opens a case.
 2. Keep the operator research-kind parity regression green as backend capabilities evolve; explicit DOMAIN research must remain reachable without changing display-only domain-pivot policy.
 3. Keep the SQLite DOMAIN migration regression green so old evidence stores remain upgradeable without destructive resets or broken provenance references.
 4. When lawful real evidence exists, run a genuinely consented or independently reviewed cohort through the matching runner. The blocker is the evidence itself, not ingestion code.
