@@ -91,4 +91,6 @@ Before exposing the URL publicly, verify all of the following:
 
 Optional provider credentials remain server-side environment secrets. An absent credential must disable or defer that provider rather than causing the application to fabricate enrichment.
 
+`OPENALEX_API_KEY` is a free server-side key used only when an operator supplies an exact OpenAlex author URL. PersonaLattice sends it in the `Authorization` header rather than a query string. If the key is absent, OpenAlex is reported as `credential_not_configured` and no provider attempt is counted. Do not expose the key to the browser or commit it to Git.
+
 The first production deployment does not require an external phone/email enrichment provider. Live username research works through the reviewed public-source path; phone/email coverage remains deliberately narrower until an external source passes source, license, privacy, retention and cost review.
