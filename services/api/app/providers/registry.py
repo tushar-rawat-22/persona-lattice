@@ -214,6 +214,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="wayback_url_availability",
+        capability="public_web_archive_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official Internet Archive Wayback availability metadata for an already-normalized "
+            "public URL; capture metadata only, with no archived page-content retrieval."
+        ),
+        version="availability-json-v1",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=32 * 1024,
+        max_concurrency=1,
+        rate_limit=15,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="brave_public_web_index",
         capability="exact_public_web_search",
         status=ProviderStatus.DEVELOPMENT.value,
