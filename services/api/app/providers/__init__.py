@@ -14,6 +14,7 @@ from .codeforces_public import CodeforcesPublicProfileProvider, fetch_codeforces
 from .contracts import ExecutionRequest, QueryOrigin
 from .crossref_work import CrossrefExactWorkProvider, crossref_doi_from_url, fetch_crossref_work
 from .datacite_doi import DataCiteExactDoiProvider, fetch_datacite_doi
+from .dblp_person import DblpExactPersonProvider, dblp_person_pid_from_url, fetch_dblp_person
 from .errors import (
     ProviderAuthError,
     ProviderExecutionError,
@@ -58,6 +59,7 @@ __all__ = [
     "ContactRisk",
     "CrossrefExactWorkProvider",
     "DataCiteExactDoiProvider",
+    "DblpExactPersonProvider",
     "ExecutionRequest",
     "GitHubPublicProfileProvider",
     "GitLabPublicProfileProvider",
@@ -96,9 +98,11 @@ __all__ = [
     "WikidataExactEntityProvider",
     "authorize_execution",
     "crossref_doi_from_url",
+    "dblp_person_pid_from_url",
     "fetch_codeforces_public_profile",
     "fetch_crossref_work",
     "fetch_datacite_doi",
+    "fetch_dblp_person",
     "fetch_github_public_profile",
     "fetch_gitlab_public_profile",
     "fetch_openalex_author",
