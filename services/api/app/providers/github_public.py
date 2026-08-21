@@ -64,12 +64,12 @@ def _rate_limited(exc: HTTPError) -> bool:
     return exc.headers.get("X-RateLimit-Remaining") == "0"
 
 
-def _fetch_github_public_profile_sync(username: str) -> dict[str, object] | None:
+def _fetch_github_json_sync(url: str, *, resource_name: str) -> dict[str, object] | None:
     request = Request(
-        f"https://api.github.com/users/{quote(username, safe='')}",
+        url,
         headers={
             "Accept": "application/vnd.github+json",
-            "User-Agent": "PersonaLattice/0.0.1 public-profile-research",
+            "User-Agent": "PersonaLattice/0.0.1 public-source-research",
             "X-GitHub-Api-Version": _GITHUB_API_VERSION,
         },
         method="GET",
@@ -83,24 +83,66 @@ def _fetch_github_public_profile_sync(username: str) -> dict[str, object] | None
         if _rate_limited(exc):
             raise ProviderRemoteRateLimitError(retry_after=_retry_after(exc)) from exc
         if exc.code in {408, 500, 502, 503, 504}:
-            raise ProviderTransientError("GitHub public profile endpoint was unavailable.") from exc
-        raise ProviderExecutionError("GitHub public profile request failed.") from exc
+            raise ProviderTransientError(f"GitHub {resource_name} endpoint was unavailable.") from exc
+        raise ProviderExecutionError(f"GitHub {resource_name} request failed.") from exc
     except (URLError, TimeoutError) as exc:
-        raise ProviderTransientError("GitHub public profile request failed.") from exc
+        raise ProviderTransientError(f"GitHub {resource_name} request failed.") from exc
 
     if len(raw) > _MAX_RAW_RESPONSE_BYTES:
-        raise ProviderValidationError("GitHub public profile response exceeded the adapter limit.")
+        raise ProviderValidationError(f"GitHub {resource_name} response exceeded the adapter limit.")
     try:
         payload = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ProviderValidationError("GitHub public profile returned invalid JSON.") from exc
+        raise ProviderValidationError(f"GitHub {resource_name} returned invalid JSON.") from exc
     if not isinstance(payload, dict):
-        raise ProviderValidationError("GitHub public profile returned an invalid response shape.")
+        raise ProviderValidationError(f"GitHub {resource_name} returned an invalid response shape.")
     return payload
+
+
+def _fetch_github_public_profile_sync(username: str) -> dict[str, object] | None:
+    return _fetch_github_json_sync(
+        f"https://api.github.com/users/{quote(username, safe='')}",
+        resource_name="public profile",
+    )
 
 
 async def fetch_github_public_profile(username: str) -> dict[str, object] | None:
     return await asyncio.to_thread(_fetch_github_public_profile_sync, username)
+
+
+def github_repository_from_url(value: str) -> tuple[str, str] | None:
+    """Return the exact GitHub repository owner/name for a canonical public URL."""
+
+    parts = urlsplit(value)
+    if (
+        parts.scheme != "https"
+        or parts.hostname is None
+        or parts.hostname.casefold() != "github.com"
+        or parts.username is not None
+        or parts.password is not None
+        or parts.port is not None
+        or parts.query
+        or parts.fragment
+    ):
+        return None
+    segments = [segment for segment in parts.path.split("/") if segment]
+    if len(segments) != 2:
+        return None
+    owner, repository = segments
+    if parts.path not in {f"/{owner}/{repository}", f"/{owner}/{repository}/"}:
+        return None
+    return owner, repository
+
+
+def _fetch_github_public_repository_sync(owner: str, repository: str) -> dict[str, object] | None:
+    return _fetch_github_json_sync(
+        f"https://api.github.com/repos/{quote(owner, safe='')}/{quote(repository, safe='')}",
+        resource_name="public repository",
+    )
+
+
+async def fetch_github_public_repository(owner: str, repository: str) -> dict[str, object] | None:
+    return await asyncio.to_thread(_fetch_github_public_repository_sync, owner, repository)
 
 
 def _validated_profile_url(value: object, *, username: str) -> str:
@@ -113,6 +155,7 @@ def _validated_profile_url(value: object, *, username: str) -> str:
         or parts.hostname.casefold() != "github.com"
         or parts.username is not None
         or parts.password is not None
+        or parts.port is not None
         or not parts.path.strip("/")
         or parts.query
         or parts.fragment
@@ -124,18 +167,40 @@ def _validated_profile_url(value: object, *, username: str) -> str:
     return value
 
 
+def _validated_repository_url(value: object, *, owner: str, repository: str) -> str:
+    if not isinstance(value, str):
+        raise ProviderValidationError("GitHub public repository is missing html_url.")
+    parsed = github_repository_from_url(value)
+    if parsed is None:
+        raise ProviderValidationError("GitHub public repository returned an invalid public repository URL.")
+    returned_owner, returned_repository = parsed
+    if returned_owner.casefold() != owner.casefold() or returned_repository.casefold() != repository.casefold():
+        raise ProviderValidationError("GitHub public repository URL does not match the requested repository.")
+    return value
+
+
 class GitHubPublicProfileProvider:
     descriptor = PROVIDER_BY_NAME["github_public_api"]
 
-    def __init__(self, *, fetcher: GitHubFetch = fetch_github_public_profile) -> None:
+    def __init__(
+        self,
+        *,
+        fetcher: GitHubFetch = fetch_github_public_profile,
+        repository_fetcher: Callable[[str, str], Awaitable[dict[str, object] | None]] = fetch_github_public_repository,
+    ) -> None:
         self.fetcher = fetcher
+        self.repository_fetcher = repository_fetcher
 
     async def execute(self, query: ProviderQuery, secret: str | None) -> ProviderResult:
         if secret is not None:
-            raise ProviderValidationError("GitHub public profile lookup does not accept credentials.")
-        if query.identifier_kind != "username":
-            raise ProviderValidationError("GitHub public profile lookup only accepts usernames.")
+            raise ProviderValidationError("GitHub public lookup does not accept credentials.")
+        if query.identifier_kind == "username":
+            return await self._execute_profile(query)
+        if query.identifier_kind == "url":
+            return await self._execute_repository(query)
+        raise ProviderValidationError("GitHub public lookup only accepts usernames or exact repository URLs.")
 
+    async def _execute_profile(self, query: ProviderQuery) -> ProviderResult:
         payload = await self.fetcher(query.identifier_value)
         if payload is None:
             return ProviderResult(observations=())
@@ -153,6 +218,63 @@ class GitHubPublicProfileProvider:
                 "field_visibility": "public_profile_api",
             }
         )
+        return ProviderResult(
+            observations=(
+                ProviderObservationData(
+                    source_locator=source_locator,
+                    payload=details,
+                ),
+            )
+        )
+
+    async def _execute_repository(self, query: ProviderQuery) -> ProviderResult:
+        parsed = github_repository_from_url(query.identifier_value)
+        if parsed is None:
+            raise ProviderValidationError("GitHub repository lookup requires an exact public repository URL.")
+        owner, repository = parsed
+        payload = await self.repository_fetcher(owner, repository)
+        if payload is None:
+            return ProviderResult(observations=())
+
+        full_name = payload.get("full_name")
+        expected_full_name = f"{owner}/{repository}"
+        if not isinstance(full_name, str) or full_name.casefold() != expected_full_name.casefold():
+            raise ProviderValidationError("GitHub public repository full_name does not match the requested repository.")
+        if payload.get("private") is not False:
+            raise ProviderValidationError("GitHub repository result was not explicitly public.")
+
+        owner_payload = payload.get("owner")
+        if not isinstance(owner_payload, dict):
+            raise ProviderValidationError("GitHub public repository is missing owner metadata.")
+        owner_login = owner_payload.get("login")
+        if not isinstance(owner_login, str) or owner_login.casefold() != owner.casefold():
+            raise ProviderValidationError("GitHub public repository owner does not match the requested owner.")
+        owner_type = owner_payload.get("type")
+        if owner_type is not None and owner_type not in {"User", "Organization"}:
+            raise ProviderValidationError("GitHub public repository returned an unsupported owner type.")
+
+        source_locator = _validated_repository_url(payload.get("html_url"), owner=owner, repository=repository)
+        fork = payload.get("fork")
+        archived = payload.get("archived")
+        if fork is not None and not isinstance(fork, bool):
+            raise ProviderValidationError("GitHub public repository returned an invalid fork flag.")
+        if archived is not None and not isinstance(archived, bool):
+            raise ProviderValidationError("GitHub public repository returned an invalid archived flag.")
+
+        details: dict[str, object] = {
+            "github_repository_full_name": full_name,
+            "github_repository_owner_login": owner_login,
+            "github_repository_private": False,
+            "identity_claim": False,
+            "field_visibility": "public_repository_api",
+        }
+        if owner_type is not None:
+            details["github_repository_owner_type"] = owner_type
+        if fork is not None:
+            details["github_repository_fork"] = fork
+        if archived is not None:
+            details["github_repository_archived"] = archived
+
         return ProviderResult(
             observations=(
                 ProviderObservationData(
