@@ -16,6 +16,8 @@ Crossref exact-work activation: PR #180 merged as `0d049af3af7f7450d348477bfb277
 
 DataCite exact-DOI fallback activation: PR #182 merged as `e4cb6318bed78f8a72ea15b41db5f55a12a45f9d` after exact head `a7772d0f4bdfaebfb243a66b115f3b4aeeac3b10` passed CI run `32435388198` across Python 3.11/3.13, web and the production API image. DataCite is intentionally subordinate to Crossref: it runs only after Crossref completes normally with zero observations. Crossref attempted failures never fall through to DataCite.
 
+ROR exact-organization activation is carried by PR #185. In this code state, only an exact canonical `https://ror.org/<id>` URL is applicable; the source uses the credentialless v2 singleton organization endpoint, retains a narrow CC0 registry record, emits no leads and does not use organization search or affiliation matching.
+
 ## Engineering state
 
 **The current private one-admin engineering foundation is complete.**
@@ -63,6 +65,7 @@ Required/zero-spend baseline:
 - Stack Overflow exact public-profile metadata for explicit numeric profile URLs;
 - OpenAlex exact-author metadata when a free server-side key is configured;
 - Wikidata exact-item CC0 metadata for explicit item URLs;
+- ROR exact-organization CC0 metadata for explicit canonical ROR URLs;
 - Crossref exact-work bibliographic metadata for explicit DOI resolver URLs;
 - DataCite exact-DOI CC0 fallback metadata after a clean Crossref no-match;
 - authoritative RDAP for explicit DOMAIN seeds.
@@ -80,6 +83,8 @@ Stack Overflow is exact-URL account metadata only. Applicability requires a supp
 OpenAlex is exact-author-URL metadata only. Applicability requires `https://openalex.org/A<positive-digits>` with no credentials, port, query or fragment. The provider calls only the official singleton author endpoint and retains author ID, display name, works count, cited-by count, CC0 attribution and `identity_claim=false`. It does not retain ORCID/Scopus/MAG identifiers, affiliations, locations, topics, alternative names, publications, full text or contact fields and emits no leads. The free key stays server-side in `OPENALEX_API_KEY` and is sent as bearer authorization, never in a URL. Missing key is `credential_not_configured` with no provider attempt. A returned author ID mismatch fails closed rather than silently switching scholarly identities.
 
 Wikidata is exact-item-URL metadata only. Applicability requires `https://www.wikidata.org/wiki/Q<positive-digits>` with no credentials, port, query or fragment. The provider calls official `wbgetentities` for that QID and requests English labels/descriptions only. It retains the QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`; it does not request or retain structured claims, aliases, sitelinks, external identifiers or linked entities, and emits no leads. The bounded description is public descriptive text and is never parsed into identity claims or recursive leads. Requests are credentialless, use an identifying User-Agent, one-concurrency/30-per-minute local budget, `maxlag=5`, and typed HTTP/API-level rate/backoff handling.
+
+ROR is exact-organization-URL metadata only. Applicability requires the canonical `https://ror.org/<id>` form with no credentials, custom port, query, fragment or trailing path. The provider performs one official credentialless `/v2/organizations/{id}` singleton read and retains only the canonical ROR ID, exactly one bounded `ror_display` name, `active` record status, at most eight bounded organization types, CC0 attribution and `identity_claim=false`. It excludes external IDs, domains, links, aliases beyond the selected display name, relationships, locations/addresses/geocodes, search candidates and contact-like fields. The retained display name uses a provider-specific field key so generic extraction does not silently turn it into an organization lead; provider and extraction regressions require zero emitted leads. PersonaLattice applies one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and an eight-request/minute local budget. `404` is a completed no-match, `429` preserves `Retry-After`, transient failures stay attempted-unavailable, and malformed/non-active/mismatched records fail closed.
 
 Crossref is exact-work metadata only. Applicability requires a canonical `https://doi.org/<doi>` URL with no credentials, custom port, query or fragment. The provider performs one anonymous official `/works/{doi}` singleton read and retains only the DOI, one bounded title, an optional valid publication year, up to eight bounded author display names, explicit Crossref attribution and `identity_claim=false`. Author names are display-only and emit no leads. Abstracts, ORCID/other author identifiers, affiliations, references, funders, subjects and full-text/resource/license expansion are not admitted. The adapter uses one attempt, a 4-second timeout, 32 KiB response ceiling, one-concurrency/30-per-minute local budget, preserves `429`/`Retry-After`, and fails closed on malformed or mismatched DOI results.
 
@@ -115,6 +120,8 @@ Crossref is active on `main` via PR #180. Primary documentation was re-checked o
 
 DataCite is active on `main` via PR #182. Primary DataCite documentation was re-checked on 2026-08-21: public singleton DOI retrieval requires no authentication, public API records are Findable DOI metadata, the unidentified public tier is currently 500 requests per five minutes per IP, and deposited metadata is released under CC0 subject to third-party privacy/publicity rights. PersonaLattice is tighter: 30 requests/minute locally, one attempt, one concurrency slot, 4-second timeout, 32 KiB adapter ceiling, no search/list/relation expansion, and fallback execution only after a clean Crossref no-match.
 
+ROR exact organization metadata is the current admission package in PR #185. Primary ROR documentation was re-checked on 2026-08-21: ROR IDs/registry metadata are CC0 and unrestricted; exact v2 organization retrieval is supported by ID; the current schema exposes one `ror_display` name, record status and organization types; and ROR has announced a lower unidentified-client tier of 50 requests per five minutes. PersonaLattice stays below that announced tier with eight requests/minute locally and does not depend on Client ID registration, which is currently paused. Search and affiliation matching remain explicitly outside the source.
+
 Current explicit rejections/deferments include:
 
 - ORCID Public API is not suitable for a future revenue-generating PersonaLattice baseline under its current public API terms.
@@ -125,8 +132,8 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
-2. Keep Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata and Crossref/DataCite source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
+1. Keep exact-source boundaries green for Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
+2. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
 3. Review the next high-value ₹0 source from primary documentation. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
 4. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 5. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
