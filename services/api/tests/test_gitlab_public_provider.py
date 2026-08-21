@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
 import pytest
@@ -8,6 +9,7 @@ import pytest
 from app.providers.base import ProviderQuery
 from app.providers.errors import ProviderValidationError
 from app.providers.gitlab_public import GitLabPublicProfileProvider, gitlab_project_path_from_url
+import app.providers.gitlab_public as gitlab_module
 
 
 def _query(kind: str, value: str) -> ProviderQuery:
@@ -17,6 +19,44 @@ def _query(kind: str, value: str) -> ProviderQuery:
         identifier_kind=kind,
         identifier_value=value,
     )
+
+
+@pytest.mark.parametrize(
+    ("kind", "value", "parameter"),
+    [
+        ("username", "Alice", "username"),
+        ("email", "alice@example.test", "public_email"),
+    ],
+)
+def test_person_profile_transport_always_requests_human_users(
+    monkeypatch,
+    kind: str,
+    value: str,
+    parameter: str,
+) -> None:
+    requested_urls: list[str] = []
+
+    class _Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self, _limit: int) -> bytes:
+            return b"[]"
+
+    def fake_urlopen(request, timeout: float):
+        assert timeout == 4.0
+        requested_urls.append(request.full_url)
+        return _Response()
+
+    monkeypatch.setattr(gitlab_module, "urlopen", fake_urlopen)
+
+    assert gitlab_module._fetch_gitlab_public_profile_sync(kind, value) is None
+    assert len(requested_urls) == 1
+    query = parse_qs(urlsplit(requested_urls[0]).query)
+    assert query == {parameter: [value], "humans": ["true"]}
 
 
 @pytest.mark.asyncio
