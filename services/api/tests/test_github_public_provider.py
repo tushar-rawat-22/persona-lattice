@@ -7,6 +7,7 @@ import pytest
 
 from app.intelligence.extractor import extract_observation_leads
 from app.providers import ProviderQuery, ProviderValidationError
+from app.providers.errors import ProviderResultValidationError
 from app.providers.github_public import GitHubPublicProfileProvider, github_repository_from_url
 
 
@@ -35,6 +36,7 @@ async def test_github_provider_only_emits_reviewed_public_profile_fields() -> No
     async def fetcher(username: str):
         return {
             "login": username,
+            "type": "User",
             "id": 123,
             "avatar_url": "https://avatars.githubusercontent.com/u/123?v=4",
             "html_url": f"https://github.com/{username}",
@@ -69,10 +71,26 @@ async def test_github_provider_only_emits_reviewed_public_profile_fields() -> No
     assert observation.payload["account_candidate"] is True
     assert observation.payload["identity_claim"] is False
     assert observation.payload["field_visibility"] == "public_profile_api"
+    assert "type" not in observation.payload
     assert "private_gists" not in observation.payload
     assert "total_private_repos" not in observation.payload
     assert "two_factor_authentication" not in observation.payload
     assert "plan" not in observation.payload
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("account_type", ["Organization", "Bot", "Mannequin", None, 7])
+async def test_github_username_lookup_rejects_non_user_account_types(account_type: object) -> None:
+    async def fetcher(username: str):
+        return {
+            "login": username,
+            "type": account_type,
+            "html_url": f"https://github.com/{username}",
+        }
+
+    provider = GitHubPublicProfileProvider(fetcher=fetcher)
+    with pytest.raises(ProviderResultValidationError, match="personal User account"):
+        await provider.execute(_query(), None)
 
 
 @pytest.mark.asyncio
@@ -100,6 +118,7 @@ async def test_github_provider_rejects_mismatched_login() -> None:
     async def fetcher(_username: str):
         return {
             "login": "DifferentUser",
+            "type": "User",
             "html_url": "https://github.com/DifferentUser",
         }
 
@@ -122,7 +141,7 @@ async def test_github_provider_rejects_mismatched_login() -> None:
 )
 async def test_github_provider_rejects_untrusted_profile_locator(bad_url: str) -> None:
     async def fetcher(username: str):
-        return {"login": username, "html_url": bad_url}
+        return {"login": username, "type": "User", "html_url": bad_url}
 
     provider = GitHubPublicProfileProvider(fetcher=fetcher)
     with pytest.raises(ProviderValidationError, match="GitHub public profile"):
@@ -134,6 +153,7 @@ async def test_github_provider_accepts_case_insensitive_login_match_but_preserve
     async def fetcher(_username: str):
         return {
             "login": "casehandle",
+            "type": "User",
             "html_url": "https://github.com/casehandle",
         }
 

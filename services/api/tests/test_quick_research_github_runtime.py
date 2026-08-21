@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import pytest
 
+from app.intelligence.source_states import SourceRunReason, SourceRunState
 from app.models import Purpose
 from app.providers import ProviderObservationData, ProviderResult, ProviderRuntime
+from app.providers.github_public import GitHubPublicProfileProvider
 from app.providers.registry import PROVIDER_BY_NAME
 from app.research import ResearchKind, run_quick_research
 import app.research as research_module
@@ -79,6 +81,43 @@ async def test_production_github_enrichment_path_runs_through_shared_provider_ru
     assert github[0].source_locator == "https://github.com/CaseHandle"
     assert github[0].details["email"] == "public@example.test"
     assert github[0].details["identity_claim"] is False
+
+
+@pytest.mark.asyncio
+async def test_github_organization_username_is_attempted_malformed_and_not_person_evidence(
+    monkeypatch,
+) -> None:
+    async def organization_fetcher(username: str):
+        return {
+            "login": username,
+            "type": "Organization",
+            "html_url": f"https://github.com/{username}",
+        }
+
+    github_provider = GitHubPublicProfileProvider(fetcher=organization_fetcher)
+    runtime = ProviderRuntime(adapters=[github_provider])
+    monkeypatch.setattr(research_module, "DEFAULT_GITHUB_PROVIDER", github_provider)
+    monkeypatch.setattr(research_module, "DEFAULT_PROVIDER_RUNTIME", runtime)
+
+    report = await run_quick_research(
+        kind=ResearchKind.USERNAME,
+        value="OpenAI",
+        purpose=Purpose.PUBLIC_SOURCE_RESEARCH,
+        consent_acknowledged=True,
+        sherlock_provider=_EmptySherlock(),
+        gitlab_lookup=_no_profile,
+        codeforces_lookup=_no_profile,
+        public_search_lookup=_no_public_search,
+    )
+
+    github = [item for item in report.observations if item.source == "github_public_api"]
+    assert github == []
+    github_runs = [item for item in report.source_runs if item.source_name == "github_public_api"]
+    assert len(github_runs) == 1
+    assert github_runs[0].state is SourceRunState.UNAVAILABLE
+    assert github_runs[0].reason is SourceRunReason.MALFORMED_RESULT
+    assert github_runs[0].execution_attempted is True
+    assert github_runs[0].observation_count == 0
 
 
 @pytest.mark.asyncio
