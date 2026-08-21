@@ -26,6 +26,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
+  env: {
+    // Browser code must always use the same-origin proxy. The API itself stays on loopback.
+    NEXT_PUBLIC_API_URL: "/api",
+  },
   turbopack: {
     root: process.cwd(),
   },
