@@ -318,6 +318,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="zenodo_exact_record",
+        capability="public_research_record_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official Zenodo singleton record lookup only for an exact canonical record URL; "
+            "bounded CC0 metadata with no search, files, creator expansion or emitted leads."
+        ),
+        version="records-singleton-2026-08",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=32 * 1024,
+        max_concurrency=1,
+        rate_limit=30,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="ror_exact_organization",
         capability="public_organization_registry_metadata",
         status=ProviderStatus.DEVELOPMENT.value,
