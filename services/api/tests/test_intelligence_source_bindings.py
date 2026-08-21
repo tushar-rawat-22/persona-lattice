@@ -54,7 +54,7 @@ def test_no_current_source_uses_legacy_research_execution() -> None:
 
 @pytest.mark.parametrize(
     "name",
-    ["sherlock", "bluesky_public_profile"],
+    ["sherlock"],
 )
 def test_username_only_governed_sources_match_provider_descriptors(name: str) -> None:
     binding = source_binding_for(name, kind=LeadKind.USERNAME)
@@ -64,6 +64,17 @@ def test_username_only_governed_sources_match_provider_descriptors(name: str) ->
     assert descriptor.status == ProviderStatus.DEVELOPMENT.value
     assert descriptor.contact_risk is ContactRisk.NONE_KNOWN
     assert descriptor.supported_identifier_kinds == frozenset({"username"})
+
+
+def test_bluesky_username_and_url_binding_matches_provider_descriptor() -> None:
+    binding = source_binding_for("bluesky_public_profile", kind=LeadKind.URL)
+    descriptor = PROVIDER_BY_NAME["bluesky_public_profile"]
+    assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
+    assert binding.provider_name == "bluesky_public_profile"
+    assert binding.accepts == frozenset({LeadKind.USERNAME, LeadKind.URL})
+    assert descriptor.status == ProviderStatus.DEVELOPMENT.value
+    assert descriptor.contact_risk is ContactRisk.NONE_KNOWN
+    assert descriptor.supported_identifier_kinds == frozenset({"username", "url"})
 
 
 def test_github_governed_binding_shares_one_provider_for_username_and_exact_repository_url() -> None:

@@ -46,3 +46,7 @@ silently installing an unpublished revision.
 
 This file is an engineering control, not legal advice. Any commercial release
 must re-check upstream licenses and provider/site terms at the exact versions used.
+
+### Bluesky exact profile URL extension (2026-08-21)
+
+The existing credentialless Bluesky public-profile source also accepts an explicit canonical `https://bsky.app/profile/<handle>` URL. It reuses the same public AppView lookup, reviewed retained fields and 30/minute process budget. DID profile URLs, posts and broader profile/activity expansion are outside this admission. See `docs/source-admissions/BLUESKY_EXACT_PROFILE_URL.md`.

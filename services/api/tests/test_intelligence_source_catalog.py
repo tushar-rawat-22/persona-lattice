@@ -73,9 +73,10 @@ def test_active_bluesky_capability_matches_minimal_admitted_fields() -> None:
     assert bluesky.source_policy_reviewed is True
     assert bluesky.recursive_eligible is True
     assert bluesky.zero_spend_eligible is True
-    assert bluesky.accepts == frozenset({LeadKind.USERNAME})
+    assert bluesky.accepts == frozenset({LeadKind.USERNAME, LeadKind.URL})
     assert bluesky.emits == frozenset({LeadKind.USERNAME, LeadKind.NAME})
-    assert "valid AT handles only" in bluesky.note
+    assert "exact canonical" in bluesky.note
+    assert "profile URLs" in bluesky.note
 
 
 def test_optional_metered_search_requires_metered_api_credential() -> None:

@@ -112,7 +112,7 @@ def test_bluesky_is_zero_spend_credentialless_and_locally_bounded() -> None:
     assert capability.status is SourceStatus.ACTIVE
     assert capability.zero_spend_eligible is True
     assert descriptor.auth_mode is AuthMode.NONE
-    assert descriptor.supported_identifier_kinds == frozenset({"username"})
+    assert descriptor.supported_identifier_kinds == frozenset({"username", "url"})
     assert descriptor.max_attempts == 1
     assert descriptor.timeout_seconds == 4.0
     assert descriptor.max_response_bytes == 64 * 1024

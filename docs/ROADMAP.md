@@ -264,3 +264,7 @@ The next meaningful M10 step is a genuine lawful consented or independently revi
 4. Keep `docs/CONTINUITY.md`, source-admission notes and operator docs truthful in the same PR as behavior changes.
 
 Success means an operator can answer: what source produced a clue, which retained field caused a pivot, why it was admitted, what evidence affected triage, why expected evidence may be absent, and what remains unknown.
+
+### Bluesky exact profile URL reachability (2026-08-21)
+
+The active Bluesky source accepts exact canonical `bsky.app/profile/<handle>` URLs in addition to handle seeds. URL and handle research share one 30/minute governed runtime budget and the same minimal retained profile contract. DID/post URLs remain out of scope.

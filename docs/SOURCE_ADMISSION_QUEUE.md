@@ -273,3 +273,7 @@ Keep planned. The transport/admission machinery exists, but production host appr
 ## Discovery-only indexes
 
 Repositories such as `public-apis/public-apis` and machine-readable directories such as APIs.guru are useful for finding candidates. They do not establish provider permission, privacy suitability, commercial-use rights, quota stability or true zero cost. Every activation decision must be grounded in the provider's own current documentation.
+
+## Bluesky exact profile URLs — admitted 2026-08-21
+
+Exact canonical handle profile URLs reuse `bluesky_public_profile`; no new provider or quota pool was added. DID/post URLs remain outside scope. The source retains the existing minimal public profile fields and existing neutral opt-out/unavailable semantics.

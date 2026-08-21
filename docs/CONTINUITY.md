@@ -203,3 +203,9 @@ If provider documentation changes, repeat the preflight instead of trusting this
 7. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
 
 A new block must improve defensible source coverage, real evaluation, correctness, security or a concrete investigator task.
+
+## Bluesky exact profile URL package — Issue #215
+
+This package extends the existing `bluesky_public_profile` source from username handles to exact canonical `https://bsky.app/profile/<handle>` URLs. It reuses one process-owned adapter and the existing 30/minute budget. DID/post URLs and noncanonical handles stop before execution; existing public-web opt-out, account-unavailable, no-match and retained-field semantics are unchanged. No recursion or M5 policy changed.
+
+Merge SHA and exact-head CI are recorded after the PR is verified and merged.

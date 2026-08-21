@@ -24,6 +24,7 @@ from .models import Purpose
 from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.bluesky_admission import BlueskyAdmissionError, normalize_bluesky_handle
+from .providers.bluesky_public import bluesky_profile_handle_from_url
 from .providers.companies_house_company import companies_house_number_from_url
 from .providers.contracts import ExecutionRequest
 from .providers.crossref_work import crossref_doi_from_url
@@ -775,6 +776,33 @@ async def _bluesky_observations(
             identifier_id=identifier_id,
             identifier_kind=IdentifierKind.USERNAME.value,
             identifier_value=handle,
+        ),
+    )
+    return [_bluesky_observation_from_provider(item) for item in result.observations]
+
+
+async def _bluesky_url_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_BLUESKY_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
         ),
     )
     return [_bluesky_observation_from_provider(item) for item in result.observations]
@@ -1599,6 +1627,39 @@ async def _research_url(
                 )
             )
         observations.extend(gitlab_url_observations)
+
+    if bluesky_profile_handle_from_url(normalized_value) is not None:
+        try:
+            bluesky_url_observations = await _bluesky_url_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            bluesky_url_observations = []
+            source_run = _source_run_for_exception(
+                source_name="bluesky_public_profile",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+            if source_run is None or source_run.state not in {
+                SourceRunState.WITHHELD,
+                SourceRunState.NOT_FOUND,
+            }:
+                warnings.append("Bluesky exact public-profile metadata was temporarily unavailable.")
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="bluesky_public_profile",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(bluesky_url_observations),
+                )
+            )
+        observations.extend(bluesky_url_observations)
 
     if stack_overflow_user_id_from_url(normalized_value) is not None:
         try:

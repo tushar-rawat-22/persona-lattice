@@ -201,13 +201,14 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         status=ProviderStatus.DEVELOPMENT.value,
         contact_risk=ContactRisk.NONE_KNOWN,
         reason=(
-            "Official unauthenticated Bluesky public AppView profile lookup for valid AT handles; "
-            "minimal public fields only, with public-web opt-out and unavailable accounts neutral."
+            "Official unauthenticated Bluesky public AppView profile lookup for valid AT handles or exact "
+            "canonical bsky.app handle profile URLs; minimal public fields only, with public-web opt-out "
+            "and unavailable accounts neutral."
         ),
         version="app.bsky.actor.getProfile",
         source_category=SourceCategory.PUBLIC_WEB,
         allowed_purposes=SAFE_PURPOSES,
-        supported_identifier_kinds=USERNAME_ONLY,
+        supported_identifier_kinds=USERNAME_URL,
         max_attempts=1,
         timeout_seconds=4.0,
         max_response_bytes=64 * 1024,

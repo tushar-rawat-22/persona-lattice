@@ -146,7 +146,7 @@ def test_bluesky_descriptor_is_active_without_credentials_and_remains_bounded() 
     assert descriptor.status == ProviderStatus.DEVELOPMENT.value
     assert descriptor.auth_mode is AuthMode.NONE
     assert descriptor.secret_env is None
-    assert descriptor.supported_identifier_kinds == frozenset({"username"})
+    assert descriptor.supported_identifier_kinds == frozenset({"username", "url"})
     assert descriptor.max_attempts == 1
     assert descriptor.timeout_seconds == 4.0
     assert descriptor.max_response_bytes == 64 * 1024
