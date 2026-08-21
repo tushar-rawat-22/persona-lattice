@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+from app.providers.base import ProviderStatus
 from app.providers.registry import PROVIDER_BY_NAME
 from app.providers.shared_runtime import (
     DEFAULT_BLUESKY_PROVIDER,
@@ -32,7 +33,6 @@ def test_shared_production_runtime_owns_current_governed_quick_research_provider
         "sherlock",
         "github_public_api",
         "gitlab_public_api",
-        "codeforces_public_api",
         "bluesky_public_profile",
         "keybase_public_user",
         "public_dns_infrastructure",
@@ -52,7 +52,6 @@ def test_shared_production_runtime_owns_current_governed_quick_research_provider
     assert DEFAULT_PROVIDER_RUNTIME.adapters["sherlock"] is DEFAULT_SHERLOCK_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["github_public_api"] is DEFAULT_GITHUB_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["gitlab_public_api"] is DEFAULT_GITLAB_PROVIDER
-    assert DEFAULT_PROVIDER_RUNTIME.adapters["codeforces_public_api"] is DEFAULT_CODEFORCES_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["bluesky_public_profile"] is DEFAULT_BLUESKY_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["keybase_public_user"] is DEFAULT_KEYBASE_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["public_dns_infrastructure"] is DEFAULT_DNS_PROVIDER
@@ -74,7 +73,6 @@ def test_shared_runtime_adapters_match_reviewed_registry_descriptors() -> None:
     assert DEFAULT_SHERLOCK_PROVIDER.descriptor is PROVIDER_BY_NAME["sherlock"]
     assert DEFAULT_GITHUB_PROVIDER.descriptor is PROVIDER_BY_NAME["github_public_api"]
     assert DEFAULT_GITLAB_PROVIDER.descriptor is PROVIDER_BY_NAME["gitlab_public_api"]
-    assert DEFAULT_CODEFORCES_PROVIDER.descriptor is PROVIDER_BY_NAME["codeforces_public_api"]
     assert DEFAULT_BLUESKY_PROVIDER.descriptor is PROVIDER_BY_NAME["bluesky_public_profile"]
     assert DEFAULT_KEYBASE_PROVIDER.descriptor is PROVIDER_BY_NAME["keybase_public_user"]
     assert DEFAULT_DNS_PROVIDER.descriptor is PROVIDER_BY_NAME["public_dns_infrastructure"]
@@ -91,12 +89,16 @@ def test_shared_runtime_adapters_match_reviewed_registry_descriptors() -> None:
     assert DEFAULT_RDAP_PROVIDER.descriptor is PROVIDER_BY_NAME["rdap_domain_registry"]
     assert DEFAULT_BRAVE_PROVIDER.descriptor is PROVIDER_BY_NAME["brave_public_web_index"]
 
+    assert DEFAULT_CODEFORCES_PROVIDER.descriptor is PROVIDER_BY_NAME["codeforces_public_api"]
+    assert DEFAULT_CODEFORCES_PROVIDER.descriptor.status == ProviderStatus.REVIEW_REQUIRED.value
+    assert "codeforces_public_api" not in DEFAULT_PROVIDER_RUNTIME.adapters
+
 
 def test_default_provider_returns_process_owned_adapter_without_reinstantiation() -> None:
     assert default_provider("sherlock") is DEFAULT_SHERLOCK_PROVIDER
     assert default_provider("github_public_api") is DEFAULT_GITHUB_PROVIDER
     assert default_provider("gitlab_public_api") is DEFAULT_GITLAB_PROVIDER
-    assert default_provider("codeforces_public_api") is DEFAULT_CODEFORCES_PROVIDER
+    assert default_provider("codeforces_public_api") is None
     assert default_provider("bluesky_public_profile") is DEFAULT_BLUESKY_PROVIDER
     assert default_provider("keybase_public_user") is DEFAULT_KEYBASE_PROVIDER
     assert default_provider("public_dns_infrastructure") is DEFAULT_DNS_PROVIDER
