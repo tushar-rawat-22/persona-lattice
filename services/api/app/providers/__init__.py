@@ -56,6 +56,7 @@ from .stack_overflow_public import (
     stack_overflow_user_id_from_url,
 )
 from .wikidata_entity import WikidataExactEntityProvider, fetch_wikidata_entity, wikidata_entity_id_from_url
+from .zenodo_record import ZenodoExactRecordProvider, fetch_zenodo_record, zenodo_record_id_from_url
 
 __all__ = [
     "AccountDiscoveryState",
@@ -102,6 +103,7 @@ __all__ = [
     "StackOverflowPublicProfileProvider",
     "SyntheticEchoProvider",
     "WikidataExactEntityProvider",
+    "ZenodoExactRecordProvider",
     "authorize_execution",
     "companies_house_number_from_url",
     "crossref_doi_from_url",
@@ -117,10 +119,12 @@ __all__ = [
     "fetch_ror_organization",
     "fetch_stack_overflow_profile",
     "fetch_wikidata_entity",
+    "fetch_zenodo_record",
     "load_reviewed_sherlock_sites",
     "openalex_author_id_from_url",
     "ror_id_from_url",
     "sanitize_provider_log",
     "stack_overflow_user_id_from_url",
     "wikidata_entity_id_from_url",
+    "zenodo_record_id_from_url",
 ]
