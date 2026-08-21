@@ -21,6 +21,37 @@ from .registry import PROVIDER_BY_NAME
 
 _GITHUB_API_VERSION = "2026-03-10"
 _MAX_RAW_RESPONSE_BYTES = 64 * 1024
+_GITHUB_RESERVED_PROFILE_SEGMENTS = frozenset(
+    {
+        "about",
+        "account",
+        "collections",
+        "contact",
+        "customer-stories",
+        "enterprise",
+        "events",
+        "explore",
+        "features",
+        "issues",
+        "login",
+        "marketplace",
+        "new",
+        "notifications",
+        "organizations",
+        "orgs",
+        "pricing",
+        "pulls",
+        "readme",
+        "search",
+        "security",
+        "settings",
+        "signup",
+        "site",
+        "sponsors",
+        "topics",
+        "trending",
+    }
+)
 _ALLOWED_PUBLIC_FIELDS = (
     "login",
     "id",
@@ -111,6 +142,32 @@ async def fetch_github_public_profile(username: str) -> dict[str, object] | None
     return await asyncio.to_thread(_fetch_github_public_profile_sync, username)
 
 
+def github_profile_username_from_url(value: str) -> str | None:
+    """Return the login from an exact canonical GitHub public profile URL."""
+
+    parts = urlsplit(value)
+    if (
+        parts.scheme != "https"
+        or parts.hostname is None
+        or parts.hostname.casefold() != "github.com"
+        or parts.username is not None
+        or parts.password is not None
+        or parts.port is not None
+        or parts.query
+        or parts.fragment
+    ):
+        return None
+    segments = [segment for segment in parts.path.split("/") if segment]
+    if len(segments) != 1:
+        return None
+    login = segments[0]
+    if parts.path not in {f"/{login}", f"/{login}/"} or "%" in login:
+        return None
+    if login.casefold() in _GITHUB_RESERVED_PROFILE_SEGMENTS:
+        return None
+    return login
+
+
 def github_repository_from_url(value: str) -> tuple[str, str] | None:
     """Return the exact GitHub repository owner/name for a canonical public URL."""
 
@@ -196,18 +253,23 @@ class GitHubPublicProfileProvider:
         if secret is not None:
             raise ProviderValidationError("GitHub public lookup does not accept credentials.")
         if query.identifier_kind == "username":
-            return await self._execute_profile(query)
+            return await self._execute_profile(query, username=query.identifier_value)
         if query.identifier_kind == "url":
+            profile_username = github_profile_username_from_url(query.identifier_value)
+            if profile_username is not None:
+                return await self._execute_profile(query, username=profile_username)
             return await self._execute_repository(query)
-        raise ProviderValidationError("GitHub public lookup only accepts usernames or exact repository URLs.")
+        raise ProviderValidationError(
+            "GitHub public lookup only accepts usernames or exact public profile/repository URLs."
+        )
 
-    async def _execute_profile(self, query: ProviderQuery) -> ProviderResult:
-        payload = await self.fetcher(query.identifier_value)
+    async def _execute_profile(self, query: ProviderQuery, *, username: str) -> ProviderResult:
+        payload = await self.fetcher(username)
         if payload is None:
             return ProviderResult(observations=())
 
         login = payload.get("login")
-        if not isinstance(login, str) or login.casefold() != query.identifier_value.casefold():
+        if not isinstance(login, str) or login.casefold() != username.casefold():
             raise ProviderValidationError("GitHub public profile login does not match the requested username.")
         account_type = payload.get("type")
         if account_type != "User":
@@ -236,7 +298,9 @@ class GitHubPublicProfileProvider:
     async def _execute_repository(self, query: ProviderQuery) -> ProviderResult:
         parsed = github_repository_from_url(query.identifier_value)
         if parsed is None:
-            raise ProviderValidationError("GitHub repository lookup requires an exact public repository URL.")
+            raise ProviderValidationError(
+                "GitHub URL lookup requires an exact public profile or repository URL."
+            )
         owner, repository = parsed
         payload = await self.repository_fetcher(owner, repository)
         if payload is None:
