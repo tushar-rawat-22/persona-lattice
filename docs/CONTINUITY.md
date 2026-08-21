@@ -12,7 +12,7 @@ Engineering-freeze baseline: PR #168, merged as `5d774a9fadc336d43e06491183d9035
 
 Keybase source activation: PR #177 merged as `611ef00cd14858f5e60e2d32add3ec4cee47b025` after exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` across Python 3.11/3.13, web and the production API image.
 
-Crossref exact-work activation is being delivered in PR #180. The implementation is intentionally one bounded source package: exact DOI URL admission, credentialless singleton transport, catalog/binding/DEVELOPMENT registry, process-wide runtime ownership, typed source-run reporting, canonical evidence, regression coverage and source-policy documentation. Do not call it merged until #180 exact-head CI is green and the expected-head merge completes.
+Crossref exact-work activation is PR #180. Its implementation head `2e593a60888c5561d12ad19447e3a3ee924e1e9b` passed CI run `32433856669` before the final documentation checkpoint. The package covers exact DOI URL admission, credentialless singleton transport, catalog/binding/DEVELOPMENT registry, process-wide runtime ownership, typed source-run reporting, canonical evidence, regression coverage and source-policy documentation. Merge #180 only from a final exact head with the same required CI matrix green.
 
 ## Engineering state
 
@@ -61,7 +61,7 @@ Required/zero-spend baseline:
 - Stack Overflow exact public-profile metadata for explicit numeric profile URLs;
 - OpenAlex exact-author metadata when a free server-side key is configured;
 - Wikidata exact-item CC0 metadata for explicit item URLs;
-- Crossref exact-work bibliographic metadata for explicit DOI resolver URLs once PR #180 is merged;
+- Crossref exact-work bibliographic metadata for explicit DOI resolver URLs;
 - authoritative RDAP for explicit DOMAIN seeds.
 
 Optional:
@@ -106,7 +106,7 @@ Wikidata is an admitted source in `main`. Its applicability is an exact item URL
 
 Keybase is admitted via PR #177. Primary documentation was re-checked on 2026-08-21: usernames are public/immutable and restricted to the canonical 2-16-character lowercase namespace; the public lookup API supports requesting only `basics`; current terms contemplate organizational/business use, while the acceptable-use policy forbids collecting private information without permission. The implementation therefore keeps only public basics, sends no credentials, emits no leads and deliberately excludes profiles, proofs, keys and external-identity expansion. The API is documented as evolving, so shape/username/UID validation fails closed. Exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` before the expected-head squash merge.
 
-Crossref is the current source-activation package in PR #180. Primary documentation was re-checked on 2026-08-21: public API access requires no signup, exact work retrieval is `GET /works/{doi}`, almost all deposited bibliographic metadata is reusable for any purpose, abstracts can remain copyrighted, and anonymous public clients must respect current public limits/backoff. PersonaLattice therefore excludes abstracts and uses only exact DOI singleton reads under a much tighter local budget. No Crossref search/list operation or author-name pivot is authorized.
+Crossref is the current source-activation package in PR #180. Primary documentation was re-checked on 2026-08-21: public API access requires no signup, exact work retrieval is `GET /works/{doi}`, almost all deposited bibliographic metadata is reusable for any purpose, abstracts can remain copyrighted, and anonymous public clients must respect current public limits/backoff. PersonaLattice therefore excludes abstracts and uses only exact DOI singleton reads under a much tighter local budget. No Crossref search/list operation or author-name pivot is authorized. The implementation head `2e593a60888c5561d12ad19447e3a3ee924e1e9b` passed CI run `32433856669`; the final documentation head must also pass before merge.
 
 Current explicit rejections/deferments include:
 
@@ -118,9 +118,9 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Finish PR #180 only after exact-head CI is fully green; do not widen Crossref into search, abstract/full-text retrieval or author/person expansion.
+1. Keep Crossref exact-work boundaries and regressions green after #180; do not widen the source into search, abstract/full-text retrieval or author/person expansion.
 2. Keep Keybase, Wayback, Stack Overflow, OpenAlex and Wikidata source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
-3. Review the next high-value ₹0 source from primary documentation only after #180 is settled. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
+3. Review the next high-value ₹0 source from primary documentation after #180. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
 4. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 5. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
 
