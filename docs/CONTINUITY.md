@@ -16,7 +16,9 @@ Crossref exact-work activation: PR #180 merged as `0d049af3af7f7450d348477bfb277
 
 DataCite exact-DOI fallback activation: PR #182 merged as `e4cb6318bed78f8a72ea15b41db5f55a12a45f9d` after exact head `a7772d0f4bdfaebfb243a66b115f3b4aeeac3b10` passed CI run `32435388198` across Python 3.11/3.13, web and the production API image. DataCite is intentionally subordinate to Crossref: it runs only after Crossref completes normally with zero observations. Crossref attempted failures never fall through to DataCite.
 
-ROR exact-organization activation is carried by PR #185. In this code state, only an exact canonical `https://ror.org/<id>` URL is applicable; the source uses the credentialless v2 singleton organization endpoint, retains a narrow CC0 registry record, emits no leads and does not use organization search or affiliation matching.
+ROR exact-organization activation: PR #185 merged as `1f5b1a897ab08763788f6024d727cea27a299be3` after exact head `b2c67addb269f42571422d19710791284884e644` passed CI run `32437343476`. Only an exact canonical `https://ror.org/<id>` URL is applicable; the source uses the credentialless v2 singleton organization endpoint, retains a narrow CC0 registry record, emits no leads and does not use organization search or affiliation matching.
+
+DBLP exact-person activation is the current source package. It is intentionally limited to an explicit canonical `https://dblp.org/pid/<pid>` URL and one minimal public-SPARQL lookup for the exact person resource plus `dblp:primaryCreatorName`. The branch must not be treated as active on `main` until its exact-head CI passes and the PR is merged.
 
 ## Engineering state
 
@@ -66,6 +68,7 @@ Required/zero-spend baseline:
 - OpenAlex exact-author metadata when a free server-side key is configured;
 - Wikidata exact-item CC0 metadata for explicit item URLs;
 - ROR exact-organization CC0 metadata for explicit canonical ROR URLs;
+- DBLP exact-person CC0 metadata for explicit canonical person PID URLs on the current activation branch;
 - Crossref exact-work bibliographic metadata for explicit DOI resolver URLs;
 - DataCite exact-DOI CC0 fallback metadata after a clean Crossref no-match;
 - authoritative RDAP for explicit DOMAIN seeds.
@@ -85,6 +88,8 @@ OpenAlex is exact-author-URL metadata only. Applicability requires `https://open
 Wikidata is exact-item-URL metadata only. Applicability requires `https://www.wikidata.org/wiki/Q<positive-digits>` with no credentials, port, query or fragment. The provider calls official `wbgetentities` for that QID and requests English labels/descriptions only. It retains the QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`; it does not request or retain structured claims, aliases, sitelinks, external identifiers or linked entities, and emits no leads. The bounded description is public descriptive text and is never parsed into identity claims or recursive leads. Requests are credentialless, use an identifying User-Agent, one-concurrency/30-per-minute local budget, `maxlag=5`, and typed HTTP/API-level rate/backoff handling.
 
 ROR is exact-organization-URL metadata only. Applicability requires the canonical `https://ror.org/<id>` form with no credentials, custom port, query, fragment or trailing path. The provider performs one official credentialless `/v2/organizations/{id}` singleton read and retains only the canonical ROR ID, exactly one bounded `ror_display` name, `active` record status, at most eight bounded organization types, CC0 attribution and `identity_claim=false`. It excludes external IDs, domains, links, aliases beyond the selected display name, relationships, locations/addresses/geocodes, search candidates and contact-like fields. The retained display name uses a provider-specific field key so generic extraction does not silently turn it into an organization lead; provider and extraction regressions require zero emitted leads. PersonaLattice applies one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and an eight-request/minute local budget. `404` is a completed no-match, `429` preserves `Retry-After`, transient failures stay attempted-unavailable, and malformed/non-active/mismatched records fail closed.
+
+DBLP is exact-person-PID metadata only. Applicability requires a canonical `https://dblp.org/pid/<pid>` URL with no credentials, custom port, query, fragment, suffix or trailing path. PIDs remain case-sensitive. The provider sends one exact-resource query to `https://sparql.dblp.org/sparql`, constrains the resource to `dblp:Person`, and asks only for `dblp:primaryCreatorName`. It retains the canonical PID URL, one bounded primary name, CC0 attribution and `identity_claim=false`. Publication lists/counts, coauthors, affiliations, ORCID/external IDs, homepages, alternate names and contact-like data are not requested or admitted. `dblp_primary_name` is a provider-specific display field and extraction regressions require zero emitted leads. The shared public SPARQL service is treated as beta infrastructure: one attempt, 4-second timeout, 32 KiB response ceiling, one concurrency slot and six requests/minute locally. Empty results are no-match; `429` preserves `Retry-After`; transient failures stay attempted-unavailable; mismatched, duplicate or malformed results fail closed.
 
 Crossref is exact-work metadata only. Applicability requires a canonical `https://doi.org/<doi>` URL with no credentials, custom port, query or fragment. The provider performs one anonymous official `/works/{doi}` singleton read and retains only the DOI, one bounded title, an optional valid publication year, up to eight bounded author display names, explicit Crossref attribution and `identity_claim=false`. Author names are display-only and emit no leads. Abstracts, ORCID/other author identifiers, affiliations, references, funders, subjects and full-text/resource/license expansion are not admitted. The adapter uses one attempt, a 4-second timeout, 32 KiB response ceiling, one-concurrency/30-per-minute local budget, preserves `429`/`Retry-After`, and fails closed on malformed or mismatched DOI results.
 
@@ -120,7 +125,9 @@ Crossref is active on `main` via PR #180. Primary documentation was re-checked o
 
 DataCite is active on `main` via PR #182. Primary DataCite documentation was re-checked on 2026-08-21: public singleton DOI retrieval requires no authentication, public API records are Findable DOI metadata, the unidentified public tier is currently 500 requests per five minutes per IP, and deposited metadata is released under CC0 subject to third-party privacy/publicity rights. PersonaLattice is tighter: 30 requests/minute locally, one attempt, one concurrency slot, 4-second timeout, 32 KiB adapter ceiling, no search/list/relation expansion, and fallback execution only after a clean Crossref no-match.
 
-ROR exact organization metadata is the current admission package in PR #185. Primary ROR documentation was re-checked on 2026-08-21: ROR IDs/registry metadata are CC0 and unrestricted; exact v2 organization retrieval is supported by ID; the current schema exposes one `ror_display` name, record status and organization types; and ROR has announced a lower unidentified-client tier of 50 requests per five minutes. PersonaLattice stays below that announced tier with eight requests/minute locally and does not depend on Client ID registration, which is currently paused. Search and affiliation matching remain explicitly outside the source.
+ROR is active on `main` via PR #185. Primary ROR documentation was re-checked on 2026-08-21: ROR IDs/registry metadata are CC0 and unrestricted; exact v2 organization retrieval is supported by ID; the current schema exposes one `ror_display` name, record status and organization types; and ROR has announced a lower unidentified-client tier of 50 requests per five minutes. PersonaLattice stays below that announced tier with eight requests/minute locally and does not depend on Client ID registration, which is currently paused. Exact head `b2c67addb269f42571422d19710791284884e644` passed CI run `32437343476` before merge.
+
+DBLP is the current activation package. Primary DBLP documentation was re-checked on 2026-08-21: all DBLP metadata is CC0 and can be reused commercially; persistent PIDs are the stable person identifiers; `dblp:primaryCreatorName` is the primary creator-name property; and the public SPARQL service is a shared beta endpoint with rate limiting against aggressive scripting. The implementation deliberately avoids the recommended full person-bibliography export because that would retrieve much more publication/coauthor context than the operator needs for an exact PID check.
 
 Current explicit rejections/deferments include:
 
@@ -132,10 +139,11 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Keep exact-source boundaries green for Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
-2. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
-3. Review the next high-value ₹0 source from primary documentation. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
-4. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
-5. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
+1. Finish DBLP exact-person activation as one governed package, then merge only after exact-head full CI is green. Do not broaden it into name search or bibliography/coauthor expansion.
+2. Keep exact-source boundaries green for Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
+3. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
+4. Review the next high-value ₹0 source from primary documentation only after DBLP closes. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
+5. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
+6. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
 
 A new block must improve defensible source coverage, real evaluation, correctness, security or a concrete investigator task.
