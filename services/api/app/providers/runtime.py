@@ -21,6 +21,7 @@ from .errors import (
 )
 from .policy import authorize_execution
 from .rate_limit import RateBudget
+from .registry import PROVIDER_BY_NAME
 
 
 Sleep = Callable[[float], Awaitable[None]]
@@ -102,6 +103,13 @@ class ProviderRuntime:
 
         adapter = self.adapters.get(request.provider_name)
         if adapter is None:
+            # A known registry provider may intentionally have no process-owned
+            # executable adapter while it is planned, deferred or under review.
+            # Run the same central policy gate first so callers receive a truthful
+            # policy non-attempt rather than a synthetic provider-outage signal.
+            descriptor = PROVIDER_BY_NAME.get(request.provider_name)
+            if descriptor is not None:
+                authorize_execution(descriptor, request)
             raise ProviderValidationError("Provider is not registered for execution.")
         descriptor = adapter.descriptor
         authorize_execution(descriptor, request)
