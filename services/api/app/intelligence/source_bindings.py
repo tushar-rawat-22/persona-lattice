@@ -150,6 +150,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="ror_exact_organization",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="ror_exact_organization",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact canonical ROR organization URLs execute singleton registry metadata through ProviderRuntime; "
+            "organization search, affiliation matching and emitted leads are outside this source."
+        ),
+    ),
+    SourceBinding(
         source_name="crossref_exact_work",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="crossref_exact_work",
