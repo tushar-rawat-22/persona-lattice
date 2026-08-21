@@ -100,8 +100,9 @@ async def test_crossref_clean_no_match_unlocks_datacite(monkeypatch: pytest.Monk
 
     crossref_run = next(item for item in report.source_runs if item.source_name == "crossref_exact_work")
     datacite_run = next(item for item in report.source_runs if item.source_name == "datacite_exact_doi")
-    assert crossref_run.state is SourceRunState.EXECUTED
-    assert crossref_run.observation_count == 0
+    assert crossref_run.state is SourceRunState.NOT_FOUND
+    assert crossref_run.reason is SourceRunReason.NO_MATCH
+    assert crossref_run.execution_attempted is True
     assert datacite_run.state is SourceRunState.EXECUTED
     assert datacite_run.observation_count == 1
     observation = next(item for item in report.observations if item.source == "datacite_exact_doi")
