@@ -131,6 +131,25 @@ Retained evidence is restricted to the canonical ROR ID, exactly one bounded `ro
 
 The source is credentialless and zero-direct-cost. ROR has announced a lower unidentified-client tier of 50 requests per five minutes; PersonaLattice imposes the tighter local budget of eight requests/minute, one concurrency slot, one attempt, a 4-second timeout and a 32 KiB response ceiling. Client ID registration is currently paused, so the required baseline does not depend on it. `404` is a completed no-match; `429` preserves valid `Retry-After`; 408/5xx/network failures remain attempted transient failures; malformed records, non-active records and returned-ID mismatches fail closed.
 
+### DBLP exact person PID
+
+**Decision:** admitted only for an exact canonical `https://dblp.org/pid/<pid>` person URL.
+
+Primary DBLP documentation re-checked on 2026-08-21:
+
+- DBLP metadata licensing and current Terms of Use;
+- persistent PID URL guidance and PID format notes;
+- DBLP RDF schema for `Person` and `primaryCreatorName`;
+- public DBLP SPARQL service documentation and rate-limit guidance.
+
+DBLP releases its metadata under CC0 and explicitly permits commercial reuse. Persistent PIDs are the stable person-resource identifiers DBLP recommends for external services. PersonaLattice therefore admits only an operator-supplied canonical PID URL and never uses DBLP author search, autocomplete, publication search or name matching as an identity primitive.
+
+The provider sends one minimal SPARQL query to `https://sparql.dblp.org/sparql`: an exact PID resource constrained to `dblp:Person`, returning only that resource and `dblp:primaryCreatorName`, with a limit of two rows so duplicate/malformed primary-name state can fail closed. A zero-row result is a completed no-match. A returned resource mismatch, duplicate primary name, malformed binding or oversized name is a post-attempt validation failure. Ambiguous/disambiguation records do not become person evidence merely because the supplied URL exists.
+
+Retained evidence is limited to the canonical PID URL, one bounded primary creator name, `data_license=CC0`, DBLP attribution and `identity_claim=false`. The provider-specific `dblp_primary_name` field is display-only and emits no recursive lead. Publication lists/counts, coauthors, affiliations, ORCID/external identifiers, homepages, other names and contact-like data are neither requested nor admitted.
+
+The SPARQL service is public beta and DBLP asks automated clients not to overwhelm live APIs. PersonaLattice therefore uses a meaningful User-Agent, one attempt, a 4-second timeout, 32 KiB adapter response ceiling, one concurrent request and a conservative six-request/minute local budget. `429` preserves valid `Retry-After`; 408/5xx/network errors remain attempted transient failures. The required path is credentialless and zero-direct-cost.
+
 ### Crossref exact work
 
 **Decision:** admit only for an exact `https://doi.org/<doi>` URL supplied by the operator.
