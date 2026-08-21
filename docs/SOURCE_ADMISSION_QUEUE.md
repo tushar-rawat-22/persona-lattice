@@ -113,6 +113,25 @@ The provider calls official `wbgetentities` with the exact QID and requests only
 
 The source is credentialless and zero-direct-cost. Requests use a meaningful PersonaLattice User-Agent with the repository URL, run serially through a one-concurrency provider budget, stay well below Wikimedia's current identified-client allowance, send `maxlag=5`, and preserve `429`/`Retry-After`. MediaWiki API-level `ratelimited` and `maxlag` errors are also mapped to typed rate/backoff outcomes. Provider errors after contact remain attempted outcomes; malformed or mismatched entity results fail closed.
 
+### Crossref exact work
+
+**Decision:** admit only for an exact `https://doi.org/<doi>` URL supplied by the operator.
+
+Primary Crossref documentation re-checked on 2026-08-21:
+
+- REST API overview and singleton `GET /works/{doi}` endpoint;
+- public access/authentication guidance;
+- metadata reuse/licensing guidance;
+- current REST API rate-limit and backoff guidance.
+
+Crossref's public REST API requires no signup or credential. PersonaLattice uses only the singleton work endpoint after locally parsing an exact DOI resolver URL. It does not use `/works` search, query, filter, cursor or list operations and does not search by title, person name, ORCID, affiliation or other bibliographic text.
+
+Retained evidence is intentionally narrow: canonical DOI, one bounded title, a valid publication year when present, up to eight bounded author display names, Crossref attribution and `identity_claim=false`. Author names remain display-only and emit no recursive leads. Abstracts, ORCID/author identifiers, affiliations, references, funders, subjects, relation/update expansion, license/full-text/resource links and contact data are ignored even when Crossref returns them.
+
+Crossref says almost all deposited bibliographic metadata can be reused for any purpose, while abstracts may remain subject to publisher/author copyright. PersonaLattice therefore excludes abstracts rather than treating the entire response as unrestricted content.
+
+The provider runs with no secret, one attempt, a 4-second timeout, 32 KiB adapter response ceiling, one concurrent request and a local 30-request/minute budget. That local budget stays materially below Crossref's current anonymous public single-record allowance. `404` is a completed no-match; `429` preserves `Retry-After`; 408/5xx/network failures remain attempted transient failures; malformed data and returned-DOI mismatch fail closed. DOI comparison is case-insensitive, but the adapter never substitutes a different identifier.
+
 ## Rejected for the baseline
 
 ### ORCID Public API
