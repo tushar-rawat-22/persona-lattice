@@ -35,8 +35,9 @@ This is an engineering freeze, not a claim that PersonaLattice is validated in t
 Current executable sources are:
 
 - reviewed Sherlock username discovery;
-- GitHub public profiles from exact username seeds or canonical profile URLs plus exact public repository metadata through one shared provider budget;
+- GitHub public profiles plus exact public repository metadata through one shared provider budget;
 - GitLab public profiles plus exact subgroup-aware public project metadata through one shared provider budget;
+- Codeforces public profiles;
 - Keybase public account basics for already-canonical Keybase usernames;
 - Bluesky public profiles for valid AT handles;
 - local phone numbering-plan metadata;
@@ -54,9 +55,7 @@ Current executable sources are:
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
 - optional Brave exact public-web search when configured.
 
-Codeforces is no longer executable. PR #209 moved the source to `REVIEW_REQUIRED`, removed its source binding and process runtime ownership, and made central policy report a pre-attempt `provider_policy` block while preserving historical retained evidence. Reactivation requires materially clearer Codeforces-authored commercial SaaS API/data-use terms.
-
-GitHub username, exact profile-URL and repository lookup share the same process-owned `github_public_api` adapter and the same 50-request/hour local budget. Profile URL applicability is only an exact canonical `https://github.com/<login>` URL with one non-empty path segment, no credentials, custom port, query or fragment, and no known reserved GitHub root route. The path reuses official `GET /users/{username}` and still requires case-insensitive exact login agreement, `type=User` and a canonical returned `html_url`; organizations, bots and unsupported account types fail closed after provider contact. Repository applicability is only an exact `https://github.com/<owner>/<repo>` URL. Repository-owner login remains display-only because owners can be organizations; repository observations emit no leads.
+GitHub profile and repository lookup share the same process-owned `github_public_api` adapter and the same 50-request/hour local budget. Repository applicability is only an exact `https://github.com/<owner>/<repo>` URL with no credentials, custom port, query, fragment or extra route. The repository path calls only official `GET /repos/{owner}/{repo}` and retains the canonical full name, owner login/type, explicit public-state check and bounded fork/archived flags. It does not retain descriptions, contents, popularity counters, issues, contributors or contact-like fields. Repository-owner login is display-only because owners can be organizations; repository observations emit no leads.
 
 GitLab username, exact public-email and exact public-project lookup share the same process-owned `gitlab_public_api` adapter and the same 20-request/minute local budget. Project applicability accepts exact canonical `https://gitlab.com/<namespace...>/<project>` paths with at least two non-empty segments. Local admission rejects credentials, custom ports, query/fragment, `.git`, empty or malformed `.`/`-` segments, organization-scoped `/o/...` routes and GitLab `/-/` action routes. The provider calls only official `GET /api/v4/projects/{URL-encoded full project path}` and requires `visibility=public`, exact full `path_with_namespace`, namespace `full_path` matching every namespace segment before the project name, and an exact canonical returned `web_url`. Retained project fields remain provider-specific display context and emit no leads. Username/public-email requests retain GitLab's documented `humans=true` filter.
 
@@ -102,16 +101,6 @@ Activate at most one external source per PR. A source must degrade through typed
 
 Current source-admission decisions are tracked in `docs/SOURCE_ADMISSION_QUEUE.md`; source-specific admission records may add implementation detail without replacing that queue.
 
-### GitHub exact public profile URL
-
-**Active through the existing GitHub provider.**
-
-Only an exact canonical `https://github.com/<login>` URL is applicable. Username seeds, profile URLs and repository URLs share one provider descriptor, one adapter instance and the existing 50-request/hour local budget; this path adds no second quota pool. Known GitHub root routes are rejected locally so site navigation cannot be interpreted as a person profile. The provider response remains authoritative for account existence rather than a new local username grammar.
-
-The adapter reuses official `GET /users/{username}` and the reviewed username-profile field set. Exact case-insensitive login agreement, `type=User`, and a canonical returned profile locator are mandatory. Organization, Bot, missing or unsupported account types fail closed after the attempted provider request. No new followers/org/member/repository/event/gist/commit or private-resource lookup is introduced.
-
-The detailed admission record is `docs/source-admissions/GITHUB_EXACT_PROFILE_URL.md`.
-
 ### GitHub exact public repository
 
 **Active through the existing GitHub provider.**
@@ -132,9 +121,118 @@ The project adapter calls only official unauthenticated `GET /api/v4/projects/{U
 
 The detailed admission record is `docs/source-admissions/GITLAB_EXACT_PROJECT.md`.
 
+### Keybase public account basics
+
+**Active.**
+
+The source accepts only already-canonical Keybase usernames. PersonaLattice does not lowercase, trim into, or otherwise coerce a generic username into Keybase's provider namespace. Noncanonical usernames are not applicable and cause no Keybase provider attempt.
+
+The official credentialless lookup is called with `fields=basics`. Retained evidence is limited to exact username, public UID, account creation timestamp, canonical profile locator, `account_candidate=true` and `identity_claim=false`. Profile data, proofs, linked external identities, public keys, cryptocurrency addresses and contact-like data are outside this source. No recursive leads are emitted.
+
+Keybase's API documentation describes the API as evolving/alpha, so response shape and exact returned username/UID are validated fail-closed. PersonaLattice adds its own 4-second timeout, 16 KiB response ceiling, one-concurrency budget and 20-request/minute local rate budget even though no provider quota is relied on for the zero-spend contract.
+
+### Internet Archive Wayback
+
+**Active.**
+
+The integration uses the official availability endpoint for exact canonical URL leads. Automated requests identify PersonaLattice with a descriptive User-Agent and map provider `429` responses through typed remote-rate-limit handling. Returned snapshot locators must be credential-free HTTP(S) URLs on `web.archive.org` with a timestamp-consistent archive path.
+
+The adapter stores only queried URL, capture availability/status/timestamp and canonical snapshot provenance. It never fetches archived page content and intentionally emits no recursive leads.
+
+### Stack Overflow exact public profile
+
+**Active.**
+
+The source parses an exact Stack Overflow profile URL locally, extracts the numeric user ID and calls the official Stack Exchange API v2.3 `/users/{id}` path for `site=stackoverflow`. It does not call `/users?inname=` or perform display-name search.
+
+Retained fields are intentionally narrow: Stack Overflow user ID, public display name, reputation, creation timestamp, explicit API attribution, `identity_claim=false`, and the canonical returned profile locator. `about`, posts/comments, location, website, profile image and contact fields are not admitted. No recursive leads are emitted.
+
+Anonymous API reads keep the source at zero direct cost. PersonaLattice applies a tighter local rate budget than the provider's documented quota and honors remote `429`/`Retry-After` plus API `backoff` signals.
+
+### OpenAlex exact author
+
+**Active when configured.**
+
+The source admits only an exact HTTPS OpenAlex author URL with an `A<positive-digits>` ID. It uses the official singleton-author API call with `Authorization: Bearer <OPENALEX_API_KEY>` and never places the key in a request URL. Current OpenAlex documentation describes the key as free and singleton-by-ID retrieval as a free operation; those provider facts must be re-checked before future release changes.
+
+Retained evidence is limited to the canonical author ID, public display name, works count, cited-by count, CC0 attribution and `identity_claim=false`. No ORCID/Scopus/MAG IDs, affiliations, locations, topics, alternative names, publications, abstracts/full text or contact data are admitted. No recursive leads are emitted.
+
+A missing key is reported as `credential_not_configured` before a provider attempt. If the returned author ID differs from the exact ID requested, the result fails closed rather than silently following a merged/reassigned scholarly identity.
+
+### Wikidata exact entity
+
+**Active.**
+
+The source admits only an exact HTTPS Wikidata item URL with a `Q<positive-digits>` ID. It uses the official Wikibase Action API `wbgetentities` operation with the exact QID and requests English labels/descriptions only. Current Wikidata policy makes structured item data CC0.
+
+Retained evidence is limited to the canonical QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`. Structured claims, aliases, sitelinks, external IDs and linked entities are not requested or admitted. The optional English description can contain ordinary public biographical wording, but PersonaLattice does not parse that prose into dates, locations, occupations, organizations, identity claims or recursive leads.
+
+The source is credentialless and zero-direct-cost. Requests carry a meaningful PersonaLattice User-Agent, use a one-concurrency local budget of 30 requests/minute, send `maxlag=5`, and preserve provider `429`/`Retry-After`. API-level `ratelimited` and `maxlag` errors map to typed rate/backoff outcomes. Returned entity-ID mismatch, non-item results and malformed provider data fail closed rather than silently changing entity context.
+
+### Zenodo exact record
+
+**Active.**
+
+The source admits only an exact canonical HTTPS Zenodo record URL under `/records/<positive-id>`. It performs one credentialless `GET /api/records/<id>` singleton read. Zenodo's current public-record API permits anonymous metadata access and metadata are CC0 by default.
+
+Retained evidence is limited to the canonical record ID, one title capped at 512 characters, `data_license=CC0`, Zenodo/CERN attribution, canonical record locator and `identity_claim=false`. Search, DOI guessing, descriptions, creators, ORCID/affiliations, files/checksums, communities, grants, related identifiers, geolocation, uploader/account data, restricted-content workflow and version traversal are excluded. No leads are emitted.
+
+PersonaLattice keeps one attempt, one concurrency slot, a 4-second timeout, 32 KiB raw-response ceiling and 30-request/minute local budget, below Zenodo's current guest record-service allowance. `404` is a completed no-match; `429` preserves valid `Retry-After`; 408/5xx/network failures remain attempted unavailable states; malformed, oversized or mismatched record IDs fail closed.
+
+The detailed admission record is `docs/source-admissions/zenodo-exact-record.md`.
+
+### ROR exact organization
+
+**Active.**
+
+The source admits only an exact canonical HTTPS ROR organization URL. The provider calls official `GET /v2/organizations/{id}` without credentials; organization-name search, affiliation matching, autocomplete, reverse lookup and bulk enumeration remain outside PersonaLattice.
+
+Retained evidence is limited to the canonical ROR ID, exactly one bounded `ror_display` name, `active` record status, up to eight bounded organization types when present, CC0 attribution and `identity_claim=false`. External IDs, domains, links, aliases beyond the chosen display name, relationships, locations/addresses/geocodes, search candidates and contact-like fields are excluded. No recursive leads are emitted.
+
+ROR's current documentation announces a future unidentified tier of 50 requests per five minutes. PersonaLattice stays below that with one attempt, one concurrency slot, a 4-second timeout, 32 KiB response ceiling and local eight-request/minute budget. `404` is a completed no-match; `429` preserves `Retry-After`; transient failures remain attempted unavailable outcomes; malformed, non-active or mismatched records fail closed.
+
+### Companies House exact company
+
+**Active when configured.**
+
+The source admits only an exact canonical `https://find-and-update.company-information.service.gov.uk/company/<company-number>` URL. It calls official `GET /company/{company_number}` using `COMPANIES_HOUSE_API_KEY` as the HTTP Basic username with a blank password. It does not use company-name, officer/PSC or alphabetical search and does not traverse filings/documents.
+
+Retained evidence is limited to company number, one bounded registered company name, bounded status/type, an optional valid incorporation date, Companies House public-register attribution and `identity_claim=false`. Registered-office addresses, officers/directors/secretaries/PSCs, person names, SIC/business descriptions, accounts/confirmation fields, insolvency/charges, filing history/document links, previous names, jurisdiction/location expansion and contact-like data are excluded. No recursive leads are emitted.
+
+Companies House documents free public API access and a default provider limit of 600 requests per five minutes. PersonaLattice stays far below that with one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and 30 requests/minute. A missing key is `credential_not_configured` before any provider attempt; `404` is no-match; `401`/`403` are attempted credential failures; `429` preserves `Retry-After`; transient failures stay attempted unavailable; malformed or mismatched company records fail closed.
+
+### DBLP exact person PID
+
+**Active.**
+
+The source admits only an exact canonical HTTPS DBLP person URL under `/pid/`. DBLP's persistent PIDs are case-sensitive identifiers; PersonaLattice preserves the supplied case and does not infer a PID from a name. The provider sends one minimal SPARQL query constrained to that exact resource and the `dblp:Person` class, returning only the resource plus `dblp:primaryCreatorName`.
+
+Retained evidence is limited to the canonical PID URL, one bounded primary creator name, CC0 attribution and `identity_claim=false`. The source performs no author-name search and does not fetch publication bibliographies, coauthors, affiliations, ORCID/external IDs, homepages or contact-like data. `dblp_primary_name` is provider-specific display context and emits no recursive lead.
+
+The source is credentialless and zero-direct-cost. Because DBLP describes the public SPARQL service as beta and rate-limited against aggressive scripting, PersonaLattice uses one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and a six-request/minute local budget. Empty results are no-match; `429` preserves `Retry-After`; transient failures stay attempted unavailable; returned-resource mismatch or non-unique/malformed primary-name results fail closed.
+
+### Crossref exact work
+
+**Active.**
+
+The source admits only an exact HTTPS DOI resolver URL with a syntactically valid DOI. It calls the official public singleton `GET /works/{doi}` endpoint without credentials. It never calls Crossref search, query, filter, cursor or list operations.
+
+Retained evidence is limited to the canonical DOI, one bounded title, a valid publication year when present, up to eight bounded author display names, Crossref attribution and `identity_claim=false`. Author display names are not admitted as leads. Abstracts, ORCID/other author IDs, affiliations, references, funders, subjects, relation/update expansion and full-text/resource links are excluded.
+
+Crossref says almost all deposited bibliographic metadata can be reused for any purpose, while abstracts may remain subject to publisher or author copyright. The source excludes abstracts and does not treat a full provider response as reusable content. PersonaLattice adds a 4-second timeout, 32 KiB adapter response ceiling, one-concurrency budget and 30-request/minute local rate budget. `404` is a completed no-match; `429` preserves `Retry-After`; transient failures are attempted unavailable states; malformed or returned-DOI-mismatch results fail closed.
+
+### DataCite exact DOI fallback
+
+**Active after a clean Crossref no-match.**
+
+DataCite is a fallback for the same explicit `https://doi.org/<doi>` seed, not an additional discovery search. PersonaLattice calls the public singleton `GET /dois/{id}` endpoint without credentials only when Crossref completed successfully with zero observations. If Crossref was unavailable, rate-limited or malformed, DataCite does not run and cannot mask that attempted failure.
+
+Retained DataCite evidence is limited to canonical DOI, one bounded title, valid publication year/resource type when present, up to eight bounded creator display names, `data_license=CC0`, DataCite attribution and `identity_claim=false`. Creator names are display-only and never become pivots. Name identifiers/ORCID, affiliations, descriptions, geolocations, funding, related identifiers, subjects, rights/resource links and usage/activity fields are excluded. The source emits no leads.
+
+The source uses one attempt, a 4-second timeout, 32 KiB adapter ceiling, one-concurrency execution and a local 30-request/minute budget, well below DataCite's current unidentified public tier. `404` is a completed no-match, `429` preserves `Retry-After`, transient network/5xx failures remain attempted unavailable outcomes, and malformed/non-Findable/mismatched records fail closed.
+
 ### Explicit rejections/deferments
 
-- **Codeforces API:** deferred/non-executable pending materially clearer Codeforces-authored commercial SaaS reuse terms. PR #209 moved the source to `REVIEW_REQUIRED`, removed executable binding/runtime ownership and made central policy block execution before provider contact while preserving historical reads.
 - **ORCID Public API:** rejected for the product baseline because the current Public API terms prohibit use in connection with a revenue-generating product or service. A free endpoint with incompatible commercial terms is not a PersonaLattice source.
 - **Hacker News public user API:** rejected under current Y Combinator commercial-use terms. Its technical API fit does not override the product/legal boundary.
 - **Stack Exchange generic user search:** rejected as a generic username source because `inname` is substring matching, not identity-quality exact matching. The exact Stack Overflow profile-URL path above is a separate, deterministic applicability rule.
@@ -160,3 +258,7 @@ The next meaningful M10 step is a genuine lawful consented or independently revi
 
 1. Continue reviewed source expansion one source at a time, preferring exact applicability and strong provenance over provider count.
 2. Run real consented or independently reviewed M10 evidence when it exists and use those results to decide whether source coverage, graph limits or triage policy need changes.
+3. Fix newly discovered correctness/security/operator defects when they are concrete; do not reopen frozen architecture without evidence.
+4. Keep `docs/CONTINUITY.md`, source-admission notes and operator docs truthful in the same PR as behavior changes.
+
+Success means an operator can answer: what source produced a clue, which retained field caused a pivot, why it was admitted, what evidence affected triage, why expected evidence may be absent, and what remains unknown.
