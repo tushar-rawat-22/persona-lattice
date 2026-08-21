@@ -104,10 +104,9 @@ def _retry_after(exc: HTTPError) -> float | None:
 
 
 def _fetch_crossref_work_sync(doi: str) -> dict[str, object] | None:
-    # Quote the complete DOI as one path parameter. This keeps suffix punctuation
-    # from becoming query/fragment syntax while still using the exact singleton
-    # `/works/{doi}` endpoint rather than a search/list operation.
-    request_url = f"{_API_ROOT}/{quote(doi, safe='')}"
+    # Crossref documents `/works/{doi}` with DOI slashes left in the path. Keep
+    # those separators while escaping query/fragment punctuation in DOI suffixes.
+    request_url = f"{_API_ROOT}/{quote(doi, safe='/')}"
     request = Request(
         request_url,
         headers={
