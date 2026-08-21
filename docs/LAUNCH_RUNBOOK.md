@@ -41,11 +41,15 @@ Do not bypass this command to get a launch through.
 
 ## Back up retained cases
 
-Stop the API before taking the launch backup. Copy the SQLite database to a path on the same private machine that is not served by the web application:
+Stop the API before taking the launch backup. PersonaLattice uses SQLite WAL mode, so copying only the main `.db` file is not a safe snapshot: committed pages may still be in the WAL file. Use the SQLite-aware backup command instead:
 
 ```bash
-cp "$PERSONALATTICE_DB_PATH" "$PERSONALATTICE_DB_PATH.pre-launch"
+.venv/bin/python -m app.database_backup \
+  "$PERSONALATTICE_DB_PATH" \
+  "$PERSONALATTICE_DB_PATH.pre-launch"
 ```
+
+The command uses SQLite's backup API, runs an integrity check on the snapshot and refuses to overwrite an existing backup. Keep the backup on the same private machine in a path that is not served by the web application.
 
 If the database does not exist yet, record that this is a fresh launch rather than creating an empty backup file.
 
@@ -109,7 +113,7 @@ Rollback is for a failed deployment, not a routine way to hide a failing test.
 2. Stop the web and API processes.
 3. Preserve the failed database and logs for diagnosis.
 4. Check out the previously verified `main` commit.
-5. Restore the pre-launch database copy only if the failed build changed the persistent store and the previous version requires the older state.
+5. Restore the verified pre-launch SQLite snapshot only if the failed build changed the persistent store and the previous version requires the older state.
 6. Run `python -m app.launch_preflight` again.
 7. Start the API and web processes locally and repeat the login/session/case smoke before re-enabling the public route.
 
