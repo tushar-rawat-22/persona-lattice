@@ -15,6 +15,7 @@ from app.providers.shared_runtime import (
     DEFAULT_OPENALEX_PROVIDER,
     DEFAULT_PROVIDER_RUNTIME,
     DEFAULT_RDAP_PROVIDER,
+    DEFAULT_ROR_PROVIDER,
     DEFAULT_SHERLOCK_PROVIDER,
     DEFAULT_STACK_OVERFLOW_PROVIDER,
     DEFAULT_WAYBACK_PROVIDER,
@@ -36,6 +37,7 @@ def test_shared_production_runtime_owns_current_governed_quick_research_provider
         "stack_overflow_public_profile",
         "openalex_exact_author",
         "wikidata_exact_entity",
+        "ror_exact_organization",
         "crossref_exact_work",
         "datacite_exact_doi",
         "rdap_domain_registry",
@@ -52,6 +54,7 @@ def test_shared_production_runtime_owns_current_governed_quick_research_provider
     assert DEFAULT_PROVIDER_RUNTIME.adapters["stack_overflow_public_profile"] is DEFAULT_STACK_OVERFLOW_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["openalex_exact_author"] is DEFAULT_OPENALEX_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["wikidata_exact_entity"] is DEFAULT_WIKIDATA_PROVIDER
+    assert DEFAULT_PROVIDER_RUNTIME.adapters["ror_exact_organization"] is DEFAULT_ROR_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["crossref_exact_work"] is DEFAULT_CROSSREF_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["datacite_exact_doi"] is DEFAULT_DATACITE_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["rdap_domain_registry"] is DEFAULT_RDAP_PROVIDER
@@ -70,6 +73,7 @@ def test_shared_runtime_adapters_match_reviewed_registry_descriptors() -> None:
     assert DEFAULT_STACK_OVERFLOW_PROVIDER.descriptor is PROVIDER_BY_NAME["stack_overflow_public_profile"]
     assert DEFAULT_OPENALEX_PROVIDER.descriptor is PROVIDER_BY_NAME["openalex_exact_author"]
     assert DEFAULT_WIKIDATA_PROVIDER.descriptor is PROVIDER_BY_NAME["wikidata_exact_entity"]
+    assert DEFAULT_ROR_PROVIDER.descriptor is PROVIDER_BY_NAME["ror_exact_organization"]
     assert DEFAULT_CROSSREF_PROVIDER.descriptor is PROVIDER_BY_NAME["crossref_exact_work"]
     assert DEFAULT_DATACITE_PROVIDER.descriptor is PROVIDER_BY_NAME["datacite_exact_doi"]
     assert DEFAULT_RDAP_PROVIDER.descriptor is PROVIDER_BY_NAME["rdap_domain_registry"]
@@ -88,6 +92,7 @@ def test_default_provider_returns_process_owned_adapter_without_reinstantiation(
     assert default_provider("stack_overflow_public_profile") is DEFAULT_STACK_OVERFLOW_PROVIDER
     assert default_provider("openalex_exact_author") is DEFAULT_OPENALEX_PROVIDER
     assert default_provider("wikidata_exact_entity") is DEFAULT_WIKIDATA_PROVIDER
+    assert default_provider("ror_exact_organization") is DEFAULT_ROR_PROVIDER
     assert default_provider("crossref_exact_work") is DEFAULT_CROSSREF_PROVIDER
     assert default_provider("datacite_exact_doi") is DEFAULT_DATACITE_PROVIDER
     assert default_provider("rdap_domain_registry") is DEFAULT_RDAP_PROVIDER
