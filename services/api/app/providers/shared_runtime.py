@@ -5,6 +5,7 @@ from .bluesky_public import BlueskyPublicProfileProvider
 from .brave_search import BravePublicWebSearchProvider
 from .codeforces_public import CodeforcesPublicProfileProvider
 from .crossref_work import CrossrefExactWorkProvider
+from .datacite_doi import DataCiteExactDoiProvider
 from .github_public import GitHubPublicProfileProvider
 from .gitlab_public import GitLabPublicProfileProvider
 from .keybase_public import KeybasePublicUserProvider
@@ -32,6 +33,7 @@ DEFAULT_STACK_OVERFLOW_PROVIDER = StackOverflowPublicProfileProvider()
 DEFAULT_OPENALEX_PROVIDER = OpenAlexExactAuthorProvider()
 DEFAULT_WIKIDATA_PROVIDER = WikidataExactEntityProvider()
 DEFAULT_CROSSREF_PROVIDER = CrossrefExactWorkProvider()
+DEFAULT_DATACITE_PROVIDER = DataCiteExactDoiProvider()
 DEFAULT_RDAP_PROVIDER = RdapDomainRegistryProvider()
 DEFAULT_BRAVE_PROVIDER = BravePublicWebSearchProvider()
 DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
@@ -48,6 +50,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_OPENALEX_PROVIDER,
         DEFAULT_WIKIDATA_PROVIDER,
         DEFAULT_CROSSREF_PROVIDER,
+        DEFAULT_DATACITE_PROVIDER,
         DEFAULT_RDAP_PROVIDER,
         DEFAULT_BRAVE_PROVIDER,
     ]
