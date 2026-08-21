@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 
 import app.research as research_module
@@ -45,6 +47,8 @@ async def test_provider_reuses_handle_lookup_for_exact_profile_url() -> None:
     provider = BlueskyPublicProfileProvider(fetcher=fetcher)
     result = await provider.execute(
         ProviderQuery(
+            subject_id=uuid4(),
+            identifier_id=uuid4(),
             identifier_kind="url",
             identifier_value="https://bsky.app/profile/alice.bsky.social",
         ),
@@ -67,7 +71,15 @@ async def test_provider_rejects_did_and_post_urls_without_fetch() -> None:
         "https://bsky.app/profile/alice.bsky.social/post/3abc",
     ):
         with pytest.raises(ProviderValidationError):
-            await provider.execute(ProviderQuery(identifier_kind="url", identifier_value=value), None)
+            await provider.execute(
+                ProviderQuery(
+                    subject_id=uuid4(),
+                    identifier_id=uuid4(),
+                    identifier_kind="url",
+                    identifier_value=value,
+                ),
+                None,
+            )
 
 
 def test_catalog_binding_and_descriptor_share_username_url_contract() -> None:
