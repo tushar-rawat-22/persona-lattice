@@ -18,9 +18,10 @@ def test_public_preview_has_no_private_api_fetch_or_environment_access() -> None
     assert "This surface is demo-only." in source
 
 
-def test_production_web_proxy_defaults_to_loopback_api() -> None:
+def test_production_web_proxy_keeps_browser_same_origin_and_api_on_loopback() -> None:
     source = NEXT_CONFIG.read_text(encoding="utf-8")
 
+    assert 'NEXT_PUBLIC_API_URL: "/api"' in source
     assert '"http://127.0.0.1:8000"' in source
     assert 'source: "/api/:path*"' in source
     assert "destination: `${apiOrigin}/:path*`" in source
