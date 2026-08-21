@@ -104,9 +104,10 @@ def _retry_after(exc: HTTPError) -> float | None:
 
 
 def _fetch_crossref_work_sync(doi: str) -> dict[str, object] | None:
-    # Crossref documents `/works/{doi}` with DOI slashes left in the path. Keep
-    # those separators while escaping query/fragment punctuation in DOI suffixes.
-    request_url = f"{_API_ROOT}/{quote(doi, safe='/')}"
+    # Crossref's singleton examples encode the DOI as one path parameter,
+    # including its slash. This also prevents DOI suffix punctuation becoming
+    # query or fragment syntax.
+    request_url = f"{_API_ROOT}/{quote(doi, safe='')}"
     request = Request(
         request_url,
         headers={
