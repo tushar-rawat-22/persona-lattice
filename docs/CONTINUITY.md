@@ -20,7 +20,9 @@ ROR exact-organization activation: PR #185 merged as `1f5b1a897ab08763788f6024d7
 
 DBLP exact-person activation: PR #187 merged as `905f9fc8915487a002e54a81e3d23b443ea19072` after exact head `4e5de2580ea8cb2881f1520e5790b15362ea80c6` passed CI run `32440833347`. It is limited to explicit canonical `https://dblp.org/pid/<pid>` URLs and one minimal public-SPARQL query for the exact `dblp:Person` resource plus `dblp:primaryCreatorName`; it emits no leads and does not retrieve bibliography or coauthor context.
 
-Companies House exact-company activation is carried by PR #191. The package admits only explicit canonical public company URLs, uses the exact company-profile endpoint with a free server-side API key, keeps the credential out of URLs/evidence, retains a narrow non-person company record, emits no leads and excludes officer/PSC/address/filing/search expansion. The final merge SHA and exact-head CI run must be recorded here only after PR #191 is green and merged.
+Companies House exact-company activation: PR #191 merged as `079e3dc3c79f2a26fd71e869b671db30e5edb451` after exact head `820470b173050d75c9bcd98ae974399e58ce33db` passed CI run `32451537243`. The package admits only explicit canonical public company URLs, uses the exact company-profile endpoint with a free server-side API key, keeps the credential out of URLs/evidence, retains a narrow non-person company record, emits no leads and excludes officer/PSC/address/filing/search expansion.
+
+The next GitHub source extension is deliberately not a second provider. Exact public repository URLs are routed through the existing `github_public_api` descriptor, process-owned adapter and 50-request/hour local budget. Repository observations retain only bounded public repository identity/state metadata and emit no leads; owner login is display-only because repository owners can be organizations.
 
 ## Engineering state
 
@@ -59,7 +61,7 @@ Required/zero-spend baseline:
 - local normalization;
 - libphonenumber metadata;
 - reviewed Sherlock account discovery;
-- GitHub public profile API;
+- GitHub public profile API plus exact public repository metadata through one shared provider budget;
 - GitLab public profile API;
 - Codeforces `user.info`;
 - Bluesky public AppView profile lookup for valid AT handles;
@@ -79,6 +81,8 @@ Required/zero-spend baseline:
 Optional:
 
 - Brave exact public-web search when configured. It is metered and must never become a required dependency.
+
+GitHub username and repository lookups share one `github_public_api` runtime owner and one 50-request/hour local budget. Exact repository applicability requires a canonical `https://github.com/<owner>/<repo>` URL with no credentials, custom port, query, fragment or extra route. The repository path uses only official `GET /repos/{owner}/{repo}` and retains repository full name, owner login/type, explicit public-state verification and optional fork/archived booleans plus canonical provenance. Description/content, popularity counters, contributors, commits, issues, releases and contact-like fields are excluded. `github_repository_owner_login` is display-only and repository observations emit no leads.
 
 Keybase is exact-username account metadata only. Applicability requires an already-canonical Keybase username: 2-16 lowercase alphanumeric/underscore characters with an alphanumeric first character. The source requests only the official API `basics` object and retains exact username, public UID, account creation timestamp, `account_candidate=true`, `identity_claim=false` and canonical `https://keybase.io/<username>` provenance. Profile text/full name, proofs, linked external identities, public keys, cryptocurrency addresses and contact-like data are not requested or admitted. It emits no leads. Noncanonical usernames skip Keybase before provider execution.
 
@@ -116,7 +120,9 @@ Do not publish false-positive/false-negative, probability, calibration or popula
 
 ## Source expansion state
 
-Source expansion is the main engineering stream alongside real M10 evaluation. `docs/SOURCE_ADMISSION_QUEUE.md` records current preflight decisions.
+Source expansion is the main engineering stream alongside real M10 evaluation. `docs/SOURCE_ADMISSION_QUEUE.md` records current preflight decisions; source-specific admission records may provide narrower implementation contracts.
+
+GitHub exact repository metadata extends the existing source rather than adding a provider. Current primary GitHub documentation was re-checked on 2026-08-21: public repository retrieval is available without authentication, the unauthenticated REST limit is 60 requests/hour per originating IP, and current API terms prohibit abusive limit-circumvention/spam use. PersonaLattice keeps the existing 50/hour shared GitHub budget across username profiles and repositories and adds no new quota pool. Exact repository context is non-recursive and data-minimized; see `docs/source-admissions/GITHUB_EXACT_REPOSITORY.md`.
 
 Wayback was the first post-freeze source admission. Its contract is exact-URL historical availability metadata only. Treat zero capture as a valid no-match, `429` as a remote rate limit, malformed provider output as a post-attempt validation failure, and transient provider/network failure as unavailable. The source emits no recursive candidates.
 
@@ -136,11 +142,15 @@ ROR is active on `main` via PR #185. Primary ROR documentation was re-checked on
 
 DBLP is active on `main` via PR #187. Primary DBLP documentation was re-checked on 2026-08-21: all DBLP metadata is CC0 and can be reused commercially; persistent PIDs are the stable person identifiers; `dblp:primaryCreatorName` is the primary creator-name property; and the public SPARQL service is a shared beta endpoint with rate limiting against aggressive scripting. PersonaLattice deliberately avoids the full person-bibliography export because that would retrieve much more publication/coauthor context than an exact PID check needs. Exact head `4e5de2580ea8cb2881f1520e5790b15362ea80c6` passed CI run `32440833347` before PR #187 merged as `905f9fc8915487a002e54a81e3d23b443ea19072`.
 
-Companies House is the current activation package in PR #191. Primary documentation was re-checked on 2026-08-21: the exact company-profile endpoint is a read-only public-data path; API-key Basic authentication is documented; public API access is free; the default limit is 600 requests per five minutes; and third-party users remain responsible for data-protection/copyright compliance when reusing public-register information. PersonaLattice intentionally retains no registered-office address, officer/PSC/person data, filings or search results and stays at 30 requests/minute locally.
+Companies House is active on `main` via PR #191. Primary documentation was re-checked on 2026-08-21: the exact company-profile endpoint is a read-only public-data path; API-key Basic authentication is documented; public API access is free; the default limit is 600 requests per five minutes; and third-party users remain responsible for data-protection/copyright compliance when reusing public-register information. PersonaLattice intentionally retains no registered-office address, officer/PSC/person data, filings or search results and stays at 30 requests/minute locally. Exact head `820470b173050d75c9bcd98ae974399e58ce33db` passed CI run `32451537243` before PR #191 merged as `079e3dc3c79f2a26fd71e869b671db30e5edb451`.
 
 VIAF exact authority metadata was re-reviewed on 2026-08-21 and remains deferred rather than admitted. OCLC still lists VIAF as a production API and VIAF data is ODC-BY with canonical numeric URIs, but the primary materials available to us did not establish a narrow exact-record representation plus practical rate/backoff contract strongly enough to justify a new production dependency. VIAF cluster records are also materially richer than PersonaLattice needs. Do not implement VIAF name search, autosuggest, SRU search or a broad cluster parser as a workaround.
 
 LCNAF/id.loc.gov review Issue #189 was closed `not_planned` on 2026-08-21. Machine-readable exact authority resources exist, but current primary documentation did not establish both a defensible future-commercial reuse position for cooperatively maintained LCNAF/NACO records and an id.loc.gov-specific rate/backoff contract. Do not work around those blockers with search/suggest, broad SKOS parsing or borrowed limits from the separate loc.gov JSON API.
+
+GLEIF exact LEI metadata remains deferred. Current primary materials establish free access, CC0 reuse and exact LEI retrieval, but the 2026-08-21 review did not establish a provider-primary request-rate/backoff contract precise enough to encode as a runtime invariant. Do not substitute third-party quota claims merely to activate the source.
+
+SEC EDGAR exact-CIK submissions review Issue #192 was closed `not_planned`. The exact endpoint is credentialless and SEC's fair-access policy is clear, but the response includes recent filing-history arrays and can exceed PersonaLattice's required 32 KiB raw-response ceiling. Do not weaken the ceiling, fetch large filing history simply to discard it, use undocumented partial/range behavior or swap in fuzzy ticker/name/search/bulk endpoints.
 
 Current explicit rejections/deferments include:
 
@@ -149,14 +159,16 @@ Current explicit rejections/deferments include:
 - Stack Exchange `inname` user search is substring-based and therefore too fuzzy to become generic recursive username evidence; this does not affect the exact Stack Overflow profile-URL source.
 - VIAF exact authority retrieval is deferred until current primary documentation supports a narrow, stable exact-record representation and operational contract; fuzzy VIAF discovery remains out of scope regardless.
 - LCNAF/id.loc.gov is deferred until both cooperatively maintained record reuse and service-specific operating limits are defensible from current primary documentation.
+- GLEIF exact LEI lookup is deferred until a current GLEIF-primary request-rate/backoff contract is available.
+- SEC EDGAR exact-CIK submissions are deferred while the provider response shape conflicts with the raw-response/data-minimization ceiling.
 
 If provider documentation changes, repeat the preflight instead of trusting this handover.
 
 ## Next engineering gate
 
-1. Finish PR #191 as one coherent Companies House source package: provider/runtime/routing/tests/docs, exact-head CI, then guarded merge. Do not weaken missing-key non-attempt semantics or broaden into people/address/filing/search data.
-2. After #191, review the next high-value exact ₹0 source from primary documentation only. Reject sources whose terms, privacy model, operational contract or matching semantics do not fit the product even if the endpoint is free.
-3. Keep exact-source boundaries green for Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR, DBLP, Crossref/DataCite and Companies House; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
+1. Finish exact GitHub repository URL support through the existing `github_public_api` runtime owner, preserving the single shared 50/hour budget, zero-lead repository contract and username behavior. Merge only after the exact PR head passes the full required CI matrix.
+2. After that package, review the next high-value exact ₹0 source from current primary documentation only. Reject sources whose terms, privacy model, operational contract, response shape or matching semantics do not fit the product even if the endpoint is free.
+3. Keep exact-source boundaries green for GitHub, Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR, Companies House, DBLP and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
 4. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
 5. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 6. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
