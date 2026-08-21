@@ -5,8 +5,9 @@ from uuid import uuid4
 
 import pytest
 
+from app.intelligence.extractor import extract_observation_leads
 from app.providers import ProviderQuery, ProviderValidationError
-from app.providers.github_public import GitHubPublicProfileProvider
+from app.providers.github_public import GitHubPublicProfileProvider, github_repository_from_url
 
 
 def _query(value: str = "CaseHandle", *, kind: str = "username") -> ProviderQuery:
@@ -140,3 +141,101 @@ async def test_github_provider_accepts_case_insensitive_login_match_but_preserve
     result = await provider.execute(_query("CaseHandle"), None)
 
     assert result.observations[0].payload["login"] == "casehandle"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("https://github.com/OpenAI/openai-python", ("OpenAI", "openai-python")),
+        ("https://github.com/OpenAI/openai-python/", ("OpenAI", "openai-python")),
+        ("http://github.com/OpenAI/openai-python", None),
+        ("https://user:pass@github.com/OpenAI/openai-python", None),
+        ("https://github.com:443/OpenAI/openai-python", None),
+        ("https://github.com/OpenAI/openai-python/issues", None),
+        ("https://github.com/OpenAI/openai-python?tab=readme", None),
+        ("https://github.com/OpenAI/openai-python#readme", None),
+        ("https://github.com/OpenAI", None),
+    ],
+)
+def test_github_repository_url_admission_is_exact(
+    value: str,
+    expected: tuple[str, str] | None,
+) -> None:
+    assert github_repository_from_url(value) == expected
+
+
+@pytest.mark.asyncio
+async def test_github_repository_lookup_retains_only_bounded_public_metadata_and_emits_no_leads() -> None:
+    async def repository_fetcher(owner: str, repository: str):
+        assert (owner, repository) == ("OpenAI", "openai-python")
+        return {
+            "full_name": "openai/openai-python",
+            "html_url": "https://github.com/openai/openai-python",
+            "private": False,
+            "fork": False,
+            "archived": False,
+            "owner": {"login": "openai", "type": "Organization", "avatar_url": "https://example.test/avatar"},
+            "description": "must not be retained",
+            "homepage": "https://example.test",
+            "topics": ["ai"],
+            "language": "Python",
+            "stargazers_count": 999,
+            "watchers_count": 999,
+            "forks_count": 999,
+            "open_issues_count": 999,
+            "created_at": "2020-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z",
+        }
+
+    provider = GitHubPublicProfileProvider(repository_fetcher=repository_fetcher)
+    result = await provider.execute(
+        _query("https://github.com/OpenAI/openai-python", kind="url"),
+        None,
+    )
+
+    assert len(result.observations) == 1
+    observation = result.observations[0]
+    assert observation.source_locator == "https://github.com/openai/openai-python"
+    assert observation.payload == {
+        "github_repository_full_name": "openai/openai-python",
+        "github_repository_owner_login": "openai",
+        "github_repository_private": False,
+        "identity_claim": False,
+        "field_visibility": "public_repository_api",
+        "github_repository_owner_type": "Organization",
+        "github_repository_fork": False,
+        "github_repository_archived": False,
+    }
+    extracted = extract_observation_leads(
+        details=dict(observation.payload),
+        source="github_public_api",
+        source_locator=observation.source_locator,
+    )
+    assert extracted.candidates == ()
+
+
+@pytest.mark.asyncio
+async def test_github_repository_lookup_fails_closed_on_private_or_mismatched_results() -> None:
+    async def private_fetcher(_owner: str, _repository: str):
+        return {
+            "full_name": "openai/openai-python",
+            "html_url": "https://github.com/openai/openai-python",
+            "private": True,
+            "owner": {"login": "openai", "type": "Organization"},
+        }
+
+    provider = GitHubPublicProfileProvider(repository_fetcher=private_fetcher)
+    with pytest.raises(ProviderValidationError, match="not explicitly public"):
+        await provider.execute(_query("https://github.com/openai/openai-python", kind="url"), None)
+
+    async def mismatched_fetcher(_owner: str, _repository: str):
+        return {
+            "full_name": "openai/different",
+            "html_url": "https://github.com/openai/different",
+            "private": False,
+            "owner": {"login": "openai", "type": "Organization"},
+        }
+
+    provider = GitHubPublicProfileProvider(repository_fetcher=mismatched_fetcher)
+    with pytest.raises(ProviderValidationError, match="full_name does not match"):
+        await provider.execute(_query("https://github.com/openai/openai-python", kind="url"), None)
