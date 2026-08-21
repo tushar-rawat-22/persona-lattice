@@ -29,7 +29,7 @@ from .providers.contracts import ExecutionRequest
 from .providers.crossref_work import crossref_doi_from_url
 from .providers.dblp_person import dblp_person_pid_from_url
 from .providers.errors import ProviderRateBudgetExceeded
-from .providers.github_public import fetch_github_public_profile
+from .providers.github_public import fetch_github_public_profile, github_repository_from_url
 from .providers.keybase_public import keybase_username_from_seed
 from .providers.openalex_author import openalex_author_id_from_url
 from .providers.ror_organization import ror_id_from_url
@@ -140,6 +140,14 @@ def _sherlock_observation_from_provider(item: ProviderObservationData) -> QuickO
 
 
 def _github_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    repository = item.payload.get("github_repository_full_name")
+    if isinstance(repository, str):
+        return QuickObservation(
+            source="github_public_api",
+            source_locator=item.source_locator,
+            summary=f"GitHub public repository metadata for {repository}; repository context only.",
+            details=dict(item.payload),
+        )
     login = str(item.payload.get("login", "public account"))
     return QuickObservation(
         source="github_public_api",
@@ -511,6 +519,33 @@ async def _github_observations(
             subject_id=subject_id,
             identifier_id=identifier_id,
             identifier_kind=IdentifierKind.USERNAME.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_github_observation_from_provider(item) for item in result.observations]
+
+
+async def _github_repository_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_GITHUB_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
             identifier_value=normalized_value,
         ),
     )
@@ -1418,6 +1453,35 @@ async def _research_url(
             )
         )
     observations.extend(wayback_observations)
+
+    if github_repository_from_url(normalized_value) is not None:
+        try:
+            github_repository_observations = await _github_repository_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            github_repository_observations = []
+            warnings.append("GitHub exact public-repository metadata was temporarily unavailable.")
+            source_run = _source_run_for_exception(
+                source_name="github_public_api",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="github_public_api",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(github_repository_observations),
+                )
+            )
+        observations.extend(github_repository_observations)
 
     if stack_overflow_user_id_from_url(normalized_value) is not None:
         try:

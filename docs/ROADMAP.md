@@ -35,7 +35,8 @@ This is an engineering freeze, not a claim that PersonaLattice is validated in t
 Current executable sources are:
 
 - reviewed Sherlock username discovery;
-- GitHub, GitLab and Codeforces public profiles;
+- GitHub public profiles plus exact public repository metadata through one shared provider budget;
+- GitLab and Codeforces public profiles;
 - Keybase public account basics for already-canonical Keybase usernames;
 - Bluesky public profiles for valid AT handles;
 - local phone numbering-plan metadata;
@@ -51,6 +52,8 @@ Current executable sources are:
 - DataCite CC0 DOI metadata as a fallback only after a clean Crossref no-match;
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
 - optional Brave exact public-web search when configured.
+
+GitHub profile and repository lookup share the same process-owned `github_public_api` adapter and the same 50-request/hour local budget. Repository applicability is only an exact `https://github.com/<owner>/<repo>` URL with no credentials, custom port, query, fragment or extra route. The repository path calls only official `GET /repos/{owner}/{repo}` and retains the canonical full name, owner login/type, explicit public-state check and bounded fork/archived flags. It does not retain descriptions, contents, popularity counters, issues, contributors or contact-like fields. Repository-owner login is display-only because owners can be organizations; repository observations emit no leads.
 
 Keybase runs only when the normalized username is already valid in Keybase's public namespace: 2-16 lowercase alphanumeric/underscore characters with an alphanumeric first character. The adapter requests only the API `basics` object and retains username, public UID, account creation timestamp and canonical profile provenance. It does not request profile text, proofs, external identities, public keys, cryptocurrency addresses or contact-like material. It emits no leads; a same-handle result remains an account candidate rather than an identity claim.
 
@@ -90,7 +93,17 @@ Activation follows the existing path:
 
 Activate at most one external source per PR. A source must degrade through typed unavailable/rate-limited/not-applicable outcomes rather than weakening the rest of the investigation pipeline.
 
-Current source-admission decisions are tracked in `docs/SOURCE_ADMISSION_QUEUE.md`.
+Current source-admission decisions are tracked in `docs/SOURCE_ADMISSION_QUEUE.md`; source-specific admission records may add implementation detail without replacing that queue.
+
+### GitHub exact public repository
+
+**Active through the existing GitHub provider.**
+
+Only an exact canonical `https://github.com/<owner>/<repo>` URL is applicable. Username-profile research and repository metadata use the same provider descriptor, adapter instance and 50-request/hour local budget; adding the repository path does not create another GitHub quota pool. GitHub currently documents 60 unauthenticated REST requests/hour per originating IP.
+
+The repository adapter calls only official `GET /repos/{owner}/{repo}`. It requires the response to be explicitly public and to match the requested full name, owner and canonical locator. Retained evidence is limited to repository full name, owner login, bounded owner type, explicit `private=false`, optional fork/archived booleans, canonical repository URL and `identity_claim=false`. Search, contents, contributors, commits, issues, releases, popularity counters and contact-like fields are outside the source. Repository fields emit no leads.
+
+The detailed admission record is `docs/source-admissions/GITHUB_EXACT_REPOSITORY.md`.
 
 ### Keybase public account basics
 
@@ -168,7 +181,7 @@ The source admits only an exact canonical HTTPS DBLP person URL under `/pid/`. D
 
 Retained evidence is limited to the canonical PID URL, one bounded primary creator name, CC0 attribution and `identity_claim=false`. The source performs no author-name search and does not fetch publication bibliographies, coauthors, affiliations, ORCID/external IDs, homepages or contact-like data. `dblp_primary_name` is provider-specific display context and emits no recursive lead.
 
-The source is credentialless and zero-direct-cost. Because DBLP describes the public SPARQL service as beta and rate-limited against aggressive scripting, PersonaLattice uses one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and a six-request/minute local budget. Empty exact results are no-match; `429` preserves `Retry-After`; transient failures stay attempted unavailable; returned-resource mismatch or non-unique/malformed primary-name results fail closed.
+The source is credentialless and zero-direct-cost. Because DBLP describes the public SPARQL service as beta and rate-limited against aggressive scripting, PersonaLattice uses one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and a six-request/minute local budget. Empty results are no-match; `429` preserves `Retry-After`; transient failures stay attempted unavailable; returned-resource mismatch or non-unique/malformed primary-name results fail closed.
 
 ### Crossref exact work
 
@@ -197,6 +210,8 @@ The source uses one attempt, a 4-second timeout, 32 KiB adapter ceiling, one-con
 - **Stack Exchange generic user search:** rejected as a generic username source because `inname` is substring matching, not identity-quality exact matching. The exact Stack Overflow profile-URL path above is a separate, deterministic applicability rule.
 - **VIAF:** deferred. ODC-BY/canonical URI terms are workable, but current primary documentation did not establish both a narrow exact-record representation and an operational rate/backoff contract suitable for this baseline.
 - **LCNAF/id.loc.gov:** deferred. Current primary documentation did not establish both a defensible commercial-reuse position for cooperatively maintained LCNAF/NACO records and an id.loc.gov-specific rate/backoff contract.
+- **GLEIF exact LEI:** deferred. Free access, CC0 reuse and exact LEI retrieval are workable, but the 2026-08-21 primary-source review did not establish a current provider-specific request-rate/backoff contract precise enough to encode as a runtime invariant. Third-party quota claims are not sufficient.
+- **SEC EDGAR exact CIK submissions:** deferred under the current provider boundary. The credentialless exact endpoint and SEC fair-access policy are clear, but submissions responses can include large recent-filing histories and do not reliably fit PersonaLattice's 32 KiB raw-response/data-minimization ceiling. Do not weaken the ceiling, fetch filing history merely to discard it, or substitute undocumented partial/search/bulk workarounds.
 - **Gravatar:** remains blocked until provider privacy-policy/terms requirements and the free server-side-key boundary are satisfied.
 - **WebFinger:** remains blocked until a specific host passes the existing host-policy review.
 

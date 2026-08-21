@@ -54,7 +54,7 @@ def test_no_current_source_uses_legacy_research_execution() -> None:
 
 @pytest.mark.parametrize(
     "name",
-    ["sherlock", "github_public_api", "codeforces_public_api", "bluesky_public_profile"],
+    ["sherlock", "codeforces_public_api", "bluesky_public_profile"],
 )
 def test_username_only_governed_sources_match_provider_descriptors(name: str) -> None:
     binding = source_binding_for(name, kind=LeadKind.USERNAME)
@@ -64,6 +64,23 @@ def test_username_only_governed_sources_match_provider_descriptors(name: str) ->
     assert descriptor.status == ProviderStatus.DEVELOPMENT.value
     assert descriptor.contact_risk is ContactRisk.NONE_KNOWN
     assert descriptor.supported_identifier_kinds == frozenset({"username"})
+
+
+def test_github_governed_binding_shares_one_provider_for_username_and_exact_repository_url() -> None:
+    descriptor = PROVIDER_BY_NAME["github_public_api"]
+    for kind in (LeadKind.USERNAME, LeadKind.URL):
+        binding = source_binding_for("github_public_api", kind=kind)
+        assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
+        assert binding.provider_name == "github_public_api"
+    assert descriptor.status == ProviderStatus.DEVELOPMENT.value
+    assert descriptor.contact_risk is ContactRisk.NONE_KNOWN
+    assert descriptor.supported_identifier_kinds == frozenset({"username", "url"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 64 * 1024
+    assert descriptor.max_concurrency == 2
+    assert descriptor.rate_limit == 50
+    assert descriptor.rate_window_seconds == 3600.0
 
 
 def test_gitlab_governed_binding_supports_username_and_exact_public_email() -> None:

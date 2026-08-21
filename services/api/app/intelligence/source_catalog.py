@@ -161,7 +161,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
     ),
     SourceCapability(
         name="github_public_api",
-        accepts=frozenset({LeadKind.USERNAME}),
+        accepts=frozenset({LeadKind.USERNAME, LeadKind.URL}),
         emits=frozenset(
             {
                 LeadKind.USERNAME,
@@ -179,7 +179,10 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         source_policy_reviewed=True,
         recursive_eligible=True,
         priority=25,
-        note="Public profile fields only; same-handle remains insufficient identity evidence.",
+        note=(
+            "Public username-profile fields plus exact public repository metadata through one shared "
+            "GitHub budget; repository observations emit no leads."
+        ),
     ),
     SourceCapability(
         name="keybase_public_user",
