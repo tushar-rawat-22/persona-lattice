@@ -38,6 +38,16 @@ jobs:
             echo "::error title=API pytest failure::$diagnostic"
           fi
           exit "$status"
+      - name: Verify production launch preflight
+        shell: bash
+        run: |
+          export PERSONALATTICE_ADMIN_USERNAME='ci-admin'
+          export PERSONALATTICE_ADMIN_PASSWORD_HASH="$(python -c 'from app.admin_auth import hash_admin_password; print(hash_admin_password("ci-launch-password-123"))')"
+          export PERSONALATTICE_COOKIE_SECURE='true'
+          export PERSONALATTICE_DB_PATH="$RUNNER_TEMP/personalattice.db"
+          export PERSONALATTICE_CASE_RETENTION_DAYS='30'
+          export PERSONALATTICE_API_ORIGIN='http://127.0.0.1:8000'
+          python -m app.launch_preflight
 
   web:
     runs-on: ubuntu-latest
