@@ -11,7 +11,7 @@ from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
 from app.intelligence.source_outcomes import source_provider_exception_record
 from app.intelligence.source_states import SourceRunReason, SourceRunState
 from app.models import Purpose
-from app.providers.base import ProviderQuery, ProviderResult, ProviderStatus
+from app.providers.base import ProviderQuery, ProviderStatus
 from app.providers.codeforces_public import CodeforcesPublicProfileProvider
 from app.providers.contracts import ExecutionRequest
 from app.providers.errors import ProviderPolicyError
