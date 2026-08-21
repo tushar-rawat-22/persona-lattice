@@ -160,7 +160,7 @@ def _details_from_payload(payload: dict[str, object], *, expected_ror_id: str) -
 
     details: dict[str, object] = {
         "ror_id": canonical_id,
-        "organization_name": _display_name(payload),
+        "ror_display_name": _display_name(payload),
         "record_status": status,
         "data_license": "CC0",
         "api_attribution": "Research Organization Registry (ROR)",
