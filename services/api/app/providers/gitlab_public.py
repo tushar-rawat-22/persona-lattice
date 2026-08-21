@@ -116,15 +116,20 @@ def gitlab_project_path_from_url(value: str) -> str | None:
         or parts.fragment
     ):
         return None
-    segments = [segment for segment in parts.path.split("/") if segment]
-    if len(segments) != 2:
+
+    raw_segments = parts.path.split("/")
+    if not raw_segments or raw_segments[0] != "":
         return None
-    namespace, project = segments
-    if project.casefold().endswith(".git"):
+    segments = raw_segments[1:]
+    if len(segments) < 2 or any(not segment for segment in segments):
         return None
-    if namespace in {"-", "."} or project in {"-", "."}:
+    if segments[0].casefold() == "o":
         return None
-    return f"{namespace}/{project}"
+    if any(segment in {"-", "."} for segment in segments):
+        return None
+    if segments[-1].casefold().endswith(".git"):
+        return None
+    return "/".join(segments)
 
 
 def _fetch_gitlab_public_project_sync(value: str) -> dict[str, object] | None:
@@ -184,7 +189,7 @@ def _validated_project_url(value: object, *, project_path: str) -> str:
     parts = urlsplit(value)
     returned_path = gitlab_project_path_from_url(value)
     if (
-        parts.path.rstrip("/").casefold() != f"/{project_path}".casefold()
+        parts.path.casefold() != f"/{project_path}".casefold()
         or returned_path is None
         or returned_path.casefold() != project_path.casefold()
     ):
@@ -216,7 +221,7 @@ def _project_observation(payload: dict[str, object], *, requested_path: str) -> 
         raise ProviderValidationError("GitLab public project returned an invalid namespace kind.")
     if not isinstance(namespace_full_path, str) or not namespace_full_path:
         raise ProviderValidationError("GitLab public project returned an invalid namespace path.")
-    requested_namespace = requested_path.split("/", 1)[0]
+    requested_namespace = requested_path.rsplit("/", 1)[0]
     if namespace_full_path.casefold() != requested_namespace.casefold():
         raise ProviderValidationError("GitLab public project namespace does not match the request.")
 
