@@ -332,6 +332,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="zenodo_exact_record",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=44,
+        note=(
+            "Official Zenodo singleton record metadata for exact canonical record URLs only; bounded CC0 "
+            "record context, no search, file access, creator expansion or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="ror_exact_organization",
         accepts=frozenset({LeadKind.URL}),
         emits=frozenset(),

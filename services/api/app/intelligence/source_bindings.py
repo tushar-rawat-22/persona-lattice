@@ -156,6 +156,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="zenodo_exact_record",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="zenodo_exact_record",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact canonical Zenodo record URLs execute bounded public record metadata through ProviderRuntime; "
+            "search, file access, creator expansion and emitted leads are outside this source."
+        ),
+    ),
+    SourceBinding(
         source_name="ror_exact_organization",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="ror_exact_organization",

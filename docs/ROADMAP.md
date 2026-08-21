@@ -46,6 +46,7 @@ Current executable sources are:
 - Stack Overflow public-account metadata for exact numeric profile URLs;
 - OpenAlex scholarly-profile metadata for exact author URLs when a free server-side key is configured;
 - Wikidata CC0 entity metadata for exact item URLs;
+- Zenodo CC0 record metadata for exact canonical record URLs;
 - ROR CC0 organization metadata for exact canonical ROR URLs;
 - Companies House public-register company metadata for exact canonical company URLs when a free server-side key is configured;
 - DBLP CC0 person metadata for exact canonical person PID URLs;
@@ -67,6 +68,8 @@ Stack Overflow runs only when an already-supplied URL matches an exact `stackove
 OpenAlex runs only when the supplied URL is exactly an `openalex.org/A<id>` author entity. It calls the official singleton author endpoint with a free server-side key, retains only author ID, display name, works/citation counts, CC0 attribution and `identity_claim=false`, and emits no leads. Name/ORCID search, affiliations, topics and work expansion are deliberately excluded. Missing key is a non-attempt configuration state.
 
 Wikidata runs only for an exact `www.wikidata.org/wiki/Q<id>` item URL. It uses official `wbgetentities` reads and retains only the QID plus bounded English label/description metadata, CC0 attribution and `identity_claim=false`. It does not request structured claims, aliases, sitelinks, external identifiers or linked entities. The optional description remains bounded public descriptive text and is never parsed into identity claims or recursive leads.
+
+Zenodo runs only for an exact canonical `https://zenodo.org/records/<positive-id>` URL. It performs one credentialless official singleton record read and retains only the canonical record ID, one bounded title, CC0/CERN attribution, canonical provenance and `identity_claim=false`. It does not search, resolve DOI-like text, fetch files, traverse versions, request restricted content, or retain descriptions, creators, ORCID/affiliations, communities, grants, related identifiers, uploader data or geolocation. It emits no leads. PersonaLattice stays at one attempt, one concurrency slot, four seconds, 30 requests/minute and a 32 KiB raw-response ceiling; oversized records fail closed rather than expanding the adapter boundary.
 
 ROR runs only when the supplied URL is an exact canonical `https://ror.org/<id>` organization identifier. It calls the official credentialless v2 singleton organization endpoint and retains only the canonical ROR ID, one bounded `ror_display` name, active record status, bounded organization types when present, CC0 attribution and `identity_claim=false`. Search, affiliation matching, autocomplete, external-ID expansion, domains, links, aliases, relationships, locations/geocodes and contact-like fields are excluded. Provider-specific retained field names keep the display name out of generic lead extraction, and the source emits no leads.
 
@@ -166,6 +169,18 @@ Retained evidence is limited to the canonical QID, bounded English label/descrip
 
 The source is credentialless and zero-direct-cost. Requests carry a meaningful PersonaLattice User-Agent, use a one-concurrency local budget of 30 requests/minute, send `maxlag=5`, and preserve provider `429`/`Retry-After`. API-level `ratelimited` and `maxlag` errors map to typed rate/backoff outcomes. Returned entity-ID mismatch, non-item results and malformed provider data fail closed rather than silently changing entity context.
 
+### Zenodo exact record
+
+**Active.**
+
+The source admits only an exact canonical HTTPS Zenodo record URL under `/records/<positive-id>`. It performs one credentialless `GET /api/records/<id>` singleton read. Zenodo's current public-record API permits anonymous metadata access and metadata are CC0 by default.
+
+Retained evidence is limited to the canonical record ID, one title capped at 512 characters, `data_license=CC0`, Zenodo/CERN attribution, canonical record locator and `identity_claim=false`. Search, DOI guessing, descriptions, creators, ORCID/affiliations, files/checksums, communities, grants, related identifiers, geolocation, uploader/account data, restricted-content workflow and version traversal are excluded. No leads are emitted.
+
+PersonaLattice keeps one attempt, one concurrency slot, a 4-second timeout, 32 KiB raw-response ceiling and 30-request/minute local budget, below Zenodo's current guest record-service allowance. `404` is a completed no-match; `429` preserves valid `Retry-After`; 408/5xx/network failures remain attempted unavailable states; malformed, oversized or mismatched record IDs fail closed.
+
+The detailed admission record is `docs/source-admissions/zenodo-exact-record.md`.
+
 ### ROR exact organization
 
 **Active.**
@@ -221,6 +236,7 @@ The source uses one attempt, a 4-second timeout, 32 KiB adapter ceiling, one-con
 - **ORCID Public API:** rejected for the product baseline because the current Public API terms prohibit use in connection with a revenue-generating product or service. A free endpoint with incompatible commercial terms is not a PersonaLattice source.
 - **Hacker News public user API:** rejected under current Y Combinator commercial-use terms. Its technical API fit does not override the product/legal boundary.
 - **Stack Exchange generic user search:** rejected as a generic username source because `inname` is substring matching, not identity-quality exact matching. The exact Stack Overflow profile-URL path above is a separate, deterministic applicability rule.
+- **Bitbucket Cloud exact repository:** deferred because current Atlassian primary documentation did not clearly establish anonymous access to the exact public-repository operation; a general anonymous quota does not prove endpoint permission. No credential workaround is approved.
 - **VIAF:** deferred. ODC-BY/canonical URI terms are workable, but current primary documentation did not establish both a narrow exact-record representation and an operational rate/backoff contract suitable for this baseline.
 - **LCNAF/id.loc.gov:** deferred. Current primary documentation did not establish both a defensible commercial-reuse position for cooperatively maintained LCNAF/NACO records and an id.loc.gov-specific rate/backoff contract.
 - **GLEIF exact LEI:** deferred. Free access, CC0 reuse and exact LEI retrieval are workable, but the 2026-08-21 primary-source review did not establish a current provider-specific request-rate/backoff contract precise enough to encode as a runtime invariant. Third-party quota claims are not sufficient.
