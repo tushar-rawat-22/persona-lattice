@@ -54,6 +54,7 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         "openalex_exact_author",
         "wikidata_exact_entity",
         "ror_exact_organization",
+        "companies_house_exact_company",
         "dblp_exact_person",
         "crossref_exact_work",
         "datacite_exact_doi",
@@ -204,6 +205,23 @@ def test_ror_is_zero_spend_exact_url_only_and_locally_bounded() -> None:
     assert descriptor.max_response_bytes == 32 * 1024
     assert descriptor.max_concurrency == 1
     assert descriptor.rate_limit == 8
+    assert descriptor.rate_window_seconds == 60.0
+
+
+def test_companies_house_is_zero_spend_exact_url_only_and_locally_bounded() -> None:
+    descriptor = PROVIDER_BY_NAME["companies_house_exact_company"]
+    capability = SOURCE_BY_NAME["companies_house_exact_company"]
+    assert capability.status is SourceStatus.ACTIVE
+    assert capability.zero_spend_eligible is True
+    assert capability.emits == frozenset()
+    assert descriptor.auth_mode is AuthMode.API_KEY
+    assert descriptor.secret_env == "COMPANIES_HOUSE_API_KEY"
+    assert descriptor.supported_identifier_kinds == frozenset({"url"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 32 * 1024
+    assert descriptor.max_concurrency == 1
+    assert descriptor.rate_limit == 30
     assert descriptor.rate_window_seconds == 60.0
 
 
