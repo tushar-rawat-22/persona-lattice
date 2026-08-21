@@ -27,6 +27,7 @@ CONSENTED_PURPOSES = frozenset(
 PHONE_ONLY = frozenset({"phone"})
 USERNAME_ONLY = frozenset({"username"})
 USERNAME_EMAIL = frozenset({"username", "email"})
+USERNAME_URL = frozenset({"username", "url"})
 URL_ONLY = frozenset({"url"})
 DOMAIN_ONLY = frozenset({"domain"})
 PUBLIC_SEARCH_IDENTIFIERS = frozenset({"username", "email", "phone", "url"})
@@ -119,13 +120,13 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         status=ProviderStatus.DEVELOPMENT.value,
         contact_risk=ContactRisk.NONE_KNOWN,
         reason=(
-            "Official unauthenticated GitHub user-profile endpoint; only explicitly public "
-            "profile fields are admitted and the result remains an account candidate."
+            "Official unauthenticated GitHub user-profile and exact public-repository endpoints; "
+            "profile fields remain account-candidate evidence while repository metadata emits no leads."
         ),
         version="rest-2026-03-10",
         source_category=SourceCategory.PUBLIC_WEB,
         allowed_purposes=SAFE_PURPOSES,
-        supported_identifier_kinds=USERNAME_ONLY,
+        supported_identifier_kinds=USERNAME_URL,
         max_attempts=1,
         timeout_seconds=4.0,
         max_response_bytes=64 * 1024,
