@@ -113,6 +113,24 @@ The provider calls official `wbgetentities` with the exact QID and requests only
 
 The source is credentialless and zero-direct-cost. Requests use a meaningful PersonaLattice User-Agent with the repository URL, run serially through a one-concurrency provider budget, stay well below Wikimedia's current identified-client allowance, send `maxlag=5`, and preserve `429`/`Retry-After`. MediaWiki API-level `ratelimited` and `maxlag` errors are also mapped to typed rate/backoff outcomes. Provider errors after contact remain attempted outcomes; malformed or mismatched entity results fail closed.
 
+### ROR exact organization
+
+**Decision:** admitted only for an exact canonical `https://ror.org/<id>` organization URL.
+
+Primary ROR documentation re-checked on 2026-08-21:
+
+- ROR Terms of Use and CC0 registry-data policy;
+- ROR identifier-format guidance;
+- REST API v2 singleton organization retrieval;
+- v2.1 schema guidance for `ror_display`, status and organization types;
+- current Client ID and rate-limit guidance.
+
+ROR identifiers and registry metadata are published under CC0 and are available without access/use restrictions. PersonaLattice uses only `GET /v2/organizations/{id}` after locally validating the exact canonical ROR URL. It never uses organization search, affiliation matching, autocomplete, reverse lookup or bulk enumeration.
+
+Retained evidence is restricted to the canonical ROR ID, exactly one bounded `ror_display` name, `active` record status, at most eight bounded organization types when present, `data_license=CC0`, ROR attribution, canonical source provenance and `identity_claim=false`. External identifiers, domains, links, aliases beyond the selected display name, relationships, locations/addresses/geocodes, search candidates and contact-like data are ignored. Provider-specific field names are used so the generic lead extractor cannot silently turn the organization name into a recursive clue; the source emits no leads.
+
+The source is credentialless and zero-direct-cost. ROR has announced a lower unidentified-client tier of 50 requests per five minutes; PersonaLattice imposes the tighter local budget of eight requests/minute, one concurrency slot, one attempt, a 4-second timeout and a 32 KiB response ceiling. Client ID registration is currently paused, so the required baseline does not depend on it. `404` is a completed no-match; `429` preserves valid `Retry-After`; 408/5xx/network failures remain attempted transient failures; malformed records, non-active records and returned-ID mismatches fail closed.
+
 ### Crossref exact work
 
 **Decision:** admit only for an exact `https://doi.org/<doi>` URL supplied by the operator.
