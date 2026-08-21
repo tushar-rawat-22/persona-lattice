@@ -132,6 +132,25 @@ Crossref says almost all deposited bibliographic metadata can be reused for any 
 
 The provider runs with no secret, one attempt, a 4-second timeout, 32 KiB adapter response ceiling, one concurrent request and a local 30-request/minute budget. That local budget stays materially below Crossref's current anonymous public single-record allowance. `404` is a completed no-match; `429` preserves `Retry-After`; 408/5xx/network failures remain attempted transient failures; malformed data and returned-DOI mismatch fail closed. DOI comparison is case-insensitive, but the adapter never substitutes a different identifier.
 
+### DataCite exact DOI fallback
+
+**Decision:** admit only as a fallback after the exact Crossref source completes normally with zero observations.
+
+Primary DataCite documentation re-checked on 2026-08-21:
+
+- DataCite REST API overview and public API authentication guidance;
+- singleton `GET /dois/{id}` retrieval;
+- current REST API rate limits;
+- DataCite Data File Use Policy and CC0 metadata guidance.
+
+DataCite's public singleton API is credentialless. Current unidentified clients are documented at 500 requests per five minutes per IP; PersonaLattice uses one concurrency slot and a local 30-request/minute budget instead. Provider `429` preserves valid `Retry-After`; 408/5xx/network failures remain attempted transient failures; malformed singleton envelopes, non-Findable records and DOI mismatches fail closed.
+
+The critical ordering rule is source truth, not hit rate. PersonaLattice attempts Crossref first. If Crossref returns an exact observation, DataCite is not attempted. If Crossref completes with zero observations, DataCite may run. If Crossref was rate-limited, unavailable, malformed or otherwise failed after an attempt, DataCite does not run and cannot hide the Crossref failure.
+
+Retained DataCite evidence is limited to the canonical DOI, one bounded title, valid publication year/resource type when present, up to eight bounded creator display names, `data_license=CC0`, DataCite attribution and `identity_claim=false`. Creator names remain display-only. Name identifiers/ORCID, affiliations, descriptions, geolocations, funding, related identifiers, subjects, rights/full-text/resource URLs, usage/activity fields and contact/account data are excluded. The source performs no search/list/relation expansion and emits no recursive leads.
+
+DataCite releases deposited metadata under CC0 for reuse, while explicitly noting that privacy/publicity and other rights of represented individuals can still apply. PersonaLattice therefore keeps the retained field set narrow instead of treating CC0 as permission for unrestricted personal-data expansion.
+
 ## Rejected for the baseline
 
 ### ORCID Public API
