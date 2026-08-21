@@ -45,6 +45,7 @@ Current executable sources are:
 - OpenAlex scholarly-profile metadata for exact author URLs when a free server-side key is configured;
 - Wikidata CC0 entity metadata for exact item URLs;
 - ROR CC0 organization metadata for exact canonical ROR URLs;
+- Companies House public-register company metadata for exact canonical company URLs when a free server-side key is configured;
 - DBLP CC0 person metadata for exact canonical person PID URLs;
 - Crossref bibliographic metadata for exact DOI resolver URLs;
 - DataCite CC0 DOI metadata as a fallback only after a clean Crossref no-match;
@@ -62,6 +63,8 @@ OpenAlex runs only when the supplied URL is exactly an `openalex.org/A<id>` auth
 Wikidata runs only for an exact `www.wikidata.org/wiki/Q<id>` item URL. It uses official `wbgetentities` reads and retains only the QID plus bounded English label/description metadata, CC0 attribution and `identity_claim=false`. It does not request structured claims, aliases, sitelinks, external identifiers or linked entities. The optional description remains bounded public descriptive text and is never parsed into identity claims or recursive leads.
 
 ROR runs only when the supplied URL is an exact canonical `https://ror.org/<id>` organization identifier. It calls the official credentialless v2 singleton organization endpoint and retains only the canonical ROR ID, one bounded `ror_display` name, active record status, bounded organization types when present, CC0 attribution and `identity_claim=false`. Search, affiliation matching, autocomplete, external-ID expansion, domains, links, aliases, relationships, locations/geocodes and contact-like fields are excluded. Provider-specific retained field names keep the display name out of generic lead extraction, and the source emits no leads.
+
+Companies House runs only when the supplied URL is an exact canonical public company page. It calls the official exact company-profile endpoint using a free server-side `COMPANIES_HOUSE_API_KEY` via HTTP Basic authentication. Retained evidence is limited to company number, bounded registered name/status/type, an optional valid incorporation date, public-register attribution and `identity_claim=false`. Registered-office addresses, officers/directors/secretaries/PSCs, person names, SIC/business descriptions, accounts/confirmation data, insolvency/charges, filings/documents, previous names and jurisdiction/location expansion are excluded. Missing key is a non-attempt configuration state and the source emits no leads.
 
 DBLP runs only when the supplied URL is an exact canonical `https://dblp.org/pid/<pid>` person identifier. It sends one minimal exact-resource query to DBLP's public SPARQL service and retains only the canonical PID URL, one bounded `primaryCreatorName`, CC0 attribution and `identity_claim=false`. It does not use DBLP name search, bibliography exports, publication/coauthor expansion, affiliations, ORCID/external IDs or homepages. The provider-specific name field remains display-only and emits no leads. The source is credentialless and locally capped at one concurrency slot and six requests/minute because DBLP's public SPARQL service is shared beta infrastructure.
 
@@ -147,6 +150,16 @@ Retained evidence is limited to the canonical ROR ID, exactly one bounded `ror_d
 
 ROR's current documentation announces a future unidentified tier of 50 requests per five minutes. PersonaLattice stays below that with one attempt, one concurrency slot, a 4-second timeout, 32 KiB response ceiling and local eight-request/minute budget. `404` is a completed no-match; `429` preserves `Retry-After`; transient failures remain attempted unavailable outcomes; malformed, non-active or mismatched records fail closed.
 
+### Companies House exact company
+
+**Active when configured.**
+
+The source admits only an exact canonical `https://find-and-update.company-information.service.gov.uk/company/<company-number>` URL. It calls official `GET /company/{company_number}` using `COMPANIES_HOUSE_API_KEY` as the HTTP Basic username with a blank password. It does not use company-name, officer/PSC or alphabetical search and does not traverse filings/documents.
+
+Retained evidence is limited to company number, one bounded registered company name, bounded status/type, an optional valid incorporation date, Companies House public-register attribution and `identity_claim=false`. Registered-office addresses, officers/directors/secretaries/PSCs, person names, SIC/business descriptions, accounts/confirmation fields, insolvency/charges, filing history/document links, previous names, jurisdiction/location expansion and contact-like data are excluded. No recursive leads are emitted.
+
+Companies House documents free public API access and a default provider limit of 600 requests per five minutes. PersonaLattice stays far below that with one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and 30 requests/minute. A missing key is `credential_not_configured` before any provider attempt; `404` is no-match; `401`/`403` are attempted credential failures; `429` preserves `Retry-After`; transient failures stay attempted unavailable; malformed or mismatched company records fail closed.
+
 ### DBLP exact person PID
 
 **Active.**
@@ -182,6 +195,8 @@ The source uses one attempt, a 4-second timeout, 32 KiB adapter ceiling, one-con
 - **ORCID Public API:** rejected for the product baseline because the current Public API terms prohibit use in connection with a revenue-generating product or service. A free endpoint with incompatible commercial terms is not a PersonaLattice source.
 - **Hacker News public user API:** rejected under current Y Combinator commercial-use terms. Its technical API fit does not override the product/legal boundary.
 - **Stack Exchange generic user search:** rejected as a generic username source because `inname` is substring matching, not identity-quality exact matching. The exact Stack Overflow profile-URL path above is a separate, deterministic applicability rule.
+- **VIAF:** deferred. ODC-BY/canonical URI terms are workable, but current primary documentation did not establish both a narrow exact-record representation and an operational rate/backoff contract suitable for this baseline.
+- **LCNAF/id.loc.gov:** deferred. Current primary documentation did not establish both a defensible commercial-reuse position for cooperatively maintained LCNAF/NACO records and an id.loc.gov-specific rate/backoff contract.
 - **Gravatar:** remains blocked until provider privacy-policy/terms requirements and the free server-side-key boundary are satisfied.
 - **WebFinger:** remains blocked until a specific host passes the existing host-policy review.
 
