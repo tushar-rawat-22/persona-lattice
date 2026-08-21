@@ -30,6 +30,10 @@ GitLab subgroup-project extension: PR #206 merged as `079e5d70f76b6dd8011bfe8412
 
 Zenodo exact-record activation: PR #200 merged as `f78069a28b9401ef055a82c89122023ed9102052` after exact head `c24f9625b7c79f7b3fbab3f8889527dd237b8468` passed CI run `32480005328`. The implementation admits only exact canonical `https://zenodo.org/records/<positive-id>` URLs, uses one credentialless singleton Records read, retains only record ID/title plus CC0/CERN attribution and canonical provenance, emits no leads, and rejects search/files/restricted-content/version traversal.
 
+Codeforces commercial-use quarantine: PR #209 merged as `2458b383f5e1d5bb9f94d823bf951f49c94f93ec` after exact head `6359c5c50cf9072ffed0f7755c2e9801938bd0ba` passed CI run `32494382508`. `codeforces_public_api` is now `REVIEW_REQUIRED`, source-policy review is false, recursive eligibility is false, no executable source binding or process runtime owner exists, and central runtime policy reports a pre-attempt `provider_policy` block. Historical retained Codeforces evidence remains readable.
+
+GitHub exact-profile URL extension: PR #211 merged as `4bcd252a35cc0b9431ec311e23b8eb894bf8abe0` after exact head `d0830666164ab68301f8b52edb3c0d9c076906fd` passed CI run `32498900141`. Exact canonical one-segment public profile URLs reuse the existing `github_public_api` adapter and 50-request/hour budget. Known GitHub root routes are locally inapplicable, and returned profiles still require exact login consistency, `type == "User"` and canonical profile provenance before becoming person-oriented account-candidate evidence.
+
 ## Engineering state
 
 **The current private one-admin engineering foundation is complete.**
@@ -67,9 +71,8 @@ Required/zero-spend baseline:
 - local normalization;
 - libphonenumber metadata;
 - reviewed Sherlock account discovery;
-- GitHub public profile API plus exact public repository metadata through one shared provider budget;
+- GitHub public profile API from exact username seeds or canonical profile URLs plus exact public repository metadata through one shared provider budget;
 - GitLab public profile API plus exact subgroup-aware public project metadata through one shared provider budget;
-- Codeforces `user.info`;
 - Bluesky public AppView profile lookup for valid AT handles;
 - Keybase public account basics for canonical Keybase usernames;
 - public DNS infrastructure metadata;
@@ -85,11 +88,13 @@ Required/zero-spend baseline:
 - DataCite exact-DOI CC0 fallback metadata after a clean Crossref no-match;
 - authoritative RDAP for explicit DOMAIN seeds.
 
+Codeforces is deliberately not in the executable baseline. It remains registered only for policy/history compatibility while current commercial-use terms are unresolved for the intended SaaS path.
+
 Optional:
 
 - Brave exact public-web search when configured. It is metered and must never become a required dependency.
 
-GitHub username and repository lookups share one `github_public_api` runtime owner and one 50-request/hour local budget. Username research accepts a person-oriented account candidate only when the exact public account response reports `type == "User"`; organization, bot, missing or other unsupported account types are post-attempt malformed results and cannot become person evidence. Exact repository applicability requires a canonical `https://github.com/<owner>/<repo>` URL with no credentials, custom port, query, fragment or extra route. The repository path uses only official `GET /repos/{owner}/{repo}` and retains repository full name, owner login/type, explicit public-state verification and optional fork/archived booleans plus canonical provenance. Description/content, popularity counters, contributors, commits, issues, releases and contact-like fields are excluded. `github_repository_owner_login` is display-only and repository observations emit no leads.
+GitHub username, exact profile-URL and repository lookups share one `github_public_api` runtime owner and one 50-request/hour local budget. Exact profile applicability requires canonical `https://github.com/<login>` with exactly one non-empty path segment, no credentials, custom port, query or fragment, and no known reserved GitHub root route. Profile research reuses official `GET /users/{username}` and accepts a person-oriented account candidate only when the exact public response has a case-insensitive matching login, `type == "User"` and a canonical returned `html_url`; organization, bot, missing or unsupported account types are post-attempt malformed results and cannot become person evidence. Exact repository applicability remains canonical `https://github.com/<owner>/<repo>`. Repository-owner login is display-only and repository observations emit no leads.
 
 GitLab username, exact-public-email and project lookups share one `gitlab_public_api` runtime owner and one 20-request/minute local budget. Exact project applicability accepts canonical `https://gitlab.com/<namespace...>/<project>` paths with at least two non-empty segments and no credentials, custom port, query, fragment, `.git`, malformed `.`/`-` segments, organization-scoped `/o/...` routes or GitLab `/-/` action routes. The project path calls only official `GET /api/v4/projects/{URL-encoded full project path}` and requires `visibility=public`, exact full `path_with_namespace`, namespace `full_path` equal to every namespace segment before the project name, and an exact canonical returned `web_url`. It retains only numeric project ID, exact path-with-namespace, public visibility, bounded namespace kind/full path, optional archived state, canonical provenance and `identity_claim=false`. Description/content, topics, popularity counters, owner/person metadata, members/contributors, commits, issues/MRs, releases, branches/tags, pipelines/jobs, packages and contact-like fields are excluded. Provider-specific project keys are absent from the generic lead extractor and regression coverage requires zero emitted leads. Username/public-email requests retain GitLab's provider-documented `humans=true` filter.
 
@@ -133,6 +138,8 @@ Do not publish false-positive/false-negative, probability, calibration or popula
 
 Source expansion is the main engineering stream alongside real M10 evaluation. `docs/SOURCE_ADMISSION_QUEUE.md` records current preflight decisions; source-specific admission records may provide narrower implementation contracts.
 
+GitHub exact profile URLs are active through PR #211. Current GitHub documentation was re-checked on 2026-08-21: `GET /users/{username}` is available unauthenticated for public resources and the unauthenticated REST limit remains 60 requests/hour per originating IP. PersonaLattice keeps one shared 50/hour budget across username seeds, exact profile URLs and exact repository URLs. Profile URL admission is exact/canonical, known root routes fail locally, and only a returned `type == "User"` can enter person-oriented account-candidate evidence. See `docs/source-admissions/GITHUB_EXACT_PROFILE_URL.md`.
+
 GitHub exact repository metadata is active through PR #194. Current primary GitHub documentation was re-checked on 2026-08-21: public repository retrieval is available without authentication, the unauthenticated REST limit is 60 requests/hour per originating IP, and current API terms prohibit abusive limit-circumvention/spam use. PersonaLattice keeps the existing 50/hour shared GitHub budget across username profiles and repositories and adds no new quota pool. Exact repository context is non-recursive and data-minimized; see `docs/source-admissions/GITHUB_EXACT_REPOSITORY.md`.
 
 GitLab exact project metadata is active through PR #196 and subgroup-path support through PR #206. Current primary GitLab documentation was re-checked on 2026-08-21: `GET /projects/:id` is available without authentication for public projects and accepts a URL-encoded full project path; GitLab routing documents nested subgroup/project paths and uses `/-/` to separate project/group action routes. PersonaLattice keeps one shared GitLab runtime budget across username, exact public-email and project traffic. Exact project context is non-recursive and data-minimized. PR #196 exact head `ceb55758867f8ced9294c5f7d5fdc28e89022df0` passed CI run `32469839883`; subgroup extension exact head `2e998de0d8fbf38e61385f651165e2b243a6d734` passed CI run `32487688942` before PR #206 merged as `079e5d70f76b6dd8011bfe8412219e534776e89b`. See `docs/source-admissions/GITLAB_EXACT_PROJECT.md`.
@@ -159,6 +166,8 @@ DBLP is active on `main` via PR #187. Primary DBLP documentation was re-checked 
 
 Companies House is active on `main` via PR #191. Primary documentation was re-checked on 2026-08-21: the exact company-profile endpoint is a read-only public-data path; API-key Basic authentication is documented; public API access is free; the default limit is 600 requests per five minutes; and third-party users remain responsible for data-protection/copyright compliance when reusing public-register information. PersonaLattice intentionally retains no registered-office address, officer/PSC/person data, filings or search results and stays at 30 requests/minute locally. Exact head `820470b173050d75c9bcd98ae974399e58ce33db` passed CI run `32451537243` before PR #191 merged as `079e3dc3c79f2a26fd71e869b671db30e5edb451`.
 
+Codeforces is deferred/non-executable after PR #209. The 2026-08-21 primary-source review confirmed anonymous `user.info` and the documented one-call-per-two-seconds API limit, but current Codeforces Terms prohibit selling, sublicensing or otherwise commercializing Website material and no provider-authored API/data-use exception clearly authorizes this future SaaS use. Do not reactivate or expand Codeforces without materially clearer primary terms.
+
 Bitbucket Cloud exact-repository Issue #197 was closed `not_planned` on 2026-08-21. Atlassian primary documentation establishes the exact repository endpoint and a general anonymous request pool, but the exact operation still documents repository read scopes/authenticated examples without clearly making anonymous public-repository access a supported contract. No credential or third-party-behavior workaround is approved.
 
 VIAF exact authority metadata was re-reviewed on 2026-08-21 and remains deferred rather than admitted. OCLC still lists VIAF as a production API and VIAF data is ODC-BY with canonical numeric URIs, but the primary materials available to us did not establish a narrow exact-record representation plus practical rate/backoff contract strongly enough to justify a new production dependency. VIAF cluster records are also materially richer than PersonaLattice needs. Do not implement VIAF name search, autosuggest, SRU search or a broad cluster parser as a workaround.
@@ -171,6 +180,7 @@ SEC EDGAR exact-CIK submissions review Issue #192 was closed `not_planned`. The 
 
 Current explicit rejections/deferments include:
 
+- Codeforces API execution is deferred pending a provider-authored commercial SaaS data-use basis; historical evidence remains readable.
 - ORCID Public API is not suitable for a future revenue-generating PersonaLattice baseline under its current public API terms.
 - Hacker News public-user metadata is rejected under current Y Combinator commercial-use terms despite a technically attractive free API.
 - Stack Exchange `inname` user search is substring-based and therefore too fuzzy to become generic recursive username evidence; this does not affect the exact Stack Overflow profile-URL source.
@@ -184,7 +194,7 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Keep GitHub username research fail-closed on account type: only `type == "User"` can become a person-oriented account candidate. Keep GitHub and GitLab repository/project URL paths on their existing process-owned provider budgets; do not create parallel quota pools or promote repository/project metadata into person leads.
+1. Keep GitHub username and exact profile-URL research fail-closed on account type: only `type == "User"` can become a person-oriented account candidate. Keep GitHub and GitLab repository/project URL paths on their existing process-owned provider budgets; do not create parallel quota pools or promote repository/project metadata into person leads.
 2. Keep Zenodo exact-record scope narrow and green: canonical record URL only, anonymous singleton metadata, 32 KiB fail-closed ceiling, no files/search/creator expansion/version traversal and zero emitted leads.
 3. Review the next high-value exact ₹0 source from current primary documentation only. Reject sources whose terms, privacy model, operational contract, response shape or matching semantics do not fit the product even if the endpoint is free.
 4. Keep exact-source boundaries green for GitHub, GitLab, Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, Zenodo, ROR, Companies House, DBLP and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
