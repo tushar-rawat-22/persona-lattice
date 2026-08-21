@@ -6,7 +6,8 @@ from uuid import uuid4
 import pytest
 
 from app.intelligence.extractor import extract_observation_leads
-from app.providers import ProviderQuery, ProviderResultValidationError, ProviderValidationError
+from app.providers import ProviderQuery, ProviderValidationError
+from app.providers.errors import ProviderResultValidationError
 from app.providers.github_public import GitHubPublicProfileProvider, github_repository_from_url
 
 
