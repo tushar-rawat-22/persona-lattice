@@ -107,13 +107,17 @@ def bluesky_profile_handle_from_url(value: str) -> str | None:
     """Return the normalized handle from an exact canonical Bluesky profile URL."""
 
     parts = urlsplit(value)
+    try:
+        port = parts.port
+    except ValueError:
+        return None
     if (
         parts.scheme != "https"
         or parts.hostname is None
         or parts.hostname.casefold() != "bsky.app"
         or parts.username is not None
         or parts.password is not None
-        or parts.port is not None
+        or port is not None
         or parts.query
         or parts.fragment
     ):
@@ -122,7 +126,7 @@ def bluesky_profile_handle_from_url(value: str) -> str | None:
     if len(segments) != 2 or segments[0] != "profile":
         return None
     raw_handle = segments[1]
-    if parts.path not in {f"/profile/{raw_handle}", f"/profile/{raw_handle}/"} or "%" in raw_handle:
+    if parts.path != f"/profile/{raw_handle}" or "%" in raw_handle:
         return None
     if raw_handle.startswith("did:"):
         return None
