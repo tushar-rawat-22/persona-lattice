@@ -45,6 +45,7 @@ Current executable sources are:
 - OpenAlex scholarly-profile metadata for exact author URLs when a free server-side key is configured;
 - Wikidata CC0 entity metadata for exact item URLs;
 - Crossref bibliographic metadata for exact DOI resolver URLs;
+- DataCite CC0 DOI metadata as a fallback only after a clean Crossref no-match;
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
 - optional Brave exact public-web search when configured.
 
@@ -59,6 +60,8 @@ OpenAlex runs only when the supplied URL is exactly an `openalex.org/A<id>` auth
 Wikidata runs only for an exact `www.wikidata.org/wiki/Q<id>` item URL. It uses official `wbgetentities` reads and retains only the QID plus bounded English label/description metadata, CC0 attribution and `identity_claim=false`. It does not request structured claims, aliases, sitelinks, external identifiers or linked entities. The optional description remains bounded public descriptive text and is never parsed into identity claims or recursive leads.
 
 Crossref runs only for an exact `https://doi.org/<doi>` URL. It uses the official anonymous singleton `GET /works/{doi}` path, retains the DOI, one bounded title, an optional publication year and up to eight bounded author display names with `identity_claim=false`, and emits no leads. Author names are display context only. Crossref search/list operations, abstracts, author IDs/ORCIDs, affiliations, references, funders and full-text/resource expansion are excluded.
+
+DataCite uses the same exact DOI URL applicability but is not a second parallel DOI query. It runs only when Crossref completes normally with zero observations. A Crossref timeout, rate limit, malformed result or other attempted failure blocks fallback so the original source failure remains visible. DataCite retains only DOI, one bounded title, optional publication year/resource type, up to eight display-only creator names, CC0 attribution and `identity_claim=false`; it performs no search or relation expansion and emits no leads.
 
 RDAP emits no subject leads. Registrant/contact fields are not admitted. Discovered domain clues remain `DISPLAY_ONLY`; only explicit DOMAIN seeds run RDAP.
 
@@ -137,6 +140,16 @@ The source admits only an exact HTTPS DOI resolver URL with a syntactically vali
 Retained evidence is limited to the canonical DOI, one bounded title, a valid publication year when present, up to eight bounded author display names, Crossref attribution and `identity_claim=false`. Author display names are not admitted as leads. Abstracts, ORCID/other author IDs, affiliations, references, funders, subjects, relation/update expansion and full-text/resource links are excluded.
 
 Crossref says almost all deposited bibliographic metadata can be reused for any purpose, while abstracts may remain subject to publisher or author copyright. The source excludes abstracts and does not treat a full provider response as reusable content. PersonaLattice adds a 4-second timeout, 32 KiB adapter response ceiling, one-concurrency budget and 30-request/minute local rate budget. `404` is a completed no-match; `429` preserves `Retry-After`; transient failures are attempted unavailable states; malformed or returned-DOI-mismatch results fail closed.
+
+### DataCite exact DOI fallback
+
+**Active after a clean Crossref no-match.**
+
+DataCite is a fallback for the same explicit `https://doi.org/<doi>` seed, not an additional discovery search. PersonaLattice calls the public singleton `GET /dois/{id}` endpoint without credentials only when Crossref completed successfully with zero observations. If Crossref was unavailable, rate-limited or malformed, DataCite does not run and cannot mask that attempted failure.
+
+Retained DataCite evidence is limited to canonical DOI, one bounded title, valid publication year/resource type when present, up to eight bounded creator display names, `data_license=CC0`, DataCite attribution and `identity_claim=false`. Creator names are display-only and never become pivots. Name identifiers/ORCID, affiliations, descriptions, geolocations, funding, related identifiers, subjects, rights/resource links and usage/activity fields are excluded. The source emits no leads.
+
+The source uses one attempt, a 4-second timeout, 32 KiB adapter ceiling, one-concurrency execution and a local 30-request/minute budget, well below DataCite's current unidentified public tier. `404` is a completed no-match, `429` preserves `Retry-After`, transient network/5xx failures remain attempted unavailable outcomes, and malformed/non-Findable/mismatched records fail closed.
 
 ### Explicit rejections/deferments
 
