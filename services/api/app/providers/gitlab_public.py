@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 import json
+import re
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
@@ -19,6 +20,7 @@ from .registry import PROVIDER_BY_NAME
 
 
 _MAX_RAW_RESPONSE_BYTES = 64 * 1024
+_GITLAB_USERNAME_SLUG = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9]|[._-](?=[A-Za-z0-9])){0,253}[A-Za-z0-9]$")
 _GITLAB_RESERVED_PROFILE_SEGMENTS = frozenset(
     {
         "-",
