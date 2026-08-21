@@ -45,7 +45,7 @@ def test_planned_sources_are_never_returned_by_recursive_execution_query() -> No
         assert all(source.status is not SourceStatus.PLANNED for source in selected)
 
 
-def test_zero_spend_username_plan_excludes_metered_public_search() -> None:
+def test_zero_spend_username_plan_excludes_metered_and_deferred_sources() -> None:
     selected = sources_for_lead(
         LeadKind.USERNAME,
         include_planned=True,
@@ -56,9 +56,14 @@ def test_zero_spend_username_plan_excludes_metered_public_search() -> None:
     assert "sherlock" in names
     assert "github_public_api" in names
     assert "gitlab_public_api" in names
-    assert "codeforces_public_api" in names
+    assert "codeforces_public_api" not in names
     assert "bluesky_public_profile" in names
     assert "brave_public_web_index" not in names
+
+    codeforces = SOURCE_BY_NAME["codeforces_public_api"]
+    assert codeforces.status is SourceStatus.REVIEW_REQUIRED
+    assert codeforces.source_policy_reviewed is False
+    assert codeforces.recursive_eligible is False
 
 
 def test_active_bluesky_capability_matches_minimal_admitted_fields() -> None:

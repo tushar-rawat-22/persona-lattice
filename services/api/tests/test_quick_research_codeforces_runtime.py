@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import pytest
 
+from app.intelligence.source_states import SourceRunReason, SourceRunState
 from app.models import Purpose
-from app.providers import ProviderObservationData, ProviderResult, ProviderRuntime
+from app.providers import ProviderResult
 from app.providers.registry import PROVIDER_BY_NAME
 from app.research import ResearchKind, run_quick_research
-import app.research as research_module
 
 
 class _EmptySherlock:
@@ -26,35 +26,7 @@ async def _no_public_search(_value: str):
 
 
 @pytest.mark.asyncio
-async def test_production_codeforces_path_runs_through_shared_provider_runtime(monkeypatch) -> None:
-    class FakeCodeforcesProvider:
-        descriptor = PROVIDER_BY_NAME["codeforces_public_api"]
-
-        def __init__(self) -> None:
-            self.queries: list[tuple[str, str]] = []
-
-        async def execute(self, query, secret):
-            self.queries.append((query.identifier_kind, query.identifier_value))
-            return ProviderResult(
-                observations=(
-                    ProviderObservationData(
-                        source_locator="https://codeforces.com/profile/CaseHandle",
-                        payload={
-                            "handle": "CaseHandle",
-                            "matched_by": "exact_handle",
-                            "account_candidate": True,
-                            "identity_claim": False,
-                            "field_visibility": "public_profile_api",
-                        },
-                    ),
-                )
-            )
-
-    codeforces_provider = FakeCodeforcesProvider()
-    runtime = ProviderRuntime(adapters=[codeforces_provider])
-    monkeypatch.setattr(research_module, "DEFAULT_CODEFORCES_PROVIDER", codeforces_provider)
-    monkeypatch.setattr(research_module, "DEFAULT_PROVIDER_RUNTIME", runtime)
-
+async def test_production_codeforces_path_is_policy_blocked_without_provider_attempt() -> None:
     report = await run_quick_research(
         kind=ResearchKind.USERNAME,
         value="CaseHandle",
@@ -66,9 +38,12 @@ async def test_production_codeforces_path_runs_through_shared_provider_runtime(m
         public_search_lookup=_no_public_search,
     )
 
-    assert codeforces_provider.queries == [("username", "CaseHandle")]
-    observations = [item for item in report.observations if item.source == "codeforces_public_api"]
-    assert len(observations) == 1
-    assert observations[0].source_locator == "https://codeforces.com/profile/CaseHandle"
-    assert observations[0].details["matched_by"] == "exact_handle"
-    assert observations[0].details["identity_claim"] is False
+    assert [item for item in report.observations if item.source == "codeforces_public_api"] == []
+    codeforces_runs = [
+        item for item in report.source_runs if item.source_name == "codeforces_public_api"
+    ]
+    assert len(codeforces_runs) == 1
+    assert codeforces_runs[0].state is SourceRunState.BLOCKED
+    assert codeforces_runs[0].reason is SourceRunReason.PROVIDER_POLICY
+    assert codeforces_runs[0].execution_attempted is False
+    assert codeforces_runs[0].observation_count == 0

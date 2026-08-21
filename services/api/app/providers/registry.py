@@ -178,11 +178,11 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
     ProviderDescriptor(
         name="codeforces_public_api",
         capability="public_profile_enrichment",
-        status=ProviderStatus.DEVELOPMENT.value,
+        status=ProviderStatus.REVIEW_REQUIRED.value,
         contact_risk=ContactRisk.NONE_KNOWN,
         reason=(
-            "Official anonymous Codeforces user.info endpoint; public profile fields only, "
-            "with exact or historic-handle results retained as account candidates."
+            "Execution deferred on 2026-08-21: current Codeforces Terms prohibit commercializing Website "
+            "material and no provider-authored API carve-out was found for commercial profile-metadata use."
         ),
         version="user.info",
         source_category=SourceCategory.PUBLIC_WEB,

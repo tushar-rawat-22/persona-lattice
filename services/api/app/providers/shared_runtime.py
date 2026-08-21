@@ -24,7 +24,8 @@ from .zenodo_record import ZenodoExactRecordProvider
 
 
 # Production quick-research providers share one process-wide runtime so provider
-# rate/concurrency state cannot fragment across request paths.
+# rate/concurrency state cannot fragment across request paths. Deferred adapters
+# may retain a descriptor object for compatibility, but are not runtime-owned.
 DEFAULT_SHERLOCK_PROVIDER = SherlockProvider()
 DEFAULT_GITHUB_PROVIDER = GitHubPublicProfileProvider()
 DEFAULT_GITLAB_PROVIDER = GitLabPublicProfileProvider()
@@ -49,7 +50,6 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_SHERLOCK_PROVIDER,
         DEFAULT_GITHUB_PROVIDER,
         DEFAULT_GITLAB_PROVIDER,
-        DEFAULT_CODEFORCES_PROVIDER,
         DEFAULT_BLUESKY_PROVIDER,
         DEFAULT_KEYBASE_PROVIDER,
         DEFAULT_DNS_PROVIDER,
