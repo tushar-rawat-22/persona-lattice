@@ -13,6 +13,7 @@ from .base import (
 from .codeforces_public import CodeforcesPublicProfileProvider, fetch_codeforces_public_profile
 from .contracts import ExecutionRequest, QueryOrigin
 from .crossref_work import CrossrefExactWorkProvider, crossref_doi_from_url, fetch_crossref_work
+from .datacite_doi import DataCiteExactDoiProvider, fetch_datacite_doi
 from .errors import (
     ProviderAuthError,
     ProviderExecutionError,
@@ -55,6 +56,7 @@ __all__ = [
     "CodeforcesPublicProfileProvider",
     "ContactRisk",
     "CrossrefExactWorkProvider",
+    "DataCiteExactDoiProvider",
     "ExecutionRequest",
     "GitHubPublicProfileProvider",
     "GitLabPublicProfileProvider",
@@ -94,6 +96,7 @@ __all__ = [
     "crossref_doi_from_url",
     "fetch_codeforces_public_profile",
     "fetch_crossref_work",
+    "fetch_datacite_doi",
     "fetch_github_public_profile",
     "fetch_gitlab_public_profile",
     "fetch_openalex_author",
