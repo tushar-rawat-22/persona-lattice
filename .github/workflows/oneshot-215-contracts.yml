@@ -1,0 +1,34 @@
+name: One-shot Bluesky contract repair
+
+on:
+  push:
+    branches:
+      - source/bluesky-exact-profile-215
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[oneshot-215-contracts]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: source/bluesky-exact-profile-215
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python scripts/oneshot_215_contracts.py
+      - run: rm .github/workflows/oneshot-215-contracts.yml scripts/oneshot_215_contracts.py
+      - shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git status --short
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Update Bluesky username and URL architecture contracts [oneshot-215-contracts]'
+          git push origin HEAD:source/bluesky-exact-profile-215
