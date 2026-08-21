@@ -342,6 +342,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="dblp_exact_person",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=44,
+        note=(
+            "Official DBLP exact person-PID primary-name metadata through public SPARQL; bounded CC0 "
+            "profile context, no name search, bibliography expansion, external IDs or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="crossref_exact_work",
         accepts=frozenset({LeadKind.URL}),
         emits=frozenset(),

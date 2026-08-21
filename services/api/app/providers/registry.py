@@ -336,6 +336,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="dblp_exact_person",
+        capability="public_scholarly_profile_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official DBLP SPARQL lookup only for an exact supplied person PID URL; "
+            "bounded CC0 primary-name metadata with no name search, bibliography expansion or emitted leads."
+        ),
+        version="sparql-primary-creator-name-2026-08",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=32 * 1024,
+        max_concurrency=1,
+        rate_limit=6,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="crossref_exact_work",
         capability="public_bibliographic_metadata",
         status=ProviderStatus.DEVELOPMENT.value,

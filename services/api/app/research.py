@@ -26,6 +26,7 @@ from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.bluesky_admission import BlueskyAdmissionError, normalize_bluesky_handle
 from .providers.contracts import ExecutionRequest
 from .providers.crossref_work import crossref_doi_from_url
+from .providers.dblp_person import dblp_person_pid_from_url
 from .providers.errors import ProviderRateBudgetExceeded
 from .providers.github_public import fetch_github_public_profile
 from .providers.keybase_public import keybase_username_from_seed
@@ -38,6 +39,7 @@ from .providers.shared_runtime import (
     DEFAULT_CODEFORCES_PROVIDER,
     DEFAULT_CROSSREF_PROVIDER,
     DEFAULT_DATACITE_PROVIDER,
+    DEFAULT_DBLP_PROVIDER,
     DEFAULT_DNS_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
@@ -250,6 +252,16 @@ def _ror_observation_from_provider(item: ProviderObservationData) -> QuickObserv
         source="ror_exact_organization",
         source_locator=item.source_locator,
         summary=f"ROR CC0 registry metadata for {ror_id}; exact supplied-organization evidence only.",
+        details=dict(item.payload),
+    )
+
+
+def _dblp_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    pid = str(item.payload.get("dblp_pid", "unknown person"))
+    return QuickObservation(
+        source="dblp_exact_person",
+        source_locator=item.source_locator,
+        summary=f"DBLP CC0 person metadata for {pid}; exact supplied-profile evidence only.",
         details=dict(item.payload),
     )
 
@@ -848,6 +860,33 @@ async def _ror_observations(
         ),
     )
     return [_ror_observation_from_provider(item) for item in result.observations]
+
+
+async def _dblp_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_DBLP_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_dblp_observation_from_provider(item) for item in result.observations]
 
 
 async def _crossref_observations(
@@ -1454,6 +1493,35 @@ async def _research_url(
                 )
             )
         observations.extend(ror_observations)
+
+    if dblp_person_pid_from_url(normalized_value) is not None:
+        try:
+            dblp_observations = await _dblp_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            dblp_observations = []
+            warnings.append("DBLP exact-person metadata was temporarily unavailable.")
+            source_run = _source_run_for_exception(
+                source_name="dblp_exact_person",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="dblp_exact_person",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(dblp_observations),
+                )
+            )
+        observations.extend(dblp_observations)
 
     if crossref_doi_from_url(normalized_value) is not None:
         crossref_completed = False

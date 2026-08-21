@@ -45,6 +45,7 @@ Current executable sources are:
 - OpenAlex scholarly-profile metadata for exact author URLs when a free server-side key is configured;
 - Wikidata CC0 entity metadata for exact item URLs;
 - ROR CC0 organization metadata for exact canonical ROR URLs;
+- DBLP CC0 person metadata for exact canonical person PID URLs;
 - Crossref bibliographic metadata for exact DOI resolver URLs;
 - DataCite CC0 DOI metadata as a fallback only after a clean Crossref no-match;
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
@@ -61,6 +62,8 @@ OpenAlex runs only when the supplied URL is exactly an `openalex.org/A<id>` auth
 Wikidata runs only for an exact `www.wikidata.org/wiki/Q<id>` item URL. It uses official `wbgetentities` reads and retains only the QID plus bounded English label/description metadata, CC0 attribution and `identity_claim=false`. It does not request structured claims, aliases, sitelinks, external identifiers or linked entities. The optional description remains bounded public descriptive text and is never parsed into identity claims or recursive leads.
 
 ROR runs only when the supplied URL is an exact canonical `https://ror.org/<id>` organization identifier. It calls the official credentialless v2 singleton organization endpoint and retains only the canonical ROR ID, one bounded `ror_display` name, active record status, bounded organization types when present, CC0 attribution and `identity_claim=false`. Search, affiliation matching, autocomplete, external-ID expansion, domains, links, aliases, relationships, locations/geocodes and contact-like fields are excluded. Provider-specific retained field names keep the display name out of generic lead extraction, and the source emits no leads.
+
+DBLP runs only when the supplied URL is an exact canonical `https://dblp.org/pid/<pid>` person identifier. It sends one minimal exact-resource query to DBLP's public SPARQL service and retains only the canonical PID URL, one bounded `primaryCreatorName`, CC0 attribution and `identity_claim=false`. It does not use DBLP name search, bibliography exports, publication/coauthor expansion, affiliations, ORCID/external IDs or homepages. The provider-specific name field remains display-only and emits no leads. The source is credentialless and locally capped at one concurrency slot and six requests/minute because DBLP's public SPARQL service is shared beta infrastructure.
 
 Crossref runs only for an exact `https://doi.org/<doi>` URL. It uses the official anonymous singleton `GET /works/{doi}` path, retains the DOI, one bounded title, an optional publication year and up to eight bounded author display names with `identity_claim=false`, and emits no leads. Author names are display context only. Crossref search/list operations, abstracts, author IDs/ORCIDs, affiliations, references, funders and full-text/resource expansion are excluded.
 
@@ -143,6 +146,16 @@ The source admits only an exact canonical HTTPS ROR organization URL. The provid
 Retained evidence is limited to the canonical ROR ID, exactly one bounded `ror_display` name, `active` record status, up to eight bounded organization types when present, CC0 attribution and `identity_claim=false`. External IDs, domains, links, aliases beyond the chosen display name, relationships, locations/addresses/geocodes, search candidates and contact-like fields are excluded. No recursive leads are emitted.
 
 ROR's current documentation announces a future unidentified tier of 50 requests per five minutes. PersonaLattice stays below that with one attempt, one concurrency slot, a 4-second timeout, 32 KiB response ceiling and local eight-request/minute budget. `404` is a completed no-match; `429` preserves `Retry-After`; transient failures remain attempted unavailable outcomes; malformed, non-active or mismatched records fail closed.
+
+### DBLP exact person PID
+
+**Active.**
+
+The source admits only an exact canonical HTTPS DBLP person URL under `/pid/`. DBLP's persistent PIDs are case-sensitive identifiers; PersonaLattice preserves the supplied case and does not infer a PID from a name. The provider sends one minimal SPARQL query constrained to that exact resource and the `dblp:Person` class, returning only the resource plus `dblp:primaryCreatorName`.
+
+Retained evidence is limited to the canonical PID URL, one bounded primary creator name, CC0 attribution and `identity_claim=false`. The source performs no author-name search and does not fetch publication bibliographies, coauthors, affiliations, ORCID/external IDs, homepages or contact-like data. `dblp_primary_name` is provider-specific display context and emits no recursive lead.
+
+The source is credentialless and zero-direct-cost. Because DBLP describes the public SPARQL service as beta and rate-limited against aggressive scripting, PersonaLattice uses one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and a six-request/minute local budget. Empty exact results are no-match; `429` preserves `Retry-After`; transient failures stay attempted unavailable; returned-resource mismatch or non-unique/malformed primary-name results fail closed.
 
 ### Crossref exact work
 
