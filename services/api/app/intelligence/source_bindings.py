@@ -160,6 +160,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="datacite_exact_doi",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="datacite_exact_doi",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact doi.org URLs use DataCite singleton metadata only after Crossref completes with "
+            "an exact no-match; search, relation expansion and creator-name pivots stay outside this source."
+        ),
+    ),
+    SourceBinding(
         source_name="rdap_domain_registry",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="rdap_domain_registry",
