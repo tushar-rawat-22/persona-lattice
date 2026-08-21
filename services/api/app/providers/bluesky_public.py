@@ -5,7 +5,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import json
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from .base import ProviderObservationData, ProviderQuery, ProviderResult
@@ -103,6 +103,38 @@ async def fetch_bluesky_public_profile(handle: str) -> dict[str, object] | None:
     return await asyncio.to_thread(_fetch_bluesky_public_profile_sync, handle)
 
 
+def bluesky_profile_handle_from_url(value: str) -> str | None:
+    """Return the normalized handle from an exact canonical Bluesky profile URL."""
+
+    parts = urlsplit(value)
+    if (
+        parts.scheme != "https"
+        or parts.hostname is None
+        or parts.hostname.casefold() != "bsky.app"
+        or parts.username is not None
+        or parts.password is not None
+        or parts.port is not None
+        or parts.query
+        or parts.fragment
+    ):
+        return None
+    segments = [segment for segment in parts.path.split("/") if segment]
+    if len(segments) != 2 or segments[0] != "profile":
+        return None
+    raw_handle = segments[1]
+    if parts.path not in {f"/profile/{raw_handle}", f"/profile/{raw_handle}/"} or "%" in raw_handle:
+        return None
+    if raw_handle.startswith("did:"):
+        return None
+    try:
+        handle = normalize_bluesky_handle(raw_handle)
+    except BlueskyAdmissionError:
+        return None
+    if raw_handle != handle:
+        return None
+    return handle
+
+
 class BlueskyPublicProfileProvider:
     descriptor = PROVIDER_BY_NAME["bluesky_public_profile"]
 
@@ -112,12 +144,21 @@ class BlueskyPublicProfileProvider:
     async def execute(self, query: ProviderQuery, secret: str | None) -> ProviderResult:
         if secret is not None:
             raise ProviderValidationError("Bluesky public profile lookup does not accept credentials.")
-        if query.identifier_kind != "username":
-            raise ProviderValidationError("Bluesky public profile lookup only accepts reviewed handles.")
-        try:
-            handle = normalize_bluesky_handle(query.identifier_value)
-        except BlueskyAdmissionError as exc:
-            raise ProviderValidationError(str(exc)) from exc
+        if query.identifier_kind == "username":
+            try:
+                handle = normalize_bluesky_handle(query.identifier_value)
+            except BlueskyAdmissionError as exc:
+                raise ProviderValidationError(str(exc)) from exc
+        elif query.identifier_kind == "url":
+            handle = bluesky_profile_handle_from_url(query.identifier_value)
+            if handle is None:
+                raise ProviderValidationError(
+                    "Bluesky URL lookup requires an exact canonical handle profile URL."
+                )
+        else:
+            raise ProviderValidationError(
+                "Bluesky public profile lookup only accepts reviewed handles or exact handle profile URLs."
+            )
 
         payload = await self.fetcher(handle)
         if payload is None:

@@ -243,7 +243,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
     ),
     SourceCapability(
         name="bluesky_public_profile",
-        accepts=frozenset({LeadKind.USERNAME}),
+        accepts=frozenset({LeadKind.USERNAME, LeadKind.URL}),
         emits=frozenset({LeadKind.USERNAME, LeadKind.NAME}),
         status=SourceStatus.ACTIVE,
         mode=SourceMode.PUBLIC_API,
@@ -253,8 +253,8 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         recursive_eligible=True,
         priority=37,
         note=(
-            "Unauthenticated public AppView profile lookup for syntactically valid AT handles only; "
-            "public-web opt-out and unavailable-account states are neutral completed outcomes."
+            "Unauthenticated public AppView profile lookup for valid AT handles or exact canonical "
+            "bsky.app handle profile URLs; public-web opt-out and unavailable-account states are neutral."
         ),
     ),
     SourceCapability(

@@ -95,10 +95,10 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         source_name="bluesky_public_profile",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="bluesky_public_profile",
-        accepts=frozenset({LeadKind.USERNAME}),
+        accepts=frozenset({LeadKind.USERNAME, LeadKind.URL}),
         migration_note=(
-            "Valid AT handles execute through the shared ProviderRuntime; ordinary usernames are "
-            "filtered as not applicable before provider execution."
+            "Valid AT handles and exact canonical bsky.app handle profile URLs execute through one shared "
+            "ProviderRuntime adapter and provider budget; non-applicable values stop before execution."
         ),
     ),
     SourceBinding(
