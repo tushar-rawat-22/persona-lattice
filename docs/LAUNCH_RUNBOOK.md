@@ -62,16 +62,22 @@ Start the API on loopback with one worker:
   --no-proxy-headers
 ```
 
-Build and start the web process with the same loopback API origin:
+Build and start the web process with the same loopback API origin. The rewrite target is resolved when Next.js builds, so keep the origin set for both build and start:
 
 ```bash
 cd apps/web
 npm ci
-npm run build
+PERSONALATTICE_API_ORIGIN='http://127.0.0.1:8000' npm run build
 PERSONALATTICE_API_ORIGIN='http://127.0.0.1:8000' npm run start
 ```
 
-The public HTTPS route should target the web process only. The web application proxies `/api/*` to the loopback API.
+Browser-side admin code is forced to use the same-origin `/api` path. The public HTTPS route should target the web process only; Next.js proxies `/api/*` to the loopback API. Do not publish port 8000 separately.
+
+## HTTPS route
+
+A temporary preview URL is enough for the external smoke test, but it is not automatically a production hostname. If a tunnel provider labels its quick or random-hostname mode as development/testing only, use it only for the smoke and do not describe that URL as the stable beta.
+
+For the live private beta, use a reviewed HTTPS route with a stable hostname and terms that fit the intended commercial product. Record any unavoidable domain or service cost honestly instead of folding it into the zero-spend software baseline.
 
 ## Smoke test from an external browser
 
