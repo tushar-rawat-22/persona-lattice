@@ -167,7 +167,10 @@ def gitlab_profile_username_from_url(value: str) -> str | None:
     username = segments[0]
     if parts.path not in {f"/{username}", f"/{username}/"} or "%" in username:
         return None
-    if username.casefold() in _GITLAB_RESERVED_PROFILE_SEGMENTS:
+    if (
+        _GITLAB_USERNAME_SLUG.fullmatch(username) is None
+        or username.casefold() in _GITLAB_RESERVED_PROFILE_SEGMENTS
+    ):
         return None
     return username
 
