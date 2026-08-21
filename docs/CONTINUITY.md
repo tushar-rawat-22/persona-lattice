@@ -14,7 +14,7 @@ Keybase source activation: PR #177 merged as `611ef00cd14858f5e60e2d32add3ec4cee
 
 Crossref exact-work activation: PR #180 merged as `0d049af3af7f7450d348477bfb2775921cc25b3b`. It provides exact DOI URL admission, credentialless singleton transport, governed catalog/binding/runtime ownership, typed source-run reporting, bounded canonical evidence and source-policy regressions.
 
-DataCite exact-DOI fallback is the current source package in PR #182. It is intentionally subordinate to Crossref: DataCite runs only after Crossref completes normally with zero observations. Crossref attempted failures never fall through to DataCite. The package covers credentialless singleton transport, catalog/binding/DEVELOPMENT registry, process-wide runtime ownership, typed fallback source states, bounded CC0 evidence, regression coverage and current source-policy documentation. Merge only from a final exact head with the required Python 3.11/3.13, web and production-image CI matrix green.
+DataCite exact-DOI fallback activation: PR #182 merged as `e4cb6318bed78f8a72ea15b41db5f55a12a45f9d` after exact head `a7772d0f4bdfaebfb243a66b115f3b4aeeac3b10` passed CI run `32435388198` across Python 3.11/3.13, web and the production API image. DataCite is intentionally subordinate to Crossref: it runs only after Crossref completes normally with zero observations. Crossref attempted failures never fall through to DataCite.
 
 ## Engineering state
 
@@ -113,7 +113,7 @@ Keybase is admitted via PR #177. Primary documentation was re-checked on 2026-08
 
 Crossref is active on `main` via PR #180. Primary documentation was re-checked on 2026-08-21: public API access requires no signup, exact work retrieval is `GET /works/{doi}`, almost all deposited bibliographic metadata is reusable for any purpose, abstracts can remain copyrighted, and anonymous public clients must respect current public limits/backoff. PersonaLattice excludes abstracts and uses only exact DOI singleton reads under a much tighter local budget. No Crossref search/list operation or author-name pivot is authorized.
 
-DataCite is the current source package in PR #182. Primary DataCite documentation was re-checked on 2026-08-21: public singleton DOI retrieval requires no authentication, public API records are Findable DOI metadata, the unidentified public tier is currently 500 requests per five minutes per IP, and deposited metadata is released under CC0 subject to third-party privacy/publicity rights. PersonaLattice is tighter: 30 requests/minute locally, one attempt, one concurrency slot, 4-second timeout, 32 KiB adapter ceiling, no search/list/relation expansion, and fallback execution only after a clean Crossref no-match.
+DataCite is active on `main` via PR #182. Primary DataCite documentation was re-checked on 2026-08-21: public singleton DOI retrieval requires no authentication, public API records are Findable DOI metadata, the unidentified public tier is currently 500 requests per five minutes per IP, and deposited metadata is released under CC0 subject to third-party privacy/publicity rights. PersonaLattice is tighter: 30 requests/minute locally, one attempt, one concurrency slot, 4-second timeout, 32 KiB adapter ceiling, no search/list/relation expansion, and fallback execution only after a clean Crossref no-match.
 
 Current explicit rejections/deferments include:
 
@@ -125,9 +125,9 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Finish PR #182 only after its final exact head passes the full required CI matrix; do not weaken the Crossref-first fallback invariant to increase hit rate.
-2. Keep Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata and Crossref source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
-3. Review the next high-value ₹0 source from primary documentation after #182. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
+1. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
+2. Keep Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata and Crossref/DataCite source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
+3. Review the next high-value ₹0 source from primary documentation. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
 4. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 5. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
 
