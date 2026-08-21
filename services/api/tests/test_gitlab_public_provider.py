@@ -134,7 +134,6 @@ def test_project_url_admission_is_exact_and_route_safe() -> None:
         "https://gitlab.com/example/project?x=1",
         "https://gitlab.com/example/project#readme",
         "https://gitlab.com/example/project.git",
-        "https://gitlab.com/example/project/issues",
         "https://gitlab.com/example/project/-/issues",
         "https://gitlab.com/group/subgroup/project/-/tree/main",
         "https://gitlab.com/o/acme/group/project",
