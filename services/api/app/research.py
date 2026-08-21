@@ -29,7 +29,11 @@ from .providers.contracts import ExecutionRequest
 from .providers.crossref_work import crossref_doi_from_url
 from .providers.dblp_person import dblp_person_pid_from_url
 from .providers.errors import ProviderRateBudgetExceeded
-from .providers.github_public import fetch_github_public_profile, github_repository_from_url
+from .providers.github_public import (
+    fetch_github_public_profile,
+    github_profile_username_from_url,
+    github_repository_from_url,
+)
 from .providers.gitlab_public import gitlab_project_path_from_url
 from .providers.keybase_public import keybase_username_from_seed
 from .providers.openalex_author import openalex_author_id_from_url
@@ -1529,9 +1533,12 @@ async def _research_url(
         )
     observations.extend(wayback_observations)
 
-    if github_repository_from_url(normalized_value) is not None:
+    if (
+        github_profile_username_from_url(normalized_value) is not None
+        or github_repository_from_url(normalized_value) is not None
+    ):
         try:
-            github_repository_observations = await _github_repository_observations(
+            github_url_observations = await _github_repository_observations(
                 normalized_value,
                 subject_id=subject_id,
                 identifier_id=identifier_id,
@@ -1539,8 +1546,8 @@ async def _research_url(
                 consent_acknowledged=consent_acknowledged,
             )
         except Exception as exc:
-            github_repository_observations = []
-            warnings.append("GitHub exact public-repository metadata was temporarily unavailable.")
+            github_url_observations = []
+            warnings.append("GitHub exact public profile/repository metadata was temporarily unavailable.")
             source_run = _source_run_for_exception(
                 source_name="github_public_api",
                 lead_kind=LeadKind.URL,
@@ -1553,10 +1560,10 @@ async def _research_url(
                 source_result_record(
                     source_name="github_public_api",
                     lead_kind=LeadKind.URL,
-                    observation_count=len(github_repository_observations),
+                    observation_count=len(github_url_observations),
                 )
             )
-        observations.extend(github_repository_observations)
+        observations.extend(github_url_observations)
 
     if gitlab_project_path_from_url(normalized_value) is not None:
         try:
