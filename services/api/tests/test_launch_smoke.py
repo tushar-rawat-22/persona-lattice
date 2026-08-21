@@ -4,7 +4,6 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.admin_auth import LOGIN_THROTTLE, SESSION_STORE, hash_admin_password
-from app.audit import AUDIT_STORE
 from app.main import app
 from app.research import QuickResearchReport, ResearchKind
 
@@ -21,7 +20,6 @@ def _configure(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("PERSONALATTICE_CASE_RETENTION_DAYS", "30")
     SESSION_STORE.clear()
     LOGIN_THROTTLE.clear()
-    AUDIT_STORE.clear()
 
 
 def test_one_admin_case_lifecycle_smoke(monkeypatch, tmp_path) -> None:
