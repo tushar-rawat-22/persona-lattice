@@ -35,9 +35,8 @@ This is an engineering freeze, not a claim that PersonaLattice is validated in t
 Current executable sources are:
 
 - reviewed Sherlock username discovery;
-- GitHub public profiles plus exact public repository metadata through one shared provider budget;
+- GitHub public profiles from exact username seeds or exact canonical public profile URLs plus exact public repository metadata through one shared provider budget;
 - GitLab public profiles plus exact subgroup-aware public project metadata through one shared provider budget;
-- Codeforces public profiles;
 - Keybase public account basics for already-canonical Keybase usernames;
 - Bluesky public profiles for valid AT handles;
 - local phone numbering-plan metadata;
@@ -55,7 +54,9 @@ Current executable sources are:
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
 - optional Brave exact public-web search when configured.
 
-GitHub profile and repository lookup share the same process-owned `github_public_api` adapter and the same 50-request/hour local budget. Repository applicability is only an exact `https://github.com/<owner>/<repo>` URL with no credentials, custom port, query, fragment or extra route. The repository path calls only official `GET /repos/{owner}/{repo}` and retains the canonical full name, owner login/type, explicit public-state check and bounded fork/archived flags. It does not retain descriptions, contents, popularity counters, issues, contributors or contact-like fields. Repository-owner login is display-only because owners can be organizations; repository observations emit no leads.
+Codeforces is deferred/non-executable after PR #209. Current Codeforces terms did not establish a defensible commercial SaaS reuse basis for the public profile metadata, so central policy blocks it before provider contact while historical evidence remains readable.
+
+GitHub username, exact profile-URL and repository lookup share the same process-owned `github_public_api` adapter and the same 50-request/hour local budget. Exact profile URL applicability requires canonical `https://github.com/<login>` with one non-empty path segment, no credentials, custom port, query or fragment, and no known reserved GitHub root route. Profile URLs reuse official `GET /users/{username}`; exact login consistency, `type=User` and a canonical returned `html_url` remain mandatory. Repository applicability is only an exact `https://github.com/<owner>/<repo>` URL with no credentials, custom port, query, fragment or extra route. The repository path calls only official `GET /repos/{owner}/{repo}` and retains the canonical full name, owner login/type, explicit public-state check and bounded fork/archived flags. It does not retain descriptions, contents, popularity counters, issues, contributors or contact-like fields. Repository-owner login is display-only because owners can be organizations; repository observations emit no leads.
 
 GitLab username, exact public-email and exact public-project lookup share the same process-owned `gitlab_public_api` adapter and the same 20-request/minute local budget. Project applicability accepts exact canonical `https://gitlab.com/<namespace...>/<project>` paths with at least two non-empty segments. Local admission rejects credentials, custom ports, query/fragment, `.git`, empty or malformed `.`/`-` segments, organization-scoped `/o/...` routes and GitLab `/-/` action routes. The provider calls only official `GET /api/v4/projects/{URL-encoded full project path}` and requires `visibility=public`, exact full `path_with_namespace`, namespace `full_path` matching every namespace segment before the project name, and an exact canonical returned `web_url`. Retained project fields remain provider-specific display context and emit no leads. Username/public-email requests retain GitLab's documented `humans=true` filter.
 
@@ -233,6 +234,7 @@ The source uses one attempt, a 4-second timeout, 32 KiB adapter ceiling, one-con
 
 ### Explicit rejections/deferments
 
+- **Codeforces API:** deferred/non-executable after PR #209 because current primary terms do not provide a defensible commercial SaaS reuse basis for the profile metadata. Historical retained evidence remains readable; reactivation requires materially clearer Codeforces-authored terms.
 - **ORCID Public API:** rejected for the product baseline because the current Public API terms prohibit use in connection with a revenue-generating product or service. A free endpoint with incompatible commercial terms is not a PersonaLattice source.
 - **Hacker News public user API:** rejected under current Y Combinator commercial-use terms. Its technical API fit does not override the product/legal boundary.
 - **Stack Exchange generic user search:** rejected as a generic username source because `inname` is substring matching, not identity-quality exact matching. The exact Stack Overflow profile-URL path above is a separate, deterministic applicability rule.
