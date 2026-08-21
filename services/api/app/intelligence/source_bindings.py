@@ -92,13 +92,6 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
-        source_name="codeforces_public_api",
-        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
-        provider_name="codeforces_public_api",
-        accepts=frozenset({LeadKind.USERNAME}),
-        migration_note="Public user.info lookup executes through the shared ProviderRuntime.",
-    ),
-    SourceBinding(
         source_name="bluesky_public_profile",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="bluesky_public_profile",
