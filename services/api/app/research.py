@@ -34,7 +34,10 @@ from .providers.github_public import (
     github_profile_username_from_url,
     github_repository_from_url,
 )
-from .providers.gitlab_public import gitlab_project_path_from_url
+from .providers.gitlab_public import (
+    gitlab_profile_username_from_url,
+    gitlab_project_path_from_url,
+)
 from .providers.keybase_public import keybase_username_from_seed
 from .providers.openalex_author import openalex_author_id_from_url
 from .providers.ror_organization import ror_id_from_url
@@ -667,7 +670,7 @@ async def _gitlab_observations(
     return [_gitlab_observation_from_provider(item) for item in result.observations]
 
 
-async def _gitlab_project_observations(
+async def _gitlab_url_observations(
     normalized_value: str,
     *,
     subject_id,
@@ -1565,9 +1568,12 @@ async def _research_url(
             )
         observations.extend(github_url_observations)
 
-    if gitlab_project_path_from_url(normalized_value) is not None:
+    if (
+        gitlab_profile_username_from_url(normalized_value) is not None
+        or gitlab_project_path_from_url(normalized_value) is not None
+    ):
         try:
-            gitlab_project_observations = await _gitlab_project_observations(
+            gitlab_url_observations = await _gitlab_url_observations(
                 normalized_value,
                 subject_id=subject_id,
                 identifier_id=identifier_id,
@@ -1575,8 +1581,8 @@ async def _research_url(
                 consent_acknowledged=consent_acknowledged,
             )
         except Exception as exc:
-            gitlab_project_observations = []
-            warnings.append("GitLab exact public-project metadata was temporarily unavailable.")
+            gitlab_url_observations = []
+            warnings.append("GitLab exact public profile/project metadata was temporarily unavailable.")
             source_run = _source_run_for_exception(
                 source_name="gitlab_public_api",
                 lead_kind=LeadKind.URL,
@@ -1589,10 +1595,10 @@ async def _research_url(
                 source_result_record(
                     source_name="gitlab_public_api",
                     lead_kind=LeadKind.URL,
-                    observation_count=len(gitlab_project_observations),
+                    observation_count=len(gitlab_url_observations),
                 )
             )
-        observations.extend(gitlab_project_observations)
+        observations.extend(gitlab_url_observations)
 
     if stack_overflow_user_id_from_url(normalized_value) is not None:
         try:
