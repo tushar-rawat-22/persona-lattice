@@ -316,6 +316,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="ror_exact_organization",
+        capability="public_organization_registry_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official ROR singleton organization lookup only for an exact canonical ROR URL; "
+            "bounded CC0 registry metadata with no search, affiliation matching or emitted leads."
+        ),
+        version="api-v2-single-organization-2026-08",
+        source_category=SourceCategory.REGISTRY,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=32 * 1024,
+        max_concurrency=1,
+        rate_limit=8,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="crossref_exact_work",
         capability="public_bibliographic_metadata",
         status=ProviderStatus.DEVELOPMENT.value,
