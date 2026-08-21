@@ -36,7 +36,8 @@ Current executable sources are:
 
 - reviewed Sherlock username discovery;
 - GitHub public profiles plus exact public repository metadata through one shared provider budget;
-- GitLab and Codeforces public profiles;
+- GitLab public profiles plus exact two-segment public project metadata through one shared provider budget;
+- Codeforces public profiles;
 - Keybase public account basics for already-canonical Keybase usernames;
 - Bluesky public profiles for valid AT handles;
 - local phone numbering-plan metadata;
@@ -54,6 +55,8 @@ Current executable sources are:
 - optional Brave exact public-web search when configured.
 
 GitHub profile and repository lookup share the same process-owned `github_public_api` adapter and the same 50-request/hour local budget. Repository applicability is only an exact `https://github.com/<owner>/<repo>` URL with no credentials, custom port, query, fragment or extra route. The repository path calls only official `GET /repos/{owner}/{repo}` and retains the canonical full name, owner login/type, explicit public-state check and bounded fork/archived flags. It does not retain descriptions, contents, popularity counters, issues, contributors or contact-like fields. Repository-owner login is display-only because owners can be organizations; repository observations emit no leads.
+
+GitLab username, exact public-email and exact public-project lookup share the same process-owned `gitlab_public_api` adapter and the same 20-request/minute local budget. Project applicability is deliberately limited to `https://gitlab.com/<namespace>/<project>` with exactly two path segments and no credentials, custom port, query, fragment, `.git` coercion or extra route. The provider calls only official `GET /api/v4/projects/{URL-encoded namespace/project}` and requires an explicitly public, path-consistent response. Retained project fields are provider-specific display context and emit no leads. Subgroup projects remain inapplicable until nested namespace paths can be distinguished from project routes without guessing.
 
 Keybase runs only when the normalized username is already valid in Keybase's public namespace: 2-16 lowercase alphanumeric/underscore characters with an alphanumeric first character. The adapter requests only the API `basics` object and retains username, public UID, account creation timestamp and canonical profile provenance. It does not request profile text, proofs, external identities, public keys, cryptocurrency addresses or contact-like material. It emits no leads; a same-handle result remains an account candidate rather than an identity claim.
 
@@ -104,6 +107,16 @@ Only an exact canonical `https://github.com/<owner>/<repo>` URL is applicable. U
 The repository adapter calls only official `GET /repos/{owner}/{repo}`. It requires the response to be explicitly public and to match the requested full name, owner and canonical locator. Retained evidence is limited to repository full name, owner login, bounded owner type, explicit `private=false`, optional fork/archived booleans, canonical repository URL and `identity_claim=false`. Search, contents, contributors, commits, issues, releases, popularity counters and contact-like fields are outside the source. Repository fields emit no leads.
 
 The detailed admission record is `docs/source-admissions/GITHUB_EXACT_REPOSITORY.md`.
+
+### GitLab exact public project
+
+**Active through the existing GitLab provider.**
+
+Only an exact `https://gitlab.com/<namespace>/<project>` URL with exactly two non-empty path segments is applicable in the first version. Username, exact public-email and project lookup share one provider descriptor, one process-owned adapter and the same 20-request/minute local budget. Subgroup project paths are intentionally excluded until nested namespaces can be admitted without route ambiguity.
+
+The project adapter calls only official unauthenticated `GET /api/v4/projects/{URL-encoded namespace/project}`. It requires `visibility=public`, exact path/namespace agreement and a canonical GitLab `web_url`. Retained evidence is limited to numeric project ID, exact project path, public visibility, bounded namespace kind/full path, optional archived flag, canonical locator and `identity_claim=false`. Search, repository contents, owner/member enumeration, contributors, commits, issues/MRs, releases, branches/tags, pipelines/jobs, packages, popularity counters and contact-like fields are outside the source. Project fields emit no leads.
+
+The detailed admission record is `docs/source-admissions/GITLAB_EXACT_PROJECT.md`.
 
 ### Keybase public account basics
 

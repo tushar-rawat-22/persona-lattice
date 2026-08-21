@@ -83,15 +83,21 @@ def test_github_governed_binding_shares_one_provider_for_username_and_exact_repo
     assert descriptor.rate_window_seconds == 3600.0
 
 
-def test_gitlab_governed_binding_supports_username_and_exact_public_email() -> None:
+def test_gitlab_governed_binding_shares_one_provider_for_profiles_email_and_project_urls() -> None:
     descriptor = PROVIDER_BY_NAME["gitlab_public_api"]
-    for kind in (LeadKind.USERNAME, LeadKind.EMAIL):
+    for kind in (LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.URL):
         binding = source_binding_for("gitlab_public_api", kind=kind)
         assert binding.backend is SourceExecutionBackend.M3_GOVERNED_ADAPTER
         assert binding.provider_name == "gitlab_public_api"
     assert descriptor.status == ProviderStatus.DEVELOPMENT.value
     assert descriptor.contact_risk is ContactRisk.NONE_KNOWN
-    assert descriptor.supported_identifier_kinds == frozenset({"username", "email"})
+    assert descriptor.supported_identifier_kinds == frozenset({"username", "email", "url"})
+    assert descriptor.max_attempts == 1
+    assert descriptor.timeout_seconds == 4.0
+    assert descriptor.max_response_bytes == 64 * 1024
+    assert descriptor.max_concurrency == 2
+    assert descriptor.rate_limit == 20
+    assert descriptor.rate_window_seconds == 60.0
 
 
 def test_public_dns_is_governed_for_url_only_and_never_domain_seed_today() -> None:

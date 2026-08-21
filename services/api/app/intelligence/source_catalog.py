@@ -202,7 +202,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
     ),
     SourceCapability(
         name="gitlab_public_api",
-        accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL}),
+        accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.URL}),
         emits=frozenset(
             {
                 LeadKind.USERNAME,
@@ -220,7 +220,10 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         source_policy_reviewed=True,
         recursive_eligible=True,
         priority=30,
-        note="Username and exact public-email lookup paths only.",
+        note=(
+            "Username and exact public-email profile lookup plus exact two-segment public project URLs "
+            "through one shared GitLab budget; project observations emit no leads."
+        ),
     ),
     SourceCapability(
         name="codeforces_public_api",

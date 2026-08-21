@@ -5,7 +5,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import json
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from .base import ProviderObservationData, ProviderQuery, ProviderResult
@@ -54,6 +54,29 @@ def _retry_after(exc: HTTPError) -> float | None:
     return value if value >= 0 else None
 
 
+def _read_json_response(request: Request, *, context: str) -> object:
+    try:
+        with urlopen(request, timeout=4.0) as response:
+            raw = response.read(_MAX_RAW_RESPONSE_BYTES + 1)
+    except HTTPError as exc:
+        if exc.code == 404:
+            return None
+        if exc.code == 429:
+            raise ProviderRemoteRateLimitError(retry_after=_retry_after(exc)) from exc
+        if exc.code in {408, 500, 502, 503, 504}:
+            raise ProviderTransientError(f"GitLab {context} endpoint was unavailable.") from exc
+        raise ProviderExecutionError(f"GitLab {context} request failed.") from exc
+    except (URLError, TimeoutError) as exc:
+        raise ProviderTransientError(f"GitLab {context} request failed.") from exc
+
+    if len(raw) > _MAX_RAW_RESPONSE_BYTES:
+        raise ProviderValidationError(f"GitLab {context} response exceeded the adapter limit.")
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ProviderValidationError(f"GitLab {context} returned invalid JSON.") from exc
+
+
 def _fetch_gitlab_public_profile_sync(kind: str, value: str) -> dict[str, object] | None:
     parameter = "username" if kind == "username" else "public_email"
     query = urlencode({parameter: value})
@@ -65,26 +88,9 @@ def _fetch_gitlab_public_profile_sync(kind: str, value: str) -> dict[str, object
         },
         method="GET",
     )
-    try:
-        with urlopen(request, timeout=4.0) as response:
-            raw = response.read(_MAX_RAW_RESPONSE_BYTES + 1)
-    except HTTPError as exc:
-        if exc.code == 404:
-            return None
-        if exc.code == 429:
-            raise ProviderRemoteRateLimitError(retry_after=_retry_after(exc)) from exc
-        if exc.code in {408, 500, 502, 503, 504}:
-            raise ProviderTransientError("GitLab public profile endpoint was unavailable.") from exc
-        raise ProviderExecutionError("GitLab public profile request failed.") from exc
-    except (URLError, TimeoutError) as exc:
-        raise ProviderTransientError("GitLab public profile request failed.") from exc
-
-    if len(raw) > _MAX_RAW_RESPONSE_BYTES:
-        raise ProviderValidationError("GitLab public profile response exceeded the adapter limit.")
-    try:
-        payload = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ProviderValidationError("GitLab public profile returned invalid JSON.") from exc
+    payload = _read_json_response(request, context="public profile")
+    if payload is None:
+        return None
     if not isinstance(payload, list):
         raise ProviderValidationError("GitLab public profile returned an invalid response shape.")
 
@@ -97,7 +103,59 @@ def _fetch_gitlab_public_profile_sync(kind: str, value: str) -> dict[str, object
     return None
 
 
+def gitlab_project_path_from_url(value: str) -> str | None:
+    parts = urlsplit(value)
+    if (
+        parts.scheme != "https"
+        or parts.hostname is None
+        or parts.hostname.casefold() != "gitlab.com"
+        or parts.username is not None
+        or parts.password is not None
+        or parts.port is not None
+        or parts.query
+        or parts.fragment
+    ):
+        return None
+    segments = [segment for segment in parts.path.split("/") if segment]
+    if len(segments) != 2:
+        return None
+    namespace, project = segments
+    if project.casefold().endswith(".git"):
+        return None
+    if namespace in {"-", "."} or project in {"-", "."}:
+        return None
+    return f"{namespace}/{project}"
+
+
+def _fetch_gitlab_public_project_sync(value: str) -> dict[str, object] | None:
+    project_path = gitlab_project_path_from_url(value)
+    if project_path is None:
+        raise ProviderValidationError("GitLab project lookup requires an exact public project URL.")
+    encoded = quote(project_path, safe="")
+    request = Request(
+        f"https://gitlab.com/api/v4/projects/{encoded}",
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "PersonaLattice/0.0.1 public-project-research",
+        },
+        method="GET",
+    )
+    payload = _read_json_response(request, context="public project")
+    if payload is None:
+        return None
+    if not isinstance(payload, dict):
+        raise ProviderValidationError("GitLab public project returned an invalid response shape.")
+    return payload
+
+
+async def fetch_gitlab_public(kind: str, value: str) -> dict[str, object] | None:
+    if kind == "url":
+        return await asyncio.to_thread(_fetch_gitlab_public_project_sync, value)
+    return await asyncio.to_thread(_fetch_gitlab_public_profile_sync, kind, value)
+
+
 async def fetch_gitlab_public_profile(kind: str, value: str) -> dict[str, object] | None:
+    """Compatibility helper for existing username/public-email callers."""
     return await asyncio.to_thread(_fetch_gitlab_public_profile_sync, kind, value)
 
 
@@ -111,6 +169,7 @@ def _validated_profile_url(value: object, *, username: str) -> str:
         or parts.hostname.casefold() != "gitlab.com"
         or parts.username is not None
         or parts.password is not None
+        or parts.port is not None
         or parts.query
         or parts.fragment
         or parts.path.rstrip("/").casefold() != f"/{username}".casefold()
@@ -119,17 +178,91 @@ def _validated_profile_url(value: object, *, username: str) -> str:
     return value
 
 
+def _validated_project_url(value: object, *, project_path: str) -> str:
+    if not isinstance(value, str):
+        raise ProviderValidationError("GitLab public project is missing web_url.")
+    parts = urlsplit(value)
+    returned_path = gitlab_project_path_from_url(value)
+    if (
+        parts.path.rstrip("/").casefold() != f"/{project_path}".casefold()
+        or returned_path is None
+        or returned_path.casefold() != project_path.casefold()
+    ):
+        raise ProviderValidationError("GitLab public project returned an invalid canonical project URL.")
+    return value
+
+
+def _project_observation(payload: dict[str, object], *, requested_path: str) -> ProviderResult:
+    project_id = payload.get("id")
+    if not isinstance(project_id, int) or isinstance(project_id, bool) or project_id <= 0:
+        raise ProviderValidationError("GitLab public project is missing a valid numeric project ID.")
+
+    path_with_namespace = payload.get("path_with_namespace")
+    if not isinstance(path_with_namespace, str) or not path_with_namespace:
+        raise ProviderValidationError("GitLab public project is missing path_with_namespace.")
+    if path_with_namespace.casefold() != requested_path.casefold():
+        raise ProviderValidationError("GitLab public project path does not match the request.")
+
+    visibility = payload.get("visibility")
+    if visibility != "public":
+        raise ProviderValidationError("GitLab project lookup returned a non-public project.")
+
+    namespace = payload.get("namespace")
+    if not isinstance(namespace, dict):
+        raise ProviderValidationError("GitLab public project is missing namespace metadata.")
+    namespace_kind = namespace.get("kind")
+    namespace_full_path = namespace.get("full_path")
+    if namespace_kind not in {"user", "group"}:
+        raise ProviderValidationError("GitLab public project returned an invalid namespace kind.")
+    if not isinstance(namespace_full_path, str) or not namespace_full_path:
+        raise ProviderValidationError("GitLab public project returned an invalid namespace path.")
+    requested_namespace = requested_path.split("/", 1)[0]
+    if namespace_full_path.casefold() != requested_namespace.casefold():
+        raise ProviderValidationError("GitLab public project namespace does not match the request.")
+
+    source_locator = _validated_project_url(payload.get("web_url"), project_path=path_with_namespace)
+    archived = payload.get("archived")
+    if archived is not None and not isinstance(archived, bool):
+        raise ProviderValidationError("GitLab public project returned an invalid archived flag.")
+
+    details: dict[str, object] = {
+        "gitlab_project_id": project_id,
+        "gitlab_project_path_with_namespace": path_with_namespace,
+        "gitlab_project_visibility": visibility,
+        "gitlab_project_namespace_kind": namespace_kind,
+        "gitlab_project_namespace_full_path": namespace_full_path,
+        "gitlab_project_archived": archived,
+        "identity_claim": False,
+        "field_visibility": "public_project_api",
+        "matched_by": "exact_project_url",
+    }
+    return ProviderResult(
+        observations=(ProviderObservationData(source_locator=source_locator, payload=details),)
+    )
+
+
 class GitLabPublicProfileProvider:
     descriptor = PROVIDER_BY_NAME["gitlab_public_api"]
 
-    def __init__(self, *, fetcher: GitLabFetch = fetch_gitlab_public_profile) -> None:
+    def __init__(self, *, fetcher: GitLabFetch = fetch_gitlab_public) -> None:
         self.fetcher = fetcher
 
     async def execute(self, query: ProviderQuery, secret: str | None) -> ProviderResult:
         if secret is not None:
-            raise ProviderValidationError("GitLab public profile lookup does not accept credentials.")
-        if query.identifier_kind not in {"username", "email"}:
-            raise ProviderValidationError("GitLab public profile lookup accepts usernames or public emails only.")
+            raise ProviderValidationError("GitLab public lookup does not accept credentials.")
+        if query.identifier_kind not in {"username", "email", "url"}:
+            raise ProviderValidationError(
+                "GitLab public lookup accepts usernames, public emails, or exact project URLs only."
+            )
+
+        if query.identifier_kind == "url":
+            project_path = gitlab_project_path_from_url(query.identifier_value)
+            if project_path is None:
+                raise ProviderValidationError("GitLab project lookup requires an exact public project URL.")
+            payload = await self.fetcher(query.identifier_kind, query.identifier_value)
+            if payload is None:
+                return ProviderResult(observations=())
+            return _project_observation(payload, requested_path=project_path)
 
         payload = await self.fetcher(query.identifier_kind, query.identifier_value)
         if payload is None:

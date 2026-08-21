@@ -30,6 +30,7 @@ from .providers.crossref_work import crossref_doi_from_url
 from .providers.dblp_person import dblp_person_pid_from_url
 from .providers.errors import ProviderRateBudgetExceeded
 from .providers.github_public import fetch_github_public_profile, github_repository_from_url
+from .providers.gitlab_public import gitlab_project_path_from_url
 from .providers.keybase_public import keybase_username_from_seed
 from .providers.openalex_author import openalex_author_id_from_url
 from .providers.ror_organization import ror_id_from_url
@@ -168,6 +169,14 @@ def _keybase_observation_from_provider(item: ProviderObservationData) -> QuickOb
 
 
 def _gitlab_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    project_path = item.payload.get("gitlab_project_path_with_namespace")
+    if isinstance(project_path, str):
+        return QuickObservation(
+            source="gitlab_public_api",
+            source_locator=item.source_locator,
+            summary=f"GitLab public project metadata for {project_path}; project context only.",
+            details=dict(item.payload),
+        )
     matched_by = str(item.payload.get("matched_by", "public_profile"))
     return QuickObservation(
         source="gitlab_public_api",
@@ -636,6 +645,33 @@ async def _gitlab_observations(
             subject_id=subject_id,
             identifier_id=identifier_id,
             identifier_kind=identifier_kind.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_gitlab_observation_from_provider(item) for item in result.observations]
+
+
+async def _gitlab_project_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_GITLAB_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
             identifier_value=normalized_value,
         ),
     )
@@ -1482,6 +1518,35 @@ async def _research_url(
                 )
             )
         observations.extend(github_repository_observations)
+
+    if gitlab_project_path_from_url(normalized_value) is not None:
+        try:
+            gitlab_project_observations = await _gitlab_project_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            gitlab_project_observations = []
+            warnings.append("GitLab exact public-project metadata was temporarily unavailable.")
+            source_run = _source_run_for_exception(
+                source_name="gitlab_public_api",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="gitlab_public_api",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(gitlab_project_observations),
+                )
+            )
+        observations.extend(gitlab_project_observations)
 
     if stack_overflow_user_id_from_url(normalized_value) is not None:
         try:

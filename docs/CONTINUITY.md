@@ -22,7 +22,9 @@ DBLP exact-person activation: PR #187 merged as `905f9fc8915487a002e54a81e3d23b4
 
 Companies House exact-company activation: PR #191 merged as `079e3dc3c79f2a26fd71e869b671db30e5edb451` after exact head `820470b173050d75c9bcd98ae974399e58ce33db` passed CI run `32451537243`. The package admits only explicit canonical public company URLs, uses the exact company-profile endpoint with a free server-side API key, keeps the credential out of URLs/evidence, retains a narrow non-person company record, emits no leads and excludes officer/PSC/address/filing/search expansion.
 
-The next GitHub source extension is deliberately not a second provider. Exact public repository URLs are routed through the existing `github_public_api` descriptor, process-owned adapter and 50-request/hour local budget. Repository observations retain only bounded public repository identity/state metadata and emit no leads; owner login is display-only because repository owners can be organizations.
+GitHub exact-repository activation: PR #194 merged as `88133c33d73aaf78344b497e4033966684e5b499` after exact head `d786b1d992a4076827554753865b9f904595c1ac` passed CI run `32464826173`. Exact public repository URLs use the existing `github_public_api` descriptor, process-owned adapter and 50-request/hour local budget. Repository observations retain only bounded public repository identity/state metadata and emit no leads; owner login is display-only because repository owners can be organizations.
+
+GitLab exact-project support extends the existing `gitlab_public_api` source rather than adding a provider. It admits only exact two-segment `https://gitlab.com/<namespace>/<project>` URLs, uses official unauthenticated exact-project retrieval, shares the existing process-owned GitLab adapter and 20-request/minute budget with username/public-email traffic, retains bounded public project/namespace state metadata and emits no leads. Subgroup projects remain intentionally inapplicable until nested namespace paths can be distinguished from GitLab project routes without guessing.
 
 ## Engineering state
 
@@ -62,7 +64,7 @@ Required/zero-spend baseline:
 - libphonenumber metadata;
 - reviewed Sherlock account discovery;
 - GitHub public profile API plus exact public repository metadata through one shared provider budget;
-- GitLab public profile API;
+- GitLab public profile API plus exact two-segment public project metadata through one shared provider budget;
 - Codeforces `user.info`;
 - Bluesky public AppView profile lookup for valid AT handles;
 - Keybase public account basics for canonical Keybase usernames;
@@ -83,6 +85,8 @@ Optional:
 - Brave exact public-web search when configured. It is metered and must never become a required dependency.
 
 GitHub username and repository lookups share one `github_public_api` runtime owner and one 50-request/hour local budget. Exact repository applicability requires a canonical `https://github.com/<owner>/<repo>` URL with no credentials, custom port, query, fragment or extra route. The repository path uses only official `GET /repos/{owner}/{repo}` and retains repository full name, owner login/type, explicit public-state verification and optional fork/archived booleans plus canonical provenance. Description/content, popularity counters, contributors, commits, issues, releases and contact-like fields are excluded. `github_repository_owner_login` is display-only and repository observations emit no leads.
+
+GitLab username, exact-public-email and project lookups share one `gitlab_public_api` runtime owner and one 20-request/minute local budget. Exact project applicability requires `https://gitlab.com/<namespace>/<project>` with exactly two non-empty path segments and no credentials, custom port, query, fragment, `.git` suffix or extra route. The project path calls only official `GET /api/v4/projects/{URL-encoded namespace/project}` and requires an explicitly public, path-consistent response. It retains only numeric project ID, exact path-with-namespace, public visibility, bounded namespace kind/full path, optional archived state, canonical provenance and `identity_claim=false`. Description/content, topics, popularity counters, owner/person metadata, members/contributors, commits, issues/MRs, releases, branches/tags, pipelines/jobs, packages and contact-like fields are excluded. Provider-specific project keys are absent from the generic lead extractor and regression coverage requires zero emitted leads. Subgroup paths are deliberately rejected in the first version.
 
 Keybase is exact-username account metadata only. Applicability requires an already-canonical Keybase username: 2-16 lowercase alphanumeric/underscore characters with an alphanumeric first character. The source requests only the official API `basics` object and retains exact username, public UID, account creation timestamp, `account_candidate=true`, `identity_claim=false` and canonical `https://keybase.io/<username>` provenance. Profile text/full name, proofs, linked external identities, public keys, cryptocurrency addresses and contact-like data are not requested or admitted. It emits no leads. Noncanonical usernames skip Keybase before provider execution.
 
@@ -122,7 +126,9 @@ Do not publish false-positive/false-negative, probability, calibration or popula
 
 Source expansion is the main engineering stream alongside real M10 evaluation. `docs/SOURCE_ADMISSION_QUEUE.md` records current preflight decisions; source-specific admission records may provide narrower implementation contracts.
 
-GitHub exact repository metadata extends the existing source rather than adding a provider. Current primary GitHub documentation was re-checked on 2026-08-21: public repository retrieval is available without authentication, the unauthenticated REST limit is 60 requests/hour per originating IP, and current API terms prohibit abusive limit-circumvention/spam use. PersonaLattice keeps the existing 50/hour shared GitHub budget across username profiles and repositories and adds no new quota pool. Exact repository context is non-recursive and data-minimized; see `docs/source-admissions/GITHUB_EXACT_REPOSITORY.md`.
+GitHub exact repository metadata is active through PR #194. Current primary GitHub documentation was re-checked on 2026-08-21: public repository retrieval is available without authentication, the unauthenticated REST limit is 60 requests/hour per originating IP, and current API terms prohibit abusive limit-circumvention/spam use. PersonaLattice keeps the existing 50/hour shared GitHub budget across username profiles and repositories and adds no new quota pool. Exact repository context is non-recursive and data-minimized; see `docs/source-admissions/GITHUB_EXACT_REPOSITORY.md`.
+
+GitLab exact project metadata extends the existing GitLab provider. Current primary GitLab documentation was re-checked on 2026-08-21: `GET /projects/:id` is available without authentication for public projects and accepts a URL-encoded project path; documented GitLab.com unauthenticated/public-project limits are materially above PersonaLattice's existing 20/minute local budget. PersonaLattice keeps one shared GitLab runtime budget across username, exact public-email and project traffic. Exact project context is non-recursive and data-minimized; see `docs/source-admissions/GITLAB_EXACT_PROJECT.md`.
 
 Wayback was the first post-freeze source admission. Its contract is exact-URL historical availability metadata only. Treat zero capture as a valid no-match, `429` as a remote rate limit, malformed provider output as a post-attempt validation failure, and transient provider/network failure as unavailable. The source emits no recursive candidates.
 
@@ -166,9 +172,9 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Finish exact GitHub repository URL support through the existing `github_public_api` runtime owner, preserving the single shared 50/hour budget, zero-lead repository contract and username behavior. Merge only after the exact PR head passes the full required CI matrix.
-2. After that package, review the next high-value exact ₹0 source from current primary documentation only. Reject sources whose terms, privacy model, operational contract, response shape or matching semantics do not fit the product even if the endpoint is free.
-3. Keep exact-source boundaries green for GitHub, Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR, Companies House, DBLP and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
+1. Keep the GitHub and GitLab exact repository/project URL paths on their existing process-owned provider budgets; do not create parallel quota pools or promote repository/project metadata into person leads.
+2. Review the next high-value exact ₹0 source from current primary documentation only. Reject sources whose terms, privacy model, operational contract, response shape or matching semantics do not fit the product even if the endpoint is free.
+3. Keep exact-source boundaries green for GitHub, GitLab, Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR, Companies House, DBLP and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
 4. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
 5. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 6. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.

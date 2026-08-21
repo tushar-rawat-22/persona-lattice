@@ -90,7 +90,7 @@ def test_gitlab_public_api_keeps_the_existing_conservative_local_budget() -> Non
     descriptor = PROVIDER_BY_NAME["gitlab_public_api"]
     assert descriptor.rate_window_seconds == 60.0
     assert descriptor.rate_limit == 20
-    assert descriptor.supported_identifier_kinds == frozenset({"username", "email"})
+    assert descriptor.supported_identifier_kinds == frozenset({"username", "email", "url"})
 
 
 def test_codeforces_budget_matches_documented_minimum_request_interval() -> None:

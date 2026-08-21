@@ -85,8 +85,11 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         source_name="gitlab_public_api",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="gitlab_public_api",
-        accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL}),
-        migration_note="Username and exact public-email lookups execute through ProviderRuntime.",
+        accepts=frozenset({LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.URL}),
+        migration_note=(
+            "Username, exact public-email and exact public project URL lookups share one process-owned "
+            "ProviderRuntime adapter and one GitLab provider budget."
+        ),
     ),
     SourceBinding(
         source_name="codeforces_public_api",
