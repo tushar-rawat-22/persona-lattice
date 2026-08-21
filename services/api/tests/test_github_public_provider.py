@@ -8,7 +8,11 @@ import pytest
 from app.intelligence.extractor import extract_observation_leads
 from app.providers import ProviderQuery, ProviderValidationError
 from app.providers.errors import ProviderResultValidationError
-from app.providers.github_public import GitHubPublicProfileProvider, github_repository_from_url
+from app.providers.github_public import (
+    GitHubPublicProfileProvider,
+    github_profile_username_from_url,
+    github_repository_from_url,
+)
 
 
 def _query(value: str = "CaseHandle", *, kind: str = "username") -> ProviderQuery:
@@ -161,6 +165,67 @@ async def test_github_provider_accepts_case_insensitive_login_match_but_preserve
     result = await provider.execute(_query("CaseHandle"), None)
 
     assert result.observations[0].payload["login"] == "casehandle"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("https://github.com/octocat", "octocat"),
+        ("https://github.com/octocat/", "octocat"),
+        ("https://github.com/Octo-Cat", "Octo-Cat"),
+        ("http://github.com/octocat", None),
+        ("https://user:pass@github.com/octocat", None),
+        ("https://github.com:443/octocat", None),
+        ("https://github.com/octocat/repos", None),
+        ("https://github.com/octocat?tab=repositories", None),
+        ("https://github.com/octocat#readme", None),
+        ("https://github.com/search", None),
+        ("https://github.com/settings", None),
+        ("https://github.com/orgs", None),
+        ("https://github.com/%6fctocat", None),
+    ],
+)
+def test_github_profile_url_admission_is_exact(value: str, expected: str | None) -> None:
+    assert github_profile_username_from_url(value) == expected
+
+
+@pytest.mark.asyncio
+async def test_github_profile_url_reuses_reviewed_profile_path_and_rejects_organizations() -> None:
+    seen: list[str] = []
+
+    async def user_fetcher(username: str):
+        seen.append(username)
+        return {
+            "login": "octocat",
+            "type": "User",
+            "html_url": "https://github.com/octocat",
+            "name": "Public Name",
+        }
+
+    async def repository_fetcher(_owner: str, _repository: str):
+        raise AssertionError("repository fetcher must not run for a profile URL")
+
+    provider = GitHubPublicProfileProvider(
+        fetcher=user_fetcher,
+        repository_fetcher=repository_fetcher,
+    )
+    result = await provider.execute(_query("https://github.com/OctoCat", kind="url"), None)
+
+    assert seen == ["OctoCat"]
+    assert result.observations[0].source_locator == "https://github.com/octocat"
+    assert result.observations[0].payload["login"] == "octocat"
+    assert result.observations[0].payload["account_candidate"] is True
+
+    async def organization_fetcher(username: str):
+        return {
+            "login": username,
+            "type": "Organization",
+            "html_url": f"https://github.com/{username}",
+        }
+
+    provider = GitHubPublicProfileProvider(fetcher=organization_fetcher)
+    with pytest.raises(ProviderResultValidationError, match="personal User account"):
+        await provider.execute(_query("https://github.com/OpenAI", kind="url"), None)
 
 
 @pytest.mark.parametrize(
