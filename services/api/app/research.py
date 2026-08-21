@@ -25,6 +25,7 @@ from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.bluesky_admission import BlueskyAdmissionError, normalize_bluesky_handle
 from .providers.contracts import ExecutionRequest
+from .providers.crossref_work import crossref_doi_from_url
 from .providers.errors import ProviderRateBudgetExceeded
 from .providers.github_public import fetch_github_public_profile
 from .providers.keybase_public import keybase_username_from_seed
@@ -34,6 +35,7 @@ from .providers.shared_runtime import (
     DEFAULT_BLUESKY_PROVIDER,
     DEFAULT_BRAVE_PROVIDER,
     DEFAULT_CODEFORCES_PROVIDER,
+    DEFAULT_CROSSREF_PROVIDER,
     DEFAULT_DNS_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
@@ -235,6 +237,16 @@ def _wikidata_observation_from_provider(item: ProviderObservationData) -> QuickO
         source="wikidata_exact_entity",
         source_locator=item.source_locator,
         summary=f"Wikidata CC0 metadata for entity {entity_id}; exact supplied-entity evidence only.",
+        details=dict(item.payload),
+    )
+
+
+def _crossref_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    doi = str(item.payload.get("crossref_doi", "unknown DOI"))
+    return QuickObservation(
+        source="crossref_exact_work",
+        source_locator=item.source_locator,
+        summary=f"Crossref bibliographic metadata for DOI {doi}; exact supplied-work evidence only.",
         details=dict(item.payload),
     )
 
@@ -788,6 +800,33 @@ async def _wikidata_observations(
     return [_wikidata_observation_from_provider(item) for item in result.observations]
 
 
+async def _crossref_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_CROSSREF_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_crossref_observation_from_provider(item) for item in result.observations]
+
+
 async def _research_username(
     normalized_value: str,
     *,
@@ -1309,6 +1348,35 @@ async def _research_url(
                 )
             )
         observations.extend(wikidata_observations)
+
+    if crossref_doi_from_url(normalized_value) is not None:
+        try:
+            crossref_observations = await _crossref_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            crossref_observations = []
+            warnings.append("Crossref exact-work metadata was temporarily unavailable.")
+            source_run = _source_run_for_exception(
+                source_name="crossref_exact_work",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="crossref_exact_work",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(crossref_observations),
+                )
+            )
+        observations.extend(crossref_observations)
 
     search_observations, search_warning, search_run = await _public_search(
         normalized_value,

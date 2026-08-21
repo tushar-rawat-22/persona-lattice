@@ -326,6 +326,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="crossref_exact_work",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=44,
+        note=(
+            "Official Crossref singleton work metadata for exact doi.org URLs only; bounded title/year/author "
+            "display context, no search, abstract/full-text expansion or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="rdap_domain_registry",
         accepts=frozenset({LeadKind.DOMAIN}),
         emits=frozenset(),

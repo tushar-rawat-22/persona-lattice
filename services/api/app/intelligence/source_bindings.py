@@ -150,6 +150,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="crossref_exact_work",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="crossref_exact_work",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact doi.org URLs execute one Crossref singleton-work lookup through ProviderRuntime; "
+            "search, abstract/full-text expansion and author-name pivots are outside this source."
+        ),
+    ),
+    SourceBinding(
         source_name="rdap_domain_registry",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="rdap_domain_registry",
