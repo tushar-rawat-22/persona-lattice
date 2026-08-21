@@ -326,6 +326,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="ror_exact_organization",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=44,
+        note=(
+            "Official ROR singleton organization metadata for exact canonical ROR URLs only; bounded CC0 "
+            "registry context, no search, affiliation matching, external-ID expansion or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="crossref_exact_work",
         accepts=frozenset({LeadKind.URL}),
         emits=frozenset(),

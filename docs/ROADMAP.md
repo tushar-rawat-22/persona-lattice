@@ -44,6 +44,7 @@ Current executable sources are:
 - Stack Overflow public-account metadata for exact numeric profile URLs;
 - OpenAlex scholarly-profile metadata for exact author URLs when a free server-side key is configured;
 - Wikidata CC0 entity metadata for exact item URLs;
+- ROR CC0 organization metadata for exact canonical ROR URLs;
 - Crossref bibliographic metadata for exact DOI resolver URLs;
 - DataCite CC0 DOI metadata as a fallback only after a clean Crossref no-match;
 - authoritative metadata-only RDAP for explicit DOMAIN seeds;
@@ -58,6 +59,8 @@ Stack Overflow runs only when an already-supplied URL matches an exact `stackove
 OpenAlex runs only when the supplied URL is exactly an `openalex.org/A<id>` author entity. It calls the official singleton author endpoint with a free server-side key, retains only author ID, display name, works/citation counts, CC0 attribution and `identity_claim=false`, and emits no leads. Name/ORCID search, affiliations, topics and work expansion are deliberately excluded. Missing key is a non-attempt configuration state.
 
 Wikidata runs only for an exact `www.wikidata.org/wiki/Q<id>` item URL. It uses official `wbgetentities` reads and retains only the QID plus bounded English label/description metadata, CC0 attribution and `identity_claim=false`. It does not request structured claims, aliases, sitelinks, external identifiers or linked entities. The optional description remains bounded public descriptive text and is never parsed into identity claims or recursive leads.
+
+ROR runs only when the supplied URL is an exact canonical `https://ror.org/<id>` organization identifier. It calls the official credentialless v2 singleton organization endpoint and retains only the canonical ROR ID, one bounded `ror_display` name, active record status, bounded organization types when present, CC0 attribution and `identity_claim=false`. Search, affiliation matching, autocomplete, external-ID expansion, domains, links, aliases, relationships, locations/geocodes and contact-like fields are excluded. Provider-specific retained field names keep the display name out of generic lead extraction, and the source emits no leads.
 
 Crossref runs only for an exact `https://doi.org/<doi>` URL. It uses the official anonymous singleton `GET /works/{doi}` path, retains the DOI, one bounded title, an optional publication year and up to eight bounded author display names with `identity_claim=false`, and emits no leads. Author names are display context only. Crossref search/list operations, abstracts, author IDs/ORCIDs, affiliations, references, funders and full-text/resource expansion are excluded.
 
@@ -130,6 +133,16 @@ The source admits only an exact HTTPS Wikidata item URL with a `Q<positive-digit
 Retained evidence is limited to the canonical QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`. Structured claims, aliases, sitelinks, external IDs and linked entities are not requested or admitted. The optional English description can contain ordinary public biographical wording, but PersonaLattice does not parse that prose into dates, locations, occupations, organizations, identity claims or recursive leads.
 
 The source is credentialless and zero-direct-cost. Requests carry a meaningful PersonaLattice User-Agent, use a one-concurrency local budget of 30 requests/minute, send `maxlag=5`, and preserve provider `429`/`Retry-After`. API-level `ratelimited` and `maxlag` errors map to typed rate/backoff outcomes. Returned entity-ID mismatch, non-item results and malformed provider data fail closed rather than silently changing entity context.
+
+### ROR exact organization
+
+**Active.**
+
+The source admits only an exact canonical HTTPS ROR organization URL. The provider calls official `GET /v2/organizations/{id}` without credentials; organization-name search, affiliation matching, autocomplete, reverse lookup and bulk enumeration remain outside PersonaLattice.
+
+Retained evidence is limited to the canonical ROR ID, exactly one bounded `ror_display` name, `active` record status, up to eight bounded organization types when present, CC0 attribution and `identity_claim=false`. External IDs, domains, links, aliases beyond the chosen display name, relationships, locations/addresses/geocodes, search candidates and contact-like fields are excluded. No recursive leads are emitted.
+
+ROR's current documentation announces a future unidentified tier of 50 requests per five minutes. PersonaLattice stays below that with one attempt, one concurrency slot, a 4-second timeout, 32 KiB response ceiling and local eight-request/minute budget. `404` is a completed no-match; `429` preserves `Retry-After`; transient failures remain attempted unavailable outcomes; malformed, non-active or mismatched records fail closed.
 
 ### Crossref exact work
 
