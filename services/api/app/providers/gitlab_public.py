@@ -21,14 +21,25 @@ from .registry import PROVIDER_BY_NAME
 _MAX_RAW_RESPONSE_BYTES = 64 * 1024
 _GITLAB_RESERVED_PROFILE_SEGMENTS = frozenset(
     {
+        "-",
         ".well-known",
+        "404.html",
+        "422.html",
+        "500.html",
+        "502.html",
+        "503.html",
         "admin",
         "api",
+        "apple-touch-icon.png",
         "assets",
         "dashboard",
+        "deploy.html",
         "explore",
+        "favicon.ico",
+        "favicon.png",
         "files",
         "groups",
+        "health_check",
         "help",
         "import",
         "jwt",
@@ -37,8 +48,13 @@ _GITLAB_RESERVED_PROFILE_SEGMENTS = frozenset(
         "profile",
         "projects",
         "public",
+        "robots.txt",
         "s",
         "search",
+        "sitemap",
+        "sitemap.xml",
+        "sitemap.xml.gz",
+        "slash-command-logo.png",
         "snippets",
         "unsubscribes",
         "uploads",
@@ -343,7 +359,8 @@ class GitLabPublicProfileProvider:
             raise ProviderValidationError("GitLab public lookup does not accept credentials.")
         if query.identifier_kind not in {"username", "email", "url"}:
             raise ProviderValidationError(
-                "GitLab public lookup accepts usernames, public emails, or exact profile/project URLs only."
+                "GitLab public lookup accepts usernames, public emails, or exact project URLs; "
+                "exact profile URLs are also supported."
             )
 
         if query.identifier_kind == "url":
