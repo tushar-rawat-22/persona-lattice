@@ -12,6 +12,16 @@ One external source is activated per PR. Activation uses the existing catalog â†
 
 ## Active after current code is merged
 
+### GitLab exact public profile URL
+
+**Decision:** admit only an exact canonical `https://gitlab.com/<username>` URL through the existing `gitlab_public_api` source.
+
+Primary GitLab Users API, user-profile routing, reserved-name, API-terms and acceptable-use documentation were re-checked on 2026-08-21. Profile URL research reuses the existing `GET /users?username=<username>&humans=true` path, process-owned adapter and 20-request/minute local budget already shared by username, exact public-email and project research. No second provider, credential path or quota pool is created.
+
+Applicability requires one non-empty path segment, HTTPS, no credentials, custom port, query or fragment, no percent-encoded path, and no current documented reserved top-level route. `/-/u/<id>` is deliberately unsupported in this version. Because one-segment GitLab paths can also identify groups, PersonaLattice performs one human-only exact username lookup and treats no matching human as a completed no-match; it never infers a group as a person. Returned username and canonical `web_url` must match the supplied username. The reviewed public-profile field set is unchanged.
+
+See `docs/source-admissions/GITLAB_EXACT_PROFILE_URL.md`.
+
 ### GitHub exact public profile URL
 
 **Decision:** admit only an exact canonical `https://github.com/<login>` URL through the existing `github_public_api` source.
