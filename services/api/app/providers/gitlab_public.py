@@ -79,7 +79,7 @@ def _read_json_response(request: Request, *, context: str) -> object:
 
 def _fetch_gitlab_public_profile_sync(kind: str, value: str) -> dict[str, object] | None:
     parameter = "username" if kind == "username" else "public_email"
-    query = urlencode({parameter: value})
+    query = urlencode({parameter: value, "humans": "true"})
     request = Request(
         f"https://gitlab.com/api/v4/users?{query}",
         headers={
