@@ -1,0 +1,41 @@
+name: One-shot Bluesky URL patch
+
+on:
+  push:
+    branches:
+      - source/bluesky-exact-profile-215
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[oneshot-215]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: source/bluesky-exact-profile-215
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply exact patch
+        run: python scripts/oneshot_215.py
+      - name: Remove one-shot machinery
+        run: rm .github/workflows/oneshot-215.yml scripts/oneshot_215.py
+      - name: Verify diff and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git status --short
+          if git diff --quiet && git diff --cached --quiet; then
+            echo 'No generated changes.' >&2
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Extend Bluesky source to exact profile URLs [oneshot-215]'
+          git push origin HEAD:source/bluesky-exact-profile-215
