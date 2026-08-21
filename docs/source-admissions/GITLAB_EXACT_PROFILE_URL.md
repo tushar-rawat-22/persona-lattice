@@ -8,6 +8,8 @@ Reviewed against current GitLab primary documentation on 2026-08-21: Users API, 
 
 Only an explicit canonical `https://gitlab.com/<username>` URL is eligible. The path must contain exactly one non-empty segment. Credentials, custom ports, query strings, fragments, percent-encoded path segments, `/-/u/<id>`, multi-segment routes, and GitLab's documented reserved top-level routes are rejected locally before provider execution.
 
+The username segment must also satisfy GitLab's current canonical slug shape: 2-255 characters, alphanumeric at both ends, only alphanumerics plus single `.`, `_`, or `-` separators internally. Noncanonical one-segment paths are rejected before provider contact rather than spent against the shared API budget.
+
 A one-segment GitLab path can identify a group namespace. PersonaLattice therefore does not infer that the URL represents a person. It performs one exact human-only username lookup and treats no matching human as a completed no-match.
 
 ## Provider execution
