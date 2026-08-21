@@ -221,7 +221,7 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         recursive_eligible=True,
         priority=30,
         note=(
-            "Username and exact public-email profile lookup plus exact two-segment public project URLs "
+            "Username and exact public-email profile lookup plus exact public project URLs "
             "through one shared GitLab budget; project observations emit no leads."
         ),
     ),
@@ -229,14 +229,17 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         name="codeforces_public_api",
         accepts=frozenset({LeadKind.USERNAME}),
         emits=frozenset({LeadKind.USERNAME, LeadKind.EMAIL, LeadKind.ORGANIZATION}),
-        status=SourceStatus.ACTIVE,
+        status=SourceStatus.REVIEW_REQUIRED,
         mode=SourceMode.PUBLIC_API,
         cost_class=SourceCostClass.ZERO_DIRECT_COST,
         credential_class=SourceCredentialClass.NONE,
-        source_policy_reviewed=True,
-        recursive_eligible=True,
+        source_policy_reviewed=False,
+        recursive_eligible=False,
         priority=35,
-        note="Public profile fields only.",
+        note=(
+            "Deferred on 2026-08-21: anonymous user.info is technically available, but current Codeforces "
+            "Terms do not establish a defensible commercial-SaaS reuse basis for profile metadata."
+        ),
     ),
     SourceCapability(
         name="bluesky_public_profile",
