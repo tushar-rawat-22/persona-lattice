@@ -12,6 +12,16 @@ One external source is activated per PR. Activation uses the existing catalog â†
 
 ## Active after current code is merged
 
+### GitHub exact public profile URL
+
+**Decision:** admit only an exact canonical `https://github.com/<login>` URL through the existing `github_public_api` source.
+
+Primary GitHub REST/API terms and acceptable-use documentation were re-checked on 2026-08-21. Public `GET /users/{username}` reads remain available without authentication and the unauthenticated REST limit remains 60 requests/hour per originating IP. Profile URLs, username seeds and repository URLs share PersonaLattice's existing process-owned adapter and 50-request/hour local budget; no second provider, credential or quota pool is created.
+
+Applicability requires one non-empty GitHub path segment, HTTPS, no credentials, custom port, query or fragment, and no known reserved GitHub root route. Percent-encoded profile segments are not canonical. The provider response must match the supplied login case-insensitively, report `type == "User"`, and return a canonical GitHub profile URL. Organization, bot, missing or unsupported account types fail closed after the provider attempt and cannot become person-oriented evidence.
+
+The retained profile field set is unchanged from reviewed username research. The extension adds no follower/org/member/repository enumeration, events, gists, commits, private-resource access or new contact-enrichment path. See `docs/source-admissions/GITHUB_EXACT_PROFILE_URL.md`.
+
 ### Keybase public account basics
 
 **Decision:** admit only for an already-canonical Keybase username and only the public `basics` object.
@@ -225,6 +235,14 @@ The API is technically attractive: exact case-sensitive user IDs, credentialless
 Do not activate Hacker News account metadata merely because the endpoint is free. Revisit only if current primary terms change or written permission makes the commercial-use boundary clear enough.
 
 ## Deferred
+
+### Codeforces public user API
+
+**Decision:** non-executable pending a defensible provider-authored commercial SaaS reuse basis.
+
+The 2026-08-21 review confirmed anonymous public `user.info` access and Codeforces' one-call-per-two-seconds API limit, but current Codeforces Terms prohibit selling, sublicensing or otherwise commercializing Website material and no Codeforces-authored API/data-use exception was found. PR #209 therefore moved `codeforces_public_api` to `REVIEW_REQUIRED`, removed its executable source binding and process-wide runtime ownership, and made central policy return a pre-attempt `provider_policy` block. Historical retained evidence remains readable.
+
+Do not reactivate or expand Codeforces from third-party interpretations or the fact that the endpoint is public/free. Revisit only if materially clearer primary terms are published.
 
 ### Stack Exchange user search
 
