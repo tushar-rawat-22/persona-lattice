@@ -1,0 +1,89 @@
+name: Patch GitLab profile routing
+
+on:
+  push:
+    branches:
+      - source/gitlab-exact-profile-213
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: source/gitlab-exact-profile-213
+          fetch-depth: 0
+      - name: Apply narrow routing patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('services/api/app/research.py')
+          text = path.read_text()
+
+          replacements = [
+              (
+                  'from .providers.gitlab_public import gitlab_project_path_from_url',
+                  'from .providers.gitlab_public import (\n    gitlab_profile_username_from_url,\n    gitlab_project_path_from_url,\n)',
+                  1,
+              ),
+              (
+                  'async def _gitlab_project_observations(',
+                  'async def _gitlab_url_observations(',
+                  1,
+              ),
+              (
+                  '    if gitlab_project_path_from_url(normalized_value) is not None:\n',
+                  '    if (\n        gitlab_profile_username_from_url(normalized_value) is not None\n        or gitlab_project_path_from_url(normalized_value) is not None\n    ):\n',
+                  1,
+              ),
+              (
+                  '            gitlab_project_observations = await _gitlab_project_observations(',
+                  '            gitlab_url_observations = await _gitlab_url_observations(',
+                  1,
+              ),
+              (
+                  '            gitlab_project_observations = []',
+                  '            gitlab_url_observations = []',
+                  1,
+              ),
+              (
+                  '            warnings.append("GitLab exact public-project metadata was temporarily unavailable.")',
+                  '            warnings.append("GitLab exact public profile/project metadata was temporarily unavailable.")',
+                  1,
+              ),
+              (
+                  '                    observation_count=len(gitlab_project_observations),',
+                  '                    observation_count=len(gitlab_url_observations),',
+                  1,
+              ),
+              (
+                  '        observations.extend(gitlab_project_observations)',
+                  '        observations.extend(gitlab_url_observations)',
+                  1,
+              ),
+          ]
+
+          for old, new, expected in replacements:
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f'expected {expected} occurrence(s), found {count}: {old!r}')
+              text = text.replace(old, new, expected)
+
+          path.write_text(text)
+          PY
+
+          git rm -- .github/workflows/patch-gitlab-profile-213.yml
+          git diff --check
+          git diff -- services/api/app/research.py
+          git config user.name "PersonaLattice CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- services/api/app/research.py
+          git commit -m "Route exact GitLab profile URLs through shared runtime"
+          git push origin HEAD:source/gitlab-exact-profile-213
