@@ -55,10 +55,12 @@ from .providers.shared_runtime import (
     DEFAULT_STACK_OVERFLOW_PROVIDER,
     DEFAULT_WAYBACK_PROVIDER,
     DEFAULT_WIKIDATA_PROVIDER,
+    DEFAULT_ZENODO_PROVIDER,
 )
 from .providers.sherlock import SherlockProvider
 from .providers.stack_overflow_public import stack_overflow_user_id_from_url
 from .providers.wikidata_entity import wikidata_entity_id_from_url
+from .providers.zenodo_record import zenodo_record_id_from_url
 from .public_profiles import (
     codeforces_public_observation_fields,
     gitlab_public_observation_fields,
@@ -261,6 +263,16 @@ def _wikidata_observation_from_provider(item: ProviderObservationData) -> QuickO
         source="wikidata_exact_entity",
         source_locator=item.source_locator,
         summary=f"Wikidata CC0 metadata for entity {entity_id}; exact supplied-entity evidence only.",
+        details=dict(item.payload),
+    )
+
+
+def _zenodo_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    record_id = str(item.payload.get("zenodo_record_id", "unknown record"))
+    return QuickObservation(
+        source="zenodo_exact_record",
+        source_locator=item.source_locator,
+        summary=f"Zenodo CC0 metadata for record {record_id}; exact supplied-record evidence only.",
         details=dict(item.payload),
     )
 
@@ -919,6 +931,33 @@ async def _wikidata_observations(
         ),
     )
     return [_wikidata_observation_from_provider(item) for item in result.observations]
+
+
+async def _zenodo_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_ZENODO_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_zenodo_observation_from_provider(item) for item in result.observations]
 
 
 async def _ror_observations(
@@ -1635,6 +1674,35 @@ async def _research_url(
                 )
             )
         observations.extend(wikidata_observations)
+
+    if zenodo_record_id_from_url(normalized_value) is not None:
+        try:
+            zenodo_observations = await _zenodo_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            zenodo_observations = []
+            warnings.append("Zenodo exact-record metadata was temporarily unavailable.")
+            source_run = _source_run_for_exception(
+                source_name="zenodo_exact_record",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="zenodo_exact_record",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(zenodo_observations),
+                )
+            )
+        observations.extend(zenodo_observations)
 
     if ror_id_from_url(normalized_value) is not None:
         try:
