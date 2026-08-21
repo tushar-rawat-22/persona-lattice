@@ -121,10 +121,11 @@ async def test_mismatched_email_or_profile_url_fails_closed() -> None:
         await GitLabPublicProfileProvider(fetcher=wrong_url).execute(_query("username", "alice"), None)
 
 
-def test_project_url_admission_is_exact_and_excludes_subgroups_and_routes() -> None:
+def test_project_url_admission_is_exact_and_route_safe() -> None:
+    assert gitlab_project_path_from_url("https://gitlab.com/example/project") == "example/project"
     assert (
-        gitlab_project_path_from_url("https://gitlab.com/example/project")
-        == "example/project"
+        gitlab_project_path_from_url("https://gitlab.com/group/subgroup/project")
+        == "group/subgroup/project"
     )
     rejected = (
         "http://gitlab.com/example/project",
@@ -133,8 +134,9 @@ def test_project_url_admission_is_exact_and_excludes_subgroups_and_routes() -> N
         "https://gitlab.com/example/project?x=1",
         "https://gitlab.com/example/project#readme",
         "https://gitlab.com/example/project.git",
-        "https://gitlab.com/example/project/issues",
-        "https://gitlab.com/group/subgroup/project",
+        "https://gitlab.com/example/project/-/issues",
+        "https://gitlab.com/group/subgroup/project/-/tree/main",
+        "https://gitlab.com/o/acme/group/project",
         "https://example.com/example/project",
     )
     assert all(gitlab_project_path_from_url(value) is None for value in rejected)

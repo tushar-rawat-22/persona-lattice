@@ -92,7 +92,7 @@ async def test_non_project_gitlab_route_does_not_attempt_gitlab_provider(
 
     report = await run_quick_research(
         kind=ResearchKind.URL,
-        value="https://gitlab.com/example/project/issues",
+        value="https://gitlab.com/example/project/-/issues",
         purpose=Purpose.PUBLIC_SOURCE_RESEARCH,
         consent_acknowledged=True,
         public_search_lookup=_no_public_search,
