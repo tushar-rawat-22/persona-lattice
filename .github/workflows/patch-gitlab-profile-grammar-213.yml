@@ -1,0 +1,63 @@
+name: Tighten GitLab profile grammar
+
+on:
+  push:
+    branches:
+      - source/gitlab-exact-profile-213
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: source/gitlab-exact-profile-213
+          fetch-depth: 0
+      - name: Apply exact grammar patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          provider = Path('services/api/app/providers/gitlab_public.py')
+          text = provider.read_text()
+          old = 'import json\nfrom urllib.error import HTTPError, URLError'
+          new = 'import json\nimport re\nfrom urllib.error import HTTPError, URLError'
+          if text.count(old) != 1:
+              raise SystemExit('provider import anchor changed')
+          text = text.replace(old, new, 1)
+
+          old = '_MAX_RAW_RESPONSE_BYTES = 64 * 1024\n_GITLAB_RESERVED_PROFILE_SEGMENTS = frozenset('
+          new = '_MAX_RAW_RESPONSE_BYTES = 64 * 1024\n_GITLAB_USERNAME_SLUG = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9]|[._-](?=[A-Za-z0-9])){0,253}[A-Za-z0-9]$")\n_GITLAB_RESERVED_PROFILE_SEGMENTS = frozenset('
+          if text.count(old) != 1:
+              raise SystemExit('provider constant anchor changed')
+          text = text.replace(old, new, 1)
+
+          old = '    if username.casefold() in _GITLAB_RESERVED_PROFILE_SEGMENTS:\n        return None\n    return username\n'
+          new = '    if (\n        _GITLAB_USERNAME_SLUG.fullmatch(username) is None\n        or username.casefold() in _GITLAB_RESERVED_PROFILE_SEGMENTS\n    ):\n        return None\n    return username\n'
+          if text.count(old) != 1:
+              raise SystemExit('profile parser anchor changed')
+          provider.write_text(text)
+
+          tests = Path('services/api/tests/test_gitlab_profile_urls.py')
+          text = tests.read_text()
+          old = '        "https://gitlab.com/%41lice",\n        "https://gitlab.com/Alice/project",'
+          new = '        "https://gitlab.com/%41lice",\n        "https://gitlab.com/.",\n        "https://gitlab.com/_alice",\n        "https://gitlab.com/alice..smith",\n        "https://gitlab.com/alice_",\n        "https://gitlab.com/Alice/project",'
+          if text.count(old) != 1:
+              raise SystemExit('profile test anchor changed')
+          tests.write_text(text.replace(old, new, 1))
+          PY
+
+          git rm -- .github/workflows/patch-gitlab-profile-grammar-213.yml
+          git diff --check
+          git diff --stat
+          git config user.name "PersonaLattice CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add -- services/api/app/providers/gitlab_public.py services/api/tests/test_gitlab_profile_urls.py
+          git commit -m "Reject noncanonical GitLab profile slugs"
+          git push origin HEAD:source/gitlab-exact-profile-213
