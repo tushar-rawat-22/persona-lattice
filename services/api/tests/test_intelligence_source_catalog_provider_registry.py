@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from app.intelligence.source_catalog import SOURCE_BY_NAME, SourceStatus
-from app.providers.base import AuthMode
+from app.providers.base import AuthMode, ProviderStatus
 from app.providers.registry import PROVIDER_BY_NAME
 
 
@@ -17,6 +17,7 @@ def test_existing_non_synthetic_provider_registry_entries_are_catalogued() -> No
 
 def test_deferred_provider_registry_entries_are_not_recursive_sources() -> None:
     for name in (
+        "codeforces_public_api",
         "numverify",
         "abstract_phone_intelligence",
         "ipqualityscore",
@@ -46,7 +47,6 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         "github_public_api",
         "keybase_public_user",
         "gitlab_public_api",
-        "codeforces_public_api",
         "bluesky_public_profile",
         "public_dns_infrastructure",
         "wayback_url_availability",
@@ -94,8 +94,12 @@ def test_gitlab_public_api_keeps_the_existing_conservative_local_budget() -> Non
     assert descriptor.supported_identifier_kinds == frozenset({"username", "email", "url"})
 
 
-def test_codeforces_budget_matches_documented_minimum_request_interval() -> None:
+def test_codeforces_remains_bounded_but_is_not_executable_while_review_required() -> None:
     descriptor = PROVIDER_BY_NAME["codeforces_public_api"]
+    capability = SOURCE_BY_NAME["codeforces_public_api"]
+    assert descriptor.status == ProviderStatus.REVIEW_REQUIRED.value
+    assert capability.status is SourceStatus.REVIEW_REQUIRED
+    assert capability.recursive_eligible is False
     assert descriptor.rate_limit == 1
     assert descriptor.rate_window_seconds == CODEFORCES_MINIMUM_REQUEST_INTERVAL_SECONDS
     assert descriptor.max_concurrency == 1
