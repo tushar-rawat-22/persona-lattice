@@ -65,8 +65,11 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         source_name="github_public_api",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="github_public_api",
-        accepts=frozenset({LeadKind.USERNAME}),
-        migration_note="Quick research executes GitHub public-profile lookup through ProviderRuntime.",
+        accepts=frozenset({LeadKind.USERNAME, LeadKind.URL}),
+        migration_note=(
+            "GitHub username profiles and exact public repository URLs share one process-owned "
+            "ProviderRuntime adapter and one provider budget."
+        ),
     ),
     SourceBinding(
         source_name="keybase_public_user",
