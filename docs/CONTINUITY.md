@@ -18,7 +18,7 @@ DataCite exact-DOI fallback activation: PR #182 merged as `e4cb6318bed78f8a72ea1
 
 ROR exact-organization activation: PR #185 merged as `1f5b1a897ab08763788f6024d727cea27a299be3` after exact head `b2c67addb269f42571422d19710791284884e644` passed CI run `32437343476`. Only an exact canonical `https://ror.org/<id>` URL is applicable; the source uses the credentialless v2 singleton organization endpoint, retains a narrow CC0 registry record, emits no leads and does not use organization search or affiliation matching.
 
-DBLP exact-person activation is the current source package. It is intentionally limited to an explicit canonical `https://dblp.org/pid/<pid>` URL and one minimal public-SPARQL lookup for the exact person resource plus `dblp:primaryCreatorName`. The branch must not be treated as active on `main` until its exact-head CI passes and the PR is merged.
+DBLP exact-person activation: PR #187 merged as `905f9fc8915487a002e54a81e3d23b443ea19072` after exact head `4e5de2580ea8cb2881f1520e5790b15362ea80c6` passed CI run `32440833347`. It is limited to explicit canonical `https://dblp.org/pid/<pid>` URLs and one minimal public-SPARQL query for the exact `dblp:Person` resource plus `dblp:primaryCreatorName`; it emits no leads and does not retrieve bibliography or coauthor context.
 
 ## Engineering state
 
@@ -68,7 +68,7 @@ Required/zero-spend baseline:
 - OpenAlex exact-author metadata when a free server-side key is configured;
 - Wikidata exact-item CC0 metadata for explicit item URLs;
 - ROR exact-organization CC0 metadata for explicit canonical ROR URLs;
-- DBLP exact-person CC0 metadata for explicit canonical person PID URLs on the current activation branch;
+- DBLP exact-person CC0 metadata for explicit canonical person PID URLs;
 - Crossref exact-work bibliographic metadata for explicit DOI resolver URLs;
 - DataCite exact-DOI CC0 fallback metadata after a clean Crossref no-match;
 - authoritative RDAP for explicit DOMAIN seeds.
@@ -127,22 +127,25 @@ DataCite is active on `main` via PR #182. Primary DataCite documentation was re-
 
 ROR is active on `main` via PR #185. Primary ROR documentation was re-checked on 2026-08-21: ROR IDs/registry metadata are CC0 and unrestricted; exact v2 organization retrieval is supported by ID; the current schema exposes one `ror_display` name, record status and organization types; and ROR has announced a lower unidentified-client tier of 50 requests per five minutes. PersonaLattice stays below that announced tier with eight requests/minute locally and does not depend on Client ID registration, which is currently paused. Exact head `b2c67addb269f42571422d19710791284884e644` passed CI run `32437343476` before merge.
 
-DBLP is the current activation package. Primary DBLP documentation was re-checked on 2026-08-21: all DBLP metadata is CC0 and can be reused commercially; persistent PIDs are the stable person identifiers; `dblp:primaryCreatorName` is the primary creator-name property; and the public SPARQL service is a shared beta endpoint with rate limiting against aggressive scripting. The implementation deliberately avoids the recommended full person-bibliography export because that would retrieve much more publication/coauthor context than the operator needs for an exact PID check.
+DBLP is active on `main` via PR #187. Primary DBLP documentation was re-checked on 2026-08-21: all DBLP metadata is CC0 and can be reused commercially; persistent PIDs are the stable person identifiers; `dblp:primaryCreatorName` is the primary creator-name property; and the public SPARQL service is a shared beta endpoint with rate limiting against aggressive scripting. PersonaLattice deliberately avoids the full person-bibliography export because that would retrieve much more publication/coauthor context than an exact PID check needs. Exact head `4e5de2580ea8cb2881f1520e5790b15362ea80c6` passed CI run `32440833347` before PR #187 merged as `905f9fc8915487a002e54a81e3d23b443ea19072`.
+
+VIAF exact authority metadata was re-reviewed on 2026-08-21 and remains deferred rather than admitted. OCLC still lists VIAF as a production API and VIAF data is ODC-BY with canonical numeric URIs, but the current interactive API documentation endpoint was unavailable during review and the primary materials available to us did not establish a narrow exact-record JSON representation plus practical rate/backoff contract strongly enough to justify a new production dependency. VIAF cluster records are also materially richer than PersonaLattice needs. Do not implement VIAF name search, autosuggest, SRU search or a broad cluster parser as a workaround. The next authority-source review should compare a narrow exact LCNAF/id.loc.gov representation before reopening VIAF.
 
 Current explicit rejections/deferments include:
 
 - ORCID Public API is not suitable for a future revenue-generating PersonaLattice baseline under its current public API terms.
 - Hacker News public-user metadata is rejected under current Y Combinator commercial-use terms despite a technically attractive free API.
 - Stack Exchange `inname` user search is substring-based and therefore too fuzzy to become generic recursive username evidence; this does not affect the exact Stack Overflow profile-URL source.
+- VIAF exact authority retrieval is deferred until current primary documentation supports a narrow, stable exact-record representation and operational contract; fuzzy VIAF discovery remains out of scope regardless.
 
 If provider documentation changes, repeat the preflight instead of trusting this handover.
 
 ## Next engineering gate
 
-1. Finish DBLP exact-person activation as one governed package, then merge only after exact-head full CI is green. Do not broaden it into name search or bibliography/coauthor expansion.
-2. Keep exact-source boundaries green for Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
+1. Review a narrow exact LCNAF/id.loc.gov authority path from current primary documentation before admitting another authority source. Prefer an explicit canonical authority URI and a small machine representation; no name search, autosuggest, relationship expansion or bulk enumeration.
+2. Keep exact-source boundaries green for Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR, DBLP and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
 3. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
-4. Review the next high-value ₹0 source from primary documentation only after DBLP closes. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
+4. Review the next high-value ₹0 source from primary documentation only. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
 5. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 6. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
 
