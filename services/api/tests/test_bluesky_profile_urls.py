@@ -13,14 +13,14 @@ from app.intelligence.source_states import SourceRunReason, SourceRunState
 from app.models import Purpose
 from app.providers import ProviderObservationData, ProviderQuery, ProviderResult, ProviderRuntime
 from app.providers.bluesky_public import BlueskyPublicProfileProvider, bluesky_profile_handle_from_url
-from app.providers.errors import ProviderValidationError
+from app.providers.errors import ProviderPublicWebOptOutError, ProviderValidationError
 from app.providers.registry import PROVIDER_BY_NAME
 from app.research import ResearchKind, run_quick_research
 
 
 def test_exact_bluesky_handle_profile_url_admission_is_fail_closed() -> None:
     assert bluesky_profile_handle_from_url("https://bsky.app/profile/alice.bsky.social") == "alice.bsky.social"
-    assert bluesky_profile_handle_from_url("https://bsky.app/profile/alice.bsky.social/") == "alice.bsky.social"
+    assert bluesky_profile_handle_from_url("https://bsky.app/profile/alice.bsky.social/") is None
     assert bluesky_profile_handle_from_url("https://bsky.app/profile/Alice.Bsky.Social") is None
     assert bluesky_profile_handle_from_url("https://bsky.app/profile/did:plc:abc") is None
     assert bluesky_profile_handle_from_url("https://bsky.app/profile/alice.bsky.social/post/3abc") is None
@@ -28,6 +28,7 @@ def test_exact_bluesky_handle_profile_url_admission_is_fail_closed() -> None:
     assert bluesky_profile_handle_from_url("http://bsky.app/profile/alice.bsky.social") is None
     assert bluesky_profile_handle_from_url("https://user@bsky.app/profile/alice.bsky.social") is None
     assert bluesky_profile_handle_from_url("https://bsky.app:443/profile/alice.bsky.social") is None
+    assert bluesky_profile_handle_from_url("https://bsky.app:bad/profile/alice.bsky.social") is None
     assert bluesky_profile_handle_from_url("https://bsky.app/profile/alice.bsky.social?x=1") is None
     assert bluesky_profile_handle_from_url("https://bsky.app/profile/alice.test") is None
 
@@ -61,6 +62,28 @@ async def test_provider_reuses_handle_lookup_for_exact_profile_url() -> None:
 
 
 @pytest.mark.asyncio
+async def test_provider_url_no_match_is_clean_after_one_fetch() -> None:
+    seen: list[str] = []
+
+    async def fetcher(handle: str):
+        seen.append(handle)
+        return None
+
+    provider = BlueskyPublicProfileProvider(fetcher=fetcher)
+    result = await provider.execute(
+        ProviderQuery(
+            subject_id=uuid4(),
+            identifier_id=uuid4(),
+            identifier_kind="url",
+            identifier_value="https://bsky.app/profile/alice.bsky.social",
+        ),
+        None,
+    )
+    assert seen == ["alice.bsky.social"]
+    assert result.observations == ()
+
+
+@pytest.mark.asyncio
 async def test_provider_rejects_did_and_post_urls_without_fetch() -> None:
     async def unexpected(_handle: str):
         raise AssertionError("provider must not fetch non-applicable Bluesky URL")
@@ -91,6 +114,18 @@ def test_catalog_binding_and_descriptor_share_username_url_contract() -> None:
     assert descriptor.rate_window_seconds == 60.0
 
 
+async def _no_dns(*args, **kwargs):
+    return []
+
+
+async def _no_wayback(*args, **kwargs):
+    return []
+
+
+async def _no_search(_value: str):
+    return ()
+
+
 @pytest.mark.asyncio
 async def test_exact_profile_url_runs_bluesky_once_through_shared_runtime(monkeypatch) -> None:
     class FakeBlueskyProvider:
@@ -118,28 +153,19 @@ async def test_exact_profile_url_runs_bluesky_once_through_shared_runtime(monkey
                 )
             )
 
-    async def no_dns(*args, **kwargs):
-        return []
-
-    async def no_wayback(*args, **kwargs):
-        return []
-
-    async def no_search(_value: str):
-        return ()
-
     provider = FakeBlueskyProvider()
     runtime = ProviderRuntime(adapters=[provider])
     monkeypatch.setattr(research_module, "DEFAULT_BLUESKY_PROVIDER", provider)
     monkeypatch.setattr(research_module, "DEFAULT_PROVIDER_RUNTIME", runtime)
-    monkeypatch.setattr(research_module, "_dns_observations", no_dns)
-    monkeypatch.setattr(research_module, "_wayback_observations", no_wayback)
+    monkeypatch.setattr(research_module, "_dns_observations", _no_dns)
+    monkeypatch.setattr(research_module, "_wayback_observations", _no_wayback)
 
     report = await run_quick_research(
         kind=ResearchKind.URL,
         value="https://bsky.app/profile/alice.bsky.social",
         purpose=Purpose.SELF_AUDIT,
         consent_acknowledged=True,
-        public_search_lookup=no_search,
+        public_search_lookup=_no_search,
     )
 
     assert len(provider.queries) == 1
@@ -151,3 +177,62 @@ async def test_exact_profile_url_runs_bluesky_once_through_shared_runtime(monkey
     assert source_run.state is SourceRunState.EXECUTED
     assert source_run.reason is SourceRunReason.RESULTS_RETURNED
     assert source_run.observation_count == 1
+
+
+@pytest.mark.asyncio
+async def test_exact_profile_url_preserves_public_web_opt_out_as_neutral_withheld(monkeypatch) -> None:
+    class OptedOutProvider:
+        descriptor = PROVIDER_BY_NAME["bluesky_public_profile"]
+
+        async def execute(self, query, secret):
+            raise ProviderPublicWebOptOutError("opted out")
+
+    provider = OptedOutProvider()
+    runtime = ProviderRuntime(adapters=[provider])
+    monkeypatch.setattr(research_module, "DEFAULT_BLUESKY_PROVIDER", provider)
+    monkeypatch.setattr(research_module, "DEFAULT_PROVIDER_RUNTIME", runtime)
+    monkeypatch.setattr(research_module, "_dns_observations", _no_dns)
+    monkeypatch.setattr(research_module, "_wayback_observations", _no_wayback)
+
+    report = await run_quick_research(
+        kind=ResearchKind.URL,
+        value="https://bsky.app/profile/alice.bsky.social",
+        purpose=Purpose.SELF_AUDIT,
+        consent_acknowledged=True,
+        public_search_lookup=_no_search,
+    )
+
+    source_run = next(item for item in report.source_runs if item.source_name == "bluesky_public_profile")
+    assert source_run.state is SourceRunState.WITHHELD
+    assert source_run.reason is SourceRunReason.PUBLIC_WEB_OPT_OUT
+    assert source_run.execution_attempted is True
+    assert not any("Bluesky exact public-profile" in warning for warning in report.warnings)
+
+
+@pytest.mark.asyncio
+async def test_exact_profile_url_no_match_is_typed_not_found(monkeypatch) -> None:
+    class NoMatchProvider:
+        descriptor = PROVIDER_BY_NAME["bluesky_public_profile"]
+
+        async def execute(self, query, secret):
+            return ProviderResult(observations=())
+
+    provider = NoMatchProvider()
+    runtime = ProviderRuntime(adapters=[provider])
+    monkeypatch.setattr(research_module, "DEFAULT_BLUESKY_PROVIDER", provider)
+    monkeypatch.setattr(research_module, "DEFAULT_PROVIDER_RUNTIME", runtime)
+    monkeypatch.setattr(research_module, "_dns_observations", _no_dns)
+    monkeypatch.setattr(research_module, "_wayback_observations", _no_wayback)
+
+    report = await run_quick_research(
+        kind=ResearchKind.URL,
+        value="https://bsky.app/profile/alice.bsky.social",
+        purpose=Purpose.SELF_AUDIT,
+        consent_acknowledged=True,
+        public_search_lookup=_no_search,
+    )
+
+    source_run = next(item for item in report.source_runs if item.source_name == "bluesky_public_profile")
+    assert source_run.state is SourceRunState.NOT_FOUND
+    assert source_run.reason is SourceRunReason.NO_MATCH
+    assert source_run.execution_attempted is True
