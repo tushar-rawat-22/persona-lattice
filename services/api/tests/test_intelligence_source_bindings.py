@@ -54,7 +54,7 @@ def test_no_current_source_uses_legacy_research_execution() -> None:
 
 @pytest.mark.parametrize(
     "name",
-    ["sherlock", "codeforces_public_api", "bluesky_public_profile"],
+    ["sherlock", "bluesky_public_profile"],
 )
 def test_username_only_governed_sources_match_provider_descriptors(name: str) -> None:
     binding = source_binding_for(name, kind=LeadKind.USERNAME)
@@ -162,6 +162,7 @@ def test_webfinger_planning_is_url_only_and_does_not_claim_activitypub_fields() 
 
 def test_planned_and_deferred_sources_have_no_executable_binding() -> None:
     for name in (
+        "codeforces_public_api",
         "gravatar_public_profile",
         "webfinger_activitypub",
         "google_people_authorized",
