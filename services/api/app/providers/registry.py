@@ -316,6 +316,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="crossref_exact_work",
+        capability="public_bibliographic_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official Crossref singleton work lookup only for an exact supplied doi.org URL; "
+            "bounded bibliographic metadata with no search, abstract/full-text expansion or emitted leads."
+        ),
+        version="rest-single-work-2026-08",
+        source_category=SourceCategory.PUBLIC_WEB,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=32 * 1024,
+        max_concurrency=1,
+        rate_limit=30,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="brave_public_web_index",
         capability="exact_public_web_search",
         status=ProviderStatus.DEVELOPMENT.value,
