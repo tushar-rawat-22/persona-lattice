@@ -36,6 +36,7 @@ from .providers.shared_runtime import (
     DEFAULT_BRAVE_PROVIDER,
     DEFAULT_CODEFORCES_PROVIDER,
     DEFAULT_CROSSREF_PROVIDER,
+    DEFAULT_DATACITE_PROVIDER,
     DEFAULT_DNS_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
@@ -247,6 +248,16 @@ def _crossref_observation_from_provider(item: ProviderObservationData) -> QuickO
         source="crossref_exact_work",
         source_locator=item.source_locator,
         summary=f"Crossref bibliographic metadata for DOI {doi}; exact supplied-work evidence only.",
+        details=dict(item.payload),
+    )
+
+
+def _datacite_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    doi = str(item.payload.get("datacite_doi", "unknown DOI"))
+    return QuickObservation(
+        source="datacite_exact_doi",
+        source_locator=item.source_locator,
+        summary=f"DataCite CC0 metadata for DOI {doi}; exact supplied-work fallback evidence only.",
         details=dict(item.payload),
     )
 
@@ -827,6 +838,33 @@ async def _crossref_observations(
     return [_crossref_observation_from_provider(item) for item in result.observations]
 
 
+async def _datacite_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_DATACITE_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_datacite_observation_from_provider(item) for item in result.observations]
+
+
 async def _research_username(
     normalized_value: str,
     *,
@@ -1350,6 +1388,7 @@ async def _research_url(
         observations.extend(wikidata_observations)
 
     if crossref_doi_from_url(normalized_value) is not None:
+        crossref_completed = False
         try:
             crossref_observations = await _crossref_observations(
                 normalized_value,
@@ -1369,6 +1408,7 @@ async def _research_url(
             if source_run is not None:
                 source_runs.append(source_run)
         else:
+            crossref_completed = True
             source_runs.append(
                 source_result_record(
                     source_name="crossref_exact_work",
@@ -1377,6 +1417,35 @@ async def _research_url(
                 )
             )
         observations.extend(crossref_observations)
+
+        if crossref_completed and not crossref_observations:
+            try:
+                datacite_observations = await _datacite_observations(
+                    normalized_value,
+                    subject_id=subject_id,
+                    identifier_id=identifier_id,
+                    purpose=purpose,
+                    consent_acknowledged=consent_acknowledged,
+                )
+            except Exception as exc:
+                datacite_observations = []
+                warnings.append("DataCite exact-DOI fallback metadata was temporarily unavailable.")
+                source_run = _source_run_for_exception(
+                    source_name="datacite_exact_doi",
+                    lead_kind=LeadKind.URL,
+                    exc=exc,
+                )
+                if source_run is not None:
+                    source_runs.append(source_run)
+            else:
+                source_runs.append(
+                    source_result_record(
+                        source_name="datacite_exact_doi",
+                        lead_kind=LeadKind.URL,
+                        observation_count=len(datacite_observations),
+                    )
+                )
+            observations.extend(datacite_observations)
 
     search_observations, search_warning, search_run = await _public_search(
         normalized_value,
