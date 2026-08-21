@@ -33,6 +33,7 @@ from .mock import SyntheticEchoProvider
 from .openalex_author import OpenAlexExactAuthorProvider, fetch_openalex_author, openalex_author_id_from_url
 from .policy import authorize_execution
 from .registry import PROVIDERS, PROVIDER_BY_NAME
+from .ror_organization import RorExactOrganizationProvider, fetch_ror_organization, ror_id_from_url
 from .runtime import PreparedProviderExecution, ProviderRuntime
 from .sherlock import (
     AccountDiscoveryState,
@@ -84,6 +85,7 @@ __all__ = [
     "ProviderValidationError",
     "QueryOrigin",
     "REDACTED_SECRET",
+    "RorExactOrganizationProvider",
     "SHERLOCK_SITE_ALLOWLIST",
     "SHERLOCK_UPSTREAM_VERSION",
     "SherlockProvider",
@@ -100,10 +102,12 @@ __all__ = [
     "fetch_github_public_profile",
     "fetch_gitlab_public_profile",
     "fetch_openalex_author",
+    "fetch_ror_organization",
     "fetch_stack_overflow_profile",
     "fetch_wikidata_entity",
     "load_reviewed_sherlock_sites",
     "openalex_author_id_from_url",
+    "ror_id_from_url",
     "sanitize_provider_log",
     "stack_overflow_user_id_from_url",
     "wikidata_entity_id_from_url",
