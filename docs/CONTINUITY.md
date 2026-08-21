@@ -12,7 +12,9 @@ Engineering-freeze baseline: PR #168, merged as `5d774a9fadc336d43e06491183d9035
 
 Keybase source activation: PR #177 merged as `611ef00cd14858f5e60e2d32add3ec4cee47b025` after exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` across Python 3.11/3.13, web and the production API image.
 
-Crossref exact-work activation is PR #180. Its implementation head `2e593a60888c5561d12ad19447e3a3ee924e1e9b` passed CI run `32433856669` before the final documentation checkpoint. The package covers exact DOI URL admission, credentialless singleton transport, catalog/binding/DEVELOPMENT registry, process-wide runtime ownership, typed source-run reporting, canonical evidence, regression coverage and source-policy documentation. Merge #180 only from a final exact head with the same required CI matrix green.
+Crossref exact-work activation: PR #180 merged as `0d049af3af7f7450d348477bfb2775921cc25b3b`. It provides exact DOI URL admission, credentialless singleton transport, governed catalog/binding/runtime ownership, typed source-run reporting, bounded canonical evidence and source-policy regressions.
+
+DataCite exact-DOI fallback is the current source package in PR #182. It is intentionally subordinate to Crossref: DataCite runs only after Crossref completes normally with zero observations. Crossref attempted failures never fall through to DataCite. The package covers credentialless singleton transport, catalog/binding/DEVELOPMENT registry, process-wide runtime ownership, typed fallback source states, bounded CC0 evidence, regression coverage and current source-policy documentation. Merge only from a final exact head with the required Python 3.11/3.13, web and production-image CI matrix green.
 
 ## Engineering state
 
@@ -62,6 +64,7 @@ Required/zero-spend baseline:
 - OpenAlex exact-author metadata when a free server-side key is configured;
 - Wikidata exact-item CC0 metadata for explicit item URLs;
 - Crossref exact-work bibliographic metadata for explicit DOI resolver URLs;
+- DataCite exact-DOI CC0 fallback metadata after a clean Crossref no-match;
 - authoritative RDAP for explicit DOMAIN seeds.
 
 Optional:
@@ -79,6 +82,8 @@ OpenAlex is exact-author-URL metadata only. Applicability requires `https://open
 Wikidata is exact-item-URL metadata only. Applicability requires `https://www.wikidata.org/wiki/Q<positive-digits>` with no credentials, port, query or fragment. The provider calls official `wbgetentities` for that QID and requests English labels/descriptions only. It retains the QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`; it does not request or retain structured claims, aliases, sitelinks, external identifiers or linked entities, and emits no leads. The bounded description is public descriptive text and is never parsed into identity claims or recursive leads. Requests are credentialless, use an identifying User-Agent, one-concurrency/30-per-minute local budget, `maxlag=5`, and typed HTTP/API-level rate/backoff handling.
 
 Crossref is exact-work metadata only. Applicability requires a canonical `https://doi.org/<doi>` URL with no credentials, custom port, query or fragment. The provider performs one anonymous official `/works/{doi}` singleton read and retains only the DOI, one bounded title, an optional valid publication year, up to eight bounded author display names, explicit Crossref attribution and `identity_claim=false`. Author names are display-only and emit no leads. Abstracts, ORCID/other author identifiers, affiliations, references, funders, subjects and full-text/resource/license expansion are not admitted. The adapter uses one attempt, a 4-second timeout, 32 KiB response ceiling, one-concurrency/30-per-minute local budget, preserves `429`/`Retry-After`, and fails closed on malformed or mismatched DOI results.
+
+DataCite is an exact-DOI fallback, not an independent discovery query. It reuses the canonical DOI URL applicability rule and executes only when Crossref completed normally with no observation. If Crossref was rate-limited, unavailable, malformed or otherwise failed after an attempt, DataCite does not execute and the Crossref failure remains visible. The provider calls credentialless public `/dois/{id}` singleton retrieval and retains only DOI, bounded title, optional valid publication year/resource type, up to eight bounded creator display names, `data_license=CC0`, explicit DataCite attribution and `identity_claim=false`. It excludes creator identifiers/ORCID, affiliations, descriptions, geolocations, funding, related identifiers, subjects, rights/resource URLs and usage/activity fields, and emits no leads. Current DataCite metadata policy is CC0 but does not remove privacy/publicity rights in represented individuals.
 
 Planned/review-gated entries in the source catalog are not executable merely because code or a catalog record exists.
 
@@ -106,7 +111,9 @@ Wikidata is an admitted source in `main`. Its applicability is an exact item URL
 
 Keybase is admitted via PR #177. Primary documentation was re-checked on 2026-08-21: usernames are public/immutable and restricted to the canonical 2-16-character lowercase namespace; the public lookup API supports requesting only `basics`; current terms contemplate organizational/business use, while the acceptable-use policy forbids collecting private information without permission. The implementation therefore keeps only public basics, sends no credentials, emits no leads and deliberately excludes profiles, proofs, keys and external-identity expansion. The API is documented as evolving, so shape/username/UID validation fails closed. Exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` before the expected-head squash merge.
 
-Crossref is the current source-activation package in PR #180. Primary documentation was re-checked on 2026-08-21: public API access requires no signup, exact work retrieval is `GET /works/{doi}`, almost all deposited bibliographic metadata is reusable for any purpose, abstracts can remain copyrighted, and anonymous public clients must respect current public limits/backoff. PersonaLattice therefore excludes abstracts and uses only exact DOI singleton reads under a much tighter local budget. No Crossref search/list operation or author-name pivot is authorized. The implementation head `2e593a60888c5561d12ad19447e3a3ee924e1e9b` passed CI run `32433856669`; the final documentation head must also pass before merge.
+Crossref is active on `main` via PR #180. Primary documentation was re-checked on 2026-08-21: public API access requires no signup, exact work retrieval is `GET /works/{doi}`, almost all deposited bibliographic metadata is reusable for any purpose, abstracts can remain copyrighted, and anonymous public clients must respect current public limits/backoff. PersonaLattice excludes abstracts and uses only exact DOI singleton reads under a much tighter local budget. No Crossref search/list operation or author-name pivot is authorized.
+
+DataCite is the current source package in PR #182. Primary DataCite documentation was re-checked on 2026-08-21: public singleton DOI retrieval requires no authentication, public API records are Findable DOI metadata, the unidentified public tier is currently 500 requests per five minutes per IP, and deposited metadata is released under CC0 subject to third-party privacy/publicity rights. PersonaLattice is tighter: 30 requests/minute locally, one attempt, one concurrency slot, 4-second timeout, 32 KiB adapter ceiling, no search/list/relation expansion, and fallback execution only after a clean Crossref no-match.
 
 Current explicit rejections/deferments include:
 
@@ -118,9 +125,9 @@ If provider documentation changes, repeat the preflight instead of trusting this
 
 ## Next engineering gate
 
-1. Keep Crossref exact-work boundaries and regressions green after #180; do not widen the source into search, abstract/full-text retrieval or author/person expansion.
-2. Keep Keybase, Wayback, Stack Overflow, OpenAlex and Wikidata source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
-3. Review the next high-value ₹0 source from primary documentation after #180. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
+1. Finish PR #182 only after its final exact head passes the full required CI matrix; do not weaken the Crossref-first fallback invariant to increase hit rate.
+2. Keep Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata and Crossref source boundaries/tests green; do not expand them into content scraping, fuzzy person/entity search or hidden identity reconciliation.
+3. Review the next high-value ₹0 source from primary documentation after #182. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
 4. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 5. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
 
