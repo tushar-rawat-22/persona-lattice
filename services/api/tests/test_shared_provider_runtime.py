@@ -22,6 +22,7 @@ from app.providers.shared_runtime import (
     DEFAULT_STACK_OVERFLOW_PROVIDER,
     DEFAULT_WAYBACK_PROVIDER,
     DEFAULT_WIKIDATA_PROVIDER,
+    DEFAULT_ZENODO_PROVIDER,
     default_provider,
 )
 
@@ -39,6 +40,7 @@ def test_shared_production_runtime_owns_current_governed_quick_research_provider
         "stack_overflow_public_profile",
         "openalex_exact_author",
         "wikidata_exact_entity",
+        "zenodo_exact_record",
         "ror_exact_organization",
         "companies_house_exact_company",
         "dblp_exact_person",
@@ -58,6 +60,7 @@ def test_shared_production_runtime_owns_current_governed_quick_research_provider
     assert DEFAULT_PROVIDER_RUNTIME.adapters["stack_overflow_public_profile"] is DEFAULT_STACK_OVERFLOW_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["openalex_exact_author"] is DEFAULT_OPENALEX_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["wikidata_exact_entity"] is DEFAULT_WIKIDATA_PROVIDER
+    assert DEFAULT_PROVIDER_RUNTIME.adapters["zenodo_exact_record"] is DEFAULT_ZENODO_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["ror_exact_organization"] is DEFAULT_ROR_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["companies_house_exact_company"] is DEFAULT_COMPANIES_HOUSE_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["dblp_exact_person"] is DEFAULT_DBLP_PROVIDER
@@ -79,6 +82,7 @@ def test_shared_runtime_adapters_match_reviewed_registry_descriptors() -> None:
     assert DEFAULT_STACK_OVERFLOW_PROVIDER.descriptor is PROVIDER_BY_NAME["stack_overflow_public_profile"]
     assert DEFAULT_OPENALEX_PROVIDER.descriptor is PROVIDER_BY_NAME["openalex_exact_author"]
     assert DEFAULT_WIKIDATA_PROVIDER.descriptor is PROVIDER_BY_NAME["wikidata_exact_entity"]
+    assert DEFAULT_ZENODO_PROVIDER.descriptor is PROVIDER_BY_NAME["zenodo_exact_record"]
     assert DEFAULT_ROR_PROVIDER.descriptor is PROVIDER_BY_NAME["ror_exact_organization"]
     assert DEFAULT_COMPANIES_HOUSE_PROVIDER.descriptor is PROVIDER_BY_NAME["companies_house_exact_company"]
     assert DEFAULT_DBLP_PROVIDER.descriptor is PROVIDER_BY_NAME["dblp_exact_person"]
@@ -100,6 +104,7 @@ def test_default_provider_returns_process_owned_adapter_without_reinstantiation(
     assert default_provider("stack_overflow_public_profile") is DEFAULT_STACK_OVERFLOW_PROVIDER
     assert default_provider("openalex_exact_author") is DEFAULT_OPENALEX_PROVIDER
     assert default_provider("wikidata_exact_entity") is DEFAULT_WIKIDATA_PROVIDER
+    assert default_provider("zenodo_exact_record") is DEFAULT_ZENODO_PROVIDER
     assert default_provider("ror_exact_organization") is DEFAULT_ROR_PROVIDER
     assert default_provider("companies_house_exact_company") is DEFAULT_COMPANIES_HOUSE_PROVIDER
     assert default_provider("dblp_exact_person") is DEFAULT_DBLP_PROVIDER
