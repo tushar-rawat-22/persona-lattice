@@ -4,6 +4,7 @@ from __future__ import annotations
 from .bluesky_public import BlueskyPublicProfileProvider
 from .brave_search import BravePublicWebSearchProvider
 from .codeforces_public import CodeforcesPublicProfileProvider
+from .companies_house_company import CompaniesHouseExactCompanyProvider
 from .crossref_work import CrossrefExactWorkProvider
 from .datacite_doi import DataCiteExactDoiProvider
 from .dblp_person import DblpExactPersonProvider
@@ -35,6 +36,7 @@ DEFAULT_STACK_OVERFLOW_PROVIDER = StackOverflowPublicProfileProvider()
 DEFAULT_OPENALEX_PROVIDER = OpenAlexExactAuthorProvider()
 DEFAULT_WIKIDATA_PROVIDER = WikidataExactEntityProvider()
 DEFAULT_ROR_PROVIDER = RorExactOrganizationProvider()
+DEFAULT_COMPANIES_HOUSE_PROVIDER = CompaniesHouseExactCompanyProvider()
 DEFAULT_DBLP_PROVIDER = DblpExactPersonProvider()
 DEFAULT_CROSSREF_PROVIDER = CrossrefExactWorkProvider()
 DEFAULT_DATACITE_PROVIDER = DataCiteExactDoiProvider()
@@ -54,6 +56,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_OPENALEX_PROVIDER,
         DEFAULT_WIKIDATA_PROVIDER,
         DEFAULT_ROR_PROVIDER,
+        DEFAULT_COMPANIES_HOUSE_PROVIDER,
         DEFAULT_DBLP_PROVIDER,
         DEFAULT_CROSSREF_PROVIDER,
         DEFAULT_DATACITE_PROVIDER,

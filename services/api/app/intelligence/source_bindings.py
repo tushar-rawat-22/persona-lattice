@@ -160,6 +160,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="companies_house_exact_company",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="companies_house_exact_company",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact canonical Companies House company URLs execute singleton public-register metadata through "
+            "ProviderRuntime; company search, officer/PSC/address expansion and emitted leads are outside this source."
+        ),
+    ),
+    SourceBinding(
         source_name="dblp_exact_person",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="dblp_exact_person",

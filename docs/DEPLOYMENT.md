@@ -93,4 +93,6 @@ Optional provider credentials remain server-side environment secrets. An absent 
 
 `OPENALEX_API_KEY` is a free server-side key used only when an operator supplies an exact OpenAlex author URL. PersonaLattice sends it in the `Authorization` header rather than a query string. If the key is absent, OpenAlex is reported as `credential_not_configured` and no provider attempt is counted. Do not expose the key to the browser or commit it to Git.
 
+`COMPANIES_HOUSE_API_KEY` is a free server-side key used only when an operator supplies an exact canonical Companies House public company URL. PersonaLattice uses the documented HTTP Basic form with the API key as username and an empty password. The key is never placed in the request URL or retained case evidence. If the key is absent, Companies House is reported as `credential_not_configured` and no provider attempt is counted. Do not use company authentication codes or user-supplied credentials for this source.
+
 The first production deployment does not require an external phone/email enrichment provider. Live username research works through the reviewed public-source path; phone/email coverage remains deliberately narrower until an external source passes source, license, privacy, retention and cost review.

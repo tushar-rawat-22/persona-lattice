@@ -24,6 +24,7 @@ from .models import Purpose
 from .network_metadata import resolve_public_host_ips
 from .providers.base import ProviderObservationData, ProviderQuery
 from .providers.bluesky_admission import BlueskyAdmissionError, normalize_bluesky_handle
+from .providers.companies_house_company import companies_house_number_from_url
 from .providers.contracts import ExecutionRequest
 from .providers.crossref_work import crossref_doi_from_url
 from .providers.dblp_person import dblp_person_pid_from_url
@@ -37,6 +38,7 @@ from .providers.shared_runtime import (
     DEFAULT_BLUESKY_PROVIDER,
     DEFAULT_BRAVE_PROVIDER,
     DEFAULT_CODEFORCES_PROVIDER,
+    DEFAULT_COMPANIES_HOUSE_PROVIDER,
     DEFAULT_CROSSREF_PROVIDER,
     DEFAULT_DATACITE_PROVIDER,
     DEFAULT_DBLP_PROVIDER,
@@ -252,6 +254,19 @@ def _ror_observation_from_provider(item: ProviderObservationData) -> QuickObserv
         source="ror_exact_organization",
         source_locator=item.source_locator,
         summary=f"ROR CC0 registry metadata for {ror_id}; exact supplied-organization evidence only.",
+        details=dict(item.payload),
+    )
+
+
+def _companies_house_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    company_number = str(item.payload.get("companies_house_company_number", "unknown company"))
+    return QuickObservation(
+        source="companies_house_exact_company",
+        source_locator=item.source_locator,
+        summary=(
+            f"Companies House public-register metadata for company {company_number}; "
+            "exact supplied-company evidence only."
+        ),
         details=dict(item.payload),
     )
 
@@ -860,6 +875,33 @@ async def _ror_observations(
         ),
     )
     return [_ror_observation_from_provider(item) for item in result.observations]
+
+
+async def _companies_house_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_COMPANIES_HOUSE_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_companies_house_observation_from_provider(item) for item in result.observations]
 
 
 async def _dblp_observations(
@@ -1493,6 +1535,36 @@ async def _research_url(
                 )
             )
         observations.extend(ror_observations)
+
+    if companies_house_number_from_url(normalized_value) is not None:
+        try:
+            companies_house_observations = await _companies_house_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            companies_house_observations = []
+            source_run = _source_run_for_exception(
+                source_name="companies_house_exact_company",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+            if source_run is None or source_run.reason.value != "credential_not_configured":
+                warnings.append("Companies House exact-company metadata was temporarily unavailable.")
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="companies_house_exact_company",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(companies_house_observations),
+                )
+            )
+        observations.extend(companies_house_observations)
 
     if dblp_person_pid_from_url(normalized_value) is not None:
         try:

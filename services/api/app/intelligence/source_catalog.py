@@ -342,6 +342,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="companies_house_exact_company",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.FREE_TIER,
+        credential_class=SourceCredentialClass.FREE_API_KEY,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=44,
+        note=(
+            "Official Companies House singleton company-profile metadata for exact canonical company URLs only; "
+            "free server-side API key, no company/person search, address/officer expansion or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="dblp_exact_person",
         accepts=frozenset({LeadKind.URL}),
         emits=frozenset(),

@@ -11,6 +11,11 @@ from .base import (
     SourceCategory,
 )
 from .codeforces_public import CodeforcesPublicProfileProvider, fetch_codeforces_public_profile
+from .companies_house_company import (
+    CompaniesHouseExactCompanyProvider,
+    companies_house_number_from_url,
+    fetch_companies_house_company,
+)
 from .contracts import ExecutionRequest, QueryOrigin
 from .crossref_work import CrossrefExactWorkProvider, crossref_doi_from_url, fetch_crossref_work
 from .datacite_doi import DataCiteExactDoiProvider, fetch_datacite_doi
@@ -56,6 +61,7 @@ __all__ = [
     "AccountDiscoveryState",
     "AuthMode",
     "CodeforcesPublicProfileProvider",
+    "CompaniesHouseExactCompanyProvider",
     "ContactRisk",
     "CrossrefExactWorkProvider",
     "DataCiteExactDoiProvider",
@@ -97,9 +103,11 @@ __all__ = [
     "SyntheticEchoProvider",
     "WikidataExactEntityProvider",
     "authorize_execution",
+    "companies_house_number_from_url",
     "crossref_doi_from_url",
     "dblp_person_pid_from_url",
     "fetch_codeforces_public_profile",
+    "fetch_companies_house_company",
     "fetch_crossref_work",
     "fetch_datacite_doi",
     "fetch_dblp_person",

@@ -20,6 +20,8 @@ ROR exact-organization activation: PR #185 merged as `1f5b1a897ab08763788f6024d7
 
 DBLP exact-person activation: PR #187 merged as `905f9fc8915487a002e54a81e3d23b443ea19072` after exact head `4e5de2580ea8cb2881f1520e5790b15362ea80c6` passed CI run `32440833347`. It is limited to explicit canonical `https://dblp.org/pid/<pid>` URLs and one minimal public-SPARQL query for the exact `dblp:Person` resource plus `dblp:primaryCreatorName`; it emits no leads and does not retrieve bibliography or coauthor context.
 
+Companies House exact-company activation is carried by PR #191. The package admits only explicit canonical public company URLs, uses the exact company-profile endpoint with a free server-side API key, keeps the credential out of URLs/evidence, retains a narrow non-person company record, emits no leads and excludes officer/PSC/address/filing/search expansion. The final merge SHA and exact-head CI run must be recorded here only after PR #191 is green and merged.
+
 ## Engineering state
 
 **The current private one-admin engineering foundation is complete.**
@@ -68,6 +70,7 @@ Required/zero-spend baseline:
 - OpenAlex exact-author metadata when a free server-side key is configured;
 - Wikidata exact-item CC0 metadata for explicit item URLs;
 - ROR exact-organization CC0 metadata for explicit canonical ROR URLs;
+- Companies House exact-company public-register metadata for explicit canonical company URLs when a free server-side key is configured;
 - DBLP exact-person CC0 metadata for explicit canonical person PID URLs;
 - Crossref exact-work bibliographic metadata for explicit DOI resolver URLs;
 - DataCite exact-DOI CC0 fallback metadata after a clean Crossref no-match;
@@ -88,6 +91,10 @@ OpenAlex is exact-author-URL metadata only. Applicability requires `https://open
 Wikidata is exact-item-URL metadata only. Applicability requires `https://www.wikidata.org/wiki/Q<positive-digits>` with no credentials, port, query or fragment. The provider calls official `wbgetentities` for that QID and requests English labels/descriptions only. It retains the QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`; it does not request or retain structured claims, aliases, sitelinks, external identifiers or linked entities, and emits no leads. The bounded description is public descriptive text and is never parsed into identity claims or recursive leads. Requests are credentialless, use an identifying User-Agent, one-concurrency/30-per-minute local budget, `maxlag=5`, and typed HTTP/API-level rate/backoff handling.
 
 ROR is exact-organization-URL metadata only. Applicability requires the canonical `https://ror.org/<id>` form with no credentials, custom port, query, fragment or trailing path. The provider performs one official credentialless `/v2/organizations/{id}` singleton read and retains only the canonical ROR ID, exactly one bounded `ror_display` name, `active` record status, at most eight bounded organization types, CC0 attribution and `identity_claim=false`. It excludes external IDs, domains, links, aliases beyond the selected display name, relationships, locations/addresses/geocodes, search candidates and contact-like fields. The retained display name uses a provider-specific field key so generic extraction does not silently turn it into an organization lead; provider and extraction regressions require zero emitted leads. PersonaLattice applies one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and an eight-request/minute local budget. `404` is a completed no-match, `429` preserves `Retry-After`, transient failures stay attempted-unavailable, and malformed/non-active/mismatched records fail closed.
+
+Companies House is exact-company-URL metadata only. Applicability requires `https://find-and-update.company-information.service.gov.uk/company/<company-number>` with no credentials, custom port, query, fragment or trailing path. The provider calls only the official exact company-profile endpoint and sends `COMPANIES_HOUSE_API_KEY` as the HTTP Basic username with a blank password. The key never appears in request URLs, retained evidence or client configuration. Missing key is a pre-attempt `credential_not_configured` state.
+
+The retained company record is limited to company number, bounded registered name/status/type, optional valid incorporation date, Companies House public-register attribution and `identity_claim=false`. Registered-office addresses, officers/directors/secretaries/PSCs, person names, SIC/business descriptions, accounts/confirmation fields, insolvency/charges, filing history/document links, previous names, jurisdiction/location expansion and contact-like fields are excluded. Provider-specific names keep the registered name out of generic lead extraction; regression coverage requires zero emitted leads. PersonaLattice uses one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and 30 requests/minute, well below the documented 600 requests/five-minute provider limit.
 
 DBLP is exact-person-PID metadata only. Applicability requires a canonical `https://dblp.org/pid/<pid>` URL with no credentials, custom port, query, fragment, suffix or trailing path. PIDs remain case-sensitive. The provider sends one exact-resource query to `https://sparql.dblp.org/sparql`, constrains the resource to `dblp:Person`, and asks only for `dblp:primaryCreatorName`. It retains the canonical PID URL, one bounded primary name, CC0 attribution and `identity_claim=false`. Publication lists/counts, coauthors, affiliations, ORCID/external IDs, homepages, alternate names and contact-like data are not requested or admitted. `dblp_primary_name` is a provider-specific display field and extraction regressions require zero emitted leads. The shared public SPARQL service is treated as beta infrastructure: one attempt, 4-second timeout, 32 KiB response ceiling, one concurrency slot and six requests/minute locally. Empty results are no-match; `429` preserves `Retry-After`; transient failures stay attempted-unavailable; mismatched, duplicate or malformed results fail closed.
 
@@ -115,7 +122,7 @@ Wayback was the first post-freeze source admission. Its contract is exact-URL hi
 
 Stack Overflow is the second admitted post-freeze source. Its applicability boundary is an exact profile URL with a numeric user ID, not a username/display-name query. Anonymous requests use the official Stack Exchange API, stay under a conservative local budget, preserve provider `Retry-After`/API `backoff`, and keep Stack Overflow attribution visible with canonical provenance.
 
-OpenAlex is the third admitted post-freeze source. Its applicability is an exact author entity URL, not a person-name search. Current primary documentation was re-checked on 2026-08-21: API keys are required and free, bearer authentication is supported, singleton-by-ID retrieval is a free operation, author names are not safe identifiers, and the data is CC0. Re-check those provider facts before future source-policy changes.
+OpenAlex is an admitted post-freeze source. Its applicability is an exact author entity URL, not a person-name search. Current primary documentation was re-checked on 2026-08-21: API keys are required and free, bearer authentication is supported, singleton-by-ID retrieval is a free operation, author names are not safe identifiers, and the data is CC0. Re-check those provider facts before future source-policy changes.
 
 Wikidata is an admitted source in `main`. Its applicability is an exact item URL, not a person/entity-name search. Current primary documentation was re-checked on 2026-08-21: structured data is CC0; `wbgetentities` supports exact QID retrieval; automated clients must identify themselves and respect rate/backoff policy. PersonaLattice stays far below the current identified-client allowance and requests no claims or linked-entity expansion.
 
@@ -129,7 +136,11 @@ ROR is active on `main` via PR #185. Primary ROR documentation was re-checked on
 
 DBLP is active on `main` via PR #187. Primary DBLP documentation was re-checked on 2026-08-21: all DBLP metadata is CC0 and can be reused commercially; persistent PIDs are the stable person identifiers; `dblp:primaryCreatorName` is the primary creator-name property; and the public SPARQL service is a shared beta endpoint with rate limiting against aggressive scripting. PersonaLattice deliberately avoids the full person-bibliography export because that would retrieve much more publication/coauthor context than an exact PID check needs. Exact head `4e5de2580ea8cb2881f1520e5790b15362ea80c6` passed CI run `32440833347` before PR #187 merged as `905f9fc8915487a002e54a81e3d23b443ea19072`.
 
-VIAF exact authority metadata was re-reviewed on 2026-08-21 and remains deferred rather than admitted. OCLC still lists VIAF as a production API and VIAF data is ODC-BY with canonical numeric URIs, but the current interactive API documentation endpoint was unavailable during review and the primary materials available to us did not establish a narrow exact-record JSON representation plus practical rate/backoff contract strongly enough to justify a new production dependency. VIAF cluster records are also materially richer than PersonaLattice needs. Do not implement VIAF name search, autosuggest, SRU search or a broad cluster parser as a workaround. The next authority-source review should compare a narrow exact LCNAF/id.loc.gov representation before reopening VIAF.
+Companies House is the current activation package in PR #191. Primary documentation was re-checked on 2026-08-21: the exact company-profile endpoint is a read-only public-data path; API-key Basic authentication is documented; public API access is free; the default limit is 600 requests per five minutes; and third-party users remain responsible for data-protection/copyright compliance when reusing public-register information. PersonaLattice intentionally retains no registered-office address, officer/PSC/person data, filings or search results and stays at 30 requests/minute locally.
+
+VIAF exact authority metadata was re-reviewed on 2026-08-21 and remains deferred rather than admitted. OCLC still lists VIAF as a production API and VIAF data is ODC-BY with canonical numeric URIs, but the primary materials available to us did not establish a narrow exact-record representation plus practical rate/backoff contract strongly enough to justify a new production dependency. VIAF cluster records are also materially richer than PersonaLattice needs. Do not implement VIAF name search, autosuggest, SRU search or a broad cluster parser as a workaround.
+
+LCNAF/id.loc.gov review Issue #189 was closed `not_planned` on 2026-08-21. Machine-readable exact authority resources exist, but current primary documentation did not establish both a defensible future-commercial reuse position for cooperatively maintained LCNAF/NACO records and an id.loc.gov-specific rate/backoff contract. Do not work around those blockers with search/suggest, broad SKOS parsing or borrowed limits from the separate loc.gov JSON API.
 
 Current explicit rejections/deferments include:
 
@@ -137,15 +148,16 @@ Current explicit rejections/deferments include:
 - Hacker News public-user metadata is rejected under current Y Combinator commercial-use terms despite a technically attractive free API.
 - Stack Exchange `inname` user search is substring-based and therefore too fuzzy to become generic recursive username evidence; this does not affect the exact Stack Overflow profile-URL source.
 - VIAF exact authority retrieval is deferred until current primary documentation supports a narrow, stable exact-record representation and operational contract; fuzzy VIAF discovery remains out of scope regardless.
+- LCNAF/id.loc.gov is deferred until both cooperatively maintained record reuse and service-specific operating limits are defensible from current primary documentation.
 
 If provider documentation changes, repeat the preflight instead of trusting this handover.
 
 ## Next engineering gate
 
-1. Review a narrow exact LCNAF/id.loc.gov authority path from current primary documentation before admitting another authority source. Prefer an explicit canonical authority URI and a small machine representation; no name search, autosuggest, relationship expansion or bulk enumeration.
-2. Keep exact-source boundaries green for Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR, DBLP and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
-3. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
-4. Review the next high-value ₹0 source from primary documentation only. Reject sources whose terms, privacy model or matching semantics do not fit the product even if the endpoint is free.
+1. Finish PR #191 as one coherent Companies House source package: provider/runtime/routing/tests/docs, exact-head CI, then guarded merge. Do not weaken missing-key non-attempt semantics or broaden into people/address/filing/search data.
+2. After #191, review the next high-value exact ₹0 source from primary documentation only. Reject sources whose terms, privacy model, operational contract or matching semantics do not fit the product even if the endpoint is free.
+3. Keep exact-source boundaries green for Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, ROR, DBLP, Crossref/DataCite and Companies House; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
+4. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
 5. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
 6. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
 

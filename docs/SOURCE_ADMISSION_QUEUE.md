@@ -131,6 +131,24 @@ Retained evidence is restricted to the canonical ROR ID, exactly one bounded `ro
 
 The source is credentialless and zero-direct-cost. ROR has announced a lower unidentified-client tier of 50 requests per five minutes; PersonaLattice imposes the tighter local budget of eight requests/minute, one concurrency slot, one attempt, a 4-second timeout and a 32 KiB response ceiling. Client ID registration is currently paused, so the required baseline does not depend on it. `404` is a completed no-match; `429` preserves valid `Retry-After`; 408/5xx/network failures remain attempted transient failures; malformed records, non-active records and returned-ID mismatches fail closed.
 
+### Companies House exact company
+
+**Decision:** admit only for an explicit canonical `https://find-and-update.company-information.service.gov.uk/company/<company-number>` URL and a configured free server-side API key.
+
+Primary Companies House/GOV.UK documentation re-checked on 2026-08-21:
+
+- Public Data API company-profile endpoint;
+- API authentication guidance for HTTP Basic API-key authentication;
+- developer rate-limit guidance;
+- Companies House public-register data/reuse guidance;
+- current personal-information guidance for third-party reuse.
+
+PersonaLattice uses only `GET /company/{company_number}` after strict local URL admission. It never uses company-name search, officer/PSC search, alphabetical search, filing/document traversal, reverse lookup or bulk enumeration. The API key stays server-side in `COMPANIES_HOUSE_API_KEY`; a missing key is a pre-attempt `credential_not_configured` state.
+
+Retained evidence is limited to the canonical company number, one bounded registered company name, bounded company status/type, an optional valid incorporation date, Companies House public-register attribution, canonical company provenance and `identity_claim=false`. Registered-office addresses, officers/directors/secretaries/PSCs, person names, SIC/business descriptions, accounts/confirmation data, insolvency/charges, filing history/document links, previous names, jurisdiction/location expansion and contact-like fields are ignored. Provider-specific field names prevent the generic lead extractor from turning the company name into a recursive clue; the source emits no leads.
+
+Companies House documents public API access as free and a default limit of 600 requests per five minutes. PersonaLattice is deliberately tighter: one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrent request and a 30-request/minute local budget. `404` is a completed no-match; `401`/`403` are attempted credential failures without key leakage; `429` preserves valid `Retry-After`; 408/5xx/network failures remain attempted transient failures; malformed records and returned-company-number mismatches fail closed.
+
 ### DBLP exact person PID
 
 **Decision:** admitted only for an exact canonical `https://dblp.org/pid/<pid>` person URL.

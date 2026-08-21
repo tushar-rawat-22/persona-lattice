@@ -336,6 +336,28 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="companies_house_exact_company",
+        capability="public_company_registry_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official Companies House singleton company-profile lookup only for an exact supplied public "
+            "company URL; bounded company metadata with no person, address, filing or search expansion."
+        ),
+        version="public-data-company-profile-2026-08",
+        source_category=SourceCategory.REGISTRY,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        auth_mode=AuthMode.API_KEY,
+        secret_env="COMPANIES_HOUSE_API_KEY",
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=32 * 1024,
+        max_concurrency=1,
+        rate_limit=30,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="dblp_exact_person",
         capability="public_scholarly_profile_metadata",
         status=ProviderStatus.DEVELOPMENT.value,
