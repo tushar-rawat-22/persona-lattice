@@ -513,3 +513,43 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
 SOURCE_BY_NAME = {source.name: source for source in SOURCE_CATALOG}
 if len(SOURCE_BY_NAME) != len(SOURCE_CATALOG):
     raise RuntimeError("Source capability catalog contains duplicate names.")
+
+
+def sources_for_lead(
+    kind: LeadKind,
+    *,
+    include_optional: bool = True,
+    include_planned: bool = False,
+    include_deferred: bool = False,
+    zero_spend_only: bool = False,
+    recursive_only: bool = False,
+) -> tuple[SourceCapability, ...]:
+    """Return deterministic source capabilities that declare support for a lead kind.
+
+    A catalog match is planning metadata only. It never bypasses adapter existence,
+    source policy, purpose/consent checks, credentials, budgets or execution gates.
+    """
+
+    allowed_statuses = {SourceStatus.ACTIVE}
+    if include_optional:
+        allowed_statuses.add(SourceStatus.OPTIONAL)
+    if include_planned:
+        allowed_statuses.add(SourceStatus.PLANNED)
+    if include_deferred:
+        allowed_statuses.update(
+            {
+                SourceStatus.REVIEW_REQUIRED,
+                SourceStatus.MANUAL_ONLY,
+                SourceStatus.REFERENCE_ONLY,
+            }
+        )
+
+    selected = [
+        source
+        for source in SOURCE_CATALOG
+        if kind in source.accepts
+        and source.status in allowed_statuses
+        and (not zero_spend_only or source.zero_spend_eligible)
+        and (not recursive_only or source.recursive_eligible)
+    ]
+    return tuple(sorted(selected, key=lambda source: (source.priority, source.name)))
