@@ -12,6 +12,7 @@ from .base import ProviderObservationData, ProviderQuery, ProviderResult
 from .errors import (
     ProviderExecutionError,
     ProviderRemoteRateLimitError,
+    ProviderResultValidationError,
     ProviderTransientError,
     ProviderValidationError,
 )
@@ -208,6 +209,11 @@ class GitHubPublicProfileProvider:
         login = payload.get("login")
         if not isinstance(login, str) or login.casefold() != query.identifier_value.casefold():
             raise ProviderValidationError("GitHub public profile login does not match the requested username.")
+        account_type = payload.get("type")
+        if account_type != "User":
+            raise ProviderResultValidationError(
+                "GitHub username lookup did not return a personal User account."
+            )
         source_locator = _validated_profile_url(payload.get("html_url"), username=login)
 
         details = {field: payload.get(field) for field in _ALLOWED_PUBLIC_FIELDS}
