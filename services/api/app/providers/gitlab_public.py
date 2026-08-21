@@ -19,6 +19,33 @@ from .registry import PROVIDER_BY_NAME
 
 
 _MAX_RAW_RESPONSE_BYTES = 64 * 1024
+_GITLAB_RESERVED_PROFILE_SEGMENTS = frozenset(
+    {
+        ".well-known",
+        "admin",
+        "api",
+        "assets",
+        "dashboard",
+        "explore",
+        "files",
+        "groups",
+        "help",
+        "import",
+        "jwt",
+        "login",
+        "oauth",
+        "profile",
+        "projects",
+        "public",
+        "s",
+        "search",
+        "snippets",
+        "unsubscribes",
+        "uploads",
+        "users",
+        "v2",
+    }
+)
 _ALLOWED_PUBLIC_FIELDS = (
     "id",
     "username",
@@ -103,6 +130,30 @@ def _fetch_gitlab_public_profile_sync(kind: str, value: str) -> dict[str, object
     return None
 
 
+def gitlab_profile_username_from_url(value: str) -> str | None:
+    parts = urlsplit(value)
+    if (
+        parts.scheme != "https"
+        or parts.hostname is None
+        or parts.hostname.casefold() != "gitlab.com"
+        or parts.username is not None
+        or parts.password is not None
+        or parts.port is not None
+        or parts.query
+        or parts.fragment
+    ):
+        return None
+    segments = [segment for segment in parts.path.split("/") if segment]
+    if len(segments) != 1:
+        return None
+    username = segments[0]
+    if parts.path not in {f"/{username}", f"/{username}/"} or "%" in username:
+        return None
+    if username.casefold() in _GITLAB_RESERVED_PROFILE_SEGMENTS:
+        return None
+    return username
+
+
 def gitlab_project_path_from_url(value: str) -> str | None:
     parts = urlsplit(value)
     if (
@@ -155,6 +206,9 @@ def _fetch_gitlab_public_project_sync(value: str) -> dict[str, object] | None:
 
 async def fetch_gitlab_public(kind: str, value: str) -> dict[str, object] | None:
     if kind == "url":
+        profile_username = gitlab_profile_username_from_url(value)
+        if profile_username is not None:
+            return await asyncio.to_thread(_fetch_gitlab_public_profile_sync, "username", profile_username)
         return await asyncio.to_thread(_fetch_gitlab_public_project_sync, value)
     return await asyncio.to_thread(_fetch_gitlab_public_profile_sync, kind, value)
 
@@ -195,6 +249,38 @@ def _validated_project_url(value: object, *, project_path: str) -> str:
     ):
         raise ProviderValidationError("GitLab public project returned an invalid canonical project URL.")
     return value
+
+
+def _profile_observation(
+    payload: dict[str, object],
+    *,
+    requested_kind: str,
+    requested_value: str,
+    matched_by: str,
+) -> ProviderResult:
+    username = payload.get("username")
+    if not isinstance(username, str) or not username:
+        raise ProviderValidationError("GitLab public profile is missing username.")
+    if requested_kind in {"username", "url"} and username.casefold() != requested_value.casefold():
+        raise ProviderValidationError("GitLab public profile username does not match the request.")
+    if requested_kind == "email":
+        public_email = payload.get("public_email")
+        if not isinstance(public_email, str) or public_email.casefold() != requested_value.casefold():
+            raise ProviderValidationError("GitLab public email does not match the request.")
+
+    source_locator = _validated_profile_url(payload.get("web_url"), username=username)
+    details = {field: payload.get(field) for field in _ALLOWED_PUBLIC_FIELDS}
+    details.update(
+        {
+            "account_candidate": True,
+            "identity_claim": False,
+            "field_visibility": "public_profile_api",
+            "matched_by": matched_by,
+        }
+    )
+    return ProviderResult(
+        observations=(ProviderObservationData(source_locator=source_locator, payload=details),)
+    )
 
 
 def _project_observation(payload: dict[str, object], *, requested_path: str) -> ProviderResult:
@@ -257,13 +343,27 @@ class GitLabPublicProfileProvider:
             raise ProviderValidationError("GitLab public lookup does not accept credentials.")
         if query.identifier_kind not in {"username", "email", "url"}:
             raise ProviderValidationError(
-                "GitLab public lookup accepts usernames, public emails, or exact project URLs only."
+                "GitLab public lookup accepts usernames, public emails, or exact profile/project URLs only."
             )
 
         if query.identifier_kind == "url":
+            profile_username = gitlab_profile_username_from_url(query.identifier_value)
+            if profile_username is not None:
+                payload = await self.fetcher(query.identifier_kind, query.identifier_value)
+                if payload is None:
+                    return ProviderResult(observations=())
+                return _profile_observation(
+                    payload,
+                    requested_kind="url",
+                    requested_value=profile_username,
+                    matched_by="exact_profile_url",
+                )
+
             project_path = gitlab_project_path_from_url(query.identifier_value)
             if project_path is None:
-                raise ProviderValidationError("GitLab project lookup requires an exact public project URL.")
+                raise ProviderValidationError(
+                    "GitLab URL lookup requires an exact public profile or project URL."
+                )
             payload = await self.fetcher(query.identifier_kind, query.identifier_value)
             if payload is None:
                 return ProviderResult(observations=())
@@ -272,29 +372,9 @@ class GitLabPublicProfileProvider:
         payload = await self.fetcher(query.identifier_kind, query.identifier_value)
         if payload is None:
             return ProviderResult(observations=())
-
-        username = payload.get("username")
-        if not isinstance(username, str) or not username:
-            raise ProviderValidationError("GitLab public profile is missing username.")
-        if query.identifier_kind == "username" and username.casefold() != query.identifier_value.casefold():
-            raise ProviderValidationError("GitLab public profile username does not match the request.")
-        if query.identifier_kind == "email":
-            public_email = payload.get("public_email")
-            if not isinstance(public_email, str) or public_email.casefold() != query.identifier_value.casefold():
-                raise ProviderValidationError("GitLab public email does not match the request.")
-
-        source_locator = _validated_profile_url(payload.get("web_url"), username=username)
-        details = {field: payload.get(field) for field in _ALLOWED_PUBLIC_FIELDS}
-        details.update(
-            {
-                "account_candidate": True,
-                "identity_claim": False,
-                "field_visibility": "public_profile_api",
-                "matched_by": "username" if query.identifier_kind == "username" else "exact_public_email",
-            }
-        )
-        return ProviderResult(
-            observations=(
-                ProviderObservationData(source_locator=source_locator, payload=details),
-            )
+        return _profile_observation(
+            payload,
+            requested_kind=query.identifier_kind,
+            requested_value=query.identifier_value,
+            matched_by="username" if query.identifier_kind == "username" else "exact_public_email",
         )
