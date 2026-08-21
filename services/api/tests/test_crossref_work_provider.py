@@ -175,7 +175,7 @@ def test_transport_uses_singleton_endpoint_and_escapes_reserved_doi_characters(
     payload = crossref._fetch_crossref_work_sync("10.5555/ABC(123)")
 
     assert payload == _payload("10.5555/ABC(123)")
-    assert seen["url"] == "https://api.crossref.org/works/10.5555/ABC%28123%29"
+    assert seen["url"] == "https://api.crossref.org/works/10.5555%2FABC%28123%29"
     assert "?" not in seen["url"]
     assert seen["user_agent"] == "PersonaLattice/0.0.1 crossref-exact-doi-research"
 
