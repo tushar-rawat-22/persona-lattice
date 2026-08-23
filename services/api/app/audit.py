@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import json
 import os
 from pathlib import Path
+import re
 import sqlite3
 from uuid import UUID, uuid4
 
@@ -17,6 +18,39 @@ class AuditEvent:
     event_type: str
     case_id: UUID | None
     details: dict[str, object]
+
+
+# Audit metadata is intentionally schema-limited. The audit table is an
+# operational trail, not a second evidence store. Adding a new event or detail
+# key should therefore be an explicit privacy decision rather than something a
+# caller can persist opportunistically.
+_ALLOWED_DETAIL_KEYS_BY_EVENT: dict[str, frozenset[str]] = {
+    "auth.login_success": frozenset(),
+    "auth.logout": frozenset(),
+    "research.quick": frozenset({"kind"}),
+    "research.converged": frozenset({"kind", "node_count"}),
+    "case.create": frozenset({"mode", "node_count"}),
+    "case.list": frozenset({"result_count", "has_more"}),
+    "case.purge_expired": frozenset({"count"}),
+    "case.delete_all": frozenset({"count"}),
+    "case.read": frozenset(),
+    "case.delete": frozenset({"deleted"}),
+    "file.preview": frozenset({"file_count"}),
+    "file.review.confirm": frozenset({"candidate_type", "identifier_kind"}),
+    "file.review.reject": frozenset({"candidate_type", "identifier_kind"}),
+    "file.review.reopen": frozenset({"candidate_type", "identifier_kind"}),
+    "file.review.promote": frozenset({"kind"}),
+    "file.review.research_case": frozenset({"mode", "kind"}),
+}
+_EVENT_TYPE_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,79}$")
+_SAFE_KIND_VALUES = frozenset({"username", "phone", "email", "url", "domain"})
+_SAFE_MODE_VALUES = frozenset({"quick", "converged"})
+_SAFE_CANDIDATE_TYPE_VALUES = frozenset({"identifier", "claim"})
+_SAFE_IDENTIFIER_KIND_VALUES = frozenset(
+    {"name", "phone", "email", "username", "url", "domain", "organization"}
+)
+_COUNT_DETAIL_KEYS = frozenset({"node_count", "result_count", "count", "file_count"})
+_BOOL_DETAIL_KEYS = frozenset({"has_more", "deleted"})
 
 
 def _database_path() -> Path:
@@ -64,12 +98,52 @@ def _decode(row: sqlite3.Row) -> AuditEvent:
     )
 
 
+def _validate_detail_value(key: str, value: object) -> None:
+    if key in _COUNT_DETAIL_KEYS:
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 1_000_000_000:
+            raise ValueError(f"audit detail {key!r} must be a bounded non-negative integer")
+        return
+    if key in _BOOL_DETAIL_KEYS:
+        if not isinstance(value, bool):
+            raise ValueError(f"audit detail {key!r} must be boolean")
+        return
+    if key == "kind":
+        if value not in _SAFE_KIND_VALUES:
+            raise ValueError("audit detail 'kind' is outside the approved vocabulary")
+        return
+    if key == "mode":
+        if value not in _SAFE_MODE_VALUES:
+            raise ValueError("audit detail 'mode' is outside the approved vocabulary")
+        return
+    if key == "candidate_type":
+        if value not in _SAFE_CANDIDATE_TYPE_VALUES:
+            raise ValueError("audit detail 'candidate_type' is outside the approved vocabulary")
+        return
+    if key == "identifier_kind":
+        if value is not None and value not in _SAFE_IDENTIFIER_KIND_VALUES:
+            raise ValueError("audit detail 'identifier_kind' is outside the approved vocabulary")
+        return
+    raise ValueError(f"audit detail key {key!r} has no approved value contract")
+
+
+def _validate_details(event_type: str, payload: dict[str, object]) -> None:
+    allowed = _ALLOWED_DETAIL_KEYS_BY_EVENT.get(event_type)
+    if allowed is None:
+        raise ValueError("audit event type is outside the approved vocabulary")
+    unexpected = set(payload).difference(allowed)
+    if unexpected:
+        raise ValueError("audit details contain an unapproved key")
+    for key, value in payload.items():
+        _validate_detail_value(key, value)
+
+
 class AuditStore:
     """Minimal operational audit trail that deliberately excludes research seed values.
 
-    Audit events can identify a retained case by UUID and record bounded operational
-    metadata, but they must not copy emails, phone numbers, usernames, URLs, session
-    secrets, CSRF tokens, passwords or provider response payloads.
+    Audit events can identify a retained case by UUID and record only explicitly
+    approved operational metadata. Emails, phone numbers, usernames, URLs,
+    passwords, hashes, session/CSRF tokens, provider secrets, raw upload content
+    and provider payloads have no permitted audit detail field.
     """
 
     def record(
@@ -81,9 +155,10 @@ class AuditStore:
         now: datetime | None = None,
     ) -> AuditEvent:
         normalized_event_type = event_type.strip()
-        if not normalized_event_type or len(normalized_event_type) > 80:
-            raise ValueError("audit event_type must contain 1 to 80 characters")
+        if _EVENT_TYPE_RE.fullmatch(normalized_event_type) is None:
+            raise ValueError("audit event_type has an invalid format")
         payload = dict(details or {})
+        _validate_details(normalized_event_type, payload)
         serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         if len(serialized.encode("utf-8")) > 4096:
             raise ValueError("audit details exceed the configured limit")
