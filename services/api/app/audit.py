@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import json
 import os
 from pathlib import Path
+import re
 import sqlite3
 from uuid import UUID, uuid4
 
@@ -20,9 +21,9 @@ class AuditEvent:
 
 
 # Audit metadata is intentionally schema-limited. The audit table is an
-# operational trail, not a second evidence store. Adding a new detail key should
-# therefore be an explicit privacy decision rather than something any caller can
-# persist opportunistically.
+# operational trail, not a second evidence store. Adding a new event or detail
+# key should therefore be an explicit privacy decision rather than something a
+# caller can persist opportunistically.
 _ALLOWED_DETAIL_KEYS_BY_EVENT: dict[str, frozenset[str]] = {
     "auth.login_success": frozenset(),
     "auth.logout": frozenset(),
@@ -41,6 +42,7 @@ _ALLOWED_DETAIL_KEYS_BY_EVENT: dict[str, frozenset[str]] = {
     "file.review.promote": frozenset({"kind"}),
     "file.review.research_case": frozenset({"mode", "kind"}),
 }
+_EVENT_TYPE_RE = re.compile(r"^[a-z][a-z0-9_.-]{0,79}$")
 _SAFE_KIND_VALUES = frozenset({"username", "phone", "email", "url", "domain"})
 _SAFE_MODE_VALUES = frozenset({"quick", "converged"})
 _SAFE_CANDIDATE_TYPE_VALUES = frozenset({"identifier", "claim"})
@@ -125,11 +127,9 @@ def _validate_detail_value(key: str, value: object) -> None:
 
 
 def _validate_details(event_type: str, payload: dict[str, object]) -> None:
-    if not payload:
-        return
     allowed = _ALLOWED_DETAIL_KEYS_BY_EVENT.get(event_type)
     if allowed is None:
-        raise ValueError("audit details are not approved for this event type")
+        raise ValueError("audit event type is outside the approved vocabulary")
     unexpected = set(payload).difference(allowed)
     if unexpected:
         raise ValueError("audit details contain an unapproved key")
@@ -155,8 +155,8 @@ class AuditStore:
         now: datetime | None = None,
     ) -> AuditEvent:
         normalized_event_type = event_type.strip()
-        if not normalized_event_type or len(normalized_event_type) > 80:
-            raise ValueError("audit event_type must contain 1 to 80 characters")
+        if _EVENT_TYPE_RE.fullmatch(normalized_event_type) is None:
+            raise ValueError("audit event_type has an invalid format")
         payload = dict(details or {})
         _validate_details(normalized_event_type, payload)
         serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
