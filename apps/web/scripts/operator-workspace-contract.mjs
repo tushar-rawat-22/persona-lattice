@@ -51,12 +51,12 @@ for (const token of requiredResearch) {
 }
 
 assert.ok(
-  research.indexOf("Raw retained JSON") > research.indexOf("Source execution"),
-  "raw provider payload must remain secondary to source execution/provenance context",
-);
-assert.ok(
   research.includes("<details>") && research.includes("<summary>Raw retained JSON</summary>"),
   "raw provider payload must remain progressively disclosed",
+);
+assert.ok(
+  research.includes("SourceRunSummary") && research.includes("resolveEdgeProvenance"),
+  "source execution and canonical provenance context must remain available alongside raw provider detail",
 );
 
 console.log("operator workspace contract: PASS");
