@@ -12,9 +12,9 @@ from app.providers import (
     ProviderObservationData,
     ProviderQuery,
     ProviderResult,
-    ProviderResultValidationError,
     SyntheticEchoProvider,
 )
+from app.providers.errors import ProviderResultValidationError
 from app.providers.runtime import ProviderRuntime
 
 
