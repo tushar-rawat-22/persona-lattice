@@ -65,6 +65,9 @@ jobs:
         run: npm run lint
       - working-directory: apps/web
         run: npm run typecheck
+      - name: Verify operator workspace contract
+        working-directory: apps/web
+        run: npm run test:operator-workspace
       - working-directory: apps/web
         run: npm run build
 
