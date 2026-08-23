@@ -56,6 +56,44 @@ def test_url_normalization_keeps_case_sensitive_components_and_fragment() -> Non
     assert result.comparison_key == "https://example.com/Profile?tab=about#Section"
 
 
+def test_public_url_hostname_is_canonicalized_through_idna() -> None:
+    result = normalize_identifier(
+        IdentifierKind.URL,
+        "https://BÜCHER.example/Profile",
+    )
+    assert result.normalized_value == "https://xn--bcher-kva.example/Profile"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "ftp://example.com/profile",
+        "file://example.com/etc/passwd",
+        "gopher://example.com/resource",
+        "https://localhost/profile",
+        "https://intranet/profile",
+        "https://person.internal/profile",
+        "https://person.local/profile",
+        "https://127.0.0.1/profile",
+        "https://10.0.0.8/profile",
+        "https://8.8.8.8/profile",
+        "https://[::1]/profile",
+        "https://[2606:4700:4700::1111]/profile",
+        "https://@example.com/profile",
+        "https://example.com/profile with space",
+        "https://example.com/profile\nnext",
+    ],
+)
+def test_public_url_seed_rejects_non_web_or_non_dns_destinations(value: str) -> None:
+    with pytest.raises(InvalidIdentifier):
+        normalize_identifier(IdentifierKind.URL, value)
+
+
+def test_malformed_ipv6_url_is_reported_as_invalid_identifier() -> None:
+    with pytest.raises(InvalidIdentifier, match="malformed"):
+        normalize_identifier(IdentifierKind.URL, "https://[not-an-ipv6/profile")
+
+
 def test_collection_deduplicates_only_on_safe_generic_equivalence() -> None:
     results, warnings = normalize_collection(
         IdentifierKind.EMAIL,
