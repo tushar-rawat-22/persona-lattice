@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
+import os
 import shutil
+import stat
 
 import pytest
 
@@ -55,3 +57,33 @@ def test_launch_backup_refuses_to_overwrite_existing_snapshot(monkeypatch, tmp_p
 
     with pytest.raises(DatabaseBackupError, match="refusing to overwrite"):
         backup_sqlite_database(live_path, backup_path)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX file-mode contract")
+def test_launch_backup_is_owner_only_even_with_permissive_umask(monkeypatch, tmp_path) -> None:
+    live_path = tmp_path / "live.db"
+    backup_path = tmp_path / "live.db.pre-launch"
+    _create_retained_case(monkeypatch, live_path)
+
+    previous_umask = os.umask(0)
+    try:
+        backup_sqlite_database(live_path, backup_path)
+    finally:
+        os.umask(previous_umask)
+
+    assert stat.S_IMODE(backup_path.stat().st_mode) == 0o600
+
+
+@pytest.mark.skipif(os.name != "posix", reason="symbolic-link contract")
+def test_launch_backup_refuses_broken_destination_symlink(monkeypatch, tmp_path) -> None:
+    live_path = tmp_path / "live.db"
+    outside_path = tmp_path / "outside.db"
+    backup_path = tmp_path / "live.db.pre-launch"
+    _create_retained_case(monkeypatch, live_path)
+    backup_path.symlink_to(outside_path)
+
+    with pytest.raises(DatabaseBackupError, match="symbolic link"):
+        backup_sqlite_database(live_path, backup_path)
+
+    assert backup_path.is_symlink()
+    assert not outside_path.exists()
