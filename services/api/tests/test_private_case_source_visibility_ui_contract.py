@@ -9,6 +9,12 @@ ROOT = Path(__file__).resolve().parents[3]
 CASE_UI = ROOT / "apps/web/app/admin/quick-research.tsx"
 
 
+def _source_run_summary(source: str) -> str:
+    start = source.index("function SourceRunSummary")
+    end = source.index("function M5EvidenceTable", start)
+    return source[start:end]
+
+
 def test_private_case_view_reads_retained_seed_provenance_directly() -> None:
     source = CASE_UI.read_text(encoding="utf-8")
 
@@ -29,9 +35,7 @@ def test_private_case_view_reads_typed_source_runs_without_warning_inference() -
     assert "report.source_runs" in source
     assert "Source execution state is unavailable for this historical case." in source
 
-    summary_start = source.index("function SourceRunSummary")
-    summary_end = source.index("export function QuickResearch")
-    summary = source[summary_start:summary_end]
+    summary = _source_run_summary(source)
     assert ".warnings" not in summary
     assert "warning" not in summary.casefold()
 
@@ -44,7 +48,7 @@ def test_source_visibility_ui_does_not_recreate_provider_policy() -> None:
     assert "item.reason" in source
     assert "aggregate.local_budget_stop_count" in source
     assert "aggregate.optional_not_configured_count" in source
-    assert "identity probability" not in source[source.index("function SourceRunSummary"):source.index("export function QuickResearch")].casefold()
+    assert "identity probability" not in _source_run_summary(source).casefold()
 
 
 def test_private_case_view_explains_missing_evidence_from_retained_counters() -> None:
@@ -74,9 +78,7 @@ def test_private_case_view_explains_missing_evidence_from_retained_counters() ->
     assert "routing authority unavailable · no provider attempt" in details
     assert "provider attempt failed" in details
 
-    summary_start = source.index("function SourceRunSummary")
-    summary_end = source.index("export function QuickResearch")
-    summary = source[summary_start:summary_end]
+    summary = _source_run_summary(source)
     assert "Why evidence may be missing" in summary
     assert "sourceOutcomeDetails(aggregate)" in summary
     assert "aggregate.withheld_count" in summary
