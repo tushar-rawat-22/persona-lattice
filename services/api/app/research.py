@@ -1152,24 +1152,46 @@ async def _research_username(
         purpose=purpose,
         consent_acknowledged=consent_acknowledged,
     )
-    result = await runtime.execute(
-        request=request,
-        query=ProviderQuery(
-            subject_id=subject_id,
-            identifier_id=identifier_id,
-            identifier_kind=IdentifierKind.USERNAME.value,
-            identifier_value=normalized_value,
-        ),
-    )
-    observations = [_sherlock_observation_from_provider(item) for item in result.observations]
     warnings: list[str] = []
-    source_runs = [
-        source_result_record(
+    source_runs: list[SourceRunRecord] = []
+    try:
+        result = await runtime.execute(
+            request=request,
+            query=ProviderQuery(
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                identifier_kind=IdentifierKind.USERNAME.value,
+                identifier_value=normalized_value,
+            ),
+        )
+    except Exception as exc:
+        source_run = _source_run_for_exception(
             source_name="sherlock",
             lead_kind=LeadKind.USERNAME,
-            observation_count=len(observations),
+            exc=exc,
         )
-    ]
+        if source_run is None or source_run.reason.value not in {
+            "execution_failure",
+            "remote_rate_limit",
+        }:
+            # Security/policy/budget/result-validation failures retain their
+            # existing fail-closed API behavior. Only proven provider availability
+            # failures are safe to quarantine as one missing source.
+            raise
+        observations: list[QuickObservation] = []
+        source_runs.append(source_run)
+        warnings.append(
+            "Sherlock username-site scan did not complete; remaining approved sources continued."
+        )
+    else:
+        observations = [_sherlock_observation_from_provider(item) for item in result.observations]
+        source_runs.append(
+            source_result_record(
+                source_name="sherlock",
+                lead_kind=LeadKind.USERNAME,
+                observation_count=len(observations),
+            )
+        )
     injected_gitlab = None if gitlab_lookup is lookup_gitlab_username else gitlab_lookup
     injected_codeforces = None if codeforces_lookup is lookup_codeforces_handle else codeforces_lookup
     enrichments = await asyncio.gather(
