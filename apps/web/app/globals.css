@@ -174,7 +174,7 @@ pre { overflow: auto; background: #121416; border: 1px solid var(--line); border
 .adminActions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .secondaryButton { padding: 8px 10px; color: var(--text); background: transparent; border: 1px solid var(--line); font-size: 11px; }
 .secondaryButton:hover { border-color: var(--line-strong); background: var(--panel-2); }
-.quickResult { margin-top: 12px; }
+.quickResult { min-width: 0; margin-top: 12px; }
 .researchObservation { display: grid; gap: 7px; border-top: 1px solid var(--line); padding-top: 8px; }
 .researchObservation:first-child { border-top: 0; }
 .researchObservation pre { margin: 0; max-height: 240px; }
@@ -208,7 +208,48 @@ details { border-top: 1px solid var(--line); padding-top: 7px; }
 summary { cursor: pointer; color: #c4c0b9; font-size: 11px; }
 
 @media (min-width: 1180px) {
-  .sideStack > .panel:first-child { max-height: calc(100vh - 92px); overflow: auto; scrollbar-gutter: stable; }
+  .sideStack > .panel:first-child {
+    max-height: calc(100vh - 92px);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    column-gap: 12px;
+    align-items: start;
+  }
+  .sideStack > .panel:first-child > .panelHeader,
+  .sideStack > .panel:first-child > .quickResearchForm,
+  .sideStack > .panel:first-child > .error {
+    grid-column: 1 / -1;
+  }
+  .sideStack > .panel:first-child > .recentCases {
+    grid-column: 1;
+    grid-row: 3;
+    min-width: 0;
+    max-height: 100%;
+    overflow: auto;
+    scrollbar-gutter: stable;
+    margin: 0;
+    padding: 0 10px 0 0;
+    border: 0;
+  }
+  .sideStack > .panel:first-child > .quickResult {
+    grid-column: 2;
+    grid-row: 3;
+    min-width: 0;
+    max-height: 100%;
+    overflow: auto;
+    scrollbar-gutter: stable;
+    margin: 0;
+    padding-left: 12px;
+    border-left: 1px solid var(--line);
+  }
+  .recentCases .panelHeader { align-items: flex-start; }
+  .recentCases .buttonRow { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .recentCases .caseRow { grid-template-columns: minmax(0, 1fr); }
+  .recentCases .caseOpen { grid-template-columns: 1fr; gap: 2px; }
+  .recentCases .caseOpen small { justify-self: start; }
+  .recentCases .dangerButton { justify-self: start; }
 }
 @media (max-width: 980px) {
   .workspace, .publicGrid { grid-template-columns: 1fr; }
