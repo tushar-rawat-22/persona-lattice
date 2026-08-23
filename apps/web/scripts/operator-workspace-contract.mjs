@@ -19,6 +19,11 @@ const requiredCss = [
   "overflow: auto",
   "scrollbar-gutter: stable",
   "box-shadow: none",
+  ".workspaceTabs",
+  ".workspaceTab.active",
+  ".compactTable",
+  ".tableScroll",
+  ".caseContextBar",
 ];
 
 for (const token of requiredCss) {
@@ -38,12 +43,28 @@ for (const token of forbiddenCss) {
 const requiredResearch = [
   "Converged live research",
   "Stored cases",
+  "Overview",
+  "Accounts & pivots",
+  "Sources",
+  "Graph",
+  "Raw",
   "M5 evidence-strength triage",
   "Evidence pivots",
   "Source execution",
   "Raw retained JSON",
   "Canonical pivot provenance could not be resolved safely.",
   "Source execution state is unavailable for this historical case.",
+  'role="tablist"',
+  'role="tab"',
+  'role="tabpanel"',
+  'aria-selected={activeView === view}',
+  'tabIndex={activeView === view ? 0 : -1}',
+  'event.key === "ArrowRight"',
+  'event.key === "ArrowLeft"',
+  'event.key === "Home"',
+  'event.key === "End"',
+  'className="compactTable sourceTable"',
+  'className="compactTable m5Table"',
 ];
 
 for (const token of requiredResearch) {
@@ -57,6 +78,14 @@ assert.ok(
 assert.ok(
   research.includes("SourceRunSummary") && research.includes("resolveEdgeProvenance"),
   "source execution and canonical provenance context must remain available alongside raw provider detail",
+);
+assert.ok(
+  research.indexOf('overview: "Overview"') < research.indexOf('raw: "Raw"'),
+  "operator workspace must keep summary-first task ordering",
+);
+assert.ok(
+  research.includes("not an identity probability") && research.includes("identity_probability: null"),
+  "M5 must remain explicitly non-probabilistic in the operator workspace",
 );
 
 console.log("operator workspace contract: PASS");
