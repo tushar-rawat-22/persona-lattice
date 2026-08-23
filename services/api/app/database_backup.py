@@ -38,13 +38,20 @@ def _create_private_destination(path: Path) -> None:
     except OSError as exc:
         raise DatabaseBackupError("Backup destination could not be created securely.") from exc
 
+    permission_error: OSError | None = None
     try:
         if os.name == "posix":
             os.fchmod(descriptor, _PRIVATE_FILE_MODE)
     except OSError as exc:
-        raise DatabaseBackupError("Backup destination permissions could not be restricted.") from exc
+        permission_error = exc
     finally:
         os.close(descriptor)
+
+    if permission_error is not None:
+        path.unlink(missing_ok=True)
+        raise DatabaseBackupError(
+            "Backup destination permissions could not be restricted."
+        ) from permission_error
 
 
 def _enforce_private_permissions(path: Path) -> None:
