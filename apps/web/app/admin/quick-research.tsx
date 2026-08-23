@@ -107,6 +107,7 @@ type ConnectedIdentifier = {
   status: string;
   observation_index?: number;
   detail_field?: string;
+  // Read-only compatibility for cases retained before ADR 0045.
   value?: string;
   source?: string;
   source_locator?: string;
@@ -131,6 +132,7 @@ type StructuredReport = {
 type M5Evaluation = {
   candidate_node: string;
   candidate_observation_index?: number;
+  // Read-only compatibility for cases retained before ADR 0043.
   candidate_source?: string;
   candidate_source_locator?: string;
   outcome: string;
@@ -166,6 +168,7 @@ type ConvergedEdge = {
   child_key: string;
   reason: string;
   lead_decision_index?: number;
+  // Read-only compatibility for cases retained before ADR 0044.
   source?: string;
   source_locator?: string;
 };
@@ -195,9 +198,7 @@ type ConvergedReport = {
     observations: Observation[];
   }>;
   edges: ConvergedEdge[];
-  lead_graph?: {
-    decisions: LeadDecision[];
-  };
+  lead_graph?: { decisions: LeadDecision[] };
   warnings: string[];
   provenance_rule: string;
   m5: {
@@ -236,9 +237,7 @@ type StoredCase = StoredCaseSummary & {
   report: QuickReport;
 };
 
-type QuickResearchProps = {
-  csrfToken: string;
-};
+type QuickResearchProps = { csrfToken: string };
 
 type ResolvedProvenance = {
   source: string;
@@ -250,9 +249,7 @@ type ResolvedPivotProvenance = ResolvedProvenance & {
   observation_summary: string | null;
 };
 
-type ResolvedConnectedIdentifier = ResolvedProvenance & {
-  value: string;
-};
+type ResolvedConnectedIdentifier = ResolvedProvenance & { value: string };
 
 type SourceOutcomeDetail = {
   label: string;
@@ -311,7 +308,7 @@ function sourceOutcomeDetails(aggregate: SourceEvaluationAggregate): SourceOutco
     { label: "Remote rate limit", count: aggregate.remote_rate_limit_count, note: "provider attempt failed" },
     { label: "Execution failure", count: aggregate.execution_failure_count, note: "provider attempt failed" },
     { label: "Malformed provider result", count: aggregate.malformed_result_count, note: "provider attempt failed" },
-    { label: "Routing unavailable", count: aggregate.routing_unavailable_count, note: "routing unavailable · no provider attempt" },
+    { label: "Routing unavailable", count: aggregate.routing_unavailable_count, note: "routing authority unavailable · no provider attempt" },
     { label: "Local budget stop", count: aggregate.local_budget_stop_count, note: "no provider attempt" },
     { label: "Optional source not configured", count: aggregate.optional_not_configured_count, note: "no provider attempt" },
     { label: "Credential not configured", count: aggregate.missing_secret_config_count, note: "no provider attempt" },
@@ -346,8 +343,7 @@ function renderObservationValue(value: unknown): string {
 function ObservationDetails({ observation }: { observation: Observation }) {
   const entries = Object.entries(observation.details).sort(([left], [right]) => left.localeCompare(right));
   return (
-    <details className="observationDetails">
-      <summary>Inspect retained fields</summary>
+    <div className="observationDetails">
       {entries.length === 0 ? (
         <p className="muted">No retained fields were returned by this observation.</p>
       ) : (
@@ -362,11 +358,11 @@ function ObservationDetails({ observation }: { observation: Observation }) {
           </table>
         </div>
       )}
-      <details className="rawPayloadDetails">
+      <details>
         <summary>Raw retained JSON</summary>
         <pre>{JSON.stringify(observation.details, null, 2)}</pre>
       </details>
-    </details>
+    </div>
   );
 }
 
@@ -376,17 +372,14 @@ function resolveConnectedIdentifier(
 ): ResolvedConnectedIdentifier | null {
   const hasLegacy = item.value !== undefined || item.source !== undefined || item.source_locator !== undefined;
   const hasReference = item.observation_index !== undefined || item.detail_field !== undefined;
-
   if (hasLegacy && hasReference) return null;
   if (hasLegacy) {
     if (!nonEmptyString(item.value) || !nonEmptyString(item.source) || !nonEmptyString(item.source_locator)) return null;
     return { value: item.value, source: item.source, source_locator: item.source_locator };
   }
-
   if (!Number.isInteger(item.observation_index) || (item.observation_index ?? -1) < 0) return null;
   if (!nonEmptyString(item.detail_field)) return null;
   if (CONNECTED_IDENTIFIER_FIELD_BY_KIND[item.kind] !== item.detail_field) return null;
-
   const observation = (report.observations ?? [])[item.observation_index as number];
   if (!observation || !nonEmptyString(observation.source) || !nonEmptyString(observation.source_locator)) return null;
   const value = observation.details[item.detail_field];
@@ -411,20 +404,17 @@ function m5EvaluationKey(evaluation: M5Evaluation): string {
 function resolveEdgeProvenance(report: ConvergedReport, edge: ConvergedEdge): ResolvedPivotProvenance | null {
   const hasLegacy = edge.source !== undefined || edge.source_locator !== undefined;
   const hasReference = edge.lead_decision_index !== undefined;
-
   if (hasLegacy && hasReference) return null;
   if (hasLegacy) {
     if (!nonEmptyString(edge.source) || !nonEmptyString(edge.source_locator)) return null;
     return { source: edge.source, source_locator: edge.source_locator, source_field: null, observation_summary: null };
   }
-
   if (!Number.isInteger(edge.lead_decision_index) || (edge.lead_decision_index ?? -1) < 0) return null;
   const decision = report.lead_graph?.decisions[edge.lead_decision_index as number];
   if (!decision || decision.decision !== "admitted") return null;
   if (decision.parent_key !== edge.parent_key || decision.child_key !== edge.child_key || decision.reason !== edge.reason) return null;
   if (!Number.isInteger(decision.source_observation_index) || (decision.source_observation_index ?? -1) < 0) return null;
   if (!nonEmptyString(decision.source_field)) return null;
-
   const parentMatches = report.nodes.filter((node) => node.key === decision.parent_key);
   if (parentMatches.length !== 1) return null;
   const observation = parentMatches[0].observations[decision.source_observation_index as number];
@@ -447,7 +437,6 @@ function SourceRunSummary({ sourceRuns, title }: { sourceRuns?: SourceRunReport;
       </div>
     );
   }
-
   const aggregate = sourceRuns.evaluation?.aggregate;
   const missingEvidenceReasons = aggregate ? sourceOutcomeDetails(aggregate) : [];
   return (
@@ -458,6 +447,7 @@ function SourceRunSummary({ sourceRuns, title }: { sourceRuns?: SourceRunReport;
         <span>{aggregate?.attempt_count ?? sourceRuns.execution_attempted_count} attempts</span>
         <span>{aggregate?.completed_attempt_count ?? "—"} completed</span>
         <span>{aggregate?.failed_attempt_count ?? "—"} failed</span>
+        {aggregate && <span>{aggregate.withheld_count} withheld</span>}
       </div>
       {sourceRuns.records.length === 0 ? (
         <p className="muted">No typed source-run records were retained for this scope.</p>
@@ -503,11 +493,10 @@ function M5EvidenceTable({ report }: { report: ConvergedReport }) {
       </div>
     );
   }
-
   return (
     <div className="reportSection">
       <h3>M5 evidence-strength triage</h3>
-      <p className="muted">{report.m5.interpretation} Scores are evidence-strength triage, not identity probabilities.</p>
+      <p className="muted">{report.m5.interpretation} The retained score is evidence-strength triage, not an identity probability.</p>
       <div className="tableScroll">
         <table className="compactTable m5Table">
           <thead><tr><th>Candidate</th><th>Outcome</th><th>Score</th><th>Factor</th><th>Group</th><th>Weight</th><th>Status / caveat</th></tr></thead>
@@ -515,6 +504,7 @@ function M5EvidenceTable({ report }: { report: ConvergedReport }) {
             {report.m5.evaluations.flatMap((evaluation) => {
               const candidate = resolveM5Candidate(report, evaluation);
               const candidateSource = candidate?.source ?? evaluation.candidate_source ?? "canonical observation unavailable";
+              const candidateLocator = candidate?.source_locator ?? evaluation.candidate_source_locator ?? null;
               const factorRows = evaluation.factors.length > 0 ? evaluation.factors : [{
                 kind: "no retained factors",
                 independence_group: "—",
@@ -526,13 +516,20 @@ function M5EvidenceTable({ report }: { report: ConvergedReport }) {
               }];
               return factorRows.map((factor, factorIndex) => (
                 <tr key={`${m5EvaluationKey(evaluation)}-${factorIndex}`}>
-                  <td>{factorIndex === 0 ? evaluation.candidate_node : ""}</td>
+                  <td>
+                    {factorIndex === 0 && <>
+                      <strong>{evaluation.candidate_node}</strong><br />
+                      <span>{candidateSource}</span>
+                      {candidateLocator && <><br /><SourceLocator locator={candidateLocator} /></>}
+                      <br /><small>{evaluation.positive_independence_groups} positive independence groups · policy {evaluation.policy_version}</small>
+                    </>}
+                  </td>
                   <td>{factorIndex === 0 ? evaluation.outcome : ""}</td>
                   <td>{factorIndex === 0 ? `${evaluation.evidence_score} / 100` : ""}</td>
                   <td>{factor.kind}</td>
                   <td>{factor.independence_group}</td>
                   <td>{factor.base_weight} → {factor.applied_weight}</td>
-                  <td>{factor.status}{factor.veto ? " · veto" : ""} · {factor.rationale}{factorIndex === 0 ? ` · source ${candidateSource}` : ""}</td>
+                  <td>{factor.status}{factor.veto ? " · veto" : ""} · {factor.rationale}</td>
                 </tr>
               ));
             })}
@@ -547,9 +544,7 @@ function ConvergedSources({ report }: { report: ConvergedReport }) {
   const rows: ConvergedSourceRow[] = report.nodes.flatMap((node) =>
     (node.source_runs?.records ?? []).map((record) => ({ ...record, node_key: node.key, node_value: node.normalized_value })),
   );
-  if (rows.length === 0) {
-    return <p className="muted">Source execution state is unavailable for this historical case.</p>;
-  }
+  if (rows.length === 0) return <p className="muted">Source execution state is unavailable for this historical case.</p>;
   return (
     <div className="reportSection">
       <h3>Source execution</h3>
@@ -574,23 +569,6 @@ function ConvergedSources({ report }: { report: ConvergedReport }) {
   );
 }
 
-function RawObservationList({ observations }: { observations: Observation[] }) {
-  if (observations.length === 0) return <p className="muted">No attributable observations were retained for this scope.</p>;
-  return (
-    <div className="rawObservationList">
-      {observations.map((observation, index) => (
-        <article className="rawObservation" key={`${observation.source_locator}-${index}`}>
-          <div className="rawObservationHeader">
-            <div><strong>{observation.source}</strong><span>{observation.summary}</span></div>
-            <small><SourceLocator locator={observation.source_locator} /></small>
-          </div>
-          <ObservationDetails observation={observation} />
-        </article>
-      ))}
-    </div>
-  );
-}
-
 export function QuickResearch({ csrfToken }: QuickResearchProps) {
   const [kind, setKind] = useState<ResearchKind>("username");
   const [value, setValue] = useState("");
@@ -608,19 +586,12 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     caseContextGeneration.current += 1;
     return caseContextGeneration.current;
   }, []);
-
-  const isCurrentCaseContext = useCallback((generation: number) => (
-    caseContextGeneration.current === generation
-  ), []);
-
+  const isCurrentCaseContext = useCallback((generation: number) => caseContextGeneration.current === generation, []);
   const advanceCaseListGeneration = useCallback(() => {
     caseListGeneration.current += 1;
     return caseListGeneration.current;
   }, []);
-
-  const isCurrentCaseList = useCallback((generation: number) => (
-    caseListGeneration.current === generation
-  ), []);
+  const isCurrentCaseList = useCallback((generation: number) => caseListGeneration.current === generation, []);
 
   const refreshCases = useCallback(async () => {
     const generation = advanceCaseListGeneration();
@@ -682,18 +653,14 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
         csrfToken,
       );
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(typeof body.detail === "string" ? body.detail : "Research request failed.");
-      }
+      if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : "Research request failed.");
       if (!isCurrentCaseContext(generation)) return;
       const stored = body as StoredCase;
       setActiveCase(stored);
       setValue(stored.seed_value);
       await refreshCases();
     } catch (caught) {
-      if (isCurrentCaseContext(generation)) {
-        setError(caught instanceof Error ? caught.message : "Research request failed.");
-      }
+      if (isCurrentCaseContext(generation)) setError(caught instanceof Error ? caught.message : "Research request failed.");
     } finally {
       setBusy(false);
     }
@@ -822,11 +789,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
             <div className="tableScroll">
               <table className="compactTable">
                 <thead><tr><th>Kind</th><th>Identifier</th><th>Depth</th><th>Reached by</th></tr></thead>
-                <tbody>
-                  {converged.nodes.map((node) => (
-                    <tr key={node.key}><td>{node.kind}</td><td>{node.normalized_value}</td><td>{node.depth}</td><td>{node.pivot_reason}</td></tr>
-                  ))}
-                </tbody>
+                <tbody>{converged.nodes.map((node) => <tr key={node.key}><td>{node.kind}</td><td>{node.normalized_value}</td><td>{node.depth}</td><td>{node.pivot_reason}</td></tr>)}</tbody>
               </table>
             </div>
           </div>
@@ -870,7 +833,13 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
                   return (
                     <tr key={`${edge.parent_key}-${edge.child_key}-${index}`}>
                       <td>{edge.parent_key}</td><td>{edge.child_key}</td><td>{edge.reason}</td>
-                      <td>{provenance ? <>{provenance.source}{provenance.source_field ? ` · ${provenance.source_field}` : ""}<br /><SourceLocator locator={provenance.source_locator} /></> : "Canonical pivot provenance could not be resolved safely."}</td>
+                      <td>
+                        {provenance ? <>
+                          {provenance.source_field ? `${provenance.source} · field ${provenance.source_field}` : `${provenance.source} · historical field unavailable`}
+                          {provenance.observation_summary && <><br />{provenance.observation_summary}</>}
+                          <br /><SourceLocator locator={provenance.source_locator} />
+                        </> : "Canonical pivot provenance could not be resolved safely."}
+                      </td>
                     </tr>
                   );
                 })}
@@ -933,14 +902,34 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
           {converged.nodes.map((node) => (
             <section className="rawNode" key={node.key}>
               <div className="rawNodeHeader"><strong>{node.kind} · {node.normalized_value}</strong><span>depth {node.depth} · {node.pivot_reason}</span></div>
+              <SourceRunSummary sourceRuns={node.source_runs} title="Source execution" />
               {node.warnings.map((warning) => <p className="muted" key={warning}>{warning}</p>)}
-              <RawObservationList observations={node.observations} />
+              {node.observations.length === 0 ? <p className="muted">No attributable observations were retained for this node.</p> : (
+                <div className="rawObservationList">
+                  {node.observations.map((observation, index) => (
+                    <article className="rawObservation" key={`${observation.source_locator}-${index}`}>
+                      <div className="rawObservationHeader"><div><strong>{observation.source}</strong><span>{observation.summary}</span></div><small><SourceLocator locator={observation.source_locator} /></small></div>
+                      <ObservationDetails observation={observation} />
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
           ))}
         </div>
       );
     }
-    return <RawObservationList observations={report.observations ?? []} />;
+    const observations = report.observations ?? [];
+    return observations.length === 0 ? <p className="muted">No attributable observations were retained for this case.</p> : (
+      <div className="rawObservationList">
+        {observations.map((observation, index) => (
+          <article className="rawObservation" key={`${observation.source_locator}-${index}`}>
+            <div className="rawObservationHeader"><div><strong>{observation.source}</strong><span>{observation.summary}</span></div><small><SourceLocator locator={observation.source_locator} /></small></div>
+            <ObservationDetails observation={observation} />
+          </article>
+        ))}
+      </div>
+    );
   }
 
   function renderView(view: WorkspaceView) {
@@ -974,7 +963,9 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
             <input value={value} onChange={(event) => setValue(event.target.value)} placeholder={PLACEHOLDER_BY_KIND[kind]} required />
           </label>
         </div>
-        {kind === "domain" && <p className="muted">Enter a bare domain such as example.com. Domain research is explicit-seed only; discovered domain clues remain display-only.</p>}
+        {kind === "domain" && (
+          <p className="muted">Enter a bare domain such as example.com. Domain research is explicit-seed only; domain clues discovered during another case remain display-only.</p>
+        )}
         <button type="submit" disabled={busy || !value.trim() || !csrfToken}>{busy ? "Following public evidence pivots…" : "Run converged research case"}</button>
         <p className="muted">Follows attributable public email, username and website fields through bounded approved providers. A pivot is evidence to investigate, not proof of identity.</p>
       </form>
