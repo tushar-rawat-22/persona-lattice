@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import json
 import os
 from typing import Any
+from urllib.parse import urlsplit
 
 from .base import AuthMode, Provider, ProviderDescriptor, ProviderQuery, ProviderResult
 from .contracts import ExecutionRequest, QueryOrigin
@@ -26,6 +27,7 @@ from .registry import PROVIDER_BY_NAME
 
 Sleep = Callable[[float], Awaitable[None]]
 SecretResolver = Callable[[str], str | None]
+_MAX_SOURCE_LOCATOR_CHARS = 4096
 
 
 def _environment_secret(name: str) -> str | None:
@@ -46,6 +48,50 @@ def _serialized_size(result: ProviderResult) -> int:
             "Provider result is not JSON serializable."
         ) from exc
     return len(serialized)
+
+
+def _validate_source_locator(locator: str) -> None:
+    """Reject malformed or credential-bearing provider locators before retention.
+
+    Provider adapters may use public HTTP(S) URLs or bounded internal schemes such
+    as ``synthetic://``, ``sherlock://``, ``dns://`` and ``local://``. The runtime
+    does not need to own that scheme catalogue, but every retained locator must be
+    compact, whitespace/control-character free, have an explicit scheme, and never
+    embed HTTP basic-auth style credentials.
+    """
+
+    if not isinstance(locator, str) or not locator or locator != locator.strip():
+        raise ProviderResultValidationError(
+            "Provider observation requires a canonical source locator."
+        )
+    if len(locator) > _MAX_SOURCE_LOCATOR_CHARS:
+        raise ProviderResultValidationError(
+            "Provider observation source locator exceeds the configured limit."
+        )
+    if any(ord(character) < 32 or ord(character) == 127 for character in locator):
+        raise ProviderResultValidationError(
+            "Provider observation source locator contains control characters."
+        )
+
+    try:
+        parsed = urlsplit(locator)
+    except ValueError as exc:
+        raise ProviderResultValidationError(
+            "Provider observation source locator is malformed."
+        ) from exc
+    if not parsed.scheme:
+        raise ProviderResultValidationError(
+            "Provider observation source locator requires an explicit scheme."
+        )
+    if parsed.scheme.lower() in {"http", "https"}:
+        if not parsed.hostname:
+            raise ProviderResultValidationError(
+                "Provider web source locator requires a hostname."
+            )
+        if parsed.username is not None or parsed.password is not None:
+            raise ProviderResultValidationError(
+                "Provider web source locator must not embed credentials."
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -231,9 +277,6 @@ class ProviderRuntime:
             raise ProviderResponseTooLarge("Provider response exceeds the configured size limit.")
 
         for observation in result.observations:
-            if not observation.source_locator.strip():
-                raise ProviderResultValidationError(
-                    "Provider observation requires a source locator."
-                )
+            _validate_source_locator(observation.source_locator)
 
         return result
