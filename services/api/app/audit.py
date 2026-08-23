@@ -4,11 +4,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
-import os
-from pathlib import Path
 import re
 import sqlite3
 from uuid import UUID, uuid4
+
+from .sqlite_storage import private_runtime_database_path
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,17 +53,8 @@ _COUNT_DETAIL_KEYS = frozenset({"node_count", "result_count", "count", "file_cou
 _BOOL_DETAIL_KEYS = frozenset({"has_more", "deleted"})
 
 
-def _database_path() -> Path:
-    raw = os.environ.get("PERSONALATTICE_DB_PATH", "./personalattice.db").strip()
-    if not raw:
-        raise RuntimeError("PERSONALATTICE_DB_PATH is empty.")
-    path = Path(raw).expanduser()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
-
-
 def _connect() -> sqlite3.Connection:
-    connection = sqlite3.connect(_database_path(), timeout=10.0)
+    connection = sqlite3.connect(private_runtime_database_path(), timeout=10.0)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA busy_timeout = 10000")
     connection.execute("PRAGMA journal_mode = WAL")
