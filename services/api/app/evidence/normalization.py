@@ -24,6 +24,7 @@ class NormalizedIdentifier:
 _DNS_LABEL_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 _MAX_DOMAIN_LENGTH = 253
 _LOCAL_USE_DOMAIN_SUFFIXES = (".local", ".localhost", ".internal", ".home", ".lan")
+_PUBLIC_WEB_URL_SCHEMES = frozenset({"http", "https"})
 
 
 def _compact_whitespace(value: str) -> str:
@@ -63,19 +64,65 @@ def _normalize_username(raw: str) -> tuple[str, str]:
     return value, value
 
 
+def _normalize_public_url_hostname(hostname: str) -> str:
+    """Return a canonical public DNS hostname for an externally researched URL.
+
+    URL seeds are forwarded to approved public-source providers. Internal hostnames
+    and IP literals therefore do not belong at this boundary even when a caller is
+    not currently dereferencing the URL directly: forwarding them would disclose
+    non-public destination data and would make future URL consumers easier to turn
+    into an SSRF path.
+    """
+
+    host = hostname.rstrip(".").lower()
+    if not host or len(host) > _MAX_DOMAIN_LENGTH:
+        raise InvalidIdentifier("URL hostname is missing or too long.")
+
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        pass
+    else:
+        raise InvalidIdentifier("Public URL seeds require a DNS hostname, not an IP literal.")
+
+    if "." not in host:
+        raise InvalidIdentifier("Public URL seeds require a multi-label DNS hostname.")
+    if host.endswith(_LOCAL_USE_DOMAIN_SUFFIXES):
+        raise InvalidIdentifier("Public URL seeds must not use a local-use hostname.")
+
+    try:
+        ascii_host = host.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise InvalidIdentifier("URL hostname is not valid IDNA.") from exc
+    if len(ascii_host) > _MAX_DOMAIN_LENGTH:
+        raise InvalidIdentifier("URL hostname is too long after IDNA normalization.")
+    if any(_DNS_LABEL_RE.fullmatch(label) is None for label in ascii_host.split(".")):
+        raise InvalidIdentifier("URL hostname contains an invalid DNS label.")
+    return ascii_host
+
+
 def _normalize_url(raw: str) -> tuple[str, str]:
     value = raw.strip()
     if not value:
         raise InvalidIdentifier("URL is empty.")
+    if any(ord(character) <= 0x20 or ord(character) == 0x7F for character in value):
+        raise InvalidIdentifier("URL must not contain whitespace or control characters.")
 
     candidate = value if "://" in value else f"https://{value}"
-    parsed = urlsplit(candidate)
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError as exc:
+        raise InvalidIdentifier("URL is malformed.") from exc
 
+    scheme = parsed.scheme.lower()
+    if scheme not in _PUBLIC_WEB_URL_SCHEMES:
+        raise InvalidIdentifier("Public URL seeds must use HTTP or HTTPS.")
+    if parsed.username is not None or parsed.password is not None:
+        raise InvalidIdentifier("URLs containing embedded credentials are not accepted.")
     if not parsed.hostname:
         raise InvalidIdentifier("URL has no hostname.")
 
-    scheme = parsed.scheme.lower()
-    hostname = parsed.hostname.lower()
+    hostname = _normalize_public_url_hostname(parsed.hostname)
 
     try:
         port = parsed.port
@@ -88,9 +135,6 @@ def _normalize_url(raw: str) -> tuple[str, str]:
         netloc = f"{hostname}:{port}"
     else:
         netloc = hostname
-
-    if parsed.username or parsed.password:
-        raise InvalidIdentifier("URLs containing embedded credentials are not accepted.")
 
     normalized_parts = SplitResult(
         scheme=scheme,
