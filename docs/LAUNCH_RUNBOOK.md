@@ -25,6 +25,15 @@ export PERSONALATTICE_CASE_RETENTION_DAYS='30'
 export PERSONALATTICE_API_ORIGIN='http://127.0.0.1:8000'
 ```
 
+Create the database parent directory before launch and keep it non-writable by other local users. On the candidate Mac, for example:
+
+```bash
+mkdir -p '/absolute/private/path'
+chmod 700 '/absolute/private/path'
+```
+
+The launch preflight rejects a missing, symlinked, group-writable or world-writable database parent. Runtime storage also re-checks that boundary before opening the retained database.
+
 Optional provider keys stay server-side. Their absence must not break the required baseline.
 
 ## Run the launch preflight
@@ -35,7 +44,7 @@ Run this before starting the public HTTPS route:
 .venv/bin/python -m app.launch_preflight
 ```
 
-The command exits non-zero for an unsafe production shape. It requires a valid Argon2 admin hash, a secure `__Host-` session cookie, an absolute persistent SQLite path, a valid retention period and a loopback API origin. Its output reports only whether optional integrations are configured; it never prints provider key values.
+The command exits non-zero for an unsafe production shape. It requires a valid Argon2 admin hash, a secure `__Host-` session cookie, an absolute persistent SQLite path with a private parent directory, a valid retention period and a loopback API origin. Its output reports only whether optional integrations are configured; it never prints provider key values.
 
 Do not bypass this command to get a launch through.
 

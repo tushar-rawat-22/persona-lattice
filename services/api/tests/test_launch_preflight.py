@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
@@ -63,6 +64,26 @@ def test_launch_preflight_rejects_unsafe_production_settings(
     env[key] = value
 
     with pytest.raises(LaunchPreflightError, match=message):
+        run_launch_preflight(env)
+
+
+def test_launch_preflight_rejects_missing_database_parent(tmp_path) -> None:
+    env = _safe_env(tmp_path)
+    env["PERSONALATTICE_DB_PATH"] = str(tmp_path / "missing" / "personalattice.db")
+
+    with pytest.raises(LaunchPreflightError, match="parent directory does not exist"):
+        run_launch_preflight(env)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX directory permissions required")
+def test_launch_preflight_rejects_writable_database_parent(tmp_path) -> None:
+    parent = tmp_path / "shared"
+    parent.mkdir()
+    parent.chmod(0o777)
+    env = _safe_env(tmp_path)
+    env["PERSONALATTICE_DB_PATH"] = str(parent / "personalattice.db")
+
+    with pytest.raises(LaunchPreflightError, match="group- or world-writable"):
         run_launch_preflight(env)
 
 

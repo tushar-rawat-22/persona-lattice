@@ -12,6 +12,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError
 
 from .admin_auth import AuthConfigurationError, load_admin_auth_config
+from .sqlite_storage import validate_private_runtime_database_parent
 
 
 _OPTIONAL_PROVIDER_KEYS = (
@@ -78,6 +79,10 @@ def _persistent_database_path(environ: dict[str, str]) -> Path:
     path = Path(raw).expanduser()
     if not path.is_absolute():
         raise LaunchPreflightError("PERSONALATTICE_DB_PATH must be absolute for production.")
+    try:
+        validate_private_runtime_database_parent(path)
+    except RuntimeError as exc:
+        raise LaunchPreflightError(str(exc)) from exc
     return path
 
 
