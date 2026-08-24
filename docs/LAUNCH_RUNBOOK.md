@@ -92,6 +92,22 @@ A temporary preview URL is enough for the external smoke test, but it is not aut
 
 For the live private beta, use a reviewed HTTPS route with a stable hostname and terms that fit the intended commercial product. Record any unavoidable domain or service cost honestly instead of folding it into the zero-spend software baseline.
 
+## One-command LC1 host acceptance
+
+For the final candidate-host proof, use the repository harness rather than rebuilding the acceptance sequence by hand:
+
+```bash
+bash scripts/lc1_host_acceptance.sh
+```
+
+The harness requires a clean `main`, fast-forwards it to `origin/main`, and performs the acceptance run in a detached temporary worktree with its own virtual environment, Node install, ports, admin credential and SQLite database. It does not stop or rewrite an already-running PersonaLattice checkout on ports 8000/3000.
+
+When no external URL is supplied, the harness starts a Cloudflare Quick Tunnel only for the bounded HTTPS smoke and tears it down afterwards. That random hostname remains test infrastructure, not a beta endpoint. A reviewed external HTTPS URL can be supplied through `PERSONALATTICE_LC1_EXTERNAL_URL` instead.
+
+The automated host run covers production preflight/build, the exact `https://github.com/octocat` URL seed, `example.com` domain seed, source-state/provenance/M5 response contracts, reviewed-document preview → confirm → promote → explicit research, retained-case open/delete, SQLite backup/restore, API restart, old-session invalidation, logout and a process-log privacy scan. It writes a mode-0600 evidence summary outside the repository under the user's private application/state directory.
+
+A passing harness is not the entire browser gate. Safari and Chrome still need the short rendered acceptance below for information hierarchy, responsive behavior, keyboard/focus behavior and the visible source/provenance/M5 presentation.
+
 ## Smoke test from an external browser
 
 Do not mark the beta live until all of these pass from a browser that is not using the server's localhost address:
