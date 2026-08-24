@@ -213,17 +213,17 @@ require_command python3
 cd "$ROOT"
 [[ -d .git ]] || fail "run this from a PersonaLattice checkout"
 [[ "$(git status --porcelain)" == "" ]] || fail "working tree must be clean before LC1 acceptance"
-TESTED_COMMIT="$(git rev-parse HEAD)"
 [[ "$(git rev-parse --abbrev-ref HEAD)" == "main" ]] || fail "LC1 acceptance must run from main"
 
 git fetch --quiet origin main
-[[ "$TESTED_COMMIT" == "$(git rev-parse origin/main)" ]] || fail "local main must exactly match origin/main"
+git merge --ff-only --quiet origin/main
+TESTED_COMMIT="$(git rev-parse HEAD)"
 
 if [[ ! -x "$PYTHON" ]]; then
   python3 -m venv "$ROOT/.venv"
   "$PYTHON" -m pip install --upgrade pip >/dev/null
-  "$PYTHON" -m pip install -e "$ROOT/services/api" >/dev/null
 fi
+"$PYTHON" -m pip install -e "$ROOT/services/api" >/dev/null
 
 export PERSONALATTICE_ADMIN_USERNAME="lc1-acceptance-admin"
 export PERSONALATTICE_LC1_PASSWORD="$("$PYTHON" -c 'import secrets; print(secrets.token_urlsafe(32))')"
@@ -325,7 +325,7 @@ for case_id in "$URL_CASE_ID" "$DOMAIN_CASE_ID" "$DOCUMENT_CASE_ID"; do
 done
 
 OLD_CSRF_TOKEN="$CSRF_TOKEN"
-OLD_SESSION_VALUE="$(awk '$0 !~ /^#/ && $6 == "__Host-personalattice_session" {print $7}' "$COOKIE_JAR" | tail -n 1)"
+OLD_SESSION_VALUE="$(awk '$6 == "__Host-personalattice_session" {print $7}' "$COOKIE_JAR" | tail -n 1)"
 
 stop_api
 "$PYTHON" -m app.database_backup "$PERSONALATTICE_DB_PATH" "$BACKUP_PATH" >/dev/null
@@ -340,7 +340,7 @@ require_status 401 "$OLD_SESSION_STATUS" "pre-restart in-memory session"
 
 rm -f "$COOKIE_JAR"
 FRESH_CSRF_TOKEN="$(login "$FRESH_LOGIN_BODY")"
-FRESH_SESSION_VALUE="$(awk '$0 !~ /^#/ && $6 == "__Host-personalattice_session" {print $7}' "$COOKIE_JAR" | tail -n 1)"
+FRESH_SESSION_VALUE="$(awk '$6 == "__Host-personalattice_session" {print $7}' "$COOKIE_JAR" | tail -n 1)"
 
 for case_id in "$URL_CASE_ID" "$DOMAIN_CASE_ID" "$DOCUMENT_CASE_ID"; do
   status="$(curl --silent --show-error -b "$COOKIE_JAR" -o /dev/null -w '%{http_code}' "$PUBLIC_URL/api/v1/cases/$case_id")"
@@ -396,7 +396,7 @@ for value in "${SENSITIVE_VALUES[@]}"; do
   fi
 done
 
-"$PYTHON" - "$EVIDENCE_PATH" <<PY
+TESTED_COMMIT="$TESTED_COMMIT" PUBLIC_URL="$PUBLIC_URL" "$PYTHON" - "$EVIDENCE_PATH" <<'PY'
 import json
 import os
 import sys
@@ -406,15 +406,15 @@ path = sys.argv[1]
 payload = {
     "status": "passed",
     "completed_at": datetime.now(timezone.utc).isoformat(),
-    "tested_commit": ${TESTED_COMMIT@Q},
-    "external_smoke_url": ${PUBLIC_URL@Q},
+    "tested_commit": os.environ["TESTED_COMMIT"],
+    "external_smoke_url": os.environ["PUBLIC_URL"],
     "test_identifiers": {
         "url": "https://github.com/octocat",
         "domain": "example.com",
         "reviewed_document": "non-sensitive generated fixture",
     },
     "verified": [
-        "clean main exactly matched origin/main",
+        "clean main fast-forwarded to origin/main",
         "production preflight",
         "clean Next.js production build",
         "loopback API and same-origin web proxy",
