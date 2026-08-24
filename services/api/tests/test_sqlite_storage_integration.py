@@ -10,6 +10,7 @@ import pytest
 from app.audit import AUDIT_STORE
 from app.cases import CASE_STORE
 from app.research import QuickResearchReport, ResearchKind
+from app.uploads.review_store import UPLOAD_REVIEW_STORE
 
 
 pytestmark = pytest.mark.skipif(
@@ -22,7 +23,7 @@ def _mode(path: Path) -> int:
     return stat.S_IMODE(path.stat().st_mode)
 
 
-def test_case_and_audit_stores_share_private_runtime_database(monkeypatch, tmp_path: Path) -> None:
+def test_retained_stores_share_private_runtime_database(monkeypatch, tmp_path: Path) -> None:
     database = tmp_path / "runtime.db"
     monkeypatch.setenv("PERSONALATTICE_DB_PATH", str(database))
     monkeypatch.setenv("PERSONALATTICE_CASE_RETENTION_DAYS", "30")
@@ -41,6 +42,7 @@ def test_case_and_audit_stores_share_private_runtime_database(monkeypatch, tmp_p
             ),
         )
         AUDIT_STORE.record("case.read", case_id=stored.id)
+        assert UPLOAD_REVIEW_STORE.delete_all() == 0
     finally:
         os.umask(previous_umask)
 
