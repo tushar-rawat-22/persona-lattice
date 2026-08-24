@@ -2,11 +2,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON="$ROOT/.venv/bin/python"
 API_PORT="${PERSONALATTICE_LC1_API_PORT:-18000}"
 WEB_PORT="${PERSONALATTICE_LC1_WEB_PORT:-13000}"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/personalattice-lc1.XXXXXX")"
 chmod 700 "$TMP_DIR"
+ACCEPT_ROOT="$TMP_DIR/checkout"
+PYTHON="$TMP_DIR/venv/bin/python"
 API_LOG="$TMP_DIR/api.log"
 WEB_LOG="$TMP_DIR/web.log"
 TUNNEL_LOG="$TMP_DIR/tunnel.log"
@@ -25,6 +26,7 @@ API_PID=""
 WEB_PID=""
 TUNNEL_PID=""
 PUBLIC_URL="${PERSONALATTICE_LC1_EXTERNAL_URL:-}"
+WORKTREE_ADDED="false"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   EVIDENCE_DIR="$HOME/Library/Application Support/PersonaLattice/lc1"
@@ -40,6 +42,9 @@ cleanup() {
   if [[ -n "$TUNNEL_PID" ]]; then kill "$TUNNEL_PID" 2>/dev/null || true; wait "$TUNNEL_PID" 2>/dev/null || true; fi
   if [[ -n "$WEB_PID" ]]; then kill "$WEB_PID" 2>/dev/null || true; wait "$WEB_PID" 2>/dev/null || true; fi
   if [[ -n "$API_PID" ]]; then kill "$API_PID" 2>/dev/null || true; wait "$API_PID" 2>/dev/null || true; fi
+  if [[ "$WORKTREE_ADDED" == "true" ]] && command -v git >/dev/null 2>&1; then
+    git -C "$ROOT" worktree remove --force "$ACCEPT_ROOT" >/dev/null 2>&1 || true
+  fi
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
@@ -126,7 +131,7 @@ PY
 
 start_api() {
   (
-    cd "$ROOT"
+    cd "$ACCEPT_ROOT"
     "$PYTHON" -m uvicorn app.main:app \
       --app-dir services/api \
       --host 127.0.0.1 \
@@ -148,7 +153,7 @@ stop_api() {
 
 start_web() {
   (
-    cd "$ROOT/apps/web"
+    cd "$ACCEPT_ROOT/apps/web"
     npm run start -- --hostname 127.0.0.1 --port "$WEB_PORT"
   ) >>"$WEB_LOG" 2>&1 &
   WEB_PID=$!
@@ -218,12 +223,12 @@ cd "$ROOT"
 git fetch --quiet origin main
 git merge --ff-only --quiet origin/main
 TESTED_COMMIT="$(git rev-parse HEAD)"
+git worktree add --detach "$ACCEPT_ROOT" "$TESTED_COMMIT" >/dev/null
+WORKTREE_ADDED="true"
 
-if [[ ! -x "$PYTHON" ]]; then
-  python3 -m venv "$ROOT/.venv"
-  "$PYTHON" -m pip install --upgrade pip >/dev/null
-fi
-"$PYTHON" -m pip install -e "$ROOT/services/api" >/dev/null
+python3 -m venv "$TMP_DIR/venv"
+"$PYTHON" -m pip install --upgrade pip >/dev/null
+"$PYTHON" -m pip install -e "$ACCEPT_ROOT/services/api" >/dev/null
 
 export PERSONALATTICE_ADMIN_USERNAME="lc1-acceptance-admin"
 export PERSONALATTICE_LC1_PASSWORD="$("$PYTHON" -c 'import secrets; print(secrets.token_urlsafe(32))')"
@@ -235,8 +240,8 @@ export PERSONALATTICE_API_ORIGIN="http://127.0.0.1:$API_PORT"
 
 "$PYTHON" -m app.launch_preflight >/dev/null
 
-npm ci --prefix apps/web --no-audit --no-fund >/dev/null
-PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run --prefix apps/web build >/dev/null
+npm ci --prefix "$ACCEPT_ROOT/apps/web" --no-audit --no-fund >/dev/null
+PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run --prefix "$ACCEPT_ROOT/apps/web" build >/dev/null
 
 start_api
 start_web
@@ -386,7 +391,12 @@ SENSITIVE_VALUES=(
   'private-converged-evidence-report-v1'
 )
 for key in BRAVE_SEARCH_API_KEY COMPANIES_HOUSE_API_KEY OPENALEX_API_KEY; do
-  value="${!key:-}"
+  value=""
+  case "$key" in
+    BRAVE_SEARCH_API_KEY) value="${BRAVE_SEARCH_API_KEY:-}" ;;
+    COMPANIES_HOUSE_API_KEY) value="${COMPANIES_HOUSE_API_KEY:-}" ;;
+    OPENALEX_API_KEY) value="${OPENALEX_API_KEY:-}" ;;
+  esac
   if [[ -n "$value" ]]; then SENSITIVE_VALUES+=("$value"); fi
 done
 for value in "${SENSITIVE_VALUES[@]}"; do
@@ -415,6 +425,7 @@ payload = {
     },
     "verified": [
         "clean main fast-forwarded to origin/main",
+        "detached isolated acceptance worktree",
         "production preflight",
         "clean Next.js production build",
         "loopback API and same-origin web proxy",
