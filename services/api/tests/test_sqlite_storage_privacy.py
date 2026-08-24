@@ -36,6 +36,40 @@ def test_new_runtime_database_ignores_permissive_umask(monkeypatch, tmp_path: Pa
     assert _mode(database) == 0o600
 
 
+def test_missing_database_parent_is_created_owner_only_under_permissive_umask(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    parent = tmp_path / "retained"
+    database = parent / "runtime.db"
+    monkeypatch.setenv("PERSONALATTICE_DB_PATH", str(database))
+
+    previous_umask = os.umask(0)
+    try:
+        private_runtime_database_path()
+    finally:
+        os.umask(previous_umask)
+
+    assert _mode(parent) == 0o700
+    assert _mode(database) == 0o600
+
+
+def test_runtime_database_rejects_group_or_world_writable_parent(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    parent = tmp_path / "shared"
+    parent.mkdir()
+    parent.chmod(0o777)
+    database = parent / "runtime.db"
+    monkeypatch.setenv("PERSONALATTICE_DB_PATH", str(database))
+
+    with pytest.raises(RuntimeError, match="group- or world-writable"):
+        private_runtime_database_path()
+
+    assert not database.exists()
+
+
 def test_existing_runtime_database_is_tightened_to_owner_only(monkeypatch, tmp_path: Path) -> None:
     database = tmp_path / "runtime.db"
     database.write_bytes(b"")
