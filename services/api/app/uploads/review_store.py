@@ -4,25 +4,16 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 import os
-from pathlib import Path
 import sqlite3
 from uuid import UUID
 
+from ..sqlite_storage import private_runtime_database_path
 from .contracts import FileBatchPreview, ReviewCandidate
 
 
 _DEFAULT_RETENTION_HOURS = 24
 _MAX_RETENTION_HOURS = 168
 _MUTABLE_REVIEW_FIELDS = frozenset({"review_status", "external_research_authorized"})
-
-
-def _database_path() -> Path:
-    raw = os.environ.get("PERSONALATTICE_DB_PATH", "./personalattice.db").strip()
-    if not raw:
-        raise RuntimeError("PERSONALATTICE_DB_PATH is empty.")
-    path = Path(raw).expanduser()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
 
 
 def _retention_hours() -> int:
@@ -40,7 +31,7 @@ def _retention_hours() -> int:
 
 
 def _connect() -> sqlite3.Connection:
-    connection = sqlite3.connect(_database_path(), timeout=10.0)
+    connection = sqlite3.connect(private_runtime_database_path(), timeout=10.0)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA busy_timeout = 10000")

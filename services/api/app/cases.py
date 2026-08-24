@@ -6,14 +6,13 @@ import binascii
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 import json
-import os
-from pathlib import Path
 import sqlite3
 from uuid import UUID, uuid4
 
 from .intelligence.source_reporting import build_source_run_report
 from .reporting import build_structured_report
 from .research import QuickResearchReport, ResearchKind
+from .sqlite_storage import private_runtime_database_path
 
 
 _DEFAULT_RETENTION_DAYS = 30
@@ -40,16 +39,9 @@ class StoredCaseSummary:
     seed_value: str
 
 
-def _database_path() -> Path:
-    raw = os.environ.get("PERSONALATTICE_DB_PATH", "./personalattice.db").strip()
-    if not raw:
-        raise RuntimeError("PERSONALATTICE_DB_PATH is empty.")
-    path = Path(raw).expanduser()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
-
-
 def _retention_days() -> int:
+    import os
+
     raw = os.environ.get("PERSONALATTICE_CASE_RETENTION_DAYS", str(_DEFAULT_RETENTION_DAYS))
     try:
         days = int(raw)
@@ -61,7 +53,7 @@ def _retention_days() -> int:
 
 
 def _connect() -> sqlite3.Connection:
-    connection = sqlite3.connect(_database_path(), timeout=10.0)
+    connection = sqlite3.connect(private_runtime_database_path(), timeout=10.0)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA busy_timeout = 10000")
