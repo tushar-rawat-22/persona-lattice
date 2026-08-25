@@ -36,7 +36,9 @@ cleanup() {
   fi
   rm -rf "$TMP_DIR"
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 fail() {
   printf 'LC1 browser hold failed: %s\n' "$1" >&2
