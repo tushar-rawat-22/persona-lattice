@@ -130,18 +130,18 @@ post_converged_case() {
 require_command curl
 require_command git
 require_command npm
-require_command python3
 
 cd "$ROOT"
 [[ -d .git ]] || fail "run this from a PersonaLattice checkout"
 [[ "$(git status --porcelain)" == "" ]] || fail "working tree must be clean before browser acceptance"
 [[ "$(git rev-parse --abbrev-ref HEAD)" == "main" ]] || fail "browser acceptance must run from main"
 [[ -d "$EVIDENCE_DIR" ]] || fail "LC1 host evidence directory does not exist; run scripts/lc1_host_acceptance.sh first"
+SYSTEM_PYTHON="$(bash "$ROOT/scripts/lc1_select_python.sh")" || fail "Python 3.11 or newer is unavailable"
 
 LATEST_EVIDENCE="$(find "$EVIDENCE_DIR" -maxdepth 1 -type f -name '*.json' -print | sort | tail -n 1)"
 [[ -n "$LATEST_EVIDENCE" ]] || fail "no LC1 host evidence summary exists; run scripts/lc1_host_acceptance.sh first"
 
-read -r EVIDENCE_STATUS TESTED_COMMIT < <(python3 - "$LATEST_EVIDENCE" <<'PY'
+read -r EVIDENCE_STATUS TESTED_COMMIT < <("$SYSTEM_PYTHON" - "$LATEST_EVIDENCE" <<'PY'
 import json
 import sys
 
@@ -161,7 +161,7 @@ fi
 git worktree add --detach "$ACCEPT_ROOT" "$TESTED_COMMIT" >/dev/null
 WORKTREE_ADDED="true"
 
-python3 -m venv "$TMP_DIR/venv"
+"$SYSTEM_PYTHON" -m venv "$TMP_DIR/venv"
 "$PYTHON" -m pip install --upgrade pip >/dev/null
 "$PYTHON" -m pip install -e "$ACCEPT_ROOT/services/api" >/dev/null
 
