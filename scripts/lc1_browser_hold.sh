@@ -99,7 +99,7 @@ start_quick_tunnel() {
   for ((i=1; i<=120; i++)); do
     PUBLIC_URL="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "$TUNNEL_LOG" | head -n 1 || true)"
     if [[ -n "$PUBLIC_URL" ]]; then
-      wait_for_url "$PUBLIC_URL/api/health" 80
+      wait_for_url "$PUBLIC_URL/api/health" 600
       return 0
     fi
     if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then

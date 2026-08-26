@@ -94,8 +94,10 @@ jobs:
           bash -n scripts/lc1_select_python.sh
           bash -n scripts/test_lc1_npm_worktree.sh
           bash -n scripts/test_lc1_python_selection.sh
+          bash -n scripts/test_lc1_tunnel_wait_contract.sh
           bash scripts/test_lc1_npm_worktree.sh
           bash scripts/test_lc1_python_selection.sh
+          bash scripts/test_lc1_tunnel_wait_contract.sh
       - name: Build and exercise production processes
         shell: bash
         run: |
