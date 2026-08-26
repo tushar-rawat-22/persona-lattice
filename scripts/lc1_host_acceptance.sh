@@ -240,8 +240,11 @@ export PERSONALATTICE_API_ORIGIN="http://127.0.0.1:$API_PORT"
 
 "$PYTHON" -m app.launch_preflight >/dev/null
 
-npm ci --prefix "$ACCEPT_ROOT/apps/web" --no-audit --no-fund >/dev/null
-PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run --prefix "$ACCEPT_ROOT/apps/web" build >/dev/null
+(
+  cd "$ACCEPT_ROOT/apps/web"
+  npm ci --no-audit --no-fund >/dev/null
+  PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run build >/dev/null
+)
 
 start_api
 start_web
