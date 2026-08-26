@@ -71,7 +71,7 @@ require_status() {
 start_api() {
   (
     cd "$ACCEPT_ROOT"
-    "$PYTHON" -m uvicorn app.main:app \
+    exec "$PYTHON" -m uvicorn app.main:app \
       --app-dir services/api \
       --host 127.0.0.1 \
       --port "$API_PORT" \
