@@ -213,12 +213,12 @@ post_converged_case() {
 require_command curl
 require_command git
 require_command npm
-require_command python3
 
 cd "$ROOT"
 [[ -d .git ]] || fail "run this from a PersonaLattice checkout"
 [[ "$(git status --porcelain)" == "" ]] || fail "working tree must be clean before LC1 acceptance"
 [[ "$(git rev-parse --abbrev-ref HEAD)" == "main" ]] || fail "LC1 acceptance must run from main"
+SYSTEM_PYTHON="$(bash "$ROOT/scripts/lc1_select_python.sh")" || fail "Python 3.11 or newer is unavailable"
 
 git fetch --quiet origin main
 git merge --ff-only --quiet origin/main
@@ -226,7 +226,7 @@ TESTED_COMMIT="$(git rev-parse HEAD)"
 git worktree add --detach "$ACCEPT_ROOT" "$TESTED_COMMIT" >/dev/null
 WORKTREE_ADDED="true"
 
-python3 -m venv "$TMP_DIR/venv"
+"$SYSTEM_PYTHON" -m venv "$TMP_DIR/venv"
 "$PYTHON" -m pip install --upgrade pip >/dev/null
 "$PYTHON" -m pip install -e "$ACCEPT_ROOT/services/api" >/dev/null
 
