@@ -6,6 +6,7 @@ import path from "node:path";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(here, "..");
 const css = await readFile(path.join(appRoot, "app", "globals.css"), "utf8");
+const adminPage = await readFile(path.join(appRoot, "app", "admin", "page.tsx"), "utf8");
 const research = await readFile(path.join(appRoot, "app", "admin", "quick-research.tsx"), "utf8");
 
 const requiredCss = [
@@ -86,6 +87,14 @@ assert.ok(
 assert.ok(
   research.includes("not an identity probability") && research.includes("identity_probability: null"),
   "M5 must remain explicitly non-probabilistic in the operator workspace",
+);
+assert.ok(
+  adminPage.includes('new FormData(event.currentTarget)') &&
+    adminPage.includes('formData.get("username")') &&
+    adminPage.includes('formData.get("password")') &&
+    adminPage.includes('name="username"') &&
+    adminPage.includes('name="password"'),
+  "admin login must submit the browser form values instead of relying on delayed controlled state",
 );
 
 console.log("operator workspace contract: PASS");

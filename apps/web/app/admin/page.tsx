@@ -139,10 +139,17 @@ export default function AdminConsole() {
     setAuthBusy(true);
     setAuthError("");
     try {
+      const formData = new FormData(event.currentTarget);
+      const submittedUsername = String(formData.get("username") ?? "");
+      const submittedPassword = String(formData.get("password") ?? "");
+
       const response = await api("/v1/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({
+          username: submittedUsername,
+          password: submittedPassword,
+        }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -279,11 +286,11 @@ export default function AdminConsole() {
           <form className="loginForm" onSubmit={login}>
             <label>
               Admin username
-              <input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required />
+              <input name="username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} required />
             </label>
             <label>
               Password
-              <input autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+              <input name="password" autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
             </label>
             {authError && <p className="error">{authError}</p>}
             <button type="submit" disabled={authBusy}>{authBusy ? "Authenticating…" : "Unlock operator console"}</button>
