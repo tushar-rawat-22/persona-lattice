@@ -60,6 +60,7 @@ def test_governed_registry_providers_currently_recursive_are_explicit() -> None:
         "crossref_exact_work",
         "datacite_exact_doi",
         "gleif_exact_lei",
+        "sec_edgar_exact_cik",
         "rdap_domain_registry",
         "brave_public_web_index",
     }
