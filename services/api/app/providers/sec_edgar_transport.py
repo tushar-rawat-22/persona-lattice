@@ -61,7 +61,6 @@ def _fetch_sec_submissions_sync(
         sec_submissions_url(cik),
         headers={
             "Accept": "application/json",
-            "Accept-Encoding": "gzip, deflate",
             "User-Agent": declared_user_agent,
         },
         method="GET",
