@@ -26,6 +26,16 @@ The real defects exposed by the Mac session were fixed in PRs #237–#241: suppo
 
 Issue #242 is the active product-quality gate: make the active case primary, collapse intake after selection, flatten excessive panel chrome, strengthen evidence/uncertainty/source/provenance hierarchy, reduce badge noise, improve readable density and preserve deliberate mobile/keyboard behavior. Do not change provider activation, privacy/provenance contracts, M5 semantics, auth/session/CSRF behavior or retained-case compatibility in that work. Source activation remains frozen.
 
+### Issue #242 workspace refinement checkpoint
+
+The bounded implementation promotes a selected retained case into the primary workspace without changing its stored/API shape. Selecting or creating a case collapses both intake launchers, widens the evidence surface, preserves a compact recent-case rail, and keeps a fast new-case path. The empty state still exposes the full intake and public-identifier launcher.
+
+The Overview now leads with real retained observation, pivot, source and unresolved-source-state counts. M5 remains uncalibrated and explicitly non-probabilistic, but candidate outcome/evidence strength is readable before factor rows; retained factors, policy and caveats move behind an operator-controlled disclosure. Source states remain explicit, ordinary count metadata loses badge chrome, raw detail remains progressive, and provenance links stay canonical.
+
+At narrow widths the collapsed intake remains immediately reachable, recent cases become a horizontal switcher, the active case follows before detail views, and wide evidence tables scroll inside their own surface instead of widening the document. The 390-pixel contract requires document width to equal viewport width. Keyboard arrow navigation across workspace tabs must keep the selected tab focused and unobscured.
+
+The deterministic operator contract covers the active-case callback, collapsed intake, progressive M5 factors, non-probabilistic language, responsive single-column override, provenance/source tables and existing Safari-safe login form submission. Required validation remains web lint, typecheck, operator contract, production build, then clean-build Safari/Chrome rendered, keyboard and responsive acceptance before Issue #242 closes.
+
 Engineering-freeze baseline: PR #168, merged as `5d774a9fadc336d43e06491183d9035d016db04f` after exact-head CI passed.
 
 Keybase source activation: PR #177 merged as `611ef00cd14858f5e60e2d32add3ec4cee47b025` after exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` across Python 3.11/3.13, web and the production API image.

@@ -237,7 +237,10 @@ type StoredCase = StoredCaseSummary & {
   report: QuickReport;
 };
 
-type QuickResearchProps = { csrfToken: string };
+type QuickResearchProps = {
+  csrfToken: string;
+  onActiveCaseChange?: (active: boolean) => void;
+};
 
 type ResolvedProvenance = {
   source: string;
@@ -496,12 +499,9 @@ function M5EvidenceTable({ report }: { report: ConvergedReport }) {
   return (
     <div className="reportSection">
       <h3>M5 evidence-strength triage</h3>
-      <p className="muted">{report.m5.interpretation} The retained score is evidence-strength triage, not an identity probability.</p>
-      <div className="tableScroll">
-        <table className="compactTable m5Table">
-          <thead><tr><th>Candidate</th><th>Outcome</th><th>Score</th><th>Factor</th><th>Group</th><th>Weight</th><th>Status / caveat</th></tr></thead>
-          <tbody>
-            {report.m5.evaluations.flatMap((evaluation) => {
+      <p className="reportBoundary">{report.m5.interpretation} The retained score is evidence-strength triage, not an identity probability.</p>
+      <div className="evidenceAssessmentList">
+        {report.m5.evaluations.map((evaluation) => {
               const candidate = resolveM5Candidate(report, evaluation);
               const candidateSource = candidate?.source ?? evaluation.candidate_source ?? "canonical observation unavailable";
               const candidateLocator = candidate?.source_locator ?? evaluation.candidate_source_locator ?? null;
@@ -514,27 +514,46 @@ function M5EvidenceTable({ report }: { report: ConvergedReport }) {
                 rationale: "Historical evaluation did not retain factor rows.",
                 veto: false,
               }];
-              return factorRows.map((factor, factorIndex) => (
-                <tr key={`${m5EvaluationKey(evaluation)}-${factorIndex}`}>
-                  <td>
-                    {factorIndex === 0 && <>
-                      <strong>{evaluation.candidate_node}</strong><br />
-                      <span>{candidateSource}</span>
-                      {candidateLocator && <><br /><SourceLocator locator={candidateLocator} /></>}
-                      <br /><small>{evaluation.positive_independence_groups} positive independence groups · policy {evaluation.policy_version}</small>
-                    </>}
-                  </td>
-                  <td>{factorIndex === 0 ? evaluation.outcome : ""}</td>
-                  <td>{factorIndex === 0 ? `${evaluation.evidence_score} / 100` : ""}</td>
-                  <td>{factor.kind}</td>
-                  <td>{factor.independence_group}</td>
-                  <td>{factor.base_weight} → {factor.applied_weight}</td>
-                  <td>{factor.status}{factor.veto ? " · veto" : ""} · {factor.rationale}</td>
-                </tr>
-              ));
+              return (
+                <article className="evidenceAssessment" data-outcome={evaluation.outcome} key={m5EvaluationKey(evaluation)}>
+                  <div className="evidenceAssessmentHeader">
+                    <div>
+                      <span>Candidate</span>
+                      <strong>{evaluation.candidate_node}</strong>
+                    </div>
+                    <div className="evidenceScore">
+                      <strong>{evaluation.evidence_score}</strong>
+                      <span>/ 100 evidence strength</span>
+                    </div>
+                  </div>
+                  <div className="evidenceAssessmentBody">
+                    <div><span>Outcome</span><strong>{evaluation.outcome.replaceAll("_", " ")}</strong></div>
+                    <div><span>Independent support</span><strong>{evaluation.positive_independence_groups} groups</strong></div>
+                    <div><span>Source</span><strong>{candidateSource}</strong></div>
+                  </div>
+                  {candidateLocator && <p className="evidenceLocator"><SourceLocator locator={candidateLocator} /></p>}
+                  <details className="evidenceFactors">
+                    <summary>Inspect {factorRows.length} retained factor{factorRows.length === 1 ? "" : "s"} and caveats</summary>
+                    <div className="tableScroll">
+                      <table className="compactTable m5Table">
+                        <thead><tr><th>Factor</th><th>Group</th><th>Weight</th><th>Status / caveat</th></tr></thead>
+                        <tbody>
+                          {factorRows.map((factor, factorIndex) => (
+                            <tr key={`${m5EvaluationKey(evaluation)}-${factorIndex}`}>
+                              <td>{factor.kind}</td>
+                              <td>{factor.independence_group}</td>
+                              <td>{factor.base_weight} → {factor.applied_weight}</td>
+                              <td>{factor.status}{factor.veto ? " · veto" : ""} · {factor.rationale}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <small className="policyNote">Policy {evaluation.policy_version} · uncalibrated · never an identity probability</small>
+                  </details>
+                </article>
+              );
             })}
-          </tbody>
-        </table>
       </div>
     </div>
   );
@@ -569,7 +588,7 @@ function ConvergedSources({ report }: { report: ConvergedReport }) {
   );
 }
 
-export function QuickResearch({ csrfToken }: QuickResearchProps) {
+export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchProps) {
   const [kind, setKind] = useState<ResearchKind>("username");
   const [value, setValue] = useState("");
   const [activeCase, setActiveCase] = useState<StoredCase | null>(null);
@@ -579,6 +598,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [activeView, setActiveView] = useState<WorkspaceView>("overview");
+  const [launcherOpen, setLauncherOpen] = useState(true);
   const caseContextGeneration = useRef(0);
   const caseListGeneration = useRef(0);
 
@@ -592,6 +612,10 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     return caseListGeneration.current;
   }, []);
   const isCurrentCaseList = useCallback((generation: number) => caseListGeneration.current === generation, []);
+
+  useEffect(() => {
+    onActiveCaseChange?.(Boolean(activeCase));
+  }, [activeCase, onActiveCaseChange]);
 
   const refreshCases = useCallback(async () => {
     const generation = advanceCaseListGeneration();
@@ -635,6 +659,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
     const generation = startCaseContextChange();
     setError("");
     setActiveCase(null);
+    setLauncherOpen(true);
     setActiveView("overview");
     setBusy(true);
     try {
@@ -657,6 +682,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
       if (!isCurrentCaseContext(generation)) return;
       const stored = body as StoredCase;
       setActiveCase(stored);
+      setLauncherOpen(false);
       setValue(stored.seed_value);
       await refreshCases();
     } catch (caught) {
@@ -679,6 +705,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
       const stored = (await response.json()) as StoredCase;
       if (!isCurrentCaseContext(generation)) return;
       setActiveCase(stored);
+      setLauncherOpen(false);
       setActiveView("overview");
       if (!isCurrentCaseContext(generation)) return;
     } catch {
@@ -695,6 +722,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
         if (isCurrentCaseContext(generation)) setError("Stored case could not be deleted.");
         return;
       }
+      if (activeCase?.id === caseId) setLauncherOpen(true);
       setActiveCase((current) => current?.id === caseId ? null : current);
       await refreshCases();
     } catch {
@@ -740,6 +768,7 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
         return;
       }
       if (isCurrentCaseContext(generation)) setActiveCase(null);
+      if (isCurrentCaseContext(generation)) setLauncherOpen(true);
       await refreshCases();
     } catch {
       if (isCurrentCaseContext(generation)) setError("Stored cases could not be deleted.");
@@ -767,15 +796,26 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
   function renderOverview() {
     if (!report) return null;
     if (converged) {
+      const retainedObservationCount = converged.nodes.reduce((total, node) => total + node.observations.length, 0);
+      const unresolvedSourceCount = converged.nodes.reduce(
+        (total, node) => total + (node.source_runs?.records.filter((record) =>
+          ["unavailable", "blocked", "budget_stopped"].includes(record.state),
+        ).length ?? 0),
+        0,
+      );
       return (
         <div className="reportSummary">
           <div className="reportMetricGrid">
-            <div><strong>{converged.executive_summary.research_node_count}</strong><span>research nodes</span></div>
+            <div><strong>{retainedObservationCount}</strong><span>attributable observations</span></div>
             <div><strong>{converged.executive_summary.pivot_edge_count}</strong><span>public pivots</span></div>
             <div><strong>{converged.executive_summary.source_count}</strong><span>sources</span></div>
-            <div><strong>{converged.executive_summary.truncated ? "yes" : "no"}</strong><span>budget truncated</span></div>
+            <div><strong>{unresolvedSourceCount}</strong><span>unresolved source states</span></div>
           </div>
-          <p className="reportBoundary">{converged.executive_summary.interpretation}</p>
+          <p className="reportBoundary">
+            {converged.executive_summary.interpretation} {converged.executive_summary.truncated
+              ? "The bounded research budget stopped before every eligible lead was explored."
+              : "The bounded research budget completed without truncation."}
+          </p>
           {report.seed_provenance && (
             <div className="reportSection">
               <h3>Reviewed document seed</h3>
@@ -941,41 +981,54 @@ export function QuickResearch({ csrfToken }: QuickResearchProps) {
   }
 
   return (
-    <section className="panel">
-      <div className="panelHeader">
-        <div><span className="index">02</span><h2>Converged live research</h2></div>
-        <span className="count">private admin only</span>
+    <section className={activeCase ? "panel researchWorkbench activeResearch" : "panel researchWorkbench"}>
+      <div className="panelHeader researchWorkbenchHeader">
+        <div><span className="index">WORKSPACE</span><h2>{activeCase ? "Active investigation" : "Investigation workspace"}</h2></div>
+        <span className="count">private · retained</span>
       </div>
-      <form className="quickResearchForm" onSubmit={submit}>
-        <div className="twoColumn">
-          <label>
-            Starting identifier
-            <select value={kind} onChange={(event) => setKind(event.target.value as ResearchKind)}>
-              <option value="username">Username / handle</option>
-              <option value="phone">Phone number</option>
-              <option value="email">Email address</option>
-              <option value="url">Public profile URL</option>
-              <option value="domain">Domain</option>
-            </select>
-          </label>
-          <label>
-            Value
-            <input value={value} onChange={(event) => setValue(event.target.value)} placeholder={PLACEHOLDER_BY_KIND[kind]} required />
-          </label>
-        </div>
-        {kind === "domain" && (
-          <p className="muted">Enter a bare domain such as example.com. Domain research is explicit-seed only; domain clues discovered during another case remain display-only.</p>
-        )}
-        <button type="submit" disabled={busy || !value.trim() || !csrfToken}>{busy ? "Following public evidence pivots…" : "Run converged research case"}</button>
-        <p className="muted">Follows attributable public email, username and website fields through bounded approved providers. A pivot is evidence to investigate, not proof of identity.</p>
-      </form>
+      <details
+        className="researchLauncher"
+        open={launcherOpen}
+        onToggle={(event) => setLauncherOpen(event.currentTarget.open)}
+      >
+        <summary>
+          <span>
+            <strong>{activeCase ? "Start another case" : "Start with a public identifier"}</strong>
+            <small>{activeCase ? "Keeps the current case until you run the next one" : "Exact, bounded research through approved sources"}</small>
+          </span>
+          <span className="summaryAction">{launcherOpen ? "Collapse" : "Open launcher"}</span>
+        </summary>
+        <form className="quickResearchForm" onSubmit={submit}>
+          <div className="twoColumn">
+            <label>
+              Starting identifier
+              <select value={kind} onChange={(event) => setKind(event.target.value as ResearchKind)}>
+                <option value="username">Username / handle</option>
+                <option value="phone">Phone number</option>
+                <option value="email">Email address</option>
+                <option value="url">Public profile URL</option>
+                <option value="domain">Domain</option>
+              </select>
+            </label>
+            <label>
+              Value
+              <input value={value} onChange={(event) => setValue(event.target.value)} placeholder={PLACEHOLDER_BY_KIND[kind]} required />
+            </label>
+          </div>
+          {kind === "domain" && (
+            <p className="muted">Enter a bare domain such as example.com. Domain research is explicit-seed only; domain clues discovered during another case remain display-only.</p>
+          )}
+          <button type="submit" disabled={busy || !value.trim() || !csrfToken}>{busy ? "Following public evidence pivots…" : "Run converged research case"}</button>
+          <p className="muted">Follows attributable public email, username and website fields through bounded approved providers. A pivot is evidence to investigate, not proof of identity.</p>
+        </form>
+      </details>
 
-      {error && <p className="error quickResult" role="alert">{error}</p>}
+      {error && <p className="error researchError" role="alert">{error}</p>}
 
       {activeCase && report && (
         <div className="quickResult">
           <div className="caseContextBar">
-            <div><span className="caseId">CASE {activeCase.id.slice(0, 8)}</span><strong>{activeCase.seed_kind.toUpperCase()} · {activeCase.seed_value}</strong></div>
+            <div><span className="caseEyebrow">Active case</span><span className="caseId">CASE {activeCase.id.slice(0, 8)}</span><strong>{activeCase.seed_kind.toUpperCase()} · {activeCase.seed_value}</strong></div>
             <span className="caseRetention">retained until {new Date(activeCase.expires_at).toLocaleString()}</span>
           </div>
           <div className="workspaceTabs" role="tablist" aria-label="Case workspace views">
