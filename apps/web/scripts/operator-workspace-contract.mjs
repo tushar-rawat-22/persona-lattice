@@ -25,6 +25,13 @@ const requiredCss = [
   ".compactTable",
   ".tableScroll",
   ".caseContextBar",
+  ".workspace.caseActive",
+  ".intakeDrawer",
+  ".researchWorkbench.activeResearch",
+  ".evidenceAssessmentList",
+  ".evidenceFactors",
+  ".workspaceBoundary",
+  ".workspace.caseActive, .publicGrid { grid-template-columns: 1fr; }",
 ];
 
 for (const token of requiredCss) {
@@ -42,7 +49,9 @@ for (const token of forbiddenCss) {
 }
 
 const requiredResearch = [
-  "Converged live research",
+  "Investigation workspace",
+  "Active investigation",
+  "Start another case",
   "Stored cases",
   "Overview",
   "Accounts & pivots",
@@ -66,6 +75,8 @@ const requiredResearch = [
   'event.key === "End"',
   'className="compactTable sourceTable"',
   'className="compactTable m5Table"',
+  'className="evidenceAssessment"',
+  'className="evidenceFactors"',
 ];
 
 for (const token of requiredResearch) {
@@ -87,6 +98,19 @@ assert.ok(
 assert.ok(
   research.includes("not an identity probability") && research.includes("identity_probability: null"),
   "M5 must remain explicitly non-probabilistic in the operator workspace",
+);
+assert.ok(
+  adminPage.includes('className={caseWorkspaceActive ? "workspace caseActive" : "workspace"}') &&
+    adminPage.includes('className="panel intakeDrawer"') &&
+    adminPage.includes("onActiveCaseChange={handleActiveCaseChange}") &&
+    adminPage.includes("(!caseWorkspaceActive || result)"),
+  "active-case selection must collapse intake and promote the investigation workspace",
+);
+assert.ok(
+  research.includes("onActiveCaseChange?.(Boolean(activeCase))") &&
+    research.includes("setLauncherOpen(false)") &&
+    research.includes("Inspect {factorRows.length} retained factor"),
+  "case-first layout and progressive M5 factor disclosure must remain wired to real case state",
 );
 assert.ok(
   adminPage.includes('new FormData(event.currentTarget)') &&

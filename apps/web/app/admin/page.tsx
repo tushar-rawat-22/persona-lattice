@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { QuickResearch } from "./quick-research";
 import { UploadReviewWorkflow } from "./upload-review-workflow";
@@ -100,6 +100,8 @@ export default function AdminConsole() {
   const [fileResult, setFileResult] = useState<FilePreview | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [caseWorkspaceActive, setCaseWorkspaceActive] = useState(false);
+  const [intakeExpanded, setIntakeExpanded] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -133,6 +135,11 @@ export default function AdminConsole() {
       ).length + files.length,
     [fullName, phones, emails, usernames, urls, organizations, notes, files],
   );
+
+  const handleActiveCaseChange = useCallback((active: boolean) => {
+    setCaseWorkspaceActive(active);
+    if (active) setIntakeExpanded(false);
+  }, []);
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -170,6 +177,8 @@ export default function AdminConsole() {
     await api("/v1/auth/logout", { method: "POST" }, csrfToken).catch(() => undefined);
     setResult(null);
     setFileResult(null);
+    setCaseWorkspaceActive(false);
+    setIntakeExpanded(true);
     setCsrfToken("");
     setAuthState("anonymous");
   }
@@ -318,12 +327,22 @@ export default function AdminConsole() {
         </div>
       </header>
 
-      <section className="workspace">
-        <form className="panel intake" onSubmit={submit}>
-          <div className="panelHeader">
-            <div><span className="index">01</span><h2>Case intake</h2></div>
-            <span className="count">{signalCount} signals</span>
-          </div>
+      <section className={caseWorkspaceActive ? "workspace caseActive" : "workspace"}>
+        <details
+          className="panel intakeDrawer"
+          open={intakeExpanded}
+          onToggle={(event) => setIntakeExpanded(event.currentTarget.open)}
+        >
+          <summary className="intakeSummary">
+            <span className="intakeSummaryTitle">
+              <span className="index">INTAKE</span>
+              <strong>{caseWorkspaceActive ? "New intake" : "Build an investigation"}</strong>
+              <small>{signalCount} signals prepared</small>
+            </span>
+            <span className="summaryAction">{intakeExpanded ? "Collapse" : "Open intake"}</span>
+          </summary>
+
+          <form className="intake intakeBody" onSubmit={submit}>
 
           <label>
             Purpose
@@ -367,12 +386,13 @@ export default function AdminConsole() {
 
           {error && <p className="error">{error}</p>}
           <button type="submit" disabled={loading}>{loading ? "Validating evidence…" : "Build research plan"}</button>
-        </form>
+          </form>
+        </details>
 
-        <aside className="sideStack">
-          <QuickResearch csrfToken={csrfToken} />
+        <aside className={caseWorkspaceActive ? "sideStack caseWorkspace" : "sideStack"}>
+          <QuickResearch csrfToken={csrfToken} onActiveCaseChange={handleActiveCaseChange} />
 
-          <section className="panel">
+          {(!caseWorkspaceActive || result) && <section className="panel">
             <div className="panelHeader"><div><span className="index">03</span><h2>Research plan</h2></div></div>
             {!result ? (
               <p className="muted">Submit an authenticated intake to see normalization and provider policy decisions.</p>
@@ -411,9 +431,9 @@ export default function AdminConsole() {
                 )}
               </>
             )}
-          </section>
+          </section>}
 
-          <section className="panel boundary">
+          <section className="workspaceBoundary">
             <p className="eyebrow">BOUNDARY</p>
             <p>Private-account bypass, credential abuse, covert IP discovery, live tracking and hidden KYC acquisition are not provider capabilities.</p>
           </section>
