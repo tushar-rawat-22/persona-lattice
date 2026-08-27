@@ -4,6 +4,7 @@ from __future__ import annotations
 from ..providers.errors import (
     ProviderAccountUnavailableError,
     ProviderAuthError,
+    ProviderConfigurationError,
     ProviderExecutionError,
     ProviderPolicyError,
     ProviderPublicWebOptOutError,
@@ -206,6 +207,11 @@ def source_provider_exception_record(
         return source_provider_policy_record(source_name=source_name, lead_kind=lead_kind)
     if isinstance(exc, ProviderAuthError):
         return source_credential_not_configured_record(
+            source_name=source_name,
+            lead_kind=lead_kind,
+        )
+    if isinstance(exc, ProviderConfigurationError):
+        return source_optional_not_configured_record(
             source_name=source_name,
             lead_kind=lead_kind,
         )
