@@ -312,14 +312,10 @@ export default function AdminConsole() {
 
   return (
     <main className="shell">
-      <header className="hero">
+      <header className="hero operatorAppBar">
         <div>
-          <p className="eyebrow">PERSONALATTICE / PRIVATE OPERATOR</p>
-          <h1>Build the case from evidence, not assumptions.</h1>
-          <p className="lede">
-            Submit identifiers and authorized evidence. The API normalizes inputs, enforces purpose
-            boundaries, and keeps provider output separate from factual claims.
-          </p>
+          <p className="eyebrow">PersonaLattice</p>
+          <h1>Operator workspace</h1>
         </div>
         <div className="adminActions">
           <span className="status"><span className="dot" /> authenticated</span>
