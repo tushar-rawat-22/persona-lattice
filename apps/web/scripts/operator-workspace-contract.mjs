@@ -14,7 +14,6 @@ const requiredCss = [
   ".hero h1",
   "font-size: 18px",
   ".hero .lede { display: none; }",
-  ".operatorAppBar",
   "button:focus-visible",
   ".recentCases",
   "grid-template-columns: 220px minmax(0, 1fr)",
@@ -108,7 +107,7 @@ assert.ok(
   "active-case selection must collapse intake and promote the investigation workspace",
 );
 assert.ok(
-  adminPage.includes('className="operatorAppBar"') &&
+  adminPage.includes('className="hero operatorAppBar"') &&
     adminPage.includes("Operator workspace") &&
     !adminPage.includes("Build the case from evidence, not assumptions."),
   "authenticated workspace must use a compact application bar rather than marketing-style hero copy",
