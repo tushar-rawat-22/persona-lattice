@@ -265,6 +265,12 @@ type ConvergedSourceRow = SourceRunRecord & {
   node_value: string;
 };
 
+type DecisionItem = {
+  key: string;
+  text: string;
+  detail?: string;
+};
+
 async function request(path: string, init?: RequestInit, csrfToken?: string) {
   const method = (init?.method ?? "GET").toUpperCase();
   const unsafe = !["GET", "HEAD", "OPTIONS"].includes(method);
@@ -429,6 +435,158 @@ function resolveEdgeProvenance(report: ConvergedReport, edge: ConvergedEdge): Re
     source_field: decision.source_field,
     observation_summary: nonEmptyString(observation.summary) ? observation.summary : null,
   };
+}
+
+function reportObservations(report: QuickReport): Observation[] {
+  if (report.converged_report) {
+    return report.converged_report.nodes.flatMap((node) => node.observations);
+  }
+  return report.observations ?? [];
+}
+
+function uniqueDecisionItems(items: DecisionItem[]): DecisionItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.key)) return false;
+    seen.add(item.key);
+    return true;
+  });
+}
+
+function deriveCorroboratedEvidence(report: QuickReport): DecisionItem[] {
+  const groups = new Map<string, { summary: string; sources: Set<string> }>();
+  for (const observation of reportObservations(report)) {
+    if (!nonEmptyString(observation.summary) || !nonEmptyString(observation.source)) continue;
+    const key = observation.summary.trim().toLocaleLowerCase();
+    const current = groups.get(key) ?? { summary: observation.summary.trim(), sources: new Set<string>() };
+    current.sources.add(observation.source.trim());
+    groups.set(key, current);
+  }
+  return [...groups.entries()]
+    .filter(([, value]) => value.sources.size >= 2)
+    .map(([key, value]) => ({
+      key: `corroborated-${key}`,
+      text: value.summary,
+      detail: `${value.sources.size} distinct retained sources report this observation: ${[...value.sources].sort().join(", ")}.`,
+    }));
+}
+
+function deriveUncertaintyItems(report: QuickReport): DecisionItem[] {
+  const items: DecisionItem[] = [];
+  for (const warning of report.warnings ?? []) {
+    if (nonEmptyString(warning)) items.push({ key: `report-warning-${warning}`, text: warning });
+  }
+  const converged = report.converged_report;
+  if (converged) {
+    for (const warning of converged.warnings) {
+      if (nonEmptyString(warning)) items.push({ key: `converged-warning-${warning}`, text: warning });
+    }
+    for (const node of converged.nodes) {
+      for (const warning of node.warnings) {
+        if (nonEmptyString(warning)) items.push({ key: `node-warning-${warning}`, text: warning, detail: `Node: ${node.normalized_value}` });
+      }
+    }
+    if (converged.m5.evaluations.length > 0) {
+      items.push({
+        key: "m5-uncalibrated",
+        text: "M5 is uncalibrated; its score is evidence-strength triage, not an identity probability.",
+      });
+    }
+    for (const evaluation of converged.m5.evaluations) {
+      for (const factor of evaluation.factors) {
+        const factorText = `${factor.status} ${factor.rationale}`;
+        const isConflict = factor.veto || factor.applied_weight < 0 || /conflict|contradict|mismatch|negative|unsupported/i.test(factorText);
+        if (!isConflict) continue;
+        items.push({
+          key: `m5-${m5EvaluationKey(evaluation)}-${factor.kind}-${factor.independence_group}`,
+          text: factor.rationale,
+          detail: `${evaluation.candidate_node} · ${factor.kind}${factor.veto ? " · veto" : ""}`,
+        });
+      }
+    }
+  }
+  return uniqueDecisionItems(items);
+}
+
+function unresolvedSourceItems(sourceRuns: SourceRunReport | undefined, scope: string): DecisionItem[] {
+  if (!sourceRuns) return [];
+  return sourceRuns.records
+    .filter((record) => !["executed", "not_found"].includes(record.state))
+    .map((record, index) => ({
+      key: `source-${scope}-${record.source}-${record.lead_kind}-${record.state}-${index}`,
+      text: `${record.source}: ${record.reason}`,
+      detail: `${record.lead_kind} · ${record.state} · ${record.execution_attempted ? "attempted" : "not attempted"}`,
+    }));
+}
+
+function deriveOpenQuestions(report: QuickReport): DecisionItem[] {
+  const items: DecisionItem[] = [];
+  for (const gap of report.structured_report?.coverage_gaps ?? []) {
+    if (nonEmptyString(gap)) items.push({ key: `coverage-${gap}`, text: gap });
+  }
+  items.push(...unresolvedSourceItems(report.source_runs, "single"));
+  const converged = report.converged_report;
+  if (converged) {
+    if (converged.executive_summary.truncated) {
+      items.push({ key: "research-truncated", text: "The bounded research budget stopped before every eligible lead was explored." });
+    }
+    for (const node of converged.nodes) {
+      items.push(...unresolvedSourceItems(node.source_runs, node.key));
+      if (node.observations.length === 0) {
+        items.push({
+          key: `no-observation-${node.key}`,
+          text: `No attributable observation was retained for ${node.kind} ${node.normalized_value}.`,
+          detail: node.pivot_reason,
+        });
+      }
+    }
+  }
+  return uniqueDecisionItems(items);
+}
+
+function DecisionList({ items, empty }: { items: DecisionItem[]; empty: string }) {
+  if (items.length === 0) return <p className="muted">{empty}</p>;
+  return (
+    <ul className="coverageList">
+      {items.slice(0, 8).map((item) => (
+        <li key={item.key}>
+          {item.text}
+          {item.detail && <small> · {item.detail}</small>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function DecisionSurface({ report }: { report: QuickReport }) {
+  const corroborated = deriveCorroboratedEvidence(report);
+  const uncertainty = deriveUncertaintyItems(report);
+  const openQuestions = deriveOpenQuestions(report);
+  return (
+    <div className="decisionSurface reportSection" aria-label="Case decision surface">
+      <section>
+        <h3>Corroborated evidence</h3>
+        <DecisionList
+          items={corroborated}
+          empty="No retained observation is independently corroborated by two distinct sources yet. Single-source observations remain evidence, not corroboration."
+        />
+      </section>
+      <section>
+        <h3>Conflicts & uncertainty</h3>
+        <DecisionList
+          items={uncertainty}
+          empty="No explicit contradiction is retained. Source limits and missing coverage still prevent treating silence as confirmation."
+        />
+      </section>
+      <section>
+        <h3>Open questions</h3>
+        <DecisionList
+          items={openQuestions}
+          empty="No explicit coverage gap is retained for this case. Review Sources before treating the investigation as complete."
+        />
+      </section>
+    </div>
+  );
 }
 
 function SourceRunSummary({ sourceRuns, title }: { sourceRuns?: SourceRunReport; title: string }) {
@@ -805,6 +963,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
       );
       return (
         <div className="reportSummary">
+          <DecisionSurface report={report} />
           <div className="reportMetricGrid">
             <div><strong>{retainedObservationCount}</strong><span>attributable observations</span></div>
             <div><strong>{converged.executive_summary.pivot_edge_count}</strong><span>public pivots</span></div>
@@ -843,6 +1002,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
     if (structured) {
       return (
         <div className="reportSummary">
+          <DecisionSurface report={report} />
           <div className="reportMetricGrid">
             <div><strong>{structured.executive_summary.observation_count}</strong><span>observations</span></div>
             <div><strong>{structured.executive_summary.source_count}</strong><span>sources</span></div>

@@ -58,6 +58,14 @@ const requiredResearch = [
   "Sources",
   "Graph",
   "Raw",
+  "Corroborated evidence",
+  "Conflicts & uncertainty",
+  "Open questions",
+  'className="decisionSurface reportSection"',
+  "deriveCorroboratedEvidence",
+  "deriveUncertaintyItems",
+  "deriveOpenQuestions",
+  "No retained observation is independently corroborated by two distinct sources yet.",
   "M5 evidence-strength triage",
   "Evidence pivots",
   "Source execution",
@@ -98,6 +106,12 @@ assert.ok(
 assert.ok(
   research.includes("not an identity probability") && research.includes("identity_probability: null"),
   "M5 must remain explicitly non-probabilistic in the operator workspace",
+);
+assert.ok(
+  research.includes("sources.size >= 2") &&
+    research.includes('!["executed", "not_found"].includes(record.state)') &&
+    research.includes("factor.veto || factor.applied_weight < 0"),
+  "decision surface must derive corroboration, unresolved source gaps and conflicting evidence from retained case data",
 );
 assert.ok(
   adminPage.includes('className={caseWorkspaceActive ? "workspace caseActive" : "workspace"}') &&
