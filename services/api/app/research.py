@@ -44,6 +44,7 @@ from .providers.keybase_public import keybase_username_from_seed
 from .providers.openalex_author import openalex_author_id_from_url
 from .providers.ror_organization import ror_id_from_url
 from .providers.runtime import ProviderRuntime
+from .providers.sec_edgar_quick import execute_sec_edgar_exact_url
 from .providers.shared_runtime import (
     DEFAULT_BLUESKY_PROVIDER,
     DEFAULT_BRAVE_PROVIDER,
@@ -122,13 +123,6 @@ def _source_run_for_exception(
     exc: BaseException,
     injected_attempt: bool = False,
 ) -> SourceRunRecord | None:
-    """Map provider failures through the shared phase-proven source contract.
-
-    Injected compatibility lookups execute outside ProviderRuntime, so an
-    exception from one of those callables is known to be post-attempt even when
-    it is not a typed provider exception.
-    """
-
     mapped = source_provider_exception_record(
         source_name=source_name,
         lead_kind=lead_kind,
@@ -303,6 +297,20 @@ def _gleif_observation_from_provider(item: ProviderObservationData) -> QuickObse
         source="gleif_exact_lei",
         source_locator=item.source_locator,
         summary=f"GLEIF CC0 legal-entity metadata for LEI {lei}; exact supplied-entity evidence only.",
+        details=dict(item.payload),
+    )
+
+
+def _sec_edgar_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    cik = str(item.payload.get("sec_cik", "unknown CIK"))
+    filer_name = str(item.payload.get("sec_filer_name", "unknown filer"))
+    return QuickObservation(
+        source="sec_edgar_exact_cik",
+        source_locator=item.source_locator,
+        summary=(
+            f"SEC EDGAR filer metadata for {filer_name} (CIK {cik}); "
+            "exact supplied-CIK registry evidence only."
+        ),
         details=dict(item.payload),
     )
 
@@ -487,7 +495,6 @@ async def _public_search(
 
 
 async def lookup_github_public_profile(username: str) -> dict[str, object] | None:
-    """Compatibility helper for callers needing the raw public GitHub payload."""
     return await fetch_github_public_profile(username)
 
 
@@ -1894,6 +1901,39 @@ async def _research_url(
             )
         observations.extend(gleif_observations)
 
+    try:
+        sec_result = await execute_sec_edgar_exact_url(
+            normalized_value,
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            purpose=purpose,
+            consent_acknowledged=consent_acknowledged,
+        )
+    except Exception as exc:
+        source_run = _source_run_for_exception(
+            source_name="sec_edgar_exact_cik",
+            lead_kind=LeadKind.URL,
+            exc=exc,
+        )
+        if source_run is None:
+            raise
+        source_runs.append(source_run)
+        if source_run.reason.value != "optional_not_configured":
+            warnings.append("SEC EDGAR exact-CIK metadata was temporarily unavailable.")
+    else:
+        if sec_result is not None:
+            sec_observations = [
+                _sec_edgar_observation_from_provider(item) for item in sec_result.observations
+            ]
+            observations.extend(sec_observations)
+            source_runs.append(
+                source_result_record(
+                    source_name="sec_edgar_exact_cik",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(sec_observations),
+                )
+            )
+
     if companies_house_number_from_url(normalized_value) is not None:
         try:
             companies_house_observations = await _companies_house_observations(
@@ -2040,8 +2080,6 @@ async def _research_domain(
     purpose: Purpose,
     consent_acknowledged: bool,
 ) -> QuickResearchReport:
-    """Run explicit DOMAIN research through the metadata-only RDAP source."""
-
     subject_id = uuid4()
     identifier_id = uuid4()
     request = ExecutionRequest(
