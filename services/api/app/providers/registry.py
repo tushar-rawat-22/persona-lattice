@@ -359,6 +359,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="gleif_exact_lei",
+        capability="public_legal_entity_identifier_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official GLEIF exact-LEI filter used only for an exact supplied GLEIF record URL; bounded "
+            "legal-entity metadata with no fuzzy search, address search, ownership traversal or ID mapping."
+        ),
+        version="api-v1-exact-lei-2026-08",
+        source_category=SourceCategory.REGISTRY,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=128 * 1024,
+        max_concurrency=1,
+        rate_limit=10,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="companies_house_exact_company",
         capability="public_company_registry_metadata",
         status=ProviderStatus.DEVELOPMENT.value,
