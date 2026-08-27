@@ -367,6 +367,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="gleif_exact_lei",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=44,
+        note=(
+            "Official GLEIF exact-LEI metadata for exact canonical GLEIF record URLs only; bounded CC0 "
+            "legal-entity context, no fuzzy search, addresses, ownership traversal, mapped IDs or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="companies_house_exact_company",
         accepts=frozenset({LeadKind.URL}),
         emits=frozenset(),

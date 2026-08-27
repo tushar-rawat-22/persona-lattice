@@ -34,6 +34,7 @@ from .errors import (
 from .executor import ProviderExecutor
 from .github_public import GitHubPublicProfileProvider, fetch_github_public_profile
 from .gitlab_public import GitLabPublicProfileProvider, fetch_gitlab_public_profile
+from .gleif_lei import GleifExactLeiProvider, fetch_gleif_lei, gleif_lei_from_url
 from .logging import REDACTED_SECRET, sanitize_provider_log
 from .mock import SyntheticEchoProvider
 from .openalex_author import OpenAlexExactAuthorProvider, fetch_openalex_author, openalex_author_id_from_url
@@ -70,6 +71,7 @@ __all__ = [
     "ExecutionRequest",
     "GitHubPublicProfileProvider",
     "GitLabPublicProfileProvider",
+    "GleifExactLeiProvider",
     "MAX_SHERLOCK_SITES",
     "OpenAlexExactAuthorProvider",
     "PROVIDERS",
@@ -115,11 +117,13 @@ __all__ = [
     "fetch_dblp_person",
     "fetch_github_public_profile",
     "fetch_gitlab_public_profile",
+    "fetch_gleif_lei",
     "fetch_openalex_author",
     "fetch_ror_organization",
     "fetch_stack_overflow_profile",
     "fetch_wikidata_entity",
     "fetch_zenodo_record",
+    "gleif_lei_from_url",
     "load_reviewed_sherlock_sites",
     "openalex_author_id_from_url",
     "ror_id_from_url",

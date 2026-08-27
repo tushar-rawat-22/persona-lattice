@@ -39,6 +39,7 @@ from .providers.gitlab_public import (
     gitlab_profile_username_from_url,
     gitlab_project_path_from_url,
 )
+from .providers.gleif_lei import gleif_lei_from_url
 from .providers.keybase_public import keybase_username_from_seed
 from .providers.openalex_author import openalex_author_id_from_url
 from .providers.ror_organization import ror_id_from_url
@@ -54,6 +55,7 @@ from .providers.shared_runtime import (
     DEFAULT_DNS_PROVIDER,
     DEFAULT_GITHUB_PROVIDER,
     DEFAULT_GITLAB_PROVIDER,
+    DEFAULT_GLEIF_PROVIDER,
     DEFAULT_KEYBASE_PROVIDER,
     DEFAULT_OPENALEX_PROVIDER,
     DEFAULT_PROVIDER_RUNTIME,
@@ -291,6 +293,16 @@ def _ror_observation_from_provider(item: ProviderObservationData) -> QuickObserv
         source="ror_exact_organization",
         source_locator=item.source_locator,
         summary=f"ROR CC0 registry metadata for {ror_id}; exact supplied-organization evidence only.",
+        details=dict(item.payload),
+    )
+
+
+def _gleif_observation_from_provider(item: ProviderObservationData) -> QuickObservation:
+    lei = str(item.payload.get("gleif_lei", "unknown LEI"))
+    return QuickObservation(
+        source="gleif_exact_lei",
+        source_locator=item.source_locator,
+        summary=f"GLEIF CC0 legal-entity metadata for LEI {lei}; exact supplied-entity evidence only.",
         details=dict(item.payload),
     )
 
@@ -1022,6 +1034,33 @@ async def _ror_observations(
     return [_ror_observation_from_provider(item) for item in result.observations]
 
 
+async def _gleif_observations(
+    normalized_value: str,
+    *,
+    subject_id,
+    identifier_id,
+    purpose: Purpose,
+    consent_acknowledged: bool,
+) -> list[QuickObservation]:
+    request = ExecutionRequest(
+        provider_name=DEFAULT_GLEIF_PROVIDER.descriptor.name,
+        subject_id=subject_id,
+        identifier_id=identifier_id,
+        purpose=purpose,
+        consent_acknowledged=consent_acknowledged,
+    )
+    result = await DEFAULT_PROVIDER_RUNTIME.execute(
+        request=request,
+        query=ProviderQuery(
+            subject_id=subject_id,
+            identifier_id=identifier_id,
+            identifier_kind=IdentifierKind.URL.value,
+            identifier_value=normalized_value,
+        ),
+    )
+    return [_gleif_observation_from_provider(item) for item in result.observations]
+
+
 async def _companies_house_observations(
     normalized_value: str,
     *,
@@ -1174,9 +1213,6 @@ async def _research_username(
             "execution_failure",
             "remote_rate_limit",
         }:
-            # Security/policy/budget/result-validation failures retain their
-            # existing fail-closed API behavior. Only proven provider availability
-            # failures are safe to quarantine as one missing source.
             raise
         observations: list[QuickObservation] = []
         source_runs.append(source_run)
@@ -1828,6 +1864,35 @@ async def _research_url(
                 )
             )
         observations.extend(ror_observations)
+
+    if gleif_lei_from_url(normalized_value) is not None:
+        try:
+            gleif_observations = await _gleif_observations(
+                normalized_value,
+                subject_id=subject_id,
+                identifier_id=identifier_id,
+                purpose=purpose,
+                consent_acknowledged=consent_acknowledged,
+            )
+        except Exception as exc:
+            gleif_observations = []
+            warnings.append("GLEIF exact-LEI metadata was temporarily unavailable.")
+            source_run = _source_run_for_exception(
+                source_name="gleif_exact_lei",
+                lead_kind=LeadKind.URL,
+                exc=exc,
+            )
+            if source_run is not None:
+                source_runs.append(source_run)
+        else:
+            source_runs.append(
+                source_result_record(
+                    source_name="gleif_exact_lei",
+                    lead_kind=LeadKind.URL,
+                    observation_count=len(gleif_observations),
+                )
+            )
+        observations.extend(gleif_observations)
 
     if companies_house_number_from_url(normalized_value) is not None:
         try:
