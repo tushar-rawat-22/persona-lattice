@@ -169,6 +169,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="gleif_exact_lei",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="gleif_exact_lei",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact canonical GLEIF record URLs execute an exact LEI filter through ProviderRuntime; "
+            "fuzzy entity search, addresses, ownership traversal, mapped identifiers and emitted leads stay outside."
+        ),
+    ),
+    SourceBinding(
         source_name="companies_house_exact_company",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="companies_house_exact_company",
