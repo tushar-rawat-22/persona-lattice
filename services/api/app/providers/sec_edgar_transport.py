@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 import json
+import re
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -20,6 +21,11 @@ from .errors import (
 
 _MAX_RAW_RESPONSE_BYTES = 256 * 1024
 _TIMEOUT_SECONDS = 4.0
+_CONTACT_EMAIL_RE = re.compile(
+    r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@"
+    r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"
+)
 
 OpenSecRequest = Callable[..., object]
 
@@ -32,9 +38,17 @@ def validate_sec_user_agent(value: str) -> str:
     text = value.strip()
     if text != value or len(text) < 8 or len(text) > 200:
         raise ProviderValidationError("SEC EDGAR User-Agent is invalid.")
-    if "@" not in text or any(ord(character) < 32 or ord(character) == 127 for character in text):
+    if any(ord(character) < 32 or ord(character) == 127 for character in text):
         raise ProviderValidationError(
             "SEC EDGAR User-Agent must include a maintainable contact email address."
+        )
+
+    tokens = text.split()
+    contact_tokens = [token for token in tokens if _CONTACT_EMAIL_RE.fullmatch(token)]
+    identity_tokens = [token for token in tokens if token not in contact_tokens]
+    if len(contact_tokens) != 1 or not identity_tokens:
+        raise ProviderValidationError(
+            "SEC EDGAR User-Agent must declare an operator identity and one contact email address."
         )
     return text
 
