@@ -26,6 +26,12 @@ class ProviderAuthError(ProviderExecutionError):
     code = "provider_auth_error"
 
 
+class ProviderConfigurationError(ProviderExecutionError):
+    """Required non-secret provider configuration is unavailable before contact."""
+
+    code = "provider_configuration_error"
+
+
 class ProviderResponseTooLarge(ProviderExecutionError):
     code = "provider_response_too_large"
 

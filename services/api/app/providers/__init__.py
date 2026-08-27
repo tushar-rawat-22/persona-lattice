@@ -22,6 +22,7 @@ from .datacite_doi import DataCiteExactDoiProvider, fetch_datacite_doi
 from .dblp_person import DblpExactPersonProvider, dblp_person_pid_from_url, fetch_dblp_person
 from .errors import (
     ProviderAuthError,
+    ProviderConfigurationError,
     ProviderExecutionError,
     ProviderPolicyError,
     ProviderRateBudgetExceeded,
@@ -79,6 +80,7 @@ __all__ = [
     "PreparedProviderExecution",
     "Provider",
     "ProviderAuthError",
+    "ProviderConfigurationError",
     "ProviderDescriptor",
     "ProviderExecutionError",
     "ProviderExecutor",
