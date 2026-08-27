@@ -379,6 +379,26 @@ PROVIDERS: tuple[ProviderDescriptor, ...] = (
         rate_window_seconds=60.0,
     ),
     ProviderDescriptor(
+        name="sec_edgar_exact_cik",
+        capability="public_company_registry_metadata",
+        status=ProviderStatus.DEVELOPMENT.value,
+        contact_risk=ContactRisk.NONE_KNOWN,
+        reason=(
+            "Official SEC EDGAR submissions metadata for an exact supplied data.sec.gov CIK URL only; "
+            "bounded filer metadata with no company search, filing-body retrieval, person expansion or emitted leads."
+        ),
+        version="submissions-exact-cik-2026-08",
+        source_category=SourceCategory.REGISTRY,
+        allowed_purposes=SAFE_PURPOSES,
+        supported_identifier_kinds=URL_ONLY,
+        max_attempts=1,
+        timeout_seconds=4.0,
+        max_response_bytes=256 * 1024,
+        max_concurrency=1,
+        rate_limit=6,
+        rate_window_seconds=60.0,
+    ),
+    ProviderDescriptor(
         name="companies_house_exact_company",
         capability="public_company_registry_metadata",
         status=ProviderStatus.DEVELOPMENT.value,
