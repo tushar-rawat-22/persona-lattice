@@ -8,6 +8,24 @@ Repository: `tushar-rawat-22/persona-lattice`
 
 Authoritative branch: `main`
 
+Launch Candidate 1 tested commit: `18b6b75b7dc28d3883752aec013911223726423c`
+
+Launch Candidate 1 post-merge CI: run `33008932692` / CI #2226, successful on the exact tested commit.
+
+Private host evidence: `$HOME/Library/Application Support/PersonaLattice/lc1/20260826T200923Z.json`, mode `0600`, status `passed`, completed `2026-08-26T20:10:38.996136+00:00`.
+
+Rollback checkpoint: `657f55e99a95fad386039e0c59204355a07580d9`. This is the last automated-host-passing main before the Safari login submission fix; using it reopens the Safari browser gate and is not an LC1-equivalent state.
+
+## Launch acceptance handover
+
+The candidate-Mac host harness passed on the exact LC1 commit. Evidence includes the clean production build and preflight, exact GitHub URL and domain cases, reviewed-document confirm/promote/explicit-run workflow, source-state/provenance/non-probabilistic-M5 contracts, retained-case lifecycle, verified SQLite backup/restore, restart persistence, invalidation of the old in-memory session, logout, external HTTPS auth/CSRF/security headers and controlled-process log privacy scanning.
+
+Safari and Chrome both passed same-commit authenticated rendering, retained-case navigation, source/provenance/M5 inspection and keyboard activation. Safari was checked at 390×844; Chrome was checked in a narrow window. The temporary no-domain ngrok route was smoke-only and was stopped after acceptance. No stable public beta hostname exists, Quick Tunnel remains smoke/development-only, and LC1 must not be described as a live private beta.
+
+The real defects exposed by the Mac session were fixed in PRs #237–#241: supported-Python selection, npm 11 detached-worktree install behavior, bounded tunnel-DNS readiness, direct API-process tracking for restart/session invalidation, and Safari-safe browser-form submission. Current main and origin/main matched the tested commit with no open PR when the evidence was recorded.
+
+Issue #242 is the active product-quality gate: make the active case primary, collapse intake after selection, flatten excessive panel chrome, strengthen evidence/uncertainty/source/provenance hierarchy, reduce badge noise, improve readable density and preserve deliberate mobile/keyboard behavior. Do not change provider activation, privacy/provenance contracts, M5 semantics, auth/session/CSRF behavior or retained-case compatibility in that work. Source activation remains frozen.
+
 Engineering-freeze baseline: PR #168, merged as `5d774a9fadc336d43e06491183d9035d016db04f` after exact-head CI passed.
 
 Keybase source activation: PR #177 merged as `611ef00cd14858f5e60e2d32add3ec4cee47b025` after exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` across Python 3.11/3.13, web and the production API image.

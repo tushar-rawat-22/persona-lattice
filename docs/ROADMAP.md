@@ -30,6 +30,22 @@ The completion gate is met for the current private one-admin product:
 
 This is an engineering freeze, not a claim that PersonaLattice is validated in the population. New engineering work should now be justified by source coverage, real M10 evidence, a concrete correctness defect or a specific operator investigation bottleneck. Do not keep polishing completed foundations because there is spare implementation time.
 
+## Launch Candidate 1
+
+**Accepted on the candidate Mac on 2026-08-27.**
+
+`LAUNCH_CANDIDATE_1` is the software and real-host acceptance state for exact commit `18b6b75b7dc28d3883752aec013911223726423c`. Post-merge CI passed on that commit as run `33008932692` / CI #2226.
+
+The mode-`0600` host summary is retained privately at `$HOME/Library/Application Support/PersonaLattice/lc1/20260826T200923Z.json`. It records a passing production preflight and clean build; loopback API and same-origin web proxy; bounded external HTTPS auth, CSRF and security-header smoke; exact `https://github.com/octocat` and `example.com` cases; source-state, provenance and non-probabilistic M5 response contracts; reviewed-document preview → confirm → promote → explicit research; retained-case open/delete; verified SQLite backup/restore; process-restart persistence; old in-memory session invalidation; logout revocation; and host-process log privacy scanning.
+
+Safari and Chrome were then inspected against the same commit. Both passed authenticated rendering, retained-case switching, source/provenance/M5 presentation and keyboard activation. Safari passed a 390×844 responsive viewport; Chrome passed a narrow-window responsive layout. Loading and empty-state behavior were also observed during the session.
+
+The external URL was a temporary no-domain ngrok route used only for bounded smoke and browser acceptance, and it was stopped afterward. It is not a live private-beta endpoint. No domain is owned, Quick Tunnel remains development/smoke-only, and no stable public beta is claimed.
+
+The rollback checkpoint is `657f55e99a95fad386039e0c59204355a07580d9`, the last exact automated-host-passing main before the Safari form-submission fix. Rolling back to it would intentionally reopen the Safari login gate; it is an operational recovery point, not an LC1-equivalent candidate.
+
+Source activation remains frozen while Issue #242 performs the bounded operator-workspace quality pass. The next product gate is active-case-first hierarchy, readability and interaction refinement without changing privacy, provenance, M5, authentication or provider policy.
+
 ## Active source baseline
 
 Current executable sources are:
