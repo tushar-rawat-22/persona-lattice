@@ -53,6 +53,9 @@ const requiredResearch = [
   "Active investigation",
   "Start another case",
   "Stored cases",
+  "Search loaded cases",
+  "Filter by kind",
+  "Sort loaded cases",
   "Overview",
   "Accounts & pivots",
   "Sources",
@@ -66,6 +69,11 @@ const requiredResearch = [
   "deriveUncertaintyItems",
   "deriveOpenQuestions",
   "No retained observation is independently corroborated by two distinct sources yet.",
+  "caseQuery",
+  "caseKindFilter",
+  "caseSort",
+  "visibleCases",
+  'className="caseActions"',
   "M5 evidence-strength triage",
   "Evidence pivots",
   "Source execution",
@@ -112,6 +120,18 @@ assert.ok(
     research.includes('!["executed", "not_found"].includes(record.state)') &&
     research.includes("factor.veto || factor.applied_weight < 0"),
   "decision surface must derive corroboration, unresolved source gaps and conflicting evidence from retained case data",
+);
+assert.ok(
+  research.includes("recentCases.filter") &&
+    research.includes("localeCompare") &&
+    research.includes("new Date(item.created_at).toLocaleString()"),
+  "stored-case navigation must filter loaded cases, sort deterministically and expose recency context",
+);
+assert.ok(
+  research.includes('<details className="caseActions">') &&
+    research.includes("Delete this case") &&
+    research.includes("Delete all retained cases"),
+  "destructive case actions must be moved behind deliberate secondary disclosure",
 );
 assert.ok(
   adminPage.includes('className={caseWorkspaceActive ? "workspace caseActive" : "workspace"}') &&
