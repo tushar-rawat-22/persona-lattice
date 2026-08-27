@@ -62,6 +62,11 @@ def test_transport_uses_one_exact_submissions_request_and_declared_contact() -> 
     "value",
     [
         "PersonaLattice",
+        "ops@example.com",
+        "PersonaLattice ops@example",
+        "PersonaLattice ops@localhost",
+        "PersonaLattice ops@@example.com",
+        "PersonaLattice ops@example.com second@example.com",
         " ops@example.com",
         "ops@example.com ",
         "PersonaLattice contact.example.com",
@@ -72,6 +77,18 @@ def test_transport_uses_one_exact_submissions_request_and_declared_contact() -> 
 def test_user_agent_must_be_explicit_bounded_and_contactable(value: str) -> None:
     with pytest.raises(ProviderValidationError):
         sec.validate_sec_user_agent(value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "PersonaLattice ops@example.com",
+        "PersonaLattice/0.0.1 security-team@example.co.in",
+        "Persona Lattice operator+edgar@example.org",
+    ],
+)
+def test_user_agent_accepts_one_operator_identity_and_contact(value: str) -> None:
+    assert sec.validate_sec_user_agent(value) == value
 
 
 def test_transport_treats_404_as_neutral_not_found() -> None:
