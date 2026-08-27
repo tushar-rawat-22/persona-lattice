@@ -179,6 +179,16 @@ SOURCE_BINDINGS: tuple[SourceBinding, ...] = (
         ),
     ),
     SourceBinding(
+        source_name="sec_edgar_exact_cik",
+        backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
+        provider_name="sec_edgar_exact_cik",
+        accepts=frozenset({LeadKind.URL}),
+        migration_note=(
+            "Exact canonical SEC submissions URLs execute one bounded filer-metadata request through ProviderRuntime; "
+            "company/ticker search, filing bodies, people/contact expansion and emitted leads stay outside."
+        ),
+    ),
+    SourceBinding(
         source_name="companies_house_exact_company",
         backend=SourceExecutionBackend.M3_GOVERNED_ADAPTER,
         provider_name="companies_house_exact_company",
