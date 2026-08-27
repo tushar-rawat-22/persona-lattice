@@ -54,7 +54,7 @@ def _fetch_sec_submissions_sync(
     cik: str,
     *,
     user_agent: str,
-    opener: OpenSecRequest = urlopen,
+    opener: OpenSecRequest | None = None,
 ) -> dict[str, object] | None:
     declared_user_agent = validate_sec_user_agent(user_agent)
     request = Request(
@@ -65,8 +65,9 @@ def _fetch_sec_submissions_sync(
         },
         method="GET",
     )
+    open_request = opener or urlopen
     try:
-        response_context = opener(request, timeout=_TIMEOUT_SECONDS)
+        response_context = open_request(request, timeout=_TIMEOUT_SECONDS)
         with response_context as response:  # type: ignore[attr-defined]
             raw = response.read(_MAX_RAW_RESPONSE_BYTES + 1)
     except HTTPError as exc:
