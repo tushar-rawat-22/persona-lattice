@@ -10,6 +10,7 @@ from .datacite_doi import DataCiteExactDoiProvider
 from .dblp_person import DblpExactPersonProvider
 from .github_public import GitHubPublicProfileProvider
 from .gitlab_public import GitLabPublicProfileProvider
+from .gleif_lei import GleifExactLeiProvider
 from .keybase_public import KeybasePublicUserProvider
 from .openalex_author import OpenAlexExactAuthorProvider
 from .public_dns import PublicDnsInfrastructureProvider
@@ -39,6 +40,7 @@ DEFAULT_OPENALEX_PROVIDER = OpenAlexExactAuthorProvider()
 DEFAULT_WIKIDATA_PROVIDER = WikidataExactEntityProvider()
 DEFAULT_ZENODO_PROVIDER = ZenodoExactRecordProvider()
 DEFAULT_ROR_PROVIDER = RorExactOrganizationProvider()
+DEFAULT_GLEIF_PROVIDER = GleifExactLeiProvider()
 DEFAULT_COMPANIES_HOUSE_PROVIDER = CompaniesHouseExactCompanyProvider()
 DEFAULT_DBLP_PROVIDER = DblpExactPersonProvider()
 DEFAULT_CROSSREF_PROVIDER = CrossrefExactWorkProvider()
@@ -59,6 +61,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_WIKIDATA_PROVIDER,
         DEFAULT_ZENODO_PROVIDER,
         DEFAULT_ROR_PROVIDER,
+        DEFAULT_GLEIF_PROVIDER,
         DEFAULT_COMPANIES_HOUSE_PROVIDER,
         DEFAULT_DBLP_PROVIDER,
         DEFAULT_CROSSREF_PROVIDER,
