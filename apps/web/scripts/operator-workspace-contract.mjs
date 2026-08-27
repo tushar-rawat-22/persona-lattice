@@ -8,6 +8,7 @@ const appRoot = path.resolve(here, "..");
 const css = await readFile(path.join(appRoot, "app", "globals.css"), "utf8");
 const adminPage = await readFile(path.join(appRoot, "app", "admin", "page.tsx"), "utf8");
 const research = await readFile(path.join(appRoot, "app", "admin", "quick-research.tsx"), "utf8");
+const caseNavigation = await readFile(path.join(appRoot, "app", "admin", "case-navigation.tsx"), "utf8");
 
 const requiredCss = [
   "font-family: -apple-system, BlinkMacSystemFont",
@@ -98,6 +99,36 @@ const requiredResearch = [
 for (const token of requiredResearch) {
   assert.ok(research.includes(token), `operator workspace lost required evidence/provenance affordance: ${token}`);
 }
+
+const requiredCaseNavigation = [
+  "Search loaded cases",
+  "Filter by kind",
+  "Sort loaded cases",
+  "filterAndSortLoadedCases",
+  "caseNavigationControls",
+  "caseNavigationFooter",
+  'className="caseActions"',
+  "Delete this case",
+  "Delete all retained cases",
+  "new Date(item.created_at).toLocaleString()",
+  "left.id.localeCompare(right.id)",
+  "No loaded cases match the current search and kind filter.",
+];
+
+for (const token of requiredCaseNavigation) {
+  assert.ok(caseNavigation.includes(token), `retained-case navigation lost required behavior: ${token}`);
+}
+assert.ok(
+  caseNavigation.includes("kind !== \"all\" && item.seed_kind !== kind") &&
+    caseNavigation.includes("candidate.toLocaleLowerCase().includes(needle)") &&
+    caseNavigation.includes('sortOrder === "newest" ? -createdDelta : createdDelta'),
+  "retained-case navigation must search/filter only loaded data and sort deterministically",
+);
+assert.ok(
+  caseNavigation.includes('aria-current={activeCaseId === item.id ? "true" : undefined}') &&
+    caseNavigation.includes("Search and sort the cases already loaded in this session."),
+  "retained-case navigation must expose active state and must not pretend loaded-case search is server-wide",
+);
 
 assert.ok(
   research.includes("<details>") && research.includes("<summary>Raw retained JSON</summary>"),
