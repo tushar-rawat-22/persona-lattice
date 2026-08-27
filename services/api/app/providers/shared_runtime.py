@@ -15,8 +15,10 @@ from .keybase_public import KeybasePublicUserProvider
 from .openalex_author import OpenAlexExactAuthorProvider
 from .public_dns import PublicDnsInfrastructureProvider
 from .rdap_domain import RdapDomainRegistryProvider
+from .registry import PROVIDER_BY_NAME
 from .ror_organization import RorExactOrganizationProvider
 from .runtime import ProviderRuntime
+from .sec_edgar import SecEdgarExactCikProvider
 from .sherlock import SherlockProvider
 from .stack_overflow_public import StackOverflowPublicProfileProvider
 from .wayback_availability import WaybackAvailabilityProvider
@@ -45,6 +47,9 @@ DEFAULT_COMPANIES_HOUSE_PROVIDER = CompaniesHouseExactCompanyProvider()
 DEFAULT_DBLP_PROVIDER = DblpExactPersonProvider()
 DEFAULT_CROSSREF_PROVIDER = CrossrefExactWorkProvider()
 DEFAULT_DATACITE_PROVIDER = DataCiteExactDoiProvider()
+DEFAULT_SEC_EDGAR_PROVIDER = SecEdgarExactCikProvider(
+    descriptor=PROVIDER_BY_NAME["sec_edgar_exact_cik"]
+)
 DEFAULT_RDAP_PROVIDER = RdapDomainRegistryProvider()
 DEFAULT_BRAVE_PROVIDER = BravePublicWebSearchProvider()
 DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
@@ -66,6 +71,7 @@ DEFAULT_PROVIDER_RUNTIME = ProviderRuntime(
         DEFAULT_DBLP_PROVIDER,
         DEFAULT_CROSSREF_PROVIDER,
         DEFAULT_DATACITE_PROVIDER,
+        DEFAULT_SEC_EDGAR_PROVIDER,
         DEFAULT_RDAP_PROVIDER,
         DEFAULT_BRAVE_PROVIDER,
     ]

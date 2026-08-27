@@ -20,6 +20,7 @@ from app.providers.shared_runtime import (
     DEFAULT_PROVIDER_RUNTIME,
     DEFAULT_RDAP_PROVIDER,
     DEFAULT_ROR_PROVIDER,
+    DEFAULT_SEC_EDGAR_PROVIDER,
     DEFAULT_SHERLOCK_PROVIDER,
     DEFAULT_STACK_OVERFLOW_PROVIDER,
     DEFAULT_WAYBACK_PROVIDER,
@@ -48,6 +49,7 @@ def test_shared_production_runtime_owns_current_governed_quick_research_provider
         "crossref_exact_work",
         "datacite_exact_doi",
         "gleif_exact_lei",
+        "sec_edgar_exact_cik",
         "rdap_domain_registry",
         "brave_public_web_index",
     }
@@ -68,6 +70,7 @@ def test_shared_production_runtime_owns_current_governed_quick_research_provider
     assert DEFAULT_PROVIDER_RUNTIME.adapters["crossref_exact_work"] is DEFAULT_CROSSREF_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["datacite_exact_doi"] is DEFAULT_DATACITE_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["gleif_exact_lei"] is DEFAULT_GLEIF_PROVIDER
+    assert DEFAULT_PROVIDER_RUNTIME.adapters["sec_edgar_exact_cik"] is DEFAULT_SEC_EDGAR_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["rdap_domain_registry"] is DEFAULT_RDAP_PROVIDER
     assert DEFAULT_PROVIDER_RUNTIME.adapters["brave_public_web_index"] is DEFAULT_BRAVE_PROVIDER
 
@@ -90,6 +93,7 @@ def test_shared_runtime_adapters_match_reviewed_registry_descriptors() -> None:
     assert DEFAULT_CROSSREF_PROVIDER.descriptor is PROVIDER_BY_NAME["crossref_exact_work"]
     assert DEFAULT_DATACITE_PROVIDER.descriptor is PROVIDER_BY_NAME["datacite_exact_doi"]
     assert DEFAULT_GLEIF_PROVIDER.descriptor is PROVIDER_BY_NAME["gleif_exact_lei"]
+    assert DEFAULT_SEC_EDGAR_PROVIDER.descriptor is PROVIDER_BY_NAME["sec_edgar_exact_cik"]
     assert DEFAULT_RDAP_PROVIDER.descriptor is PROVIDER_BY_NAME["rdap_domain_registry"]
     assert DEFAULT_BRAVE_PROVIDER.descriptor is PROVIDER_BY_NAME["brave_public_web_index"]
 
@@ -117,6 +121,7 @@ def test_default_provider_returns_process_owned_adapter_without_reinstantiation(
     assert default_provider("crossref_exact_work") is DEFAULT_CROSSREF_PROVIDER
     assert default_provider("datacite_exact_doi") is DEFAULT_DATACITE_PROVIDER
     assert default_provider("gleif_exact_lei") is DEFAULT_GLEIF_PROVIDER
+    assert default_provider("sec_edgar_exact_cik") is DEFAULT_SEC_EDGAR_PROVIDER
     assert default_provider("rdap_domain_registry") is DEFAULT_RDAP_PROVIDER
     assert default_provider("brave_public_web_index") is DEFAULT_BRAVE_PROVIDER
     assert default_provider("not-registered") is None

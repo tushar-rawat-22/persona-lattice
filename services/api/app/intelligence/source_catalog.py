@@ -383,6 +383,22 @@ SOURCE_CATALOG: tuple[SourceCapability, ...] = (
         ),
     ),
     SourceCapability(
+        name="sec_edgar_exact_cik",
+        accepts=frozenset({LeadKind.URL}),
+        emits=frozenset(),
+        status=SourceStatus.ACTIVE,
+        mode=SourceMode.PUBLIC_API,
+        cost_class=SourceCostClass.ZERO_DIRECT_COST,
+        credential_class=SourceCredentialClass.NONE,
+        source_policy_reviewed=True,
+        recursive_eligible=True,
+        priority=44,
+        note=(
+            "Official SEC EDGAR submissions metadata for exact canonical data.sec.gov CIK URLs only; "
+            "bounded filer metadata, no company/ticker search, filing bodies, people/contact expansion or emitted leads."
+        ),
+    ),
+    SourceCapability(
         name="companies_house_exact_company",
         accepts=frozenset({LeadKind.URL}),
         emits=frozenset(),
