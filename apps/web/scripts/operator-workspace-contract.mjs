@@ -107,6 +107,12 @@ assert.ok(
   "active-case selection must collapse intake and promote the investigation workspace",
 );
 assert.ok(
+  adminPage.includes('className="hero operatorAppBar"') &&
+    adminPage.includes("Operator workspace") &&
+    !adminPage.includes("Build the case from evidence, not assumptions."),
+  "authenticated workspace must use a compact application bar rather than marketing-style hero copy",
+);
+assert.ok(
   research.includes("onActiveCaseChange?.(Boolean(activeCase))") &&
     research.includes("setLauncherOpen(false)") &&
     research.includes("Inspect {factorRows.length} retained factor"),
