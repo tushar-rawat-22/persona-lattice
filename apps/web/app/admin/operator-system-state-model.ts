@@ -16,6 +16,12 @@ export type OperatorSourceAggregate = {
   blocked_count: number;
 };
 
+export type OperatorSourceRunLike = {
+  evaluation?: {
+    aggregate: OperatorSourceAggregate;
+  };
+};
+
 export type OperatorSystemStateCounts = {
   attemptCount: number;
   completedAttemptCount: number;
@@ -63,4 +69,10 @@ export function operatorSystemStateCounts(
         aggregate.blocked_count,
     };
   }, { ...EMPTY_COUNTS });
+}
+
+export function operatorSystemStateCountsFromSourceRuns(
+  sourceRuns: Array<OperatorSourceRunLike | undefined>,
+): OperatorSystemStateCounts {
+  return operatorSystemStateCounts(sourceRuns.map((item) => item?.evaluation?.aggregate));
 }
