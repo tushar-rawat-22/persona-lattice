@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test:operator-workspace": "node scripts/operator-workspace-contract.mjs && node scripts/provenance-disclosure-contract.mjs && node scripts/m5-factor-summary-contract.mjs && node scripts/operator-system-state-contract.mjs && node scripts/case-deletion-confirmation-contract.mjs && node scripts/case-retention-state-contract.mjs"
+    "test:operator-workspace": "node scripts/operator-workspace-contract.mjs && node scripts/provenance-disclosure-contract.mjs && node scripts/m5-factor-summary-contract.mjs && node scripts/operator-system-state-contract.mjs && node scripts/case-deletion-confirmation-contract.mjs && node scripts/case-retention-state-contract.mjs && node scripts/upload-review-session-state-contract.mjs"
   },
   "dependencies": {
     "next": "16.3.1",

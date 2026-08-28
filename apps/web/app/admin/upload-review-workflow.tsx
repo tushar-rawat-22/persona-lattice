@@ -115,12 +115,19 @@ export function UploadReviewWorkflow({
     return state;
   }, [artifacts]);
   const [candidateState, setCandidateState] = useState(initial);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   function patchCandidate(key: string, patch: Partial<CandidateViewState>) {
     setCandidateState((current) => ({
       ...current,
       [key]: { ...(current[key] ?? initial[key]), ...patch },
     }));
+  }
+
+  function requireActiveSession(response: Response) {
+    if (response.status !== 401) return;
+    setSessionExpired(true);
+    throw new Error("Operator session expired. Sign in again before changing uploaded evidence review state.");
   }
 
   async function mutateReview(
@@ -136,6 +143,7 @@ export function UploadReviewWorkflow({
         csrfToken,
         { method: "POST" },
       );
+      requireActiveSession(response);
       const body = (await response.json().catch(() => ({}))) as ReviewState | Record<string, unknown>;
       if (!response.ok) throw new Error(detailMessage(body, `Could not ${action} candidate.`));
       const state = body as ReviewState;
@@ -161,6 +169,7 @@ export function UploadReviewWorkflow({
         csrfToken,
         { method: "POST" },
       );
+      requireActiveSession(response);
       const body = (await response.json().catch(() => ({}))) as PromotedLead | Record<string, unknown>;
       if (!response.ok) throw new Error(detailMessage(body, "Could not promote candidate."));
       patchCandidate(key, { promoted: body as PromotedLead });
@@ -190,6 +199,7 @@ export function UploadReviewWorkflow({
           }),
         },
       );
+      requireActiveSession(response);
       const body = (await response.json().catch(() => ({}))) as CreatedCase | Record<string, unknown>;
       if (!response.ok) throw new Error(detailMessage(body, "Could not start reviewed-candidate case."));
       patchCandidate(key, { createdCase: body as CreatedCase });
@@ -210,6 +220,11 @@ export function UploadReviewWorkflow({
         and candidate IDs; the API reloads the trusted server-owned candidate before every mutation
         or research run.
       </p>
+      {sessionExpired && (
+        <p className="error" role="alert">
+          Operator session expired. Review state has not been changed by the rejected request. Sign in again before continuing.
+        </p>
+      )}
       <div className="providerList">
         {artifacts.map((artifact) => (
           <article className="researchObservation" key={artifact.artifact_id}>
@@ -227,6 +242,7 @@ export function UploadReviewWorkflow({
                 const key = candidateKey(artifact.artifact_id, candidate.candidate_id);
                 const state = candidateState[key] ?? initialView(candidate);
                 const busy = state.busyAction !== null;
+                const actionsDisabled = busy || sessionExpired;
                 const canResearch =
                   candidate.candidate_type === "identifier" &&
                   state.review_status === "confirmed" &&
@@ -241,25 +257,25 @@ export function UploadReviewWorkflow({
                     <div className="adminActions">
                       {state.review_status === "pending" && (
                         <>
-                          <button type="button" disabled={busy} onClick={() => mutateReview(artifact.artifact_id, candidate, "confirm")}>
+                          <button type="button" disabled={actionsDisabled} onClick={() => mutateReview(artifact.artifact_id, candidate, "confirm")}>
                             Confirm
                           </button>
-                          <button className="secondaryButton" type="button" disabled={busy} onClick={() => mutateReview(artifact.artifact_id, candidate, "reject")}>
+                          <button className="secondaryButton" type="button" disabled={actionsDisabled} onClick={() => mutateReview(artifact.artifact_id, candidate, "reject")}>
                             Reject
                           </button>
                         </>
                       )}
                       {state.review_status !== "pending" && (
-                        <button className="secondaryButton" type="button" disabled={busy} onClick={() => mutateReview(artifact.artifact_id, candidate, "reopen")}>
+                        <button className="secondaryButton" type="button" disabled={actionsDisabled} onClick={() => mutateReview(artifact.artifact_id, candidate, "reopen")}>
                           Re-review
                         </button>
                       )}
                       {canResearch && (
                         <>
-                          <button className="secondaryButton" type="button" disabled={busy} onClick={() => promote(artifact.artifact_id, candidate)}>
+                          <button className="secondaryButton" type="button" disabled={actionsDisabled} onClick={() => promote(artifact.artifact_id, candidate)}>
                             Preview promoted lead
                           </button>
-                          <button type="button" disabled={busy || !csrfToken} onClick={() => runCase(artifact.artifact_id, candidate)}>
+                          <button type="button" disabled={actionsDisabled || !csrfToken} onClick={() => runCase(artifact.artifact_id, candidate)}>
                             Start converged case
                           </button>
                         </>
