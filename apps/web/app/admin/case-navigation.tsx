@@ -93,19 +93,19 @@ export function CaseNavigation({
   );
 
   function confirmDeleteCase(caseId: string) {
-    if (remoteActionsDisabled) return;
+    if (initialLoading || remoteActionsDisabled) return;
     onDeleteCase(caseId);
     setPendingDeleteCaseId(null);
   }
 
   function confirmDeleteAll() {
-    if (remoteActionsDisabled) return;
+    if (initialLoading || remoteActionsDisabled) return;
     onDeleteAll();
     setPendingDeleteAll(false);
   }
 
   return (
-    <div className="recentCases" aria-label="Stored case navigation">
+    <div className="recentCases" aria-label="Stored case navigation" aria-busy={initialLoading}>
       <div className="panelHeader compactPanelHeader">
         <div>
           <span className="index">RECENT</span>
