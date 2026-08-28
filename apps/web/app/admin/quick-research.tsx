@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { CaseNavigation } from "./case-navigation";
+import { M5FactorSummary } from "./m5-factor-summary";
 import { ProvenanceDisclosure } from "./provenance-disclosure";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
@@ -717,6 +718,7 @@ function M5EvidenceTable({ report }: { report: ConvergedReport }) {
                 <div><span>Source</span><strong>{candidateSource}</strong></div>
               </div>
               {candidateLocator && <p className="evidenceLocator"><SourceLocator locator={candidateLocator} /></p>}
+              {evaluation.factors.length > 0 && <M5FactorSummary factors={evaluation.factors} />}
               <details className="evidenceFactors">
                 <summary>Inspect {factorRows.length} retained factor{factorRows.length === 1 ? "" : "s"} and caveats</summary>
                 <div className="tableScroll">
