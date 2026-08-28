@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 type ProvenanceRecord = {
   source: string;
   sourceLocator: string;
@@ -47,6 +49,7 @@ export function ProvenanceDisclosure({
   records,
   label = "Inspect provenance",
 }: ProvenanceDisclosureProps) {
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
   if (records.length === 0) return null;
 
   const unique = records.filter((record, index, all) =>
@@ -54,6 +57,15 @@ export function ProvenanceDisclosure({
       candidate.source === record.source && candidate.sourceLocator === record.sourceLocator,
     ) === index,
   );
+
+  async function copyCanonicalLocator(locator: string, source: string) {
+    try {
+      await navigator.clipboard.writeText(locator);
+      setCopyStatus(`Copied canonical locator for ${source}.`);
+    } catch {
+      setCopyStatus(`Could not copy canonical locator for ${source}.`);
+    }
+  }
 
   return (
     <details className="provenanceDisclosure">
@@ -73,14 +85,24 @@ export function ProvenanceDisclosure({
                 )}
               </div>
               {href ? (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Open canonical source for ${record.source}`}
-                >
-                  Open canonical source
-                </a>
+                <div className="provenanceActions">
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open canonical source for ${record.source}`}
+                  >
+                    Open canonical source
+                  </a>
+                  <button
+                    className="textButton"
+                    type="button"
+                    onClick={() => copyCanonicalLocator(href, record.source)}
+                    aria-label={`Copy canonical locator for ${record.source}`}
+                  >
+                    Copy locator
+                  </button>
+                </div>
               ) : (
                 <span className="muted">Canonical locator is not a safe public web URL.</span>
               )}
@@ -88,6 +110,7 @@ export function ProvenanceDisclosure({
           );
         })}
       </ul>
+      {copyStatus && <p className="muted" role="status" aria-live="polite">{copyStatus}</p>}
     </details>
   );
 }

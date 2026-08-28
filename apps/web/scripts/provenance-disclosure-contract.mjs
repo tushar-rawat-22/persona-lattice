@@ -35,6 +35,22 @@ assert.ok(
     source.includes("candidate.sourceLocator === record.sourceLocator"),
   "provenance records may deduplicate only exact source/locator pairs",
 );
+assert.ok(
+  source.includes("navigator.clipboard.writeText(locator)") &&
+    source.includes("copyCanonicalLocator(href, record.source)"),
+  "canonical locator copy must use the same fail-closed safe public locator admitted for navigation",
+);
+assert.ok(
+  source.includes('aria-label={`Copy canonical locator for ${record.source}`}') &&
+    source.includes('role="status"') &&
+    source.includes('aria-live="polite"'),
+  "canonical locator copy must be keyboard-operable and announce success/failure without modal UI",
+);
+assert.ok(
+  source.includes("Could not copy canonical locator for ${source}.") &&
+    source.includes("Canonical locator is not a safe public web URL."),
+  "clipboard failure and unsafe locator states must remain explicit and fail closed",
+);
 
 assert.ok(
   research.includes('import { ProvenanceDisclosure } from "./provenance-disclosure";'),
