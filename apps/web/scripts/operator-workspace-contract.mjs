@@ -9,6 +9,7 @@ const css = await readFile(path.join(appRoot, "app", "globals.css"), "utf8");
 const adminPage = await readFile(path.join(appRoot, "app", "admin", "page.tsx"), "utf8");
 const research = await readFile(path.join(appRoot, "app", "admin", "quick-research.tsx"), "utf8");
 const caseNavigation = await readFile(path.join(appRoot, "app", "admin", "case-navigation.tsx"), "utf8");
+const provenanceDisclosure = await readFile(path.join(appRoot, "app", "admin", "provenance-disclosure.tsx"), "utf8");
 
 const requiredCss = [
   "font-family: -apple-system, BlinkMacSystemFont",
@@ -137,6 +138,32 @@ assert.ok(
   !research.includes('<div className="recentCases">') &&
     !research.includes('onClick={() => deleteCase(item.id)}>Delete</button>'),
   "legacy retained-case markup must not remain alongside the navigation component",
+);
+
+const requiredProvenanceDisclosure = [
+  'className="provenanceDisclosure"',
+  'className="provenanceList"',
+  "Inspect provenance",
+  "Open canonical source",
+  "Canonical locator is not a safe public web URL.",
+  "record.sourceState",
+  "record.leadKind",
+  'target="_blank"',
+  'rel="noopener noreferrer"',
+];
+for (const token of requiredProvenanceDisclosure) {
+  assert.ok(provenanceDisclosure.includes(token), `provenance disclosure lost required operator context: ${token}`);
+}
+assert.ok(
+  provenanceDisclosure.includes('["http:", "https:"].includes(parsed.protocol)') &&
+    provenanceDisclosure.includes("parsed.username || parsed.password || !parsed.hostname") &&
+    provenanceDisclosure.includes("record.source === candidate.source") === false,
+  "provenance disclosure must fail closed for unsafe locators and avoid unsafe navigation",
+);
+assert.ok(
+  provenanceDisclosure.includes("candidate.source === record.source") &&
+    provenanceDisclosure.includes("candidate.sourceLocator === record.sourceLocator"),
+  "provenance disclosure must deduplicate exact retained source/locator pairs without collapsing distinct evidence",
 );
 assert.ok(
   research.includes("<details>") && research.includes("<summary>Raw retained JSON</summary>"),
