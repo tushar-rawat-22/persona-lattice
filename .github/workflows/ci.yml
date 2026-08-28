@@ -85,21 +85,24 @@ jobs:
         run: |
           python -m pip install -e "./services/api"
           npm ci --prefix apps/web --no-audit --no-fund
-      - name: Verify LC1 acceptance shell syntax
+      - name: Verify launch shell contracts
         shell: bash
         run: |
           bash -n scripts/lc1_host_acceptance.sh
           bash -n scripts/lc1_browser_hold.sh
           bash -n scripts/lc1_acceptance_session.sh
           bash -n scripts/lc1_select_python.sh
+          bash -n scripts/live_beta_start.sh
           bash -n scripts/test_lc1_api_process_contract.sh
           bash -n scripts/test_lc1_npm_worktree.sh
           bash -n scripts/test_lc1_python_selection.sh
           bash -n scripts/test_lc1_tunnel_wait_contract.sh
+          bash -n scripts/test_live_beta_start_contract.sh
           bash scripts/test_lc1_api_process_contract.sh
           bash scripts/test_lc1_npm_worktree.sh
           bash scripts/test_lc1_python_selection.sh
           bash scripts/test_lc1_tunnel_wait_contract.sh
+          bash scripts/test_live_beta_start_contract.sh
       - name: Build and exercise production processes
         shell: bash
         run: |
