@@ -1,239 +1,164 @@
-# Continuity
+# PersonaLattice continuity
 
-This file is the handover for the next PersonaLattice engineering session. Read it before proposing work.
+This is the current engineering handover for PersonaLattice. Read it before reconstructing old chats or making architectural changes. Detailed historical decisions remain in Git history, merged pull requests, issues and `docs/decisions/`; this file intentionally stays focused on the state needed to continue correctly.
 
-## Authoritative repository state
+## Repository authority
 
 Repository: `tushar-rawat-22/persona-lattice`
 
-Authoritative branch: `main`
+Default branch: `main`
 
-Launch Candidate 1 tested commit: `18b6b75b7dc28d3883752aec013911223726423c`
+The product baseline entering this documentation update is PR #275 merged as `994cc50fb1f17a5dd6fde104179ed949e168b708` on 2026-08-28. If `main` is newer, verify that it descends from this checkpoint and treat the current remote branch as authoritative.
 
-Launch Candidate 1 post-merge CI: run `33008932692` / CI #2226, successful on the exact tested commit.
+Do not trust a remembered local SHA, old assistant message or historical section of a document over the current GitHub branch, current PR state and exact-head CI.
 
-Private host evidence: `$HOME/Library/Application Support/PersonaLattice/lc1/20260826T200923Z.json`, mode `0600`, status `passed`, completed `2026-08-26T20:10:38.996136+00:00`.
+## Product state
 
-Rollback checkpoint: `657f55e99a95fad386039e0c59204355a07580d9`. This is the last automated-host-passing main before the Safari login submission fix; using it reopens the Safari browser gate and is not an LC1-equivalent state.
+PersonaLattice is a private-admin, evidence-first public-source research workbench. The public route contains synthetic/demo material; real intake, provider execution and retained cases require the authenticated operator workflow.
 
-## Launch acceptance handover
+The current product is intentionally one admin, one API worker and SQLite-backed retained storage. That architecture is valid for the private operator product and private beta. It is not yet a multi-user SaaS architecture.
 
-The candidate-Mac host harness passed on the exact LC1 commit. Evidence includes the clean production build and preflight, exact GitHub URL and domain cases, reviewed-document confirm/promote/explicit-run workflow, source-state/provenance/non-probabilistic-M5 contracts, retained-case lifecycle, verified SQLite backup/restore, restart persistence, invalidation of the old in-memory session, logout, external HTTPS auth/CSRF/security headers and controlled-process log privacy scanning.
+Permanent boundaries:
 
-Safari and Chrome both passed same-commit authenticated rendering, retained-case navigation, source/provenance/M5 inspection and keyboard activation. Safari was checked at 390×844; Chrome was checked in a narrow window. The temporary no-domain ngrok route was smoke-only and was stopped after acceptance. No stable public beta hostname exists, Quick Tunnel remains smoke/development-only, and LC1 must not be described as a live private beta.
+- observations, source claims and correlation decisions remain separate;
+- every retained observation keeps attributable provenance;
+- M5 remains uncalibrated and non-probabilistic and never becomes an identity probability;
+- hard contradictions remain visible and can veto positive evidence;
+- a discovered identifier is a research lead, not proof that two records belong to one person;
+- no private-account bypass, credential/OTP/token collection, hidden KYC/government-ID acquisition, contact harvesting, covert personal/device IP discovery, live tracking, broad ownership traversal, reverse/bulk enumeration or regulated eligibility decisioning;
+- provider execution fails closed on policy, routing, configuration, budget and malformed-result boundaries.
 
-The real defects exposed by the Mac session were fixed in PRs #237–#241: supported-Python selection, npm 11 detached-worktree install behavior, bounded tunnel-DNS readiness, direct API-process tracking for restart/session invalidation, and Safari-safe browser-form submission. Current main and origin/main matched the tested commit with no open PR when the evidence was recorded.
+## Launch state
 
-Issue #242 is the active product-quality gate: make the active case primary, collapse intake after selection, flatten excessive panel chrome, strengthen evidence/uncertainty/source/provenance hierarchy, reduce badge noise, improve readable density and preserve deliberate mobile/keyboard behavior. Do not change provider activation, privacy/provenance contracts, M5 semantics, auth/session/CSRF behavior or retained-case compatibility in that work. Source activation remains frozen.
+`LAUNCH_CANDIDATE_1` is complete. Issue #218 closed on 2026-08-27 after software, host and browser evidence was recorded.
 
-### Issue #242 workspace refinement checkpoint
+The exact host/browser-tested LC1 commit is `18b6b75b7dc28d3883752aec013911223726423c`. Exact-commit post-merge CI was run `33008932692` / CI #2226 and passed. The private host evidence summary is outside Git at:
 
-The bounded implementation promotes a selected retained case into the primary workspace without changing its stored/API shape. Selecting or creating a case collapses both intake launchers, widens the evidence surface, preserves a compact recent-case rail, and keeps a fast new-case path. The empty state still exposes the full intake and public-identifier launcher.
+`$HOME/Library/Application Support/PersonaLattice/lc1/20260826T200923Z.json`
 
-The Overview now leads with real retained observation, pivot, source and unresolved-source-state counts. M5 remains uncalibrated and explicitly non-probabilistic, but candidate outcome/evidence strength is readable before factor rows; retained factors, policy and caveats move behind an operator-controlled disclosure. Source states remain explicit, ordinary count metadata loses badge chrome, raw detail remains progressive, and provenance links stay canonical.
+That session covered production preflight, same-origin web/API routing, authentication/CSRF, exact URL/domain research, source-state/provenance/M5 contracts, reviewed-document promotion, retained-case operations, restart persistence, SQLite backup/restore, session invalidation, logout, log privacy and Safari/Chrome acceptance.
 
-At narrow widths the collapsed intake remains immediately reachable, recent cases become a horizontal switcher, the active case follows before detail views, and wide evidence tables scroll inside their own surface instead of widening the document. The 390-pixel contract requires document width to equal viewport width. Keyboard arrow navigation across workspace tabs must keep the selected tab focused and unobscured.
+LC1 is a software + real-host launch candidate. It is not a claim that a stable public beta hostname already exists. The temporary no-domain acceptance route was stopped.
 
-The deterministic operator contract covers the active-case callback, collapsed intake, progressive M5 factors, non-probabilistic language, responsive single-column override, provenance/source tables and existing Safari-safe login form submission. Required validation remains web lint, typecheck, operator contract, production build, then clean-build Safari/Chrome rendered, keyboard and responsive acceptance before Issue #242 closes.
+For the current stable-beta operating choices and the exact deployment gate, read `docs/LIVE_BETA.md` before creating new deployment architecture.
 
-Engineering-freeze baseline: PR #168, merged as `5d774a9fadc336d43e06491183d9035d016db04f` after exact-head CI passed.
+## Active engineering stream
 
-Keybase source activation: PR #177 merged as `611ef00cd14858f5e60e2d32add3ec4cee47b025` after exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` across Python 3.11/3.13, web and the production API image.
+Issue #252 is the current operator-workspace product-quality stream. It exists to remove remaining engineering-console traits and improve repeated analyst work without changing evidence semantics or provider policy.
 
-Crossref exact-work activation: PR #180 merged as `0d049af3af7f7450d348477bfb2775921cc25b3b`. It provides exact DOI URL admission, credentialless singleton transport, governed catalog/binding/runtime ownership, typed source-run reporting, bounded canonical evidence and source-policy regressions.
+Major post-LC1 improvements already merged include:
 
-DataCite exact-DOI fallback activation: PR #182 merged as `e4cb6318bed78f8a72ea15b41db5f55a12a45f9d` after exact head `a7772d0f4bdfaebfb243a66b115f3b4aeeac3b10` passed CI run `32435388198` across Python 3.11/3.13, web and the production API image. DataCite is intentionally subordinate to Crossref: it runs only after Crossref completes normally with zero observations. Crossref attempted failures never fall through to DataCite.
+- compact authenticated application bar;
+- explicit corroborated/conflicting/open-question decision surface;
+- searchable/filterable/sortable retained-case navigation;
+- one-action provenance disclosure and safe canonical-locator copy;
+- decisive M5 factor summaries with explicit truncation disclosure;
+- retained source-execution state summaries that distinguish failed, withheld, not-attempted and no-match states;
+- inline confirmation for single and bulk case deletion;
+- stale retention-deadline handling without inventing server deletion state;
+- explicit expired-session handling and fail-closed remote actions;
+- distinct initial loading, failed-index and confirmed-empty case states;
+- `/` shortcut for retained-case search;
+- `N` shortcut for reopening New intake.
 
-ROR exact-organization activation: PR #185 merged as `1f5b1a897ab08763788f6024d727cea27a299be3` after exact head `b2c67addb269f42571422d19710791284884e644` passed CI run `32437343476`. Only an exact canonical `https://ror.org/<id>` URL is applicable; the source uses the credentialless v2 singleton organization endpoint, retains a narrow CC0 registry record, emits no leads and does not use organization search or affiliation matching.
+Do not continue UI polishing merely to generate PR count. The next product change should remove a concrete operator bottleneck or correctness ambiguity.
 
-DBLP exact-person activation: PR #187 merged as `905f9fc8915487a002e54a81e3d23b443ea19072` after exact head `4e5de2580ea8cb2881f1520e5790b15362ea80c6` passed CI run `32440833347`. It is limited to explicit canonical `https://dblp.org/pid/<pid>` URLs and one minimal public-SPARQL query for the exact `dblp:Person` resource plus `dblp:primaryCreatorName`; it emits no leads and does not retrieve bibliography or coauthor context.
+## Source governance
 
-Companies House exact-company activation: PR #191 merged as `079e3dc3c79f2a26fd71e869b671db30e5edb451` after exact head `820470b173050d75c9bcd98ae974399e58ce33db` passed CI run `32451537243`. The package admits only explicit canonical public company URLs, uses the exact company-profile endpoint with a free server-side API key, keeps the credential out of URLs/evidence, retains a narrow non-person company record, emits no leads and excludes officer/PSC/address/filing/search expansion.
+Issue #222 is the governing zero-spend source admission matrix. Its body was corrected after LC1 to remove the obsolete pre-LC1 freeze. Source work remains one source per PR and requires current primary-source terms/privacy/auth/rate-limit/contact-risk review before activation.
 
-GitHub exact-repository activation: PR #194 merged as `88133c33d73aaf78344b497e4033966684e5b499` after exact head `d786b1d992a4076827554753865b9f904595c1ac` passed CI run `32464826173`. Exact public repository URLs use the existing `github_public_api` descriptor, process-owned adapter and 50-request/hour local budget. Repository observations retain only bounded public repository identity/state metadata and emit no leads; owner login is display-only because repository owners can be organizations.
+Community OSINT directories are candidate indexes only. They never authorize execution against every listed site.
 
-GitLab exact-project activation: PR #196 merged as `3a776200e7da0fe3ddd4cf2e9f26ac721e038735` after exact head `ceb55758867f8ced9294c5f7d5fdc28e89022df0` passed CI run `32469839883`. It extends the existing `gitlab_public_api` source rather than adding a provider. The first version admitted exact two-segment public project URLs through the existing process-owned GitLab adapter and 20-request/minute budget with username/public-email traffic, retained bounded public project/namespace state metadata and emitted no leads.
+Two important post-LC1 corrections to older handovers:
 
-GitLab subgroup-project extension: PR #206 merged as `079e5d70f76b6dd8011bfe8412219e534776e89b` after exact head `2e998de0d8fbf38e61385f651165e2b243a6d734` passed CI run `32487688942`. Exact canonical nested namespace paths are now admitted while `/-/` action routes, `/o/...` organization routes and malformed URL forms remain locally inapplicable. Full returned project path, namespace path, public visibility and canonical `web_url` must agree with the supplied URL. The extension reuses the same process-owned GitLab adapter and 20-request/minute budget and still emits zero project leads.
+- GLEIF exact LEI is active. PR #245 merged as `f7a7b19e31bc86d70a2c2e9dc4de1c42730bebdb`. It accepts only an exact canonical GLEIF LEI record URL, validates the identifier locally, performs a bounded exact lookup, retains narrow legal-entity registry metadata, emits no recursive leads and keeps `identity_claim=false`.
+- SEC EDGAR exact CIK is active through the governed runtime and Quick Research. PR #254 merged as `ef0dcecf7fa8438ca869f80a43b395655ebf5ee0`. It accepts only the exact canonical submissions URL shape, performs one bounded submissions request, retains narrow filer metadata, emits no recursive leads and keeps `identity_claim=false`. `SEC_EDGAR_USER_AGENT` is required non-secret operator configuration and must fail before network contact when absent.
 
-Zenodo exact-record activation: PR #200 merged as `f78069a28b9401ef055a82c89122023ed9102052` after exact head `c24f9625b7c79f7b3fbab3f8889527dd237b8468` passed CI run `32480005328`. The implementation admits only exact canonical `https://zenodo.org/records/<positive-id>` URLs, uses one credentialless singleton Records read, retains only record ID/title plus CC0/CERN attribution and canonical provenance, emits no leads, and rejects search/files/restricted-content/version traversal.
+If an older file or issue comment says those sources are still deferred, that statement is historical and no longer authoritative.
 
-Codeforces commercial-use quarantine: PR #209 merged as `2458b383f5e1d5bb9f94d823bf951f49c94f93ec` after exact head `6359c5c50cf9072ffed0f7755c2e9801938bd0ba` passed CI run `32494382508`. `codeforces_public_api` is now `REVIEW_REQUIRED`, source-policy review is false, recursive eligibility is false, no executable source binding or process runtime owner exists, and central runtime policy reports a pre-attempt `provider_policy` block. Historical retained Codeforces evidence remains readable.
+Other active exact/bounded source families include reviewed Sherlock username discovery, GitHub, GitLab, Keybase, Bluesky, local phone metadata, public DNS infrastructure metadata, Wayback availability, exact Stack Overflow profiles, OpenAlex when configured, Wikidata, Zenodo, ROR, Companies House when configured, DBLP, Crossref/DataCite DOI handling and public RDAP. The source admission records and current provider/catalog/binding/runtime code are authoritative for exact applicability and retained fields.
 
-GitHub exact-profile URL extension: PR #211 merged as `4bcd252a35cc0b9431ec311e23b8eb894bf8abe0` after exact head `d0830666164ab68301f8b52edb3c0d9c076906fd` passed CI run `32498900141`. Exact canonical one-segment public profile URLs reuse the existing `github_public_api` adapter and 50-request/hour budget. Known GitHub root routes are locally inapplicable, and returned profiles still require exact login consistency, `type == "User"` and canonical profile provenance before becoming person-oriented account-candidate evidence.
+Do not broaden an exact source into fuzzy person search, account enumeration, contact enrichment, private data, content scraping or ownership traversal because the upstream API supports it.
 
-## Engineering state
+## Runtime architecture
 
-**The current private one-admin engineering foundation is complete.**
+Browser → Next.js web → same-origin `/api/*` proxy → FastAPI API.
 
-Do not interpret this as a population-validation claim. It means the repository-side completion gate is met and remaining product risk has moved to real evaluation evidence and source coverage.
+The API owns authentication, CSRF validation, provider governance/execution, evidence normalization/correlation and retained cases.
 
-Completed foundations:
+Current production constraints:
 
-- M0-M6: repository/CI, canonical evidence/provenance storage, deterministic normalization, bounded upload intake, provider governance, reviewed Sherlock discovery, deterministic M5 triage and the local evidence dashboard.
-- M7-M9: deployment-configured one-admin authentication, Argon2 verification, HttpOnly sessions, CSRF, private `/admin`, same-origin API proxying, reviewed-document authority, retained cases, 30-day default expiry, explicit deletion and bounded live research.
-- V2-A-D: typed leads/dispositions, exact-field extraction, deterministic frontier, source capability registry and full network-source migration behind the process-wide `ProviderRuntime`.
-- DOMAIN/RDAP: canonical DOMAIN normalization and quick research, explicit-seed operator support, metadata-only RDAP through IANA bootstrap routing, non-attempt `routing_unavailable`, and a tested SQLite migration for pre-DOMAIN evidence stores.
-- Operator correctness: metadata-only case listing, bounded cursor pagination, latest-selection-wins full-case reads, mutation/list reconciliation and stale-page suppression.
-- Operator explainability: source-run outcome reasons, exact pivot source-field provenance, retained M5 factor rationale, readable observation fields and safe canonical provenance links. Browser code does not recreate source or M5 policy.
-- M10 infrastructure: synthetic evaluation, depth-limit comparison, source accounting, replay fingerprints, M5 ablations, separate synthetic/consented/independently-reviewed provenance and private bounded runners for real consented or reviewed cohorts.
+- exactly one API worker/replica because session records are process-local;
+- SQLite database must live on protected persistent storage;
+- secure `__Host-personalattice_session` cookie on HTTPS;
+- provider credentials/operator metadata remain server-side;
+- optional provider configuration must degrade to typed unavailable/not-configured states rather than fabricate evidence.
 
-## Permanent boundaries
+Primary deployment documentation: `docs/DEPLOYMENT.md` and `docs/LIVE_BETA.md`.
 
-These are not cleanup items:
+## Required configuration
 
-- Required spend stays ₹0. Paid or metered services may be optional only.
-- Production convergence stays depth 2 / 12 nodes until real labelled evidence supports a change.
-- M5 remains `calibration_status=uncalibrated` and `is_identity_claim=false`.
-- `hard_contradiction` remains a production veto.
-- No private-account bypass, credential/OTP/session-token collection, account-recovery probing, hidden KYC/government-ID acquisition, covert personal/device IP discovery, live tracking, contact harvesting, WHOIS/RDRS nonpublic access, bulk/reverse enumeration or regulated eligibility decisioning.
-- Canonical observations own provider source locators. Lead decisions and edges reference canonical provenance rather than duplicating it.
-- Reviewed-document authority stays server-owned from extraction through explicit case execution.
-- Historical retained cases remain read-only compatible; migrations must fail closed on unknown schema shapes.
-- RDAP remains metadata-only. Discovered domain clues remain `DISPLAY_ONLY`.
+Core authenticated runtime:
 
-## Active sources in the current code state
+- `PERSONALATTICE_ADMIN_USERNAME`
+- `PERSONALATTICE_ADMIN_PASSWORD_HASH`
+- `PERSONALATTICE_DB_PATH`
+- `PERSONALATTICE_COOKIE_SECURE=true` for HTTPS
+- `PERSONALATTICE_SESSION_COOKIE=__Host-personalattice_session`
 
-Required/zero-spend baseline:
+Optional/current provider configuration includes `BRAVE_SEARCH_API_KEY`, `OPENALEX_API_KEY`, `COMPANIES_HOUSE_API_KEY` and `SEC_EDGAR_USER_AGENT` where those sources are enabled/applicable.
 
-- local normalization;
-- libphonenumber metadata;
-- reviewed Sherlock account discovery;
-- GitHub public profile API from exact username seeds or canonical profile URLs plus exact public repository metadata through one shared provider budget;
-- GitLab public profile API from exact username/public-email seeds or exact canonical public profile URLs plus exact subgroup-aware public project metadata through one shared provider budget;
-- Bluesky public AppView profile lookup for valid AT handles;
-- Keybase public account basics for canonical Keybase usernames;
-- public DNS infrastructure metadata;
-- Internet Archive Wayback capture-availability metadata for canonical URLs;
-- Stack Overflow exact public-profile metadata for explicit numeric profile URLs;
-- OpenAlex exact-author metadata when a free server-side key is configured;
-- Wikidata exact-item CC0 metadata for explicit item URLs;
-- Zenodo exact-record CC0 metadata for explicit canonical record URLs;
-- ROR exact-organization CC0 metadata for explicit canonical ROR URLs;
-- Companies House exact-company public-register metadata for explicit canonical company URLs when a free server-side key is configured;
-- DBLP exact-person CC0 metadata for explicit canonical person PID URLs;
-- Crossref exact-work bibliographic metadata for explicit DOI resolver URLs;
-- DataCite exact-DOI CC0 fallback metadata after a clean Crossref no-match;
-- authoritative RDAP for explicit DOMAIN seeds.
+Never place real secrets, the retained database, private evidence, production logs containing sensitive payloads or host acceptance evidence into Git.
 
-Codeforces is deliberately not in the executable baseline. It remains registered only for policy/history compatibility while current commercial-use terms are unresolved for the intended SaaS path.
+## Documentation split
 
-Optional:
+Human/public documentation:
 
-- Brave exact public-web search when configured. It is metered and must never become a required dependency.
+- `README.md` — product, capabilities, boundaries and repository entry point;
+- `docs/PRODUCT_CHARTER.md` — product intent and scope;
+- `docs/ARCHITECTURE.md` — system design;
+- `docs/DEPLOYMENT.md` — deployment architecture/configuration;
+- `docs/LIVE_BETA.md` — current live/demo/private-beta operating choices;
+- `SECURITY.md` and `THIRD_PARTY.md` — security and external-license/integration boundaries.
 
-GitHub username, exact profile-URL and repository lookups share one `github_public_api` runtime owner and one 50-request/hour local budget. Exact profile applicability requires canonical `https://github.com/<login>` with exactly one non-empty path segment, no credentials, custom port, query or fragment, and no known reserved GitHub root route. Profile research reuses official `GET /users/{username}` and accepts a person-oriented account candidate only when the exact public response has a case-insensitive matching login, `type == "User"` and a canonical returned `html_url`; organization, bot, missing or unsupported account types are post-attempt malformed results and cannot become person evidence. Exact repository applicability remains canonical `https://github.com/<owner>/<repo>`. Repository-owner login is display-only and repository observations emit no leads.
+AI/maintainer continuity:
 
-GitLab username, exact-public-email, exact-profile-URL and project lookups share one `gitlab_public_api` runtime owner and one 20-request/minute local budget. Exact profile applicability accepts canonical `https://gitlab.com/<username>` with one non-empty segment and rejects credentials, custom ports, query/fragment, percent-encoded paths, `/-/u/<id>` and documented reserved top-level routes. Profile URLs reuse the provider-documented human-only username lookup, so bot/internal accounts are filtered and a one-segment group namespace produces a clean attempted no-match rather than a person inference. Returned profile username must match case-insensitively and its `web_url` must be canonical. Exact project applicability accepts canonical `https://gitlab.com/<namespace...>/<project>` paths with at least two non-empty segments and no credentials, custom port, query, fragment, `.git`, malformed `.`/`-` segments, organization-scoped `/o/...` routes or GitLab `/-/` action routes. The project path calls only official `GET /api/v4/projects/{URL-encoded full project path}` and requires `visibility=public`, exact full `path_with_namespace`, namespace `full_path` equal to every namespace segment before the project name, and an exact canonical returned `web_url`. It retains only numeric project ID, exact path-with-namespace, public visibility, bounded namespace kind/full path, optional archived state, canonical provenance and `identity_claim=false`. Description/content, topics, popularity counters, owner/person metadata, members/contributors, commits, issues/MRs, releases, branches/tags, pipelines/jobs, packages and contact-like fields are excluded. Provider-specific project keys are absent from the generic lead extractor and regression coverage requires zero emitted leads.
+- this file — current authoritative handover;
+- `docs/ROADMAP.md` — engineering sequence, but verify its status lines against current GitHub before acting;
+- Issue #222 — source admission/governance;
+- Issue #252 — current operator-product quality stream;
+- source admission records — exact provider contracts.
 
-Keybase is exact-username account metadata only. Applicability requires an already-canonical Keybase username: 2-16 lowercase alphanumeric/underscore characters with an alphanumeric first character. The source requests only the official API `basics` object and retains exact username, public UID, account creation timestamp, `account_candidate=true`, `identity_claim=false` and canonical `https://keybase.io/<username>` provenance. Profile text/full name, proofs, linked external identities, public keys, cryptocurrency addresses and contact-like data are not requested or admitted. It emits no leads. Noncanonical usernames skip Keybase before provider execution.
+Public docs should read like ordinary maintainer documentation, not assistant transcripts. Continuity may be dense and operational because its job is to prevent context reconstruction.
 
-Wayback is intentionally metadata-only. It queries the official availability endpoint, sends a descriptive PersonaLattice User-Agent, validates the returned `web.archive.org` snapshot locator, and retains only queried URL plus capture availability/status/timestamp. It does not fetch archived page content, emit leads or make a person-attribution claim. Provider rate limits and malformed outputs stay visible through typed source-run reporting.
+## Start-of-session procedure
 
-Stack Overflow is exact-URL account metadata only. Applicability requires a supplied `stackoverflow.com/users/<positive-id>` profile URL; the provider then calls the official exact-user API. It retains only prefixed user ID/display name/reputation/creation metadata, API attribution, `identity_claim=false`, and the canonical returned profile locator. It does not retain profile prose, posts/comments, location, website, image or contact fields, and it emits no leads. Generic Stack Exchange `inname` user search remains outside the product.
+A new assistant/model should do only this before changing code:
 
-OpenAlex is exact-author-URL metadata only. Applicability requires `https://openalex.org/A<positive-digits>` with no credentials, port, query or fragment. The provider calls only the official singleton author endpoint and retains author ID, display name, works count, cited-by count, CC0 attribution and `identity_claim=false`. It does not retain ORCID/Scopus/MAG identifiers, affiliations, locations, topics, alternative names, publications, full text or contact fields and emits no leads. The free key stays server-side in `OPENALEX_API_KEY` and is sent as bearer authorization, never in a URL. Missing key is `credential_not_configured` with no provider attempt. A returned author ID mismatch fails closed rather than silently switching scholarly identities.
+1. fetch current `main`;
+2. identify the newest open implementation PR and exact head;
+3. inspect exact-head CI and unresolved review threads;
+4. read Issue #222 only if source work is relevant, and Issue #252 if operator-product work is relevant;
+5. read the smallest implementation files needed for the active PR;
+6. fix/ship the active bounded increment before opening another unrelated stream.
 
-Wikidata is exact-item-URL metadata only. Applicability requires `https://www.wikidata.org/wiki/Q<positive-digits>` with no credentials, port, query or fragment. The provider calls official `wbgetentities` for that QID and requests English labels/descriptions only. It retains the QID, bounded English label/description when present, CC0 attribution and `identity_claim=false`; it does not request or retain structured claims, aliases, sitelinks, external identifiers or linked entities, and emits no leads. The bounded description is public descriptive text and is never parsed into identity claims or recursive leads. Requests are credentialless, use an identifying User-Agent, one-concurrency/30-per-minute local budget, `maxlag=5`, and typed HTTP/API-level rate/backoff handling.
+Do not spend the first several prompts replaying old history. Use this file to establish architecture and boundaries, then verify only the state that can have changed.
 
-Zenodo is exact-record-URL metadata only. Applicability requires canonical `https://zenodo.org/records/<positive-id>` with no credentials, custom port, query, fragment or trailing path. The provider performs one anonymous official `/api/records/<id>` singleton read and retains only the canonical record ID, one title capped at 512 characters, CC0/CERN attribution and `identity_claim=false`. It excludes descriptions, creators, affiliations/ORCID, files/checksums, communities, grants, related identifiers, geolocation, uploader/account metadata, restricted-content workflow and version traversal. The source emits no leads. PersonaLattice uses one attempt, a 4-second timeout, 32 KiB raw-response ceiling, one concurrency slot and 30 requests/minute. `404` is a completed no-match, `429` preserves `Retry-After`, transient failures stay attempted-unavailable, and malformed/oversized/mismatched records fail closed.
+## Merge discipline
 
-ROR is exact-organization-URL metadata only. Applicability requires the canonical `https://ror.org/<id>` form with no credentials, custom port, query, fragment or trailing path. The provider performs one official credentialless `/v2/organizations/{id}` singleton read and retains only the canonical ROR ID, exactly one bounded `ror_display` name, `active` record status, at most eight bounded organization types, CC0 attribution and `identity_claim=false`. It excludes external IDs, domains, links, aliases beyond the selected display name, relationships, locations/addresses/geocodes, search candidates and contact-like fields. The retained display name uses a provider-specific field key so generic extraction does not silently turn it into an organization lead; provider and extraction regressions require zero emitted leads. PersonaLattice applies one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and an eight-request/minute local budget. `404` is a completed no-match, `429` preserves `Retry-After`, transient failures stay attempted-unavailable, and malformed/non-active/mismatched records fail closed.
+For normal implementation work:
 
-Companies House is exact-company-URL metadata only. Applicability requires `https://find-and-update.company-information.service.gov.uk/company/<company-number>` with no credentials, custom port, query, fragment or trailing path. The provider calls only the official exact company-profile endpoint and sends `COMPANIES_HOUSE_API_KEY` as the HTTP Basic username with a blank password. The key never appears in request URLs, retained evidence or client configuration. Missing key is a pre-attempt `credential_not_configured` state.
+- keep each PR bounded;
+- source expansion stays one source per PR;
+- do not weaken a failing regression simply to obtain green CI;
+- merge only after the exact unchanged head is fully green and review blockers are resolved;
+- use an expected-head merge guard;
+- after a merge, choose the next highest-value safe increment rather than manufacturing cosmetic churn.
 
-The retained company record is limited to company number, bounded registered name/status/type, optional valid incorporation date, Companies House public-register attribution and `identity_claim=false`. Registered-office addresses, officers/directors/secretaries/PSCs, person names, SIC/business descriptions, accounts/confirmation fields, insolvency/charges, filing history/document links, previous names, jurisdiction/location expansion and contact-like fields are excluded. Provider-specific names keep the registered name out of generic lead extraction; regression coverage requires zero emitted leads. PersonaLattice uses one attempt, a 4-second timeout, 32 KiB response ceiling, one concurrency slot and 30 requests/minute, well below the documented 600 requests/five-minute provider limit.
+## Immediate company-level priority
 
-DBLP is exact-person-PID metadata only. Applicability requires a canonical `https://dblp.org/pid/<pid>` URL with no credentials, custom port, query, fragment, suffix or trailing path. PIDs remain case-sensitive. The provider sends one exact-resource query to `https://sparql.dblp.org/sparql`, constrains the resource to `dblp:Person`, and asks only for `dblp:primaryCreatorName`. It retains the canonical PID URL, one bounded primary name, CC0 attribution and `identity_claim=false`. Publication lists/counts, coauthors, affiliations, ORCID/external IDs, homepages, alternate names and contact-like data are not requested or admitted. `dblp_primary_name` is a provider-specific display field and extraction regressions require zero emitted leads. The shared public SPARQL service is treated as beta infrastructure: one attempt, 4-second timeout, 32 KiB response ceiling, one concurrency slot and six requests/minute locally. Empty results are no-match; `429` preserves `Retry-After`; transient failures stay attempted-unavailable; mismatched, duplicate or malformed results fail closed.
+The software is already good enough to be shown as a project and has passed LC1. The highest-value company step is now to establish a stable private-beta operating endpoint while continuing bounded product improvements.
 
-Crossref is exact-work metadata only. Applicability requires a canonical `https://doi.org/<doi>` URL with no credentials, custom port, query or fragment. The provider performs one anonymous official `/works/{doi}` singleton read and retains only the DOI, one bounded title, an optional valid publication year, up to eight bounded author display names, explicit Crossref attribution and `identity_claim=false`. Author names are display-only and emit no leads. Abstracts, ORCID/other author identifiers, affiliations, references, funders, subjects and full-text/resource/license expansion are not admitted. The adapter uses one attempt, a 4-second timeout, 32 KiB response ceiling, one-concurrency/30-per-minute local budget, preserves `429`/`Retry-After`, and fails closed on malformed or mismatched DOI results.
+Do not hold the beta offline waiting for PersonaLattice to become a hypothetical “finished” background checker. Conversely, do not call a temporary Quick Tunnel or an ephemeral SQLite deployment production.
 
-DataCite is an exact-DOI fallback, not an independent discovery query. It reuses the canonical DOI URL applicability rule and executes only when Crossref completed normally with no observation. If Crossref was rate-limited, unavailable, malformed or otherwise failed after an attempt, DataCite does not execute and the Crossref failure remains visible. The provider calls credentialless public `/dois/{id}` singleton retrieval and retains only DOI, bounded title, optional valid publication year/resource type, up to eight bounded creator display names, `data_license=CC0`, explicit DataCite attribution and `identity_claim=false`. It excludes creator identifiers/ORCID, affiliations, descriptions, geolocations, funding, related identifiers, subjects, rights/resource URLs and usage/activity fields, and emits no leads. Current DataCite metadata policy is CC0 but does not remove privacy/publicity rights in represented individuals.
-
-Planned/review-gated entries in the source catalog are not executable merely because code or a catalog record exists.
-
-## M10 status
-
-The repository-side M10 ingestion/evaluation path is ready. The blocker is real evidence.
-
-Use `docs/M10_CONSENTED_COHORT_RUNBOOK.md` only when genuine consent records support the labels. Use `docs/M10_REVIEWED_COHORT_RUNBOOK.md` only when a real independent review record supports the labels. Do not convert repository fixtures, input flags or identifier hashes into either evidence basis.
-
-Production depth 2 / 12 currently beats the depth-3 diagnostic candidate on the synthetic cohort: the deeper candidate adds attempts and wrong labelled pivots without additional relevant pivots. This is regression evidence only.
-
-Do not publish false-positive/false-negative, probability, calibration or population-performance claims until cohort design and denominators support those terms.
-
-## Source expansion state
-
-Source expansion is the main engineering stream alongside real M10 evaluation. `docs/SOURCE_ADMISSION_QUEUE.md` records current preflight decisions; source-specific admission records may provide narrower implementation contracts.
-
-GitHub exact profile URLs are active through PR #211. Current GitHub documentation was re-checked on 2026-08-21: `GET /users/{username}` is available unauthenticated for public resources and the unauthenticated REST limit remains 60 requests/hour per originating IP. PersonaLattice keeps one shared 50/hour budget across username seeds, exact profile URLs and exact repository URLs. Profile URL admission is exact/canonical, known root routes fail locally, and only a returned `type == "User"` can enter person-oriented account-candidate evidence. See `docs/source-admissions/GITHUB_EXACT_PROFILE_URL.md`.
-
-GitHub exact repository metadata is active through PR #194. Current primary GitHub documentation was re-checked on 2026-08-21: public repository retrieval is available without authentication, the unauthenticated REST limit is 60 requests/hour per originating IP, and current API terms prohibit abusive limit-circumvention/spam use. PersonaLattice keeps the existing 50/hour shared GitHub budget across username profiles and repositories and adds no new quota pool. Exact repository context is non-recursive and data-minimized; see `docs/source-admissions/GITHUB_EXACT_REPOSITORY.md`.
-
-GitLab exact project metadata is active through PR #196 and subgroup-path support through PR #206. Current primary GitLab documentation was re-checked on 2026-08-21: `GET /projects/:id` is available without authentication for public projects and accepts a URL-encoded full project path; GitLab routing documents nested subgroup/project paths and uses `/-/` to separate project/group action routes. PersonaLattice keeps one shared GitLab runtime budget across username, exact public-email and project traffic. Exact project context is non-recursive and data-minimized. PR #196 exact head `ceb55758867f8ced9294c5f7d5fdc28e89022df0` passed CI run `32469839883`; subgroup extension exact head `2e998de0d8fbf38e61385f651165e2b243a6d734` passed CI run `32487688942` before PR #206 merged as `079e5d70f76b6dd8011bfe8412219e534776e89b`. See `docs/source-admissions/GITLAB_EXACT_PROJECT.md`.
-
-Zenodo exact-record metadata is active via PR #200, merged as `f78069a28b9401ef055a82c89122023ed9102052` after exact head `c24f9625b7c79f7b3fbab3f8889527dd237b8468` passed CI run `32480005328`. The 2026-08-21 primary-doc review confirmed that the current post-2023 Records API supports anonymous exact singleton `GET /api/records/:id`; public metadata are CC0 by default and current guest record-service limits are above PersonaLattice's 30/minute local budget. The source is exact canonical URL only, retains only record ID/title plus CC0/CERN attribution and canonical provenance, emits no leads and keeps files/search/restricted content/creator expansion/version traversal out of scope. See `docs/source-admissions/zenodo-exact-record.md`.
-
-Wayback was the first post-freeze source admission. Its contract is exact-URL historical availability metadata only. Treat zero capture as a valid no-match, `429` as a remote rate limit, malformed provider output as a post-attempt validation failure, and transient provider/network failure as unavailable. The source emits no recursive candidates.
-
-Stack Overflow is the second admitted post-freeze source. Its applicability boundary is an exact profile URL with a numeric user ID, not a username/display-name query. Anonymous requests use the official Stack Exchange API, stay under a conservative local budget, preserve provider `Retry-After`/API `backoff`, and keep Stack Overflow attribution visible with canonical provenance.
-
-OpenAlex is an admitted post-freeze source. Its applicability is an exact author entity URL, not a person-name search. Current primary documentation was re-checked on 2026-08-21: API keys are required and free, bearer authentication is supported, singleton-by-ID retrieval is a free operation, author names are not safe identifiers, and the data is CC0. Re-check those provider facts before future source-policy changes.
-
-Wikidata is an admitted source in `main`. Its applicability is an exact item URL, not a person/entity-name search. Current primary documentation was re-checked on 2026-08-21: structured data is CC0; `wbgetentities` supports exact QID retrieval; automated clients must identify themselves and respect rate/backoff policy. PersonaLattice stays far below the current identified-client allowance and requests no claims or linked-entity expansion.
-
-Keybase is admitted via PR #177. Primary documentation was re-checked on 2026-08-21: usernames are public/immutable and restricted to the canonical 2-16-character lowercase namespace; the public lookup API supports requesting only `basics`; current terms contemplate organizational/business use, while the acceptable-use policy forbids collecting private information without permission. The implementation therefore keeps only public basics, sends no credentials, emits no leads and deliberately excludes profiles, proofs, keys and external-identity expansion. The API is documented as evolving, so shape/username/UID validation fails closed. Exact head `ad28424449a5719e8a3e8d66e802f60515d2c318` passed CI run `32425561458` before the expected-head squash merge.
-
-Crossref is active on `main` via PR #180. Primary documentation was re-checked on 2026-08-21: public API access requires no signup, exact work retrieval is `GET /works/{doi}`, almost all deposited bibliographic metadata is reusable for any purpose, abstracts can remain copyrighted, and anonymous public clients must respect current public limits/backoff. PersonaLattice excludes abstracts and uses only exact DOI singleton reads under a much tighter local budget. No Crossref search/list operation or author-name pivot is authorized.
-
-DataCite is active on `main` via PR #182. Primary DataCite documentation was re-checked on 2026-08-21: public singleton DOI retrieval requires no authentication, public API records are Findable DOI metadata, the unidentified public tier is currently 500 requests per five minutes per IP, and deposited metadata is released under CC0 subject to third-party privacy/publicity rights. PersonaLattice is tighter: 30 requests/minute locally, one attempt, one concurrency slot, 4-second timeout, 32 KiB adapter ceiling, no search/list/relation expansion, and fallback execution only after a clean Crossref no-match.
-
-ROR is active on `main` via PR #185. Primary ROR documentation was re-checked on 2026-08-21: ROR IDs/registry metadata are CC0 and unrestricted; exact v2 organization retrieval is supported by ID; the current schema exposes one `ror_display` name, record status and organization types; and ROR has announced a lower unidentified-client tier of 50 requests per five minutes. PersonaLattice stays below that announced tier with eight requests/minute locally and does not depend on Client ID registration, which is currently paused. Exact head `b2c67addb269f42571422d19710791284884e644` passed CI run `32437343476` before merge.
-
-DBLP is active on `main` via PR #187. Primary DBLP documentation was re-checked on 2026-08-21: all DBLP metadata is CC0 and can be reused commercially; persistent PIDs are the stable person identifiers; `dblp:primaryCreatorName` is the primary creator-name property; and the public SPARQL service is a shared beta endpoint with rate limiting against aggressive scripting. PersonaLattice deliberately avoids the full person-bibliography export because that would retrieve much more publication/coauthor context than an exact PID check needs. Exact head `4e5de2580ea8cb2881f1520e5790b15362ea80c6` passed CI run `32440833347` before PR #187 merged as `905f9fc8915487a002e54a81e3d23b443ea19072`.
-
-Companies House is active on `main` via PR #191. Primary documentation was re-checked on 2026-08-21: the exact company-profile endpoint is a read-only public-data path; API-key Basic authentication is documented; public API access is free; the default limit is 600 requests per five minutes; and third-party users remain responsible for data-protection/copyright compliance when reusing public-register information. PersonaLattice intentionally retains no registered-office address, officer/PSC/person data, filings or search results and stays at 30 requests/minute locally. Exact head `820470b173050d75c9bcd98ae974399e58ce33db` passed CI run `32451537243` before PR #191 merged as `079e3dc3c79f2a26fd71e869b671db30e5edb451`.
-
-Codeforces is deferred/non-executable after PR #209. The 2026-08-21 primary-source review confirmed anonymous `user.info` and the documented one-call-per-two-seconds API limit, but current Codeforces Terms prohibit selling, sublicensing or otherwise commercializing Website material and no provider-authored API/data-use exception clearly authorizes this future SaaS use. Do not reactivate or expand Codeforces without materially clearer primary terms.
-
-Bitbucket Cloud exact-repository Issue #197 was closed `not_planned` on 2026-08-21. Atlassian primary documentation establishes the exact repository endpoint and a general anonymous request pool, but the exact operation still documents repository read scopes/authenticated examples without clearly making anonymous public-repository access a supported contract. No credential or third-party-behavior workaround is approved.
-
-VIAF exact authority metadata was re-reviewed on 2026-08-21 and remains deferred rather than admitted. OCLC still lists VIAF as a production API and VIAF data is ODC-BY with canonical numeric URIs, but the primary materials available to us did not establish a narrow exact-record representation plus practical rate/backoff contract strongly enough to justify a new production dependency. VIAF cluster records are also materially richer than PersonaLattice needs. Do not implement VIAF name search, autosuggest, SRU search or a broad cluster parser as a workaround.
-
-LCNAF/id.loc.gov review Issue #189 was closed `not_planned` on 2026-08-21. Machine-readable exact authority resources exist, but current primary documentation did not establish both a defensible future-commercial reuse position for cooperatively maintained LCNAF/NACO records and an id.loc.gov-specific rate/backoff contract. Do not work around those blockers with search/suggest, broad SKOS parsing or borrowed limits from the separate loc.gov JSON API.
-
-GLEIF exact LEI metadata remains deferred. Current primary materials establish free access, CC0 reuse and exact LEI retrieval, but the 2026-08-21 review did not establish a provider-primary request-rate/backoff contract precise enough to encode as a runtime invariant. Do not substitute third-party quota claims merely to activate the source.
-
-SEC EDGAR exact-CIK submissions review Issue #192 was closed `not_planned`. The exact endpoint is credentialless and SEC's fair-access policy is clear, but the response includes recent filing-history arrays and can exceed PersonaLattice's required 32 KiB raw-response ceiling. Do not weaken the ceiling, fetch large filing history simply to discard it, use undocumented partial/range behavior or swap in fuzzy ticker/name/search/bulk endpoints.
-
-Current explicit rejections/deferments include:
-
-- Codeforces API execution is deferred pending a provider-authored commercial SaaS data-use basis; historical evidence remains readable.
-- ORCID Public API is not suitable for a future revenue-generating PersonaLattice baseline under its current public API terms.
-- Hacker News public-user metadata is rejected under current Y Combinator commercial-use terms despite a technically attractive free API.
-- Stack Exchange `inname` user search is substring-based and therefore too fuzzy to become generic recursive username evidence; this does not affect the exact Stack Overflow profile-URL source.
-- Bitbucket Cloud exact repository retrieval is deferred until Atlassian primary documentation clearly supports anonymous execution of the exact public-repository operation.
-- VIAF exact authority retrieval is deferred until current primary documentation supports a narrow, stable exact-record representation and operational contract; fuzzy VIAF discovery remains out of scope regardless.
-- LCNAF/id.loc.gov is deferred until both cooperatively maintained record reuse and service-specific operating limits are defensible from current primary documentation.
-- GLEIF exact LEI lookup is deferred until a current GLEIF-primary request-rate/backoff contract is available.
-- SEC EDGAR exact-CIK submissions are deferred while the provider response shape conflicts with the raw-response/data-minimization ceiling.
-
-If provider documentation changes, repeat the preflight instead of trusting this handover.
-
-## Next engineering gate
-
-1. Keep GitHub username and exact profile-URL research fail-closed on account type: only `type == "User"` can become a person-oriented account candidate. Keep GitHub and GitLab repository/project URL paths on their existing process-owned provider budgets; do not create parallel quota pools or promote repository/project metadata into person leads.
-2. Keep Zenodo exact-record scope narrow and green: canonical record URL only, anonymous singleton metadata, 32 KiB fail-closed ceiling, no files/search/creator expansion/version traversal and zero emitted leads.
-3. Review the next high-value exact ₹0 source from current primary documentation only. Reject sources whose terms, privacy model, operational contract, response shape or matching semantics do not fit the product even if the endpoint is free.
-4. Keep exact-source boundaries green for GitHub, GitLab, Keybase, Wayback, Stack Overflow, OpenAlex, Wikidata, Zenodo, ROR, Companies House, DBLP and Crossref/DataCite; do not expand them into content scraping, fuzzy person/entity/organization search or hidden identity reconciliation.
-5. Keep the Crossref→DataCite exact-DOI ordering regression green; never use the fallback to conceal Crossref attempted failures or widen DOI research into fuzzy search.
-6. When genuine consented/reviewed M10 evidence exists, run it before changing production graph limits or M5 semantics.
-7. Fix concrete correctness/security/operator defects as discovered; do not reopen frozen architecture or create cosmetic PRs to simulate progress.
-
-A new block must improve defensible source coverage, real evaluation, correctness, security or a concrete investigator task.
-
-## Bluesky exact profile URL package — Issue #215
-
-This package extends the existing `bluesky_public_profile` source from username handles to exact canonical `https://bsky.app/profile/<handle>` URLs. It reuses one process-owned adapter and the existing 30/minute budget. DID/post URLs and noncanonical handles stop before execution; existing public-web opt-out, account-unavailable, no-match and retained-field semantics are unchanged. No recursion or M5 policy changed.
-
-Merge SHA and exact-head CI are recorded after the PR is verified and merged.
+The first stable-beta release should preserve the one-admin architecture, durable case storage, server-side secrets, fail-closed provider governance and the already-tested same-origin authentication boundary. After that release, continue operator quality and source coverage incrementally.
