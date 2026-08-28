@@ -22,6 +22,9 @@ require_text 'PERSONALATTICE_SESSION_COOKIE must use the __Host- prefix'
 require_text 'export PERSONALATTICE_API_ORIGIN="http://127.0.0.1:$API_PORT"'
 require_text 'unset PERSONALATTICE_API_HOSTPORT'
 require_text 'python" -m app.launch_preflight'
+require_text 'trap cleanup EXIT'
+require_text "trap 'exit 130' INT"
+require_text "trap 'exit 143' TERM"
 require_text '--host 127.0.0.1'
 require_text '--workers 1'
 require_text '--no-proxy-headers'
