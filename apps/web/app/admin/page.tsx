@@ -65,6 +65,11 @@ function splitValues(value: string) {
     .filter(Boolean);
 }
 
+function isEditableShortcutTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
 async function api(path: string, init?: RequestInit, csrfToken?: string) {
   const method = (init?.method ?? "GET").toUpperCase();
   const unsafe = !["GET", "HEAD", "OPTIONS"].includes(method);
@@ -127,6 +132,22 @@ export default function AdminConsole() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (authState !== "authenticated") return;
+
+    function openNewIntake(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== "n") return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isEditableShortcutTarget(event.target)) return;
+      if (intakeExpanded) return;
+      event.preventDefault();
+      setIntakeExpanded(true);
+    }
+
+    window.addEventListener("keydown", openNewIntake);
+    return () => window.removeEventListener("keydown", openNewIntake);
+  }, [authState, intakeExpanded]);
 
   const signalCount = useMemo(
     () =>
@@ -329,13 +350,16 @@ export default function AdminConsole() {
           open={intakeExpanded}
           onToggle={(event) => setIntakeExpanded(event.currentTarget.open)}
         >
-          <summary className="intakeSummary">
+          <summary className="intakeSummary" aria-keyshortcuts="n">
             <span className="intakeSummaryTitle">
               <span className="index">INTAKE</span>
               <strong>{caseWorkspaceActive ? "New intake" : "Build an investigation"}</strong>
               <small>{signalCount} signals prepared</small>
             </span>
-            <span className="summaryAction">{intakeExpanded ? "Collapse" : "Open intake"}</span>
+            <span className="summaryAction">
+              {intakeExpanded ? "Collapse" : "Open intake"}
+              {!intakeExpanded && <small>Press N to open new intake.</small>}
+            </span>
           </summary>
 
           <form className="intake intakeBody" onSubmit={submit}>
