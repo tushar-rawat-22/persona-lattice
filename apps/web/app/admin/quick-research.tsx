@@ -934,13 +934,14 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
     setError("");
     try {
       const response = await request(`/v1/cases/${caseId}`, { method: "DELETE" }, csrfToken);
-      if (!isCurrentCaseContext(generation)) return;
       if (response.status === 401) {
-        expireSession("Your operator session expired. Sign in again to continue. The rejected request did not delete the retained case.");
+        if (isCurrentCaseContext(generation)) {
+          expireSession("Your operator session expired. Sign in again to continue. The rejected request did not delete the retained case.");
+        }
         return;
       }
       if (!response.ok && response.status !== 404) {
-        setError("Stored case could not be deleted.");
+        if (isCurrentCaseContext(generation)) setError("Stored case could not be deleted.");
         return;
       }
       if (activeCase?.id === caseId) setLauncherOpen(true);
@@ -988,17 +989,18 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
     setError("");
     try {
       const response = await request("/v1/cases", { method: "DELETE" }, csrfToken);
-      if (!isCurrentCaseContext(generation)) return;
       if (response.status === 401) {
-        expireSession("Your operator session expired. Sign in again to continue. The rejected request did not delete retained cases.");
+        if (isCurrentCaseContext(generation)) {
+          expireSession("Your operator session expired. Sign in again to continue. The rejected request did not delete retained cases.");
+        }
         return;
       }
       if (!response.ok) {
-        setError("Stored cases could not be deleted.");
+        if (isCurrentCaseContext(generation)) setError("Stored cases could not be deleted.");
         return;
       }
-      setActiveCase(null);
-      setLauncherOpen(true);
+      if (isCurrentCaseContext(generation)) setActiveCase(null);
+      if (isCurrentCaseContext(generation)) setLauncherOpen(true);
       await refreshCases();
     } catch {
       if (isCurrentCaseContext(generation)) setError("Stored cases could not be deleted.");
