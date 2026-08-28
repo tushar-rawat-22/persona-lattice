@@ -53,10 +53,6 @@ const requiredResearch = [
   "Investigation workspace",
   "Active investigation",
   "Start another case",
-  "Stored cases",
-  "Search loaded cases",
-  "Filter by kind",
-  "Sort loaded cases",
   "Overview",
   "Accounts & pivots",
   "Sources",
@@ -70,11 +66,6 @@ const requiredResearch = [
   "deriveUncertaintyItems",
   "deriveOpenQuestions",
   "No retained observation is independently corroborated by two distinct sources yet.",
-  "caseQuery",
-  "caseKindFilter",
-  "caseSort",
-  "visibleCases",
-  'className="caseActions"',
   "M5 evidence-strength triage",
   "Evidence pivots",
   "Source execution",
@@ -129,7 +120,24 @@ assert.ok(
     caseNavigation.includes("Search and sort the cases already loaded in this session."),
   "retained-case navigation must expose active state and must not pretend loaded-case search is server-wide",
 );
-
+assert.ok(
+  research.includes('import { CaseNavigation } from "./case-navigation";') &&
+    research.includes("<CaseNavigation") &&
+    research.includes("cases={recentCases}") &&
+    research.includes("activeCaseId={activeCase?.id}") &&
+    research.includes("hasMore={Boolean(nextCaseCursor)}") &&
+    research.includes("loadingMore={loadingOlderCases}") &&
+    research.includes("onOpenCase={openCase}") &&
+    research.includes("onLoadMore={loadOlderCases}") &&
+    research.includes("onDeleteCase={deleteCase}") &&
+    research.includes("onDeleteAll={deleteAllCases}"),
+  "retained-case navigation must be wired to the real retained-case state and lifecycle handlers",
+);
+assert.ok(
+  !research.includes('<div className="recentCases">') &&
+    !research.includes('onClick={() => deleteCase(item.id)}>Delete</button>'),
+  "legacy retained-case markup must not remain alongside the navigation component",
+);
 assert.ok(
   research.includes("<details>") && research.includes("<summary>Raw retained JSON</summary>"),
   "raw provider payload must remain progressively disclosed",
@@ -151,18 +159,6 @@ assert.ok(
     research.includes('!["executed", "not_found"].includes(record.state)') &&
     research.includes("factor.veto || factor.applied_weight < 0"),
   "decision surface must derive corroboration, unresolved source gaps and conflicting evidence from retained case data",
-);
-assert.ok(
-  research.includes("recentCases.filter") &&
-    research.includes("localeCompare") &&
-    research.includes("new Date(item.created_at).toLocaleString()"),
-  "stored-case navigation must filter loaded cases, sort deterministically and expose recency context",
-);
-assert.ok(
-  research.includes('<details className="caseActions">') &&
-    research.includes("Delete this case") &&
-    research.includes("Delete all retained cases"),
-  "destructive case actions must be moved behind deliberate secondary disclosure",
 );
 assert.ok(
   adminPage.includes('className={caseWorkspaceActive ? "workspace caseActive" : "workspace"}') &&
