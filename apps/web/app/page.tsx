@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import styles from "./public.module.css";
+
 const capabilities = [
   ["01", "Identity clues", "Normalize phones, emails, usernames, domains, public URLs and reviewed files without pretending every clue belongs to one person."],
   ["02", "Source coverage", "Show which public sources ran, which were unavailable, and which exact checks were not applicable instead of silently dropping gaps."],
@@ -11,64 +13,64 @@ const capabilities = [
 
 export default function Home() {
   return (
-    <main className="shell publicShell publicProduct">
-      <header className="publicTopbar">
-        <Link className="publicBrand" href="/" aria-label="PersonaLattice home">
-          <span className="brandMark">PL</span>
+    <main className={styles.shell}>
+      <header className={styles.topbar}>
+        <Link className={styles.brand} href="/" aria-label="PersonaLattice home">
+          <span className={styles.brandMark}>PL</span>
           <span>PersonaLattice</span>
         </Link>
-        <nav className="publicNav" aria-label="Public navigation">
-          <Link className="textLink" href="#capabilities">Capabilities</Link>
-          <Link className="textLink" href="/dashboard">Read-only product demo</Link>
-          <Link className="adminLoginButton" href="/admin">Private admin</Link>
+        <nav className={styles.nav} aria-label="Public navigation">
+          <Link className={styles.navLink} href="#capabilities">Capabilities</Link>
+          <Link className={styles.navLink} href="/demo">Read-only product demo</Link>
+          <Link className={styles.adminLink} href="/admin">Private admin</Link>
         </nav>
       </header>
 
-      <section className="publicHero">
-        <div className="publicHeroCopy">
-          <p className="eyebrow">EVIDENCE-FIRST PUBLIC-SOURCE RESEARCH</p>
+      <section className={styles.hero}>
+        <div className={styles.heroCopy}>
+          <p className={styles.kicker}>EVIDENCE-FIRST PUBLIC-SOURCE RESEARCH</p>
           <h1>See what the evidence says. Keep what it does not.</h1>
-          <p className="publicLead">
+          <p className={styles.lead}>
             PersonaLattice turns scattered public clues into a structured investigation record with
             source state, provenance, freshness, contradictions and bounded correlation visible in
             one workspace.
           </p>
-          <div className="publicHeroActions">
-            <Link className="adminLoginButton" href="/dashboard">Open the evidence workspace</Link>
-            <span className="publicBoundaryText">Synthetic case only · No research runs from this page</span>
+          <div className={styles.heroActions}>
+            <Link className={styles.primaryLink} href="/demo">Open the evidence workspace</Link>
+            <span className={styles.boundaryText}>Synthetic case only · No research runs from this page</span>
           </div>
         </div>
 
-        <aside className="publicCaseBrief" aria-label="Synthetic case snapshot">
-          <div className="caseBriefHead">
-            <span className="eyebrow">READ-ONLY PRODUCT DEMO</span>
-            <span className="caseBriefState">complete</span>
+        <aside className={styles.caseBrief} aria-label="Synthetic case snapshot">
+          <div className={styles.caseBriefHead}>
+            <span className={styles.kicker}>READ-ONLY PRODUCT DEMO</span>
+            <span className={styles.caseBriefState}>complete</span>
           </div>
-          <div className="caseBriefIdentity">
-            <span className="caseBriefAvatar" aria-hidden="true">AR</span>
+          <div className={styles.caseIdentity}>
+            <span className={styles.avatar} aria-hidden="true">AR</span>
             <div>
               <strong>Alex Rowan</strong>
               <span>synthetic investigation fixture</span>
             </div>
           </div>
-          <dl className="caseBriefMetrics">
+          <dl className={styles.metrics}>
             <div><dt>Sources</dt><dd>8</dd></div>
             <div><dt>Observations</dt><dd>11</dd></div>
             <div><dt>Conflicts</dt><dd>1</dd></div>
             <div><dt>Candidates</dt><dd>3</dd></div>
           </dl>
-          <div className="caseBriefRows">
-            <div><span>github_public_api</span><strong className="stateGood">matched</strong></div>
-            <div><span>public DNS</span><strong className="stateGood">observed</strong></div>
-            <div><span>stale profile claim</span><strong className="stateWarn">conflict retained</strong></div>
+          <div className={styles.caseRows}>
+            <div><span>github_public_api</span><strong className={styles.good}>matched</strong></div>
+            <div><span>public DNS</span><strong className={styles.good}>observed</strong></div>
+            <div><span>stale profile claim</span><strong className={styles.warn}>conflict retained</strong></div>
           </div>
-          <Link className="caseBriefLink" href="/dashboard">Inspect the full synthetic case →</Link>
+          <Link className={styles.caseLink} href="/demo">Inspect the full synthetic case →</Link>
         </aside>
       </section>
 
-      <section className="publicDemoStrip" aria-label="Public demo boundary">
+      <section className={styles.demoStrip} aria-label="Public demo boundary">
         <div>
-          <span className="eyebrow">PUBLIC ACCESS</span>
+          <span className={styles.kicker}>PUBLIC ACCESS</span>
           <strong>Visitors can inspect the product, not operate it.</strong>
         </div>
         <p>
@@ -77,19 +79,19 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="capabilitySection" id="capabilities">
-        <div className="capabilityIntro">
-          <p className="eyebrow">WHAT THE OPERATOR WORKSPACE DOES</p>
+      <section className={styles.capabilities} id="capabilities">
+        <div className={styles.capabilityIntro}>
+          <p className={styles.kicker}>WHAT THE OPERATOR WORKSPACE DOES</p>
           <h2>A background-research workflow built around inspectable evidence.</h2>
           <p>
             The useful part is not a giant confidence number. It is knowing what was checked, what
             came back, where it came from, and which assumptions still need a human decision.
           </p>
         </div>
-        <div className="capabilityList">
+        <div className={styles.capabilityList}>
           {capabilities.map(([index, title, description]) => (
-            <article className="capabilityRow" key={index}>
-              <span className="index">{index}</span>
+            <article className={styles.capabilityRow} key={index}>
+              <span>{index}</span>
               <h3>{title}</h3>
               <p>{description}</p>
             </article>
@@ -97,12 +99,12 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="publicArchitecture">
+      <section className={styles.architecture}>
         <div>
-          <p className="eyebrow">PRODUCT BOUNDARY</p>
+          <p className={styles.kicker}>PRODUCT BOUNDARY</p>
           <h2>Research is private. Demonstration is public.</h2>
         </div>
-        <div className="architectureFlow" aria-label="PersonaLattice evidence flow">
+        <div className={styles.architectureFlow} aria-label="PersonaLattice evidence flow">
           <span>clue intake</span><i>→</i><span>source policy</span><i>→</i><span>public evidence</span><i>→</i><span>provenance graph</span><i>→</i><span>case review</span>
         </div>
         <p>
@@ -112,10 +114,10 @@ export default function Home() {
         </p>
       </section>
 
-      <footer className="publicFooter">
+      <footer className={styles.footer}>
         <span>PersonaLattice · evidence intelligence</span>
         <div>
-          <Link href="/dashboard">Product demo</Link>
+          <Link href="/demo">Product demo</Link>
           <Link href="/admin">Admin login</Link>
         </div>
       </footer>
