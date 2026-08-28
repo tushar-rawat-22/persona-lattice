@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type CaseNavigationKind = "username" | "phone" | "email" | "url" | "domain";
 
@@ -40,6 +40,11 @@ const KIND_LABELS: Record<CaseNavigationKind, string> = {
 
 function normalizedSearch(value: string): string {
   return value.trim().toLocaleLowerCase();
+}
+
+function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
 }
 
 export function caseRetentionStatus(expiresAt: string, nowMs = Date.now()): "active" | "elapsed" | "unknown" {
@@ -88,11 +93,25 @@ export function CaseNavigation({
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [pendingDeleteCaseId, setPendingDeleteCaseId] = useState<string | null>(null);
   const [pendingDeleteAll, setPendingDeleteAll] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const visibleCases = useMemo(
     () => filterAndSortLoadedCases(cases, query, kindFilter, sortOrder),
     [cases, query, kindFilter, sortOrder],
   );
+
+  useEffect(() => {
+    function focusCaseSearch(event: KeyboardEvent) {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (isEditableShortcutTarget(event.target)) return;
+      if (!searchInputRef.current) return;
+      event.preventDefault();
+      searchInputRef.current.focus();
+    }
+
+    window.addEventListener("keydown", focusCaseSearch);
+    return () => window.removeEventListener("keydown", focusCaseSearch);
+  }, []);
 
   function confirmDeleteCase(caseId: string) {
     if (initialLoading || remoteActionsDisabled) return;
@@ -137,11 +156,14 @@ export function CaseNavigation({
             <label>
               Search loaded cases
               <input
+                ref={searchInputRef}
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Identifier or case ID"
+                aria-keyshortcuts="/"
               />
+              <small className="muted">Press / to focus case search.</small>
             </label>
             <label>
               Filter by kind
