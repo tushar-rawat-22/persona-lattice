@@ -50,13 +50,17 @@ The `__Host-` cookie form requires HTTPS, `Secure`, `Path=/` and no `Domain` att
 
 ## Web configuration
 
-For a separate hosted web/API topology, the web process should use:
+Browser code always uses the same-origin `/api` proxy. `apps/web/next.config.ts` sets `NEXT_PUBLIC_API_URL=/api` in the built application.
+
+The Next.js server resolves its API destination in this order:
 
 ```text
-NEXT_PUBLIC_API_URL=/api
+PERSONALATTICE_API_ORIGIN
+PERSONALATTICE_API_HOSTPORT
+http://127.0.0.1:8000   # local fallback
 ```
 
-The server-side proxy must point at the API origin using the configuration expected by the current Next.js deployment code. Do not expose a secret API credential to `NEXT_PUBLIC_*` variables.
+For a normal hosted topology, set `PERSONALATTICE_API_ORIGIN` to the private/reachable API origin. The Render reference instead injects `PERSONALATTICE_API_HOSTPORT` from the private API service. Do not place API credentials in `NEXT_PUBLIC_*` variables.
 
 The public root does not advertise `/admin`. That is product navigation, not a security control. `/admin` is safe to discover only because real data and mutations remain protected by server-side authentication and session-linked CSRF checks.
 
