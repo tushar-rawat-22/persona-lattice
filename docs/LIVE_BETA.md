@@ -1,32 +1,62 @@
 # Live beta
 
-PersonaLattice has passed its first software and real-host launch-candidate gate. That does not mean a permanent public endpoint already exists.
+PersonaLattice has passed its first software and real-host launch-candidate gate. That does not mean a permanent private operator endpoint already exists.
 
-This document separates three things that are easy to confuse: a project demo, a stable private beta, and a future multi-user SaaS deployment.
+This document separates three things that are easy to confuse: a public read-only product demo, a stable private beta, and a future multi-user SaaS deployment.
 
 ## What is ready now
 
 The one-admin application has already been exercised as a production-shaped build on a real host. The accepted LC1 session covered authentication and CSRF, exact public-source research, retained cases, source-state and provenance display, M5's non-probabilistic evidence-strength presentation, reviewed document intake, restart persistence, backup/restore and Safari/Chrome acceptance.
 
-The application can therefore be shown as a working project without waiting for every post-LC1 product refinement or every future source integration.
+The application can therefore be shown as a working product without waiting for every post-LC1 refinement or future source integration.
 
-Do not describe it as a multi-user production SaaS. The current runtime intentionally has one admin, one API worker, process-local sessions and SQLite case storage.
+Do not describe it as a multi-user production SaaS. The current private runtime intentionally has one admin, one API worker, process-local sessions and SQLite case storage.
 
-## Fastest demo path
+## Zero-spend public product demo
 
-A short-lived external demo may use a Cloudflare Quick Tunnel pointed at the local production-shaped web process. Use synthetic or otherwise safe demonstration cases only.
+The public demo is deliberately independent of the private research runtime. It contains fixed synthetic evidence and exposes the product's investigation hierarchy without provider execution, uploads, case mutation, retained private data or admin credentials.
 
-Cloudflare documents Quick Tunnels as testing/development infrastructure, with a random `trycloudflare.com` hostname and no production guarantee. A Quick Tunnel is therefore suitable for a temporary portfolio demonstration, not a stable private-beta URL and not a place to depend on for retained evidence.
+`apps/web` has a dedicated static-export mode for this surface:
+
+```bash
+cd apps/web
+npm ci --no-audit --no-fund
+npm run test:public-demo
+npm run build:public-demo
+npm run test:public-demo-export
+```
+
+The output is `apps/web/out/`. The export includes the product overview, `/demo/`, an explicit `/operator-access/` boundary page and the static security/redirect policy used by Cloudflare Pages. In the Pages deployment, `/admin` and `/admin/*` redirect to `/operator-access/`; the normal private Next.js server does not interpret that Pages redirect file, so its authenticated `/admin` route remains unchanged.
+
+A Cloudflare Pages Git deployment can use:
+
+- repository: `tushar-rawat-22/persona-lattice`;
+- production branch: `main`;
+- root directory: `apps/web`;
+- build command: `npm run build:public-demo`;
+- output directory: `out`.
+
+No provider key, admin password/hash, case database or private API URL belongs in the public Pages project. The build is intentionally useful with zero secrets and zero backend authority.
+
+Cloudflare currently gives Pages projects a `*.pages.dev` hostname and supports static Next.js exports. Its Free plan currently allows 500 builds per month, while static asset requests do not consume Pages Functions/Workers request quota. Re-check Cloudflare's primary documentation before changing deployment assumptions; these limits are operational facts, not application invariants.
+
+This is the preferred first public launch because it can stay online without keeping the operator's Mac running and cannot turn a visitor into an investigator.
+
+## Temporary full-stack demonstration
+
+A short-lived external full-stack demo may use a Cloudflare Quick Tunnel pointed at the local production-shaped web process. Use synthetic or otherwise safe demonstration cases only.
+
+Cloudflare documents Quick Tunnels as testing/development infrastructure, with a random `trycloudflare.com` hostname and no production guarantee. A Quick Tunnel is suitable for temporary browser acceptance or a supervised demonstration, not a stable private-beta URL and not a place to depend on for retained evidence.
 
 When the demo ends, stop the tunnel and local runtime.
 
 ## Stable private beta: preferred low-cost path
 
-The lowest-churn architecture is to keep the already-tested API, web process and SQLite database on the controlled host and publish the web process through a named Cloudflare Tunnel.
+The lowest-churn private architecture is to keep the already-tested API, web process and SQLite database on a controlled host and publish the web process through a named Cloudflare Tunnel.
 
 This requires a domain/zone that the operator controls. The public hostname maps through Cloudflare to the local web service; the API remains behind the same-origin `/api` proxy and does not need to be exposed directly.
 
-This path preserves the current one-admin architecture and local persistent storage. The host must remain online whenever the beta should be reachable, and host backups remain an operator responsibility.
+This path preserves the current one-admin architecture and local persistent storage. The host must remain online whenever the private beta should be reachable, and host backups remain an operator responsibility.
 
 A Cloudflare Tunnel does not remove PersonaLattice's own admin authentication requirement. The application still owns its session and CSRF boundary.
 
@@ -55,17 +85,15 @@ Use `--preflight-only` to validate the production environment without starting t
 
 The public tunnel/hostname should target only the loopback web port printed by the runner. Do not route the API port directly to the Internet.
 
-## Stable hosted alternative
+## Hosted private alternative
 
 The repository retains an optional Render topology at `deploy/render-paid.yaml`.
 
-The API needs persistent storage because retained cases use SQLite. Render's default service filesystem is ephemeral, and its current persistent-disk feature is for paid services. Do not deploy the current API on a free ephemeral web service and then call retained cases durable.
+The API needs persistent storage because retained cases use SQLite. Render's default service filesystem is ephemeral, and persistent disk is not part of the zero-spend baseline. Do not deploy the current API on an ephemeral web service and then call retained cases durable.
 
-A paid Render deployment can use Render's generated `onrender.com` hostname, so a custom domain is optional for the first hosted beta. The existing topology deliberately keeps one API instance and mounts a persistent disk for the SQLite database.
+The Render file remains an optional topology reference, not the current launch plan. Before using it, verify current pricing, storage and service limits in Render's own documentation.
 
-Before using the Render reference, verify current pricing and service names in Render's own documentation. The file is a topology reference, not a promise about current plan cost.
-
-## Required deployment configuration
+## Required private deployment configuration
 
 The minimum authenticated runtime needs server-side configuration for:
 
@@ -86,7 +114,7 @@ Current examples include:
 - `COMPANIES_HOUSE_API_KEY` for exact Companies House company lookup;
 - `SEC_EDGAR_USER_AGENT` for SEC EDGAR automation identity. This is non-secret operator metadata, but it must contain a real maintainable application/operator identity and contact email.
 
-## Go-live gate
+## Private go-live gate
 
 For a stable private beta, all of the following must be true on one exact release commit:
 
@@ -104,4 +132,4 @@ Post-LC1 UI improvements and future source additions can continue after that gat
 
 A real multi-user commercial service is a different architecture milestone. Before calling PersonaLattice that, move sessions to shared durable storage, move retained data to a production datastore designed for concurrent service instances, add account/tenant authorization boundaries, production observability and incident handling, governed backup/restore and deletion, and the required privacy/legal operating documents.
 
-Do not hide that distinction in marketing. The current product is a serious private operator workbench and can be useful before it becomes a multi-tenant SaaS.
+Do not hide that distinction in marketing. The current product is a serious private operator workbench with a safe public demonstration surface and can be useful before it becomes a multi-tenant SaaS.
