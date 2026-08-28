@@ -20,6 +20,7 @@ type CaseNavigationProps = {
   activeCaseId?: string;
   hasMore: boolean;
   initialLoading?: boolean;
+  initialLoadFailed?: boolean;
   loadingMore: boolean;
   remoteActionsDisabled?: boolean;
   onOpenCase: (caseId: string) => void;
@@ -73,6 +74,7 @@ export function CaseNavigation({
   activeCaseId,
   hasMore,
   initialLoading = false,
+  initialLoadFailed = false,
   loadingMore,
   remoteActionsDisabled = false,
   onOpenCase,
@@ -123,6 +125,8 @@ export function CaseNavigation({
 
       {initialLoading ? (
         <p className="muted" role="status" aria-live="polite">Loading retained cases…</p>
+      ) : initialLoadFailed && cases.length === 0 ? (
+        <p className="muted" role="status" aria-live="polite">Stored case history could not be loaded. Refresh before treating this workspace as empty.</p>
       ) : cases.length === 0 ? (
         <p className="muted">No retained research cases yet.</p>
       ) : (
