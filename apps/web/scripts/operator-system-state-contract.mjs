@@ -6,6 +6,7 @@ import path from "node:path";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(here, "..");
 const source = await readFile(path.join(appRoot, "app", "admin", "operator-system-state.tsx"), "utf8");
+const model = await readFile(path.join(appRoot, "app", "admin", "operator-system-state-model.ts"), "utf8");
 
 for (const token of [
   'type StateTone = "complete" | "partial" | "limited" | "quiet"',
@@ -23,6 +24,22 @@ for (const token of [
   'aria-label="Research execution state"',
 ]) {
   assert.ok(source.includes(token), `operator system-state contract missing: ${token}`);
+}
+
+for (const token of [
+  "export function operatorSystemStateCounts",
+  "aggregate.unclassified_attempt_count",
+  "aggregate.queued_count",
+  "aggregate.review_required_count",
+  "aggregate.routing_unavailable_count",
+  "aggregate.local_budget_stop_count",
+  "aggregate.optional_not_configured_count",
+  "aggregate.missing_secret_config_count",
+  "aggregate.provider_policy_block_count",
+  "aggregate.display_only_count",
+  "aggregate.blocked_count",
+]) {
+  assert.ok(model.includes(token), `operator system-state aggregation contract missing: ${token}`);
 }
 
 const withheldIndex = source.indexOf("if (withheldCount > 0)");
