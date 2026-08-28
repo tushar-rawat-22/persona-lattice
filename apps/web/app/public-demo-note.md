@@ -1,1 +1,0 @@
-Public demo implementation note. Remove this file when the read-only public product surface is complete.
