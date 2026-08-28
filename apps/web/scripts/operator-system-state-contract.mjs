@@ -10,7 +10,6 @@ const model = await readFile(path.join(appRoot, "app", "admin", "operator-system
 
 for (const token of [
   'type StateTone = "complete" | "partial" | "limited" | "quiet"',
-  "notAttemptedLimitCount: number",
   'title: "Research completed with limits"',
   'title: "Some evidence was withheld by source policy"',
   'title: "Some source paths were not attempted"',
@@ -22,11 +21,13 @@ for (const token of [
   "does not imply exhaustive coverage",
   "Review Sources",
   'aria-label="Research execution state"',
+  'import type { OperatorSystemStateCounts } from "./operator-system-state-model"',
 ]) {
   assert.ok(source.includes(token), `operator system-state contract missing: ${token}`);
 }
 
 for (const token of [
+  "notAttemptedLimitCount: number",
   "export function operatorSystemStateCounts",
   "aggregate.unclassified_attempt_count",
   "aggregate.queued_count",
