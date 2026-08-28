@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { rmSync } from "node:fs";
 import { createRequire } from "node:module";
+import path from "node:path";
 
 const require = createRequire(import.meta.url);
 const nextBin = require.resolve("next/dist/bin/next");
@@ -32,4 +34,13 @@ const result = spawnSync(process.execPath, [nextBin, "build"], {
 });
 
 if (result.error) throw result.error;
-process.exit(result.status ?? 1);
+if ((result.status ?? 1) !== 0) process.exit(result.status ?? 1);
+
+const out = path.join(process.cwd(), "out");
+// The public artifact must not merely redirect away from the operator route;
+// it must not ship the private operator page or its route-specific bundle.
+rmSync(path.join(out, "admin"), { recursive: true, force: true });
+rmSync(path.join(out, "_next", "static", "chunks", "app", "admin"), {
+  recursive: true,
+  force: true,
+});
