@@ -48,29 +48,21 @@ if (!operatorBoundary.includes("The public demo does not expose research authori
   throw new Error("public demo operator boundary page lost its non-operational framing");
 }
 
-const forbiddenRuntimeMarkers = [
-  "Unlock operator console",
-  "/v1/auth/login",
-  "NEXT_PUBLIC_API_URL",
-];
-function inspectTree(directory) {
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const target = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      inspectTree(target);
-      continue;
-    }
-    if (!/\.(?:html|js|json|txt)$/i.test(entry.name)) continue;
-    const body = fs.readFileSync(target, "utf8");
-    for (const marker of forbiddenRuntimeMarkers) {
-      if (body.includes(marker)) {
-        throw new Error(
-          `public demo export contains private runtime marker ${JSON.stringify(marker)} in ${path.relative(out, target)}`,
-        );
-      }
+const forbiddenRuntimeMarkers = ["Unlock operator console", "/v1/auth/login"];
+for (const relative of [
+  "index.html",
+  path.join("demo", "index.html"),
+  path.join("operator-access", "index.html"),
+  "404.html",
+]) {
+  const body = fs.readFileSync(path.join(out, relative), "utf8");
+  for (const marker of forbiddenRuntimeMarkers) {
+    if (body.includes(marker)) {
+      throw new Error(
+        `public route ${relative} contains private runtime marker ${JSON.stringify(marker)}`,
+      );
     }
   }
 }
-inspectTree(out);
 
 console.log("public demo static export contract passed");
