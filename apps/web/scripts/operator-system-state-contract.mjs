@@ -68,10 +68,11 @@ assert.ok(
   "operator execution state must sit between decision synthesis and supporting metrics",
 );
 
-const combinedLimitsIndex = source.indexOf("if (withheldCount > 0 && notAttemptedLimitCount > 0)");
-const withheldIndex = source.indexOf("if (withheldCount > 0)");
-const notAttemptedIndex = source.indexOf("if (notAttemptedLimitCount > 0)");
-const noMatchIndex = source.indexOf("if (attemptCount > 0 && noMatchCount === attemptCount)");
+const presentationSource = source.slice(source.indexOf("function statePresentation"));
+const combinedLimitsIndex = presentationSource.indexOf("if (withheldCount > 0 && notAttemptedLimitCount > 0)");
+const withheldIndex = presentationSource.indexOf("if (withheldCount > 0)");
+const notAttemptedIndex = presentationSource.indexOf("if (notAttemptedLimitCount > 0)");
+const noMatchIndex = presentationSource.indexOf("if (attemptCount > 0 && noMatchCount === attemptCount)");
 assert.ok(
   combinedLimitsIndex >= 0 && withheldIndex > combinedLimitsIndex && notAttemptedIndex > withheldIndex && noMatchIndex > notAttemptedIndex,
   "combined policy/configuration limits must be surfaced before narrower or quiet source states",
