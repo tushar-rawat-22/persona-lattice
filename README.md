@@ -1,124 +1,71 @@
 # PersonaLattice
 
-PersonaLattice is a private-admin, evidence-first public-source research system.
-It takes a phone number, email address, username/handle, public URL or uploaded
-document/image and builds an attributable research record without pretending
-that incomplete public data is certain identity.
+PersonaLattice is a private, evidence-first public-source research workbench. It accepts known clues such as a phone number, email address, username, public URL or uploaded document/image and builds an attributable research record around them.
 
-The public web surface is intentionally safe to expose: unauthenticated visitors
-can see the product shell/demo, but real case data is returned only after the
-single configured admin session is authenticated server-side.
+It is deliberately conservative about identity. Public records can be missing, stale, duplicated or wrong, so the system keeps observations, correlations and provenance separate. Unknowns stay unknown instead of being filled in by a model.
 
-PersonaLattice is deliberately **not** a "type a number and magically know
-everything" product. Sources can be missing, stale, duplicated or wrong. A field
-that cannot be established remains unknown rather than being invented.
+The repository is public. Real research data is not. Unauthenticated visitors only receive the synthetic/demo surface; real intake, provider execution and retained cases sit behind the server-side admin session and CSRF boundary.
 
-## Private V1 workflow
+## Project status
+
+The one-admin application has passed its first production-shaped host and browser acceptance gate (`LAUNCH_CANDIDATE_1`). It is usable as a project/private operator tool today.
+
+A permanent public beta hostname has not been provisioned yet. The remaining go-live work is operational: stable HTTPS, persistent protected storage, deployment configuration and a final smoke test on the exact release commit. See `docs/LIVE_BETA.md`.
+
+Post-LC1 product work continues without holding the usable build offline. The current focus is operator efficiency and decision clarity rather than cosmetic dashboard work.
+
+## How a case works
 
 ```text
 admin login
    ↓
-phone / email / username / public URL / file intake
+known clues / public URLs / reviewed files
    ↓
 normalization + purpose/source policy
    ↓
-approved public-source research
+approved bounded public-source research
    ↓
-bounded public identifier convergence
+attributable evidence + typed source states
    ↓
-canonical evidence graph
+bounded public-identifier convergence
    ↓
 deterministic M5 evidence-strength triage
    ↓
-private retained case with provenance, gaps and contradictions
+retained private case with provenance, gaps and contradictions
 ```
+
+The operator workspace is built around the questions that matter during an investigation: what is corroborated, what conflicts, what remains unknown, which sources ran or failed, why a correlation exists and where an observation came from.
 
 ## Current capabilities
 
-The private V1 implementation includes:
+The private V1 includes:
 
-- a single-admin Argon2-backed login boundary with opaque HttpOnly session
-  cookies, expiry/logout, CSRF protection and login throttling;
-- a public-safe Next.js shell that does not receive real case payloads before
-  authentication;
-- phone normalization and numbering-plan metadata without claiming subscriber
-  identity;
-- governed username discovery over a fixed reviewed Sherlock site subset;
-- GitHub, GitLab and Codeforces public-profile enrichment;
-- exact GitLab public-email matching where the email is explicitly exposed by
-  that public profile;
-- optional exact-match discovery through a licensed Brave public web index when
-  `BRAVE_SEARCH_API_KEY` is configured;
-- canonical public URL metadata plus globally reachable DNS infrastructure
-  addresses, explicitly labelled as site/domain infrastructure rather than a
-  person's device IP or physical location;
-- bounded two-hop/twelve-node convergence over attributable public email,
-  username and website fields;
-- source/provenance edges for every automatic research pivot;
-- duplicate-pivot suppression and local provider rate/resource budgets;
-- PDF, UTF-8 text, JPEG and PNG metadata/intake under bounded extraction rules;
-- deterministic M5 evaluation of live public account candidates using the same
-  semantics as the research core;
-- M5 results that remain `calibration_status=uncalibrated` and
-  `is_identity_claim=false`, with the score displayed as evidence-strength
-  triage and never as identity probability;
-- private SQLite case retention with a 30-day default, expiry purge, per-case
-  deletion and delete-all;
-- a privacy-minimized audit ledger that records operations without copying
-  research seeds, provider payloads or session secrets;
-- GitHub CI on Python 3.11 and 3.13 plus Ruff, `npm ci`, lint, strict TypeScript
-  and production Next.js build;
-- a zero-spend local operating path that requires no paid hosting or database;
-- an optional paid Render reference topology kept outside the repository root.
+- one-admin Argon2id authentication with opaque HttpOnly sessions, expiry/logout, CSRF checks and login throttling;
+- a same-origin Next.js/FastAPI application boundary so the browser does not need the private API origin;
+- bounded phone numbering-plan metadata without subscriber-identity claims;
+- reviewed username discovery plus exact/bounded public-source integrations;
+- exact public profile/entity/repository/record paths across admitted sources including GitHub, GitLab, Keybase, Bluesky, Stack Overflow, OpenAlex, Wikidata, Zenodo, ROR, Companies House, DBLP, GLEIF and SEC EDGAR where their exact applicability/configuration requirements are met;
+- exact DOI metadata through Crossref with bounded DataCite fallback;
+- public RDAP domain metadata and DNS infrastructure metadata without treating infrastructure IP addresses as a person's device/location;
+- Wayback capture-availability metadata without archived-page harvesting;
+- bounded public-identifier convergence with duplicate-pivot suppression and process-owned provider budgets;
+- PDF, UTF-8 text, JPEG and PNG intake under bounded extraction/review rules;
+- deterministic M5 evidence-strength triage that remains uncalibrated, non-probabilistic and `identity_claim=false`;
+- an operator decision surface for corroboration, conflicts, open questions, source execution state and provenance;
+- searchable/filterable retained-case navigation, explicit loading/failure/session states and guarded deletion;
+- SQLite case retention with expiry/purge, case deletion and verified backup/restore tooling;
+- a privacy-minimized audit ledger that avoids copying research seeds, provider payloads or session secrets;
+- CI across Python 3.11/3.13, Ruff, dependency checks, web lint/typecheck/contracts/build, production API image and launch-process smoke.
 
-## Evidence and safety rules
+Some providers require optional server-side configuration. Missing optional configuration fails closed; it does not make the application invent enrichment.
 
-- AI is not evidence.
-- Source observations, factual claims and correlation decisions are separate.
-- Same-handle reuse is weak evidence, not proof of identity.
-- A discovered public identifier is a research pivot, not an identity claim.
-- Stale evidence and contradictions remain visible.
-- A hard contradiction can veto positive evidence.
-- Real case data and provider credentials never enter Git.
-- No private-account bypass, credential/OTP theft, account-recovery probing,
-  CAPTCHA/WAF evasion or unauthorized system access.
-- No covert IP/device discovery, tracking-link collection or deanonymization.
-- No Internet-scale biometric/face identification.
-- Regulated employment, housing, credit and insurance eligibility decisions are
-  outside the product boundary.
+## Boundaries
 
-## Zero-spend baseline
+PersonaLattice does not provide private-account bypass, credential/OTP collection, account-recovery probing, CAPTCHA/WAF evasion, covert personal/device IP discovery, live tracking, hidden KYC/government-ID acquisition, broad ownership traversal, contact harvesting, Internet-scale biometric identification or regulated employment/housing/credit/insurance eligibility decisions.
 
-PersonaLattice's default operating path is local and does not require paid APIs,
-hosting, databases, proxies or enrichment. See `docs/ZERO_SPEND_RUNBOOK.md` for
-the exact setup.
+A same-handle match is weak evidence, not proof. A discovered public identifier is a research lead, not an identity claim. A hard contradiction remains visible even when other evidence agrees.
 
-Broad exact-match public web discovery through Brave is optional. Set
-`BRAVE_SEARCH_API_KEY` server-side only if that metered integration is
-deliberately enabled. Without it, PersonaLattice continues to run its other
-local and public-source research paths.
-
-The old paid Render topology is retained only as an explicit reference at
-`deploy/render-paid.yaml`. It is not the default deployment contract and is not
-required for the product to function.
-
-## Repository map
-
-```text
-apps/web/                         public shell + private admin console
-services/api/                     FastAPI authentication/research/case API
-services/api/app/evidence/        canonical evidence models and normalization
-services/api/app/correlation/     deterministic M5 evidence-strength engine
-services/api/app/convergence.py   bounded public-evidence pivot graph
-services/api/app/live_m5.py       live evidence admission into M5 semantics
-services/api/app/public_search.py optional licensed public-index discovery
-docs/                             architecture, runbooks, roadmap and decisions
-deploy/render-paid.yaml           optional paid Render reference topology
-THIRD_PARTY.md                    license/integration boundary
-SECURITY.md                       sensitive-data handling rules
-```
-
-## Local development
+## Running locally
 
 Backend requires Python 3.11 or newer.
 
@@ -139,21 +86,48 @@ npm run dev
 
 Open `http://127.0.0.1:3000`.
 
-For the private one-admin workflow, follow `docs/ZERO_SPEND_RUNBOOK.md`; it covers
-the local admin hash, cookie mode and data paths without putting secrets in Git.
+For the authenticated one-admin setup, use `docs/ZERO_SPEND_RUNBOOK.md`. Keep passwords, hashes, provider credentials, retained databases and real evidence outside Git.
 
-## Optional deployment secrets
+## Deployment
 
-Hosted or optional integrations may require server-side configuration such as:
+PersonaLattice's required baseline remains usable without paid enrichment APIs or a hosted database. A stable Internet-facing private beta still needs an operating endpoint and durable storage.
 
-- `PERSONALATTICE_ADMIN_USERNAME`
-- `PERSONALATTICE_ADMIN_PASSWORD_HASH`
-- `BRAVE_SEARCH_API_KEY` (optional and not part of the zero-spend baseline)
+The two current deployment choices are documented in `docs/LIVE_BETA.md` and `docs/DEPLOYMENT.md`:
 
-The password itself is never stored in Git; the API expects an Argon2 password
-hash.
+- controlled host + named Cloudflare Tunnel on a domain you control;
+- optional paid hosted topology, with the current Render reference at `deploy/render-paid.yaml`.
+
+A random Quick Tunnel is a short-lived demo/smoke tool, not the permanent beta endpoint. An ephemeral hosted filesystem is not acceptable for the current SQLite retained-case store.
+
+## Documentation
+
+Human-facing project documentation:
+
+- `docs/PRODUCT_CHARTER.md` — what the product is and is not;
+- `docs/ARCHITECTURE.md` — system structure and trust boundaries;
+- `docs/DEPLOYMENT.md` — runtime and deployment requirements;
+- `docs/LIVE_BETA.md` — current go-live choices and release gate;
+- `SECURITY.md` — sensitive-data and security rules;
+- `THIRD_PARTY.md` — third-party source/license boundary.
+
+For a future maintainer or AI engineering session, start with `docs/CONTINUITY.md`. It is intentionally separate from the public product prose and records the current architecture, launch state, invariants, source-governance rules and resume procedure.
+
+`docs/DOCUMENTATION_STANDARD.md` defines how those two audiences stay separate.
+
+## Repository map
+
+```text
+apps/web/                         public shell + private operator workspace
+services/api/                     FastAPI auth/research/case API
+services/api/app/evidence/        canonical evidence models and normalization
+services/api/app/correlation/     deterministic M5 evidence-strength engine
+services/api/app/convergence.py   bounded public-evidence pivot graph
+docs/                             architecture, operating docs and continuity
+deploy/render-paid.yaml           optional paid hosted reference
+THIRD_PARTY.md                    external integration/license boundary
+SECURITY.md                       sensitive-data handling rules
+```
 
 ## License
 
-Original PersonaLattice code is Apache-2.0. Third-party licenses and external
-source terms remain separate integration boundaries. See `THIRD_PARTY.md`.
+Original PersonaLattice code is Apache-2.0. Third-party licenses, provider terms and external-source data rights remain separate integration boundaries. See `THIRD_PARTY.md` and the source-admission records before changing provider scope.
