@@ -201,10 +201,11 @@ assert.ok(
   "authenticated workspace must use a compact application bar rather than marketing-style hero copy",
 );
 assert.ok(
-  adminPage.includes('aria-keyshortcuts="n"') &&
+  adminPage.includes('type="button"') &&
+    adminPage.includes('aria-keyshortcuts="n"') &&
     adminPage.includes(">New case</button>") &&
     adminPage.includes("onClick={() => setIntakeExpanded(true)}"),
-  "authenticated application bar must expose a direct keyboard-discoverable new-case action wired to the existing intake drawer",
+  "authenticated application bar must expose a non-submitting, keyboard-discoverable new-case action wired to the existing intake drawer",
 );
 assert.ok(
   research.includes("onActiveCaseChange?.(Boolean(activeCase))") &&
