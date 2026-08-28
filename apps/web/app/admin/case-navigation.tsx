@@ -39,6 +39,12 @@ function normalizedSearch(value: string): string {
   return value.trim().toLocaleLowerCase();
 }
 
+export function caseRetentionStatus(expiresAt: string, nowMs = Date.now()): "active" | "elapsed" | "unknown" {
+  const expiresMs = Date.parse(expiresAt);
+  if (!Number.isFinite(expiresMs)) return "unknown";
+  return expiresMs <= nowMs ? "elapsed" : "active";
+}
+
 export function filterAndSortLoadedCases(
   cases: CaseNavigationItem[],
   query: string,
@@ -139,40 +145,50 @@ export function CaseNavigation({
             <p className="muted">No loaded cases match the current search and kind filter.</p>
           ) : (
             <div className="providerList">
-              {visibleCases.map((item) => (
-                <div className="caseRow" key={item.id}>
-                  <button
-                    className="caseOpen"
-                    type="button"
-                    onClick={() => onOpenCase(item.id)}
-                    aria-current={activeCaseId === item.id ? "true" : undefined}
-                  >
-                    <strong>{KIND_LABELS[item.seed_kind]}</strong>
-                    <span>{item.seed_value}</span>
-                    <small>Created {new Date(item.created_at).toLocaleString()} · {item.id.slice(0, 8)}</small>
-                  </button>
-                  <details className="caseActions">
-                    <summary>Actions</summary>
-                    {pendingDeleteCaseId === item.id ? (
-                      <div className="caseDeleteConfirmation" role="group" aria-label={`Confirm deletion of ${item.seed_value}`}>
-                        <p className="muted" aria-live="polite">Delete this retained case? This cannot be undone.</p>
-                        <div className="caseDeleteConfirmationActions">
-                          <button className="dangerButton" type="button" onClick={() => confirmDeleteCase(item.id)}>
-                            Confirm delete
-                          </button>
-                          <button className="secondaryButton" type="button" onClick={() => setPendingDeleteCaseId(null)}>
-                            Cancel
-                          </button>
+              {visibleCases.map((item) => {
+                const retentionStatus = caseRetentionStatus(item.expires_at);
+                return (
+                  <div className="caseRow" key={item.id}>
+                    <button
+                      className="caseOpen"
+                      type="button"
+                      onClick={() => onOpenCase(item.id)}
+                      aria-current={activeCaseId === item.id ? "true" : undefined}
+                    >
+                      <strong>{KIND_LABELS[item.seed_kind]}</strong>
+                      <span>{item.seed_value}</span>
+                      <small>Created {new Date(item.created_at).toLocaleString()} · {item.id.slice(0, 8)}</small>
+                      <small className={retentionStatus === "elapsed" ? "caseRetentionElapsed" : "muted"}>
+                        {retentionStatus === "elapsed"
+                          ? `Retention deadline passed · ${new Date(item.expires_at).toLocaleString()} · refresh before relying on this row`
+                          : retentionStatus === "active"
+                            ? `Retained until ${new Date(item.expires_at).toLocaleString()}`
+                            : "Retention deadline unavailable · refresh before relying on this row"}
+                      </small>
+                    </button>
+                    <details className="caseActions">
+                      <summary>Actions</summary>
+                      {pendingDeleteCaseId === item.id ? (
+                        <div className="caseDeleteConfirmation" role="group" aria-label={`Confirm deletion of ${item.seed_value}`}>
+                          <p className="muted" aria-live="polite">Delete this retained case? This cannot be undone.</p>
+                          <div className="caseDeleteConfirmationActions">
+                            <button className="dangerButton" type="button" onClick={() => confirmDeleteCase(item.id)}>
+                              Confirm delete
+                            </button>
+                            <button className="secondaryButton" type="button" onClick={() => setPendingDeleteCaseId(null)}>
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <button className="dangerButton" type="button" onClick={() => setPendingDeleteCaseId(item.id)}>
-                        Delete this case
-                      </button>
-                    )}
-                  </details>
-                </div>
-              ))}
+                      ) : (
+                        <button className="dangerButton" type="button" onClick={() => setPendingDeleteCaseId(item.id)}>
+                          Delete this case
+                        </button>
+                      )}
+                    </details>
+                  </div>
+                );
+              })}
             </div>
           )}
 
