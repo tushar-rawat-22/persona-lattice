@@ -947,7 +947,6 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   }
 
   async function deleteAllCases() {
-    if (!window.confirm("Delete every retained private research case?")) return;
     const generation = startCaseContextChange();
     setError("");
     try {
