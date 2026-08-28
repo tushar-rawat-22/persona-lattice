@@ -30,6 +30,31 @@ This path preserves the current one-admin architecture and local persistent stor
 
 A Cloudflare Tunnel does not remove PersonaLattice's own admin authentication requirement. The application still owns its session and CSRF boundary.
 
+### Production-shaped host runner
+
+`scripts/live_beta_start.sh` is the bounded local production runner for this path. It does not create a tunnel and never exposes the API itself.
+
+The script:
+
+- loads a separate owner-only production environment file (`0600` or `0400`);
+- requires secure `__Host-` cookie configuration and an explicit persistent database path;
+- runs the API launch preflight before starting services;
+- builds and starts the production Next.js server rather than development mode;
+- binds both API and web to loopback;
+- runs exactly one Uvicorn worker;
+- points the web server's `/api` proxy at the loopback API;
+- leaves stable HTTPS ingress to the separately managed tunnel/host layer.
+
+By default it reads:
+
+```text
+$HOME/.config/persona-lattice/production.env
+```
+
+Use `--preflight-only` to validate the production environment without starting the application processes.
+
+The public tunnel/hostname should target only the loopback web port printed by the runner. Do not route the API port directly to the Internet.
+
 ## Stable hosted alternative
 
 The repository retains an optional Render topology at `deploy/render-paid.yaml`.
