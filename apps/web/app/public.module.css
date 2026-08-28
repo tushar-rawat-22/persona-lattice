@@ -1,0 +1,98 @@
+.shell {
+  width: min(1480px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 20px 0 48px;
+}
+
+.topbar {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-size: 13px; font-weight: 650; }
+.brandMark { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--accent); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+.nav { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+.navLink { color: var(--muted); text-decoration: none; font-size: 11px; }
+.navLink:hover { color: var(--text); }
+.adminLink, .primaryLink { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 9px 13px; border-radius: 7px; background: #d8ded9; color: #171b18; text-decoration: none; font-size: 11px; font-weight: 700; }
+
+.hero { display: grid; grid-template-columns: minmax(0, 1.14fr) minmax(390px, .86fr); gap: 58px; align-items: center; padding: 74px 0 48px; }
+.heroCopy { max-width: 800px; }
+.kicker { margin: 0 0 10px; color: var(--accent); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.hero h1 { margin: 0; max-width: 780px; font-size: clamp(48px, 7vw, 88px); line-height: .92; letter-spacing: -.058em; font-weight: 620; }
+.lead { max-width: 720px; margin: 24px 0 0; color: var(--muted); font-size: 15px; line-height: 1.65; }
+.heroActions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+.boundaryText { color: var(--muted); font-size: 10px; }
+
+.caseBrief { padding: 18px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+.caseBriefHead { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding-bottom: 13px; border-bottom: 1px solid var(--line); }
+.caseBriefState { color: var(--success); font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .05em; }
+.caseIdentity { display: flex; align-items: center; gap: 12px; padding: 17px 0; }
+.avatar { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--accent); font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.caseIdentity div { display: grid; gap: 3px; }
+.caseIdentity strong { font-size: 16px; }
+.caseIdentity span { color: var(--muted); font-size: 10px; }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; border-block: 1px solid var(--line); }
+.metrics div { padding: 11px 8px; border-right: 1px solid var(--line); }
+.metrics div:last-child { border-right: 0; }
+.metrics dt { color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .04em; }
+.metrics dd { margin: 6px 0 0; font-size: 19px; font-weight: 650; }
+.caseRows { display: grid; padding: 10px 0; }
+.caseRows div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 10px; }
+.caseRows div:last-child { border-bottom: 0; }
+.caseRows span { color: var(--muted); }
+.good { color: var(--success); }
+.warn { color: var(--warning); }
+.caseLink { display: inline-block; margin-top: 5px; color: #cfc7b8; text-decoration: none; font-size: 10px; }
+
+.demoStrip { display: grid; grid-template-columns: minmax(270px, .55fr) 1fr; gap: 32px; align-items: center; padding: 18px 0; border-block: 1px solid var(--line); }
+.demoStrip div { display: grid; gap: 3px; }
+.demoStrip strong { font-size: 13px; }
+.demoStrip p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+.capabilities { display: grid; grid-template-columns: minmax(320px, .7fr) minmax(0, 1.3fr); gap: 64px; padding: 64px 0; }
+.capabilityIntro h2, .architecture h2 { margin: 5px 0 14px; font-size: clamp(28px, 4vw, 48px); line-height: 1.04; letter-spacing: -.04em; font-weight: 620; }
+.capabilityIntro > p:last-child, .architecture > p { color: var(--muted); line-height: 1.6; }
+.capabilityList { border-top: 1px solid var(--line); }
+.capabilityRow { display: grid; grid-template-columns: 42px minmax(150px, .45fr) minmax(0, 1fr); gap: 18px; align-items: start; padding: 18px 0; border-bottom: 1px solid var(--line); }
+.capabilityRow > span { color: var(--accent); font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.capabilityRow h3 { margin: 0; font-size: 13px; }
+.capabilityRow p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+.architecture { padding: 38px 0 56px; border-top: 1px solid var(--line); }
+.architectureFlow { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin: 24px 0 20px; }
+.architectureFlow span { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: #d4d0c8; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .04em; }
+.architectureFlow i { color: var(--muted); font-style: normal; }
+.architecture > p { max-width: 840px; margin: 0; }
+
+.footer { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+.footer div { display: flex; gap: 14px; }
+.footer a { color: var(--text); text-decoration: none; }
+
+@media (max-width: 980px) {
+  .hero { grid-template-columns: 1fr; gap: 28px; padding-top: 48px; }
+  .caseBrief { max-width: 700px; }
+  .capabilities { grid-template-columns: 1fr; gap: 28px; }
+}
+
+@media (max-width: 680px) {
+  .shell { width: min(100% - 20px, 1480px); }
+  .topbar { align-items: flex-start; padding: 10px 0 12px; }
+  .nav { gap: 10px; }
+  .navLink { display: none; }
+  .hero { padding: 42px 0 34px; }
+  .hero h1 { font-size: clamp(44px, 16vw, 68px); }
+  .lead { font-size: 13px; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .metrics div:nth-child(2) { border-right: 0; }
+  .metrics div:nth-child(-n + 2) { border-bottom: 1px solid var(--line); }
+  .demoStrip { grid-template-columns: 1fr; gap: 8px; }
+  .capabilities { padding: 44px 0; }
+  .capabilityRow { grid-template-columns: 28px 1fr; gap: 10px; }
+  .capabilityRow p { grid-column: 2; }
+  .footer { align-items: flex-start; flex-direction: column; }
+}
