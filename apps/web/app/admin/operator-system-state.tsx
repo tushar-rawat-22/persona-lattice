@@ -1,14 +1,8 @@
 "use client";
 
-type OperatorSystemStateProps = {
-  attemptCount: number;
-  completedAttemptCount: number;
-  failedAttemptCount: number;
-  noMatchCount: number;
-  withheldCount: number;
-  unresolvedCount: number;
-  notAttemptedLimitCount: number;
-};
+import type { OperatorSystemStateCounts } from "./operator-system-state-model";
+
+type OperatorSystemStateProps = OperatorSystemStateCounts;
 
 type StateTone = "complete" | "partial" | "limited" | "quiet";
 
