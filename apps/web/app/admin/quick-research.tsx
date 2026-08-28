@@ -1315,6 +1315,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
         activeCaseId={activeCase?.id}
         hasMore={Boolean(nextCaseCursor)}
         loadingMore={loadingOlderCases}
+        remoteActionsDisabled={sessionExpired}
         onOpenCase={openCase}
         onLoadMore={loadOlderCases}
         onRefresh={() => refreshCases()}
