@@ -47,6 +47,9 @@ function FactorGroup({
   rows: ClassifiedFactor[];
   empty: string;
 }) {
+  const visibleRows = rows.slice(0, 3);
+  const hiddenCount = Math.max(0, rows.length - visibleRows.length);
+
   return (
     <section className="m5FactorGroup" data-factor-class={factorClass}>
       <div className="m5FactorGroupHeader">
@@ -56,18 +59,25 @@ function FactorGroup({
       {rows.length === 0 ? (
         <p className="muted">{empty}</p>
       ) : (
-        <ul className="coverageList">
-          {rows.slice(0, 3).map((factor) => (
-            <li key={`${factor.kind}-${factor.independence_group}`}>
-              <strong>{factor.kind}</strong>
-              <span> · {factor.rationale}</span>
-              <small>
-                {` · ${factor.independence_group} · weight ${factor.applied_weight}`}
-                {factor.veto ? " · veto" : ""}
-              </small>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="coverageList">
+            {visibleRows.map((factor) => (
+              <li key={`${factor.kind}-${factor.independence_group}`}>
+                <strong>{factor.kind}</strong>
+                <span> · {factor.rationale}</span>
+                <small>
+                  {` · ${factor.independence_group} · weight ${factor.applied_weight}`}
+                  {factor.veto ? " · veto" : ""}
+                </small>
+              </li>
+            ))}
+          </ul>
+          {hiddenCount > 0 ? (
+            <p className="muted m5FactorOverflow">
+              {hiddenCount} more retained {hiddenCount === 1 ? "factor" : "factors"} in the full ledger below.
+            </p>
+          ) : null}
+        </>
       )}
     </section>
   );
