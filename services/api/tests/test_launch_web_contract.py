@@ -9,13 +9,17 @@ NEXT_CONFIG = ROOT / "apps/web/next.config.ts"
 
 def test_public_preview_has_no_private_api_fetch_or_environment_access() -> None:
     source = PUBLIC_PAGE.read_text(encoding="utf-8")
+    normalized = " ".join(source.split())
 
     assert "fetch(" not in source
     assert '"/api/' not in source
     assert "process.env" not in source
-    assert "Admin credentials required" in source
-    assert "Real intake and stored case data are never sent to an unauthenticated browser." in source
-    assert "This surface is demo-only." in source
+    assert "Visitors can inspect the product, not operate it." in normalized
+    assert "Synthetic case only · No research runs from this page" in normalized
+    assert (
+        "Real-person intake and retained cases remain behind the admin session and CSRF boundary."
+        in normalized
+    )
 
 
 def test_production_web_proxy_keeps_browser_same_origin_and_api_on_loopback() -> None:
