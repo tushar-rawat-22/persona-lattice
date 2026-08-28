@@ -75,6 +75,7 @@ export function CaseNavigation({
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [pendingDeleteCaseId, setPendingDeleteCaseId] = useState<string | null>(null);
+  const [pendingDeleteAll, setPendingDeleteAll] = useState(false);
 
   const visibleCases = useMemo(
     () => filterAndSortLoadedCases(cases, query, kindFilter, sortOrder),
@@ -84,6 +85,11 @@ export function CaseNavigation({
   function confirmDeleteCase(caseId: string) {
     onDeleteCase(caseId);
     setPendingDeleteCaseId(null);
+  }
+
+  function confirmDeleteAll() {
+    onDeleteAll();
+    setPendingDeleteAll(false);
   }
 
   return (
@@ -179,9 +185,23 @@ export function CaseNavigation({
             <details className="caseActions destructiveCaseActions">
               <summary>Retention actions</summary>
               <p className="muted">Destructive actions affect retained private cases and cannot be undone.</p>
-              <button className="dangerButton" type="button" onClick={onDeleteAll}>
-                Delete all retained cases
-              </button>
+              {pendingDeleteAll ? (
+                <div className="caseDeleteConfirmation" role="group" aria-label="Confirm deletion of all retained cases">
+                  <p className="muted" aria-live="polite">Delete every retained private research case? This cannot be undone.</p>
+                  <div className="caseDeleteConfirmationActions">
+                    <button className="dangerButton" type="button" onClick={confirmDeleteAll}>
+                      Confirm delete all
+                    </button>
+                    <button className="secondaryButton" type="button" onClick={() => setPendingDeleteAll(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button className="dangerButton" type="button" onClick={() => setPendingDeleteAll(true)}>
+                  Delete all retained cases
+                </button>
+              )}
             </details>
           </div>
         </>
