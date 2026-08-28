@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 
+import { CaseNavigation } from "./case-navigation";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 const CONNECTED_IDENTIFIER_FIELD_BY_KIND: Record<string, string> = {
@@ -660,58 +662,58 @@ function M5EvidenceTable({ report }: { report: ConvergedReport }) {
       <p className="reportBoundary">{report.m5.interpretation} The retained score is evidence-strength triage, not an identity probability.</p>
       <div className="evidenceAssessmentList">
         {report.m5.evaluations.map((evaluation) => {
-              const candidate = resolveM5Candidate(report, evaluation);
-              const candidateSource = candidate?.source ?? evaluation.candidate_source ?? "canonical observation unavailable";
-              const candidateLocator = candidate?.source_locator ?? evaluation.candidate_source_locator ?? null;
-              const factorRows = evaluation.factors.length > 0 ? evaluation.factors : [{
-                kind: "no retained factors",
-                independence_group: "—",
-                base_weight: 0,
-                applied_weight: 0,
-                status: evaluation.calibration_status,
-                rationale: "Historical evaluation did not retain factor rows.",
-                veto: false,
-              }];
-              return (
-                <article className="evidenceAssessment" data-outcome={evaluation.outcome} key={m5EvaluationKey(evaluation)}>
-                  <div className="evidenceAssessmentHeader">
-                    <div>
-                      <span>Candidate</span>
-                      <strong>{evaluation.candidate_node}</strong>
-                    </div>
-                    <div className="evidenceScore">
-                      <strong>{evaluation.evidence_score}</strong>
-                      <span>/ 100 evidence strength</span>
-                    </div>
-                  </div>
-                  <div className="evidenceAssessmentBody">
-                    <div><span>Outcome</span><strong>{evaluation.outcome.replaceAll("_", " ")}</strong></div>
-                    <div><span>Independent support</span><strong>{evaluation.positive_independence_groups} groups</strong></div>
-                    <div><span>Source</span><strong>{candidateSource}</strong></div>
-                  </div>
-                  {candidateLocator && <p className="evidenceLocator"><SourceLocator locator={candidateLocator} /></p>}
-                  <details className="evidenceFactors">
-                    <summary>Inspect {factorRows.length} retained factor{factorRows.length === 1 ? "" : "s"} and caveats</summary>
-                    <div className="tableScroll">
-                      <table className="compactTable m5Table">
-                        <thead><tr><th>Factor</th><th>Group</th><th>Weight</th><th>Status / caveat</th></tr></thead>
-                        <tbody>
-                          {factorRows.map((factor, factorIndex) => (
-                            <tr key={`${m5EvaluationKey(evaluation)}-${factorIndex}`}>
-                              <td>{factor.kind}</td>
-                              <td>{factor.independence_group}</td>
-                              <td>{factor.base_weight} → {factor.applied_weight}</td>
-                              <td>{factor.status}{factor.veto ? " · veto" : ""} · {factor.rationale}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <small className="policyNote">Policy {evaluation.policy_version} · uncalibrated · never an identity probability</small>
-                  </details>
-                </article>
-              );
-            })}
+          const candidate = resolveM5Candidate(report, evaluation);
+          const candidateSource = candidate?.source ?? evaluation.candidate_source ?? "canonical observation unavailable";
+          const candidateLocator = candidate?.source_locator ?? evaluation.candidate_source_locator ?? null;
+          const factorRows = evaluation.factors.length > 0 ? evaluation.factors : [{
+            kind: "no retained factors",
+            independence_group: "—",
+            base_weight: 0,
+            applied_weight: 0,
+            status: evaluation.calibration_status,
+            rationale: "Historical evaluation did not retain factor rows.",
+            veto: false,
+          }];
+          return (
+            <article className="evidenceAssessment" data-outcome={evaluation.outcome} key={m5EvaluationKey(evaluation)}>
+              <div className="evidenceAssessmentHeader">
+                <div>
+                  <span>Candidate</span>
+                  <strong>{evaluation.candidate_node}</strong>
+                </div>
+                <div className="evidenceScore">
+                  <strong>{evaluation.evidence_score}</strong>
+                  <span>/ 100 evidence strength</span>
+                </div>
+              </div>
+              <div className="evidenceAssessmentBody">
+                <div><span>Outcome</span><strong>{evaluation.outcome.replaceAll("_", " ")}</strong></div>
+                <div><span>Independent support</span><strong>{evaluation.positive_independence_groups} groups</strong></div>
+                <div><span>Source</span><strong>{candidateSource}</strong></div>
+              </div>
+              {candidateLocator && <p className="evidenceLocator"><SourceLocator locator={candidateLocator} /></p>}
+              <details className="evidenceFactors">
+                <summary>Inspect {factorRows.length} retained factor{factorRows.length === 1 ? "" : "s"} and caveats</summary>
+                <div className="tableScroll">
+                  <table className="compactTable m5Table">
+                    <thead><tr><th>Factor</th><th>Group</th><th>Weight</th><th>Status / caveat</th></tr></thead>
+                    <tbody>
+                      {factorRows.map((factor, factorIndex) => (
+                        <tr key={`${m5EvaluationKey(evaluation)}-${factorIndex}`}>
+                          <td>{factor.kind}</td>
+                          <td>{factor.independence_group}</td>
+                          <td>{factor.base_weight} → {factor.applied_weight}</td>
+                          <td>{factor.status}{factor.veto ? " · veto" : ""} · {factor.rationale}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <small className="policyNote">Policy {evaluation.policy_version} · uncalibrated · never an identity probability</small>
+              </details>
+            </article>
+          );
+        })}
       </div>
     </div>
   );
@@ -1225,34 +1227,17 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
         </div>
       )}
 
-      <div className="recentCases">
-        <div className="panelHeader compactPanelHeader">
-          <div><span className="index">RECENT</span><h2>Stored cases</h2></div>
-          <div className="buttonRow">
-            <button className="secondaryButton" type="button" onClick={() => refreshCases()}>Refresh</button>
-            <button className="dangerButton" type="button" onClick={deleteAllCases}>Delete all</button>
-          </div>
-        </div>
-        {recentCases.length === 0 ? (
-          <p className="muted">No retained research cases yet.</p>
-        ) : (
-          <div className="providerList">
-            {recentCases.map((item) => (
-              <div className="caseRow" key={item.id}>
-                <button className="caseOpen" type="button" onClick={() => openCase(item.id)} aria-current={activeCase?.id === item.id ? "true" : undefined}>
-                  <strong>{item.seed_kind}</strong><span>{item.seed_value}</span><small>{item.id.slice(0, 8)}</small>
-                </button>
-                <button className="dangerButton" type="button" onClick={() => deleteCase(item.id)}>Delete</button>
-              </div>
-            ))}
-            {nextCaseCursor && (
-              <button className="secondaryButton" type="button" onClick={loadOlderCases} disabled={loadingOlderCases}>
-                {loadingOlderCases ? "Loading older cases…" : "Load older cases"}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <CaseNavigation
+        cases={recentCases}
+        activeCaseId={activeCase?.id}
+        hasMore={Boolean(nextCaseCursor)}
+        loadingMore={loadingOlderCases}
+        onOpenCase={openCase}
+        onLoadMore={loadOlderCases}
+        onRefresh={() => refreshCases()}
+        onDeleteCase={deleteCase}
+        onDeleteAll={deleteAllCases}
+      />
     </section>
   );
 }

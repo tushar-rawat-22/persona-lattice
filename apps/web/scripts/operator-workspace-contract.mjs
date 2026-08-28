@@ -8,6 +8,7 @@ const appRoot = path.resolve(here, "..");
 const css = await readFile(path.join(appRoot, "app", "globals.css"), "utf8");
 const adminPage = await readFile(path.join(appRoot, "app", "admin", "page.tsx"), "utf8");
 const research = await readFile(path.join(appRoot, "app", "admin", "quick-research.tsx"), "utf8");
+const caseNavigation = await readFile(path.join(appRoot, "app", "admin", "case-navigation.tsx"), "utf8");
 
 const requiredCss = [
   "font-family: -apple-system, BlinkMacSystemFont",
@@ -52,7 +53,6 @@ const requiredResearch = [
   "Investigation workspace",
   "Active investigation",
   "Start another case",
-  "Stored cases",
   "Overview",
   "Accounts & pivots",
   "Sources",
@@ -91,6 +91,53 @@ for (const token of requiredResearch) {
   assert.ok(research.includes(token), `operator workspace lost required evidence/provenance affordance: ${token}`);
 }
 
+const requiredCaseNavigation = [
+  "Search loaded cases",
+  "Filter by kind",
+  "Sort loaded cases",
+  "filterAndSortLoadedCases",
+  "caseNavigationControls",
+  "caseNavigationFooter",
+  'className="caseActions"',
+  "Delete this case",
+  "Delete all retained cases",
+  "new Date(item.created_at).toLocaleString()",
+  "left.id.localeCompare(right.id)",
+  "No loaded cases match the current search and kind filter.",
+];
+
+for (const token of requiredCaseNavigation) {
+  assert.ok(caseNavigation.includes(token), `retained-case navigation lost required behavior: ${token}`);
+}
+assert.ok(
+  caseNavigation.includes("kind !== \"all\" && item.seed_kind !== kind") &&
+    caseNavigation.includes("candidate.toLocaleLowerCase().includes(needle)") &&
+    caseNavigation.includes('sortOrder === "newest" ? -createdDelta : createdDelta'),
+  "retained-case navigation must search/filter only loaded data and sort deterministically",
+);
+assert.ok(
+  caseNavigation.includes('aria-current={activeCaseId === item.id ? "true" : undefined}') &&
+    caseNavigation.includes("Search and sort the cases already loaded in this session."),
+  "retained-case navigation must expose active state and must not pretend loaded-case search is server-wide",
+);
+assert.ok(
+  research.includes('import { CaseNavigation } from "./case-navigation";') &&
+    research.includes("<CaseNavigation") &&
+    research.includes("cases={recentCases}") &&
+    research.includes("activeCaseId={activeCase?.id}") &&
+    research.includes("hasMore={Boolean(nextCaseCursor)}") &&
+    research.includes("loadingMore={loadingOlderCases}") &&
+    research.includes("onOpenCase={openCase}") &&
+    research.includes("onLoadMore={loadOlderCases}") &&
+    research.includes("onDeleteCase={deleteCase}") &&
+    research.includes("onDeleteAll={deleteAllCases}"),
+  "retained-case navigation must be wired to the real retained-case state and lifecycle handlers",
+);
+assert.ok(
+  !research.includes('<div className="recentCases">') &&
+    !research.includes('onClick={() => deleteCase(item.id)}>Delete</button>'),
+  "legacy retained-case markup must not remain alongside the navigation component",
+);
 assert.ok(
   research.includes("<details>") && research.includes("<summary>Raw retained JSON</summary>"),
   "raw provider payload must remain progressively disclosed",

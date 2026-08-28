@@ -15,6 +15,7 @@ client = TestClient(app)
 PASSWORD = "synthetic-admin-password-123!"
 ROOT = Path(__file__).resolve().parents[3]
 CASE_UI = ROOT / "apps/web/app/admin/quick-research.tsx"
+CASE_NAVIGATION_UI = ROOT / "apps/web/app/admin/case-navigation.tsx"
 
 
 def _configure(monkeypatch, tmp_path) -> Path:
@@ -142,13 +143,18 @@ def test_case_list_api_returns_only_navigation_metadata(monkeypatch, tmp_path) -
 
 def test_private_web_uses_summary_list_then_full_case_fetch() -> None:
     source = CASE_UI.read_text(encoding="utf-8")
+    navigation = CASE_NAVIGATION_UI.read_text(encoding="utf-8")
 
     assert 'request("/v1/cases?limit=8")' in source
     assert "request(`/v1/cases/${caseId}`)" in source
+    assert 'import { CaseNavigation } from "./case-navigation";' in source
+    assert "<CaseNavigation" in source
+    assert "cases={recentCases}" in source
+    assert "onOpenCase={openCase}" in source
 
-    recent_section = source[source.index('<div className="recentCases">') :]
-    assert "recentCases.map" in recent_section
-    assert "item.report" not in recent_section
+    assert "cases.map" not in navigation
+    assert "visibleCases.map" in navigation
+    assert "item.report" not in navigation
 
     open_case_start = source.index("async function openCase")
     delete_case_start = source.index("async function deleteCase")
