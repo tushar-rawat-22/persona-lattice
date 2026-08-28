@@ -20,9 +20,13 @@ for (const token of [
   assert.ok(source.includes(token), `case deletion confirmation contract missing: ${token}`);
 }
 
+const confirmationHandler = source.match(
+  /function confirmDeleteCase\(caseId: string\) \{([\s\S]*?)\n  \}/,
+)?.[1] ?? "";
 assert.ok(
-  source.indexOf('onClick={() => setPendingDeleteCaseId(item.id)}') < source.indexOf('onClick={() => confirmDeleteCase(item.id)}'),
-  "single-case deletion must enter an explicit confirmation state before invoking deletion",
+  confirmationHandler.includes("onDeleteCase(caseId);") &&
+    confirmationHandler.includes("setPendingDeleteCaseId(null);"),
+  "confirmed deletion must invoke the destructive callback and then leave confirmation state",
 );
 
 assert.ok(
