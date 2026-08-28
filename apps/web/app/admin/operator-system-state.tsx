@@ -6,6 +6,32 @@ type OperatorSystemStateProps = OperatorSystemStateCounts;
 
 type StateTone = "complete" | "partial" | "limited" | "quiet";
 
+function countPhrase(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function limitationSummary({
+  failedAttemptCount,
+  unresolvedCount,
+  withheldCount,
+  notAttemptedLimitCount,
+}: OperatorSystemStateProps): string[] {
+  const parts: string[] = [];
+  if (failedAttemptCount > 0) {
+    parts.push(`${countPhrase(failedAttemptCount, "provider attempt")} failed`);
+  }
+  if (unresolvedCount > 0) {
+    parts.push(`${countPhrase(unresolvedCount, "source state")} ${unresolvedCount === 1 ? "remains" : "remain"} unresolved`);
+  }
+  if (withheldCount > 0) {
+    parts.push(`${countPhrase(withheldCount, "source outcome")} withheld by source policy`);
+  }
+  if (notAttemptedLimitCount > 0) {
+    parts.push(`${countPhrase(notAttemptedLimitCount, "source path")} not attempted because of configuration, routing, review, budget or policy limits before provider contact`);
+  }
+  return parts;
+}
+
 function statePresentation({
   attemptCount,
   completedAttemptCount,
@@ -15,25 +41,41 @@ function statePresentation({
   unresolvedCount,
   notAttemptedLimitCount,
 }: OperatorSystemStateProps): { tone: StateTone; title: string; detail: string } {
+  const limitations = limitationSummary({
+    attemptCount,
+    completedAttemptCount,
+    failedAttemptCount,
+    noMatchCount,
+    withheldCount,
+    unresolvedCount,
+    notAttemptedLimitCount,
+  });
   if (failedAttemptCount > 0 || unresolvedCount > 0) {
     return {
       tone: "partial",
       title: "Research completed with limits",
-      detail: `${failedAttemptCount} provider attempt${failedAttemptCount === 1 ? "" : "s"} failed and ${unresolvedCount} source state${unresolvedCount === 1 ? " remains" : "s remain"} unresolved. Review Sources before treating the case as complete.`,
+      detail: `${limitations.join("; ")}. Review Sources before treating the case as complete.`,
+    };
+  }
+  if (withheldCount > 0 && notAttemptedLimitCount > 0) {
+    return {
+      tone: "limited",
+      title: "Research completed with coverage limits",
+      detail: `${limitations.join("; ")}. Review Sources for the retained reason before drawing conclusions from missing evidence.`,
     };
   }
   if (withheldCount > 0) {
     return {
       tone: "limited",
       title: "Some evidence was withheld by source policy",
-      detail: `${withheldCount} source outcome${withheldCount === 1 ? " was" : "s were"} withheld. Review Sources for the retained reason before drawing conclusions from missing evidence.`,
+      detail: `${limitations.join("; ")}. Review Sources for the retained reason before drawing conclusions from missing evidence.`,
     };
   }
   if (notAttemptedLimitCount > 0) {
     return {
       tone: "limited",
       title: "Some source paths were not attempted",
-      detail: `${notAttemptedLimitCount} retained source state${notAttemptedLimitCount === 1 ? " shows" : "s show"} configuration, routing, review, budget or policy limits before provider contact. Review Sources for the exact reason.`,
+      detail: `${limitations.join("; ")}. Review Sources for the exact reason.`,
     };
   }
   if (attemptCount > 0 && noMatchCount === attemptCount) {
