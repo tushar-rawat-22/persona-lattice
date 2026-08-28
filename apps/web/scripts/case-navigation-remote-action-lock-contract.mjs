@@ -16,6 +16,11 @@ requireText(navigation, "role=\"status\"", "The navigation lock must explain the
 requireText(navigation, "Search, filter, and sort the cases already loaded in this browser remain available.", "Local case navigation must remain usable while remote actions are locked.");
 requireText(navigation, "remoteActionsDisabled && cases.length === 0", "An unauthenticated empty browser snapshot must not be presented as a confirmed empty retained-case index.");
 requireText(navigation, "Stored case history is unavailable until you sign in again. Do not treat this workspace as empty.", "Session expiry with no loaded summaries must state that the retained-case index is unknown rather than empty.");
+const sessionUnavailableIndex = navigation.indexOf("remoteActionsDisabled && cases.length === 0");
+const genericLoadFailureIndex = navigation.indexOf("initialLoadFailed && cases.length === 0");
+if (sessionUnavailableIndex < 0 || genericLoadFailureIndex < 0 || sessionUnavailableIndex > genericLoadFailureIndex) {
+  throw new Error("Session expiry must take precedence over generic refresh guidance when both states are present.");
+}
 requireText(research, "remoteActionsDisabled={sessionExpired}", "Quick Research must bind the retained session-expiry state to CaseNavigation.");
 
 console.log("case navigation remote-action lock contract: ok");
