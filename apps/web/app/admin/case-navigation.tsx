@@ -74,11 +74,17 @@ export function CaseNavigation({
   const [query, setQuery] = useState("");
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
+  const [pendingDeleteCaseId, setPendingDeleteCaseId] = useState<string | null>(null);
 
   const visibleCases = useMemo(
     () => filterAndSortLoadedCases(cases, query, kindFilter, sortOrder),
     [cases, query, kindFilter, sortOrder],
   );
+
+  function confirmDeleteCase(caseId: string) {
+    onDeleteCase(caseId);
+    setPendingDeleteCaseId(null);
+  }
 
   return (
     <div className="recentCases" aria-label="Stored case navigation">
@@ -141,9 +147,23 @@ export function CaseNavigation({
                   </button>
                   <details className="caseActions">
                     <summary>Actions</summary>
-                    <button className="dangerButton" type="button" onClick={() => onDeleteCase(item.id)}>
-                      Delete this case
-                    </button>
+                    {pendingDeleteCaseId === item.id ? (
+                      <div className="caseDeleteConfirmation" role="group" aria-label={`Confirm deletion of ${item.seed_value}`}>
+                        <p className="muted" aria-live="polite">Delete this retained case? This cannot be undone.</p>
+                        <div className="caseDeleteConfirmationActions">
+                          <button className="dangerButton" type="button" onClick={() => confirmDeleteCase(item.id)}>
+                            Confirm delete
+                          </button>
+                          <button className="secondaryButton" type="button" onClick={() => setPendingDeleteCaseId(null)}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button className="dangerButton" type="button" onClick={() => setPendingDeleteCaseId(item.id)}>
+                        Delete this case
+                      </button>
+                    )}
                   </details>
                 </div>
               ))}
