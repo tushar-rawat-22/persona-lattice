@@ -73,6 +73,12 @@ jobs:
         run: npm run test:operator-workspace
       - working-directory: apps/web
         run: npm run build
+      - name: Build isolated public demo export
+        working-directory: apps/web
+        run: npm run build:public-demo
+      - name: Verify isolated public demo export
+        working-directory: apps/web
+        run: npm run test:public-demo-export
 
   launch-process:
     runs-on: ubuntu-latest
