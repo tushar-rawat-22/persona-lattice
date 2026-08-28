@@ -11,6 +11,8 @@ import {
 
 import { CaseNavigation } from "./case-navigation";
 import { M5FactorSummary } from "./m5-factor-summary";
+import { operatorSystemStateCountsFromSourceRuns } from "./operator-system-state-model";
+import { OperatorSystemState } from "./operator-system-state";
 import { ProvenanceDisclosure } from "./provenance-disclosure";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
@@ -990,9 +992,13 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
         ).length ?? 0),
         0,
       );
+      const systemStateCounts = operatorSystemStateCountsFromSourceRuns(
+        converged.nodes.map((node) => node.source_runs),
+      );
       return (
         <div className="reportSummary">
           <DecisionSurface report={report} />
+          <OperatorSystemState {...systemStateCounts} />
           <div className="reportMetricGrid">
             <div><strong>{retainedObservationCount}</strong><span>attributable observations</span></div>
             <div><strong>{converged.executive_summary.pivot_edge_count}</strong><span>public pivots</span></div>
@@ -1029,9 +1035,11 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
       );
     }
     if (structured) {
+      const systemStateCounts = operatorSystemStateCountsFromSourceRuns([report.source_runs]);
       return (
         <div className="reportSummary">
           <DecisionSurface report={report} />
+          <OperatorSystemState {...systemStateCounts} />
           <div className="reportMetricGrid">
             <div><strong>{structured.executive_summary.observation_count}</strong><span>observations</span></div>
             <div><strong>{structured.executive_summary.source_count}</strong><span>sources</span></div>
