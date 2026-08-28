@@ -38,10 +38,15 @@ const requiredDemo = [
   "SYNTHETIC INVESTIGATION WORKSPACE",
   "No provider requests are executed from this demo",
   "Private admin",
+  "observation.provenance.source_kind",
+  "observation.retrieved_at",
+  "observation.expires_at",
+  "correlation.policy_version",
+  "correlation.evaluated_at",
 ];
 for (const token of requiredDemo) {
   if (!normalizedDemo.includes(token)) {
-    throw new Error(`public demo missing required product framing: ${token}`);
+    throw new Error(`public demo missing required product framing or provenance field: ${token}`);
   }
 }
 
