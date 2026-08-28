@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test:public-demo": "node scripts/public-demo-contract.mjs",
+    "test:public-demo-export": "node scripts/verify-public-demo-export.mjs",
     "test:operator-workspace": "node scripts/operator-workspace-contract.mjs && node scripts/provenance-disclosure-contract.mjs && node scripts/m5-factor-summary-contract.mjs && node scripts/operator-system-state-contract.mjs && node scripts/case-deletion-confirmation-contract.mjs && node scripts/case-retention-state-contract.mjs && node scripts/upload-review-session-state-contract.mjs && node scripts/quick-research-session-state-contract.mjs && node scripts/case-navigation-remote-action-lock-contract.mjs && node scripts/case-navigation-loading-state-contract.mjs && node scripts/case-navigation-initial-load-failure-contract.mjs && node scripts/intake-mechanics-disclosure-contract.mjs && node scripts/case-navigation-shortcut-contract.mjs && node scripts/new-intake-shortcut-contract.mjs"
   },
   "dependencies": {
