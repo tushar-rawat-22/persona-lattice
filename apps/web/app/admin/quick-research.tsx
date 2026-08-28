@@ -783,6 +783,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   const [activeCase, setActiveCase] = useState<StoredCase | null>(null);
   const [recentCases, setRecentCases] = useState<StoredCaseSummary[]>([]);
   const [initialCasesLoading, setInitialCasesLoading] = useState(true);
+  const [initialCasesLoadFailed, setInitialCasesLoadFailed] = useState(false);
   const [nextCaseCursor, setNextCaseCursor] = useState<string | null>(null);
   const [loadingOlderCases, setLoadingOlderCases] = useState(false);
   const [error, setError] = useState("");
@@ -828,6 +829,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
       if (!isCurrentCaseList(generation)) return;
       setRecentCases(page);
       setNextCaseCursor(response.headers.get("X-PersonaLattice-Next-Cursor"));
+      setInitialCasesLoadFailed(false);
     } catch {
       if (isCurrentCaseList(generation)) setError("Stored case index could not be refreshed.");
     }
@@ -842,7 +844,10 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
           if (active && isCurrentCaseList(generation)) expireSession();
           return null;
         }
-        if (!response.ok) return null;
+        if (!response.ok) {
+          if (active && isCurrentCaseList(generation)) setInitialCasesLoadFailed(true);
+          return null;
+        }
         return {
           items: (await response.json()) as StoredCaseSummary[],
           cursor: response.headers.get("X-PersonaLattice-Next-Cursor"),
@@ -852,9 +857,12 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
         if (active && page && isCurrentCaseList(generation)) {
           setRecentCases(page.items);
           setNextCaseCursor(page.cursor);
+          setInitialCasesLoadFailed(false);
         }
       })
-      .catch(() => undefined)
+      .catch(() => {
+        if (active && isCurrentCaseList(generation)) setInitialCasesLoadFailed(true);
+      })
       .finally(() => {
         if (active && isCurrentCaseList(generation)) setInitialCasesLoading(false);
       });
@@ -1320,6 +1328,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
         hasMore={Boolean(nextCaseCursor)}
         loadingMore={loadingOlderCases}
         initialLoading={initialCasesLoading}
+        initialLoadFailed={initialCasesLoadFailed}
         remoteActionsDisabled={sessionExpired}
         onOpenCase={openCase}
         onLoadMore={loadOlderCases}
