@@ -786,6 +786,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   const [loadingOlderCases, setLoadingOlderCases] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [activeView, setActiveView] = useState<WorkspaceView>("overview");
   const [launcherOpen, setLauncherOpen] = useState(true);
   const caseContextGeneration = useRef(0);
@@ -801,17 +802,26 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
     return caseListGeneration.current;
   }, []);
   const isCurrentCaseList = useCallback((generation: number) => caseListGeneration.current === generation, []);
+  const expireSession = useCallback((message = "Your operator session expired. Sign in again to continue.") => {
+    setSessionExpired(true);
+    setError(message);
+  }, []);
 
   useEffect(() => {
     onActiveCaseChange?.(Boolean(activeCase));
   }, [activeCase, onActiveCaseChange]);
 
   const refreshCases = useCallback(async () => {
+    if (sessionExpired) return;
     const generation = advanceCaseListGeneration();
     setLoadingOlderCases(false);
     setNextCaseCursor(null);
     try {
       const response = await request("/v1/cases?limit=8");
+      if (response.status === 401) {
+        if (isCurrentCaseList(generation)) expireSession();
+        return;
+      }
       if (!response.ok || !isCurrentCaseList(generation)) return;
       const page = (await response.json()) as StoredCaseSummary[];
       if (!isCurrentCaseList(generation)) return;
@@ -820,13 +830,17 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
     } catch {
       if (isCurrentCaseList(generation)) setError("Stored case index could not be refreshed.");
     }
-  }, [advanceCaseListGeneration, isCurrentCaseList]);
+  }, [advanceCaseListGeneration, expireSession, isCurrentCaseList, sessionExpired]);
 
   useEffect(() => {
     let active = true;
     const generation = advanceCaseListGeneration();
     request("/v1/cases?limit=8")
       .then(async (response) => {
+        if (response.status === 401) {
+          if (active && isCurrentCaseList(generation)) expireSession();
+          return null;
+        }
         if (!response.ok) return null;
         return {
           items: (await response.json()) as StoredCaseSummary[],
@@ -841,10 +855,11 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
       })
       .catch(() => undefined);
     return () => { active = false; };
-  }, [advanceCaseListGeneration, isCurrentCaseList]);
+  }, [advanceCaseListGeneration, expireSession, isCurrentCaseList]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sessionExpired) return;
     const generation = startCaseContextChange();
     setError("");
     setActiveCase(null);
@@ -866,6 +881,12 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
         },
         csrfToken,
       );
+      if (response.status === 401) {
+        if (isCurrentCaseContext(generation)) {
+          expireSession("Your operator session expired. Sign in again to continue. The rejected request did not start or change a research case.");
+        }
+        return;
+      }
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : "Research request failed.");
       if (!isCurrentCaseContext(generation)) return;
@@ -882,11 +903,16 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   }
 
   async function openCase(caseId: string) {
+    if (sessionExpired) return;
     const generation = startCaseContextChange();
     setError("");
     try {
       const response = await request(`/v1/cases/${caseId}`);
       if (!isCurrentCaseContext(generation)) return;
+      if (response.status === 401) {
+        expireSession();
+        return;
+      }
       if (!response.ok) {
         setError("Stored case could not be loaded.");
         return;
@@ -903,12 +929,18 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   }
 
   async function deleteCase(caseId: string) {
+    if (sessionExpired) return;
     const generation = startCaseContextChange();
     setError("");
     try {
       const response = await request(`/v1/cases/${caseId}`, { method: "DELETE" }, csrfToken);
+      if (!isCurrentCaseContext(generation)) return;
+      if (response.status === 401) {
+        expireSession("Your operator session expired. Sign in again to continue. The rejected request did not delete the retained case.");
+        return;
+      }
       if (!response.ok && response.status !== 404) {
-        if (isCurrentCaseContext(generation)) setError("Stored case could not be deleted.");
+        setError("Stored case could not be deleted.");
         return;
       }
       if (activeCase?.id === caseId) setLauncherOpen(true);
@@ -920,7 +952,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   }
 
   async function loadOlderCases() {
-    if (!nextCaseCursor || loadingOlderCases) return;
+    if (sessionExpired || !nextCaseCursor || loadingOlderCases) return;
     const generation = caseListGeneration.current;
     const cursor = nextCaseCursor;
     setError("");
@@ -928,6 +960,10 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
     try {
       const response = await request(`/v1/cases?limit=8&cursor=${encodeURIComponent(cursor)}`);
       if (!isCurrentCaseList(generation)) return;
+      if (response.status === 401) {
+        expireSession();
+        return;
+      }
       if (!response.ok) {
         setError("Older stored cases could not be loaded.");
         return;
@@ -947,16 +983,22 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   }
 
   async function deleteAllCases() {
+    if (sessionExpired) return;
     const generation = startCaseContextChange();
     setError("");
     try {
       const response = await request("/v1/cases", { method: "DELETE" }, csrfToken);
-      if (!response.ok) {
-        if (isCurrentCaseContext(generation)) setError("Stored cases could not be deleted.");
+      if (!isCurrentCaseContext(generation)) return;
+      if (response.status === 401) {
+        expireSession("Your operator session expired. Sign in again to continue. The rejected request did not delete retained cases.");
         return;
       }
-      if (isCurrentCaseContext(generation)) setActiveCase(null);
-      if (isCurrentCaseContext(generation)) setLauncherOpen(true);
+      if (!response.ok) {
+        setError("Stored cases could not be deleted.");
+        return;
+      }
+      setActiveCase(null);
+      setLauncherOpen(true);
       await refreshCases();
     } catch {
       if (isCurrentCaseContext(generation)) setError("Stored cases could not be deleted.");
@@ -1214,12 +1256,17 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
           {kind === "domain" && (
             <p className="muted">Enter a bare domain such as example.com. Domain research is explicit-seed only; domain clues discovered during another case remain display-only.</p>
           )}
-          <button type="submit" disabled={busy || !value.trim() || !csrfToken}>{busy ? "Following public evidence pivots…" : "Run converged research case"}</button>
+          <button type="submit" disabled={busy || sessionExpired || !value.trim() || !csrfToken}>{busy ? "Following public evidence pivots…" : "Run converged research case"}</button>
           <p className="muted">Follows attributable public email, username and website fields through bounded approved providers. A pivot is evidence to investigate, not proof of identity.</p>
         </form>
       </details>
 
-      {error && <p className="error researchError" role="alert">{error}</p>}
+      {sessionExpired && (
+        <p className="error researchError" role="alert">
+          Your operator session expired. Sign in again before loading, changing, deleting, or starting retained research cases.
+        </p>
+      )}
+      {!sessionExpired && error && <p className="error researchError" role="alert">{error}</p>}
 
       {activeCase && report && (
         <div className="quickResult">
