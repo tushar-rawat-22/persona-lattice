@@ -125,6 +125,8 @@ export function CaseNavigation({
 
       {initialLoading ? (
         <p className="muted" role="status" aria-live="polite">Loading retained cases…</p>
+      ) : remoteActionsDisabled && cases.length === 0 ? (
+        <p className="muted" role="status" aria-live="polite">Stored case history is unavailable until you sign in again. Do not treat this workspace as empty.</p>
       ) : initialLoadFailed && cases.length === 0 ? (
         <p className="muted" role="status" aria-live="polite">Stored case history could not be loaded. Refresh before treating this workspace as empty.</p>
       ) : cases.length === 0 ? (
