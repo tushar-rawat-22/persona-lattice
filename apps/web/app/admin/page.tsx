@@ -395,15 +395,19 @@ export default function AdminConsole() {
             ) : (
               <>
                 <div className="caseId">CASE {result.case_id.slice(0, 8)}</div>
-                <pre>{JSON.stringify(result.normalized, null, 2)}</pre>
-                <div className="providerList">
-                  {result.provider_plan.map((provider) => (
-                    <div className="provider" key={provider.provider}>
-                      <div><strong>{provider.provider}</strong><span>{provider.capability}</span></div>
-                      <div className="tags"><em>{provider.status}</em><em>{provider.contact_risk}</em></div>
-                    </div>
-                  ))}
-                </div>
+                <details className="intakeMechanics">
+                  <summary>Inspect intake mechanics</summary>
+                  <p className="muted">Provider/runtime details are implementation mechanics, not findings.</p>
+                  <pre>{JSON.stringify(result.normalized, null, 2)}</pre>
+                  <div className="providerList">
+                    {result.provider_plan.map((provider) => (
+                      <div className="provider" key={provider.provider}>
+                        <div><strong>{provider.provider}</strong><span>{provider.capability}</span></div>
+                        <div className="tags"><em>{provider.status}</em><em>{provider.contact_risk}</em></div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
                 {fileResult && (
                   <>
                     <div className="providerList">
