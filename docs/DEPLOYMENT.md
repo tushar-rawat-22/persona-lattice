@@ -1,47 +1,35 @@
 # Deployment
 
-PersonaLattice currently deploys as two services:
+PersonaLattice currently runs as two application processes:
 
-- **web** — the Next.js application (`apps/web`), which serves the public synthetic preview and the private `/admin` operator UI;
-- **API** — the FastAPI service (`services/api`), which owns admin authentication, protected research execution and the private retained-case database.
+- **web** — the Next.js application in `apps/web`, including the public synthetic preview and private `/admin` operator workspace;
+- **API** — the FastAPI service in `services/api`, which owns authentication, protected research execution, provider governance and retained cases.
 
-The public web application proxies browser calls through `/api/*` to the private API origin. This keeps the session cookie first-party to the public web origin and avoids exposing the API origin in browser configuration.
+The browser uses the web origin for `/api/*`. Next.js proxies those requests to the API. Keep that same-origin shape in production so the browser does not need the private API hostname and the admin session cookie stays first-party.
 
-## Required production properties
+For the distinction between a temporary project demo, a stable private beta and a future multi-user SaaS deployment, read `docs/LIVE_BETA.md` first.
 
-M7 is intentionally a **one-admin, one-API-worker** deployment.
+## Current production shape
 
-The current session store is process-local and fail-closed. Running multiple API workers or replicas would create inconsistent sessions because a cookie authenticated by one process is unknown to another. Do not scale the API horizontally until session records move to shared durable storage.
+The current release is deliberately a **one-admin, one-API-worker** product.
 
-Retained research cases use SQLite. The database path therefore must be on protected persistent storage. A serverless/ephemeral filesystem will lose cases after restart/deploy and is not an acceptable production case store.
+Session records are process-local. Do not run multiple API workers or replicas: a session created in one process is not shared with another process.
 
-## API deployment
+Retained cases use SQLite. `PERSONALATTICE_DB_PATH` must therefore point to protected persistent storage. An ephemeral/serverless filesystem is not an acceptable retained-case store.
 
-`services/api/Dockerfile` is the production container entry point. `render.yaml` provides a reference Render Blueprint using:
+This is a valid architecture for the private operator product and private beta. Horizontal scaling and multi-user tenancy are later architecture work, not launch prerequisites for the current product.
 
-- one Docker web service;
-- one Uvicorn worker;
-- a persistent disk at `/var/data/personalattice`;
-- `PERSONALATTICE_DB_PATH=/var/data/personalattice/personalattice.db`;
-- secure cookies;
-- administrator username/password hash supplied as deployment secrets rather than source-controlled values.
+## Core server-side configuration
 
-Set these secrets in the hosting control plane:
+Required authenticated runtime configuration:
 
 ```text
 PERSONALATTICE_ADMIN_USERNAME
 PERSONALATTICE_ADMIN_PASSWORD_HASH
+PERSONALATTICE_DB_PATH
 ```
 
-Generate the password hash from a trusted local checkout with:
-
-```text
-python -m app.admin_setup
-```
-
-Run that command from `services/api` with the project environment installed. It prompts without echoing the password and prints only the Argon2id hash to copy into the deployment secret store.
-
-Production should retain:
+Production HTTPS should retain:
 
 ```text
 PERSONALATTICE_COOKIE_SECURE=true
@@ -49,50 +37,109 @@ PERSONALATTICE_SESSION_COOKIE=__Host-personalattice_session
 PERSONALATTICE_SESSION_SECONDS=28800
 ```
 
-The `__Host-` cookie form requires HTTPS, `Secure`, `Path=/`, and no `Domain` attribute. The application satisfies those attributes when `PERSONALATTICE_COOKIE_SECURE=true`.
+Generate the admin Argon2id hash from a trusted checkout with the repository helper rather than storing a plaintext password:
 
-## Web deployment
+```bash
+cd services/api
+python -m app.admin_setup
+```
 
-Create the Next.js project with **Root Directory** `apps/web`.
+The plaintext password, generated hash, retained database and provider credentials must never be committed to Git.
 
-Set:
+The `__Host-` cookie form requires HTTPS, `Secure`, `Path=/` and no `Domain` attribute. Keep those properties intact.
+
+## Web configuration
+
+For a separate hosted web/API topology, the web process should use:
 
 ```text
 NEXT_PUBLIC_API_URL=/api
-PERSONALATTICE_API_ORIGIN=https://<private-api-origin>
 ```
 
-`NEXT_PUBLIC_API_URL` is intentionally only `/api`; the browser never needs the API hostname. `PERSONALATTICE_API_ORIGIN` is consumed by Next.js server configuration to proxy requests.
+The server-side proxy must point at the API origin using the configuration expected by the current Next.js deployment code. Do not expose a secret API credential to `NEXT_PUBLIC_*` variables.
 
-The public root does not advertise `/admin`. That is a product choice, not a security boundary. Direct navigation to `/admin` is safe only because protected API operations still require a valid server-side admin session and protected writes require the session-linked CSRF token.
+The public root does not advertise `/admin`. That is product navigation, not a security control. `/admin` is safe to discover only because real data and mutations remain protected by server-side authentication and session-linked CSRF checks.
 
-## Persistence and backup
+## Provider configuration
 
-M7 retention defaults to 30 days. Cases can also be deleted explicitly from the operator UI/API. Backups are **not enabled by application code** yet. If the hosting platform snapshots the persistent disk, those copies become an additional personal-data retention surface and must be governed before relying on them as production backups.
+Optional provider credentials and operator metadata stay server-side. Absence must become an explicit not-configured/unavailable state before provider contact, not fabricated enrichment.
 
-SQLite is not currently application-level encrypted. Do not describe M7 as providing database encryption at rest unless the selected hosting/storage layer actually provides it and that control has been verified.
+Current examples include:
 
-## Public/private verification checklist
+```text
+BRAVE_SEARCH_API_KEY
+OPENALEX_API_KEY
+COMPANIES_HOUSE_API_KEY
+SEC_EDGAR_USER_AGENT
+```
 
-Before exposing the URL publicly, verify all of the following:
+`BRAVE_SEARCH_API_KEY` is optional and metered; it is not required for the zero-spend baseline.
 
-1. `/` and `/dashboard` contain synthetic/demo data only.
-2. `/api/v1/cases` returns `401` without the admin session cookie.
-3. `/api/v1/intake/preview`, `/api/v1/cases/run`, `/api/v1/files/preview` and case deletion fail without the matching CSRF header even when a valid session cookie exists.
-4. `/admin` can authenticate with the configured admin username/password and rejects incorrect credentials.
-5. logout invalidates the current session.
-6. restarting the API invalidates existing sessions as expected.
-7. creating a case, restarting/deploying the API and re-authenticating leaves the case present on persistent storage.
-8. the deployed cookie is `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/`, and contains only an opaque value.
-9. the API is running exactly one worker/replica for M7.
-10. no real credentials, database files or research outputs are committed to Git.
+`OPENALEX_API_KEY` is used only for exact admitted OpenAlex author URLs.
 
-## Provider secrets
+`COMPANIES_HOUSE_API_KEY` is used only for exact canonical public company URLs and is sent server-side using the documented Basic-auth form. Do not use company authentication codes or user credentials.
 
-Optional provider credentials remain server-side environment secrets. An absent credential must disable or defer that provider rather than causing the application to fabricate enrichment.
+`SEC_EDGAR_USER_AGENT` is non-secret operator identity metadata, not an API credential. It must contain a maintainable PersonaLattice/operator identity and real contact email. If it is absent or malformed, SEC execution must fail before network contact.
 
-`OPENALEX_API_KEY` is a free server-side key used only when an operator supplies an exact OpenAlex author URL. PersonaLattice sends it in the `Authorization` header rather than a query string. If the key is absent, OpenAlex is reported as `credential_not_configured` and no provider attempt is counted. Do not expose the key to the browser or commit it to Git.
+Re-check provider-specific source-admission records and current provider documentation before changing these requirements.
 
-`COMPANIES_HOUSE_API_KEY` is a free server-side key used only when an operator supplies an exact canonical Companies House public company URL. PersonaLattice uses the documented HTTP Basic form with the API key as username and an empty password. The key is never placed in the request URL or retained case evidence. If the key is absent, Companies House is reported as `credential_not_configured` and no provider attempt is counted. Do not use company authentication codes or user-supplied credentials for this source.
+## Option A — controlled host + named Cloudflare Tunnel
 
-The first production deployment does not require an external phone/email enrichment provider. Live username research works through the reviewed public-source path; phone/email coverage remains deliberately narrower until an external source passes source, license, privacy, retention and cost review.
+This is the lowest-churn path for a stable private beta because LC1 already validated the production-shaped application on the candidate host.
+
+Keep API and web bound to local/private interfaces. Publish the web process through a named Cloudflare Tunnel and a hostname on a domain/zone that you control. Keep browser API calls on the same-origin `/api` path.
+
+Do not use a random `trycloudflare.com` Quick Tunnel as the permanent beta endpoint. Cloudflare documents Quick Tunnels as testing/development infrastructure. They remain useful for short-lived synthetic demos and smoke tests.
+
+The candidate host must remain online whenever the beta should be reachable. The local SQLite database and its backups remain operator-managed data surfaces.
+
+## Option B — hosted private beta on Render
+
+The repository keeps an optional reference topology at:
+
+```text
+deploy/render-paid.yaml
+```
+
+It is deliberately outside the zero-spend baseline.
+
+The reference uses one API service with a persistent disk for SQLite and one web service. Render services have an ephemeral filesystem by default, and current Render persistent disks attach to paid services. Do not move the current SQLite API to a free ephemeral web instance and describe retained cases as durable.
+
+A hosted beta can initially use the generated `onrender.com` hostname; a custom domain is optional. Re-check Render's current plans/pricing before provisioning because the repository does not freeze vendor pricing as an application contract.
+
+## Persistence and backups
+
+Retained research cases default to bounded retention and support explicit deletion. The database still needs an operational backup policy if the private beta will hold evidence you care about.
+
+A backup is another retained-data copy. Store it with equivalent access controls and deletion discipline.
+
+SQLite is not application-level encrypted. Do not claim database encryption at rest unless the chosen host/storage layer actually provides that control and it has been verified.
+
+For the candidate-host path, use the repository's verified SQLite backup/restore tooling rather than copying an active database file casually.
+
+## Stable-beta release checklist
+
+Before calling a permanent URL a live private beta, verify the following on the exact release SHA:
+
+1. HTTPS is stable and the temporary smoke tunnel is not being presented as production.
+2. `/` and other public/demo routes expose synthetic material only.
+3. unauthenticated `/api/v1/cases` and protected mutations fail closed.
+4. authenticated writes fail without the matching CSRF token.
+5. `/admin` accepts the configured admin credentials and rejects incorrect credentials.
+6. the session cookie is `Secure`, `HttpOnly`, `SameSite=Strict`, `Path=/` and opaque.
+7. there is exactly one API worker/replica.
+8. creating a case, restarting the API, signing in again and reopening the case proves persistent storage.
+9. a verified backup/restore succeeds on the deployed storage path.
+10. one bounded research case shows source-state, provenance and non-probabilistic M5 output correctly.
+11. Safari and Chrome render the current operator workspace correctly, including loading/error/empty/session states.
+12. the exact release SHA and rollback point are recorded in `docs/CONTINUITY.md`.
+
+Repository CI is necessary but not sufficient for this deployed-environment gate.
+
+## What changes for a future SaaS deployment
+
+Do not horizontally scale the current runtime by simply increasing worker count.
+
+Before multi-user production, PersonaLattice needs shared durable session/auth state, tenant-aware authorization, a concurrent production datastore, production backup/restore and deletion operations, observability/incident handling, and the relevant privacy/legal operating documents.
+
+Those are future company/product milestones. They do not block showing or operating the current one-admin private beta.
