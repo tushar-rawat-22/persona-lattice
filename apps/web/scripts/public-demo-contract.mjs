@@ -4,6 +4,8 @@ import path from "node:path";
 const root = process.cwd();
 const home = fs.readFileSync(path.join(root, "app/page.tsx"), "utf8");
 const demo = fs.readFileSync(path.join(root, "app/demo/page.tsx"), "utf8");
+const normalizedHome = home.replace(/\s+/g, " ");
+const normalizedDemo = demo.replace(/\s+/g, " ");
 
 const requiredHome = [
   "Read-only product demo",
@@ -14,7 +16,9 @@ const requiredHome = [
   'href="/admin"',
 ];
 for (const token of requiredHome) {
-  if (!home.includes(token)) throw new Error(`public home missing required demo boundary: ${token}`);
+  if (!normalizedHome.includes(token)) {
+    throw new Error(`public home missing required demo boundary: ${token}`);
+  }
 }
 
 const forbiddenHome = [
@@ -36,7 +40,9 @@ const requiredDemo = [
   "Private admin",
 ];
 for (const token of requiredDemo) {
-  if (!demo.includes(token)) throw new Error(`public demo missing required product framing: ${token}`);
+  if (!normalizedDemo.includes(token)) {
+    throw new Error(`public demo missing required product framing: ${token}`);
+  }
 }
 
 const forbiddenDemo = ["fetch(", "/v1/cases/run", "run-converged", 'type="file"', 'type="password"'];
