@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+const publicDemoOnly = process.env.PERSONALATTICE_PUBLIC_DEMO_ONLY === "true";
 const apiOrigin =
   process.env.PERSONALATTICE_API_ORIGIN ??
   (process.env.PERSONALATTICE_API_HOSTPORT
@@ -25,30 +26,35 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  ...(publicDemoOnly ? { output: "export" as const, trailingSlash: true } : {}),
   allowedDevOrigins: ["127.0.0.1"],
   env: {
-    // Browser code must always use the same-origin proxy. The API itself stays on loopback.
-    NEXT_PUBLIC_API_URL: "/api",
+    // The public static build has no API authority. The private runtime stays same-origin through /api.
+    NEXT_PUBLIC_API_URL: publicDemoOnly ? "/__public_demo_no_api__" : "/api",
   },
   turbopack: {
     root: process.cwd(),
   },
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: securityHeaders,
-      },
-    ];
-  },
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${apiOrigin}/:path*`,
-      },
-    ];
-  },
+  ...(publicDemoOnly
+    ? {}
+    : {
+        async headers() {
+          return [
+            {
+              source: "/(.*)",
+              headers: securityHeaders,
+            },
+          ];
+        },
+        async rewrites() {
+          return [
+            {
+              source: "/api/:path*",
+              destination: `${apiOrigin}/:path*`,
+            },
+          ];
+        },
+      }),
 };
 
 export default nextConfig;
