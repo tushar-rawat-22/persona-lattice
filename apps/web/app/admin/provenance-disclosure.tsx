@@ -12,12 +12,31 @@ type ProvenanceDisclosureProps = {
   label?: string;
 };
 
+function isIpLiteral(hostname: string): boolean {
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)) return true;
+  return hostname.includes(":");
+}
+
+function isSafePublicHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/\.$/, "");
+  if (!normalized || !normalized.includes(".")) return false;
+  if (isIpLiteral(normalized)) return false;
+  if (
+    normalized === "localhost" ||
+    normalized.endsWith(".localhost") ||
+    normalized.endsWith(".local") ||
+    normalized.endsWith(".internal")
+  ) return false;
+  return true;
+}
+
 function safeWebLocator(locator: string): string | null {
   if (!locator || locator !== locator.trim()) return null;
   try {
     const parsed = new URL(locator);
     if (!["http:", "https:"].includes(parsed.protocol)) return null;
     if (parsed.username || parsed.password || !parsed.hostname) return null;
+    if (!isSafePublicHostname(parsed.hostname)) return null;
     return locator;
   } catch {
     return null;
@@ -54,7 +73,12 @@ export function ProvenanceDisclosure({
                 )}
               </div>
               {href ? (
-                <a href={href} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Open canonical source for ${record.source}`}
+                >
                   Open canonical source
                 </a>
               ) : (
