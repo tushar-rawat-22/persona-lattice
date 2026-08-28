@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { CaseNavigation } from "./case-navigation";
+import { ProvenanceDisclosure } from "./provenance-disclosure";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -271,6 +272,10 @@ type DecisionItem = {
   key: string;
   text: string;
   detail?: string;
+  provenance?: Array<{
+    source: string;
+    sourceLocator: string;
+  }>;
 };
 
 async function request(path: string, init?: RequestInit, csrfToken?: string) {
@@ -456,12 +461,28 @@ function uniqueDecisionItems(items: DecisionItem[]): DecisionItem[] {
 }
 
 function deriveCorroboratedEvidence(report: QuickReport): DecisionItem[] {
-  const groups = new Map<string, { summary: string; sources: Set<string> }>();
+  const groups = new Map<string, {
+    summary: string;
+    sources: Set<string>;
+    provenance: Array<{ source: string; sourceLocator: string }>;
+  }>();
   for (const observation of reportObservations(report)) {
-    if (!nonEmptyString(observation.summary) || !nonEmptyString(observation.source)) continue;
+    if (
+      !nonEmptyString(observation.summary) ||
+      !nonEmptyString(observation.source) ||
+      !nonEmptyString(observation.source_locator)
+    ) continue;
     const key = observation.summary.trim().toLocaleLowerCase();
-    const current = groups.get(key) ?? { summary: observation.summary.trim(), sources: new Set<string>() };
+    const current = groups.get(key) ?? {
+      summary: observation.summary.trim(),
+      sources: new Set<string>(),
+      provenance: [],
+    };
     current.sources.add(observation.source.trim());
+    current.provenance.push({
+      source: observation.source.trim(),
+      sourceLocator: observation.source_locator.trim(),
+    });
     groups.set(key, current);
   }
   return [...groups.entries()]
@@ -470,6 +491,7 @@ function deriveCorroboratedEvidence(report: QuickReport): DecisionItem[] {
       key: `corroborated-${key}`,
       text: value.summary,
       detail: `${value.sources.size} distinct retained sources report this observation: ${[...value.sources].sort().join(", ")}.`,
+      provenance: value.provenance,
     }));
 }
 
@@ -554,6 +576,9 @@ function DecisionList({ items, empty }: { items: DecisionItem[]; empty: string }
         <li key={item.key}>
           {item.text}
           {item.detail && <small> · {item.detail}</small>}
+          {item.provenance && item.provenance.length > 0 && (
+            <ProvenanceDisclosure records={item.provenance} label="Inspect retained provenance" />
+          )}
         </li>
       ))}
     </ul>
