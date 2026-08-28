@@ -339,6 +339,12 @@ export default function AdminConsole() {
           <h1>Operator workspace</h1>
         </div>
         <div className="adminActions">
+          <button
+            className="secondaryButton"
+            type="button"
+            aria-keyshortcuts="n"
+            onClick={() => setIntakeExpanded(true)}
+          >New case</button>
           <span className="status"><span className="dot" /> authenticated</span>
           <button className="secondaryButton" type="button" onClick={logout}>Log out</button>
         </div>
