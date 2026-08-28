@@ -12,11 +12,15 @@ const quickResearch = await readFile(path.join(appRoot, "app", "admin", "quick-r
 for (const token of [
   'type StateTone = "complete" | "partial" | "limited" | "quiet"',
   'title: "Research completed with limits"',
+  'title: "Research completed with coverage limits"',
   'title: "Some evidence was withheld by source policy"',
   'title: "Some source paths were not attempted"',
   'title: "No retained match from attempted sources"',
   'title: "Attempted sources completed"',
   'title: "Source coverage is limited"',
+  "function limitationSummary",
+  'limitations.join("; ")',
+  "withheld by source policy",
   "configuration, routing, review, budget or policy limits before provider contact",
   "source silence, not evidence",
   "does not imply exhaustive coverage",
@@ -64,11 +68,26 @@ assert.ok(
   "operator execution state must sit between decision synthesis and supporting metrics",
 );
 
+const combinedLimitsIndex = source.indexOf("if (withheldCount > 0 && notAttemptedLimitCount > 0)");
 const withheldIndex = source.indexOf("if (withheldCount > 0)");
 const notAttemptedIndex = source.indexOf("if (notAttemptedLimitCount > 0)");
 const noMatchIndex = source.indexOf("if (attemptCount > 0 && noMatchCount === attemptCount)");
-assert.ok(withheldIndex >= 0 && notAttemptedIndex > withheldIndex && noMatchIndex > notAttemptedIndex,
-  "policy/configuration limits must take precedence over a quiet no-match state");
+assert.ok(
+  combinedLimitsIndex >= 0 && withheldIndex > combinedLimitsIndex && notAttemptedIndex > withheldIndex && noMatchIndex > notAttemptedIndex,
+  "combined policy/configuration limits must be surfaced before narrower or quiet source states",
+);
+assert.ok(
+  source.includes("if (failedAttemptCount > 0)") &&
+    source.includes("if (unresolvedCount > 0)") &&
+    source.includes("if (withheldCount > 0)") &&
+    source.includes("if (notAttemptedLimitCount > 0)"),
+  "overview limitation detail must omit zero-count categories while retaining every material source limit",
+);
+assert.ok(
+  !source.includes("${failedAttemptCount} provider attempt") &&
+    !source.includes("${unresolvedCount} source state"),
+  "partial-state copy must not hard-code zero-valued failure or unresolved categories",
+);
 
 for (const forbidden of [
   "all clear",
