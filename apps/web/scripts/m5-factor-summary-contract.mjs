@@ -18,13 +18,20 @@ for (const token of [
   'label="Supporting"',
   'label="Conflicting"',
   'label="Neutral / withheld"',
-  "rows.slice(0, 3)",
+  "const visibleRows = rows.slice(0, 3)",
+  "const hiddenCount = Math.max(0, rows.length - visibleRows.length)",
+  "more retained",
+  "in the full ledger below",
   "not calibrated probabilities",
   "do not establish identity",
 ]) {
   assert.ok(source.includes(token), `M5 decisive-factor contract missing: ${token}`);
 }
 
+assert.ok(
+  source.includes('hiddenCount === 1 ? "factor" : "factors"'),
+  "truncated M5 summaries must disclose the exact hidden-factor count without awkward singular copy",
+);
 assert.ok(
   !/identity[_ ]probability\s*[:=]\s*[^n]/i.test(source),
   "M5 summary must not introduce a numeric identity-probability channel",
