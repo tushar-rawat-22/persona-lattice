@@ -20,6 +20,7 @@ type CaseNavigationProps = {
   activeCaseId?: string;
   hasMore: boolean;
   loadingMore: boolean;
+  remoteActionsDisabled?: boolean;
   onOpenCase: (caseId: string) => void;
   onLoadMore: () => void;
   onRefresh: () => void;
@@ -71,6 +72,7 @@ export function CaseNavigation({
   activeCaseId,
   hasMore,
   loadingMore,
+  remoteActionsDisabled = false,
   onOpenCase,
   onLoadMore,
   onRefresh,
@@ -89,11 +91,13 @@ export function CaseNavigation({
   );
 
   function confirmDeleteCase(caseId: string) {
+    if (remoteActionsDisabled) return;
     onDeleteCase(caseId);
     setPendingDeleteCaseId(null);
   }
 
   function confirmDeleteAll() {
+    if (remoteActionsDisabled) return;
     onDeleteAll();
     setPendingDeleteAll(false);
   }
@@ -106,8 +110,14 @@ export function CaseNavigation({
           <h2>Stored cases</h2>
           <small className="muted">Search and sort the cases already loaded in this session.</small>
         </div>
-        <button className="secondaryButton" type="button" onClick={onRefresh}>Refresh</button>
+        <button className="secondaryButton" type="button" onClick={onRefresh} disabled={remoteActionsDisabled}>Refresh</button>
       </div>
+
+      {remoteActionsDisabled && (
+        <p className="muted" role="status">
+          Remote case actions are unavailable until you sign in again. Search, filter, and sort the cases already loaded in this browser remain available.
+        </p>
+      )}
 
       {cases.length === 0 ? (
         <p className="muted">No retained research cases yet.</p>
@@ -154,6 +164,7 @@ export function CaseNavigation({
                       type="button"
                       onClick={() => onOpenCase(item.id)}
                       aria-current={activeCaseId === item.id ? "true" : undefined}
+                      disabled={remoteActionsDisabled}
                     >
                       <strong>{KIND_LABELS[item.seed_kind]}</strong>
                       <span>{item.seed_value}</span>
@@ -172,7 +183,7 @@ export function CaseNavigation({
                         <div className="caseDeleteConfirmation" role="group" aria-label={`Confirm deletion of ${item.seed_value}`}>
                           <p className="muted" aria-live="polite">Delete this retained case? This cannot be undone.</p>
                           <div className="caseDeleteConfirmationActions">
-                            <button className="dangerButton" type="button" onClick={() => confirmDeleteCase(item.id)}>
+                            <button className="dangerButton" type="button" onClick={() => confirmDeleteCase(item.id)} disabled={remoteActionsDisabled}>
                               Confirm delete
                             </button>
                             <button className="secondaryButton" type="button" onClick={() => setPendingDeleteCaseId(null)}>
@@ -181,7 +192,7 @@ export function CaseNavigation({
                           </div>
                         </div>
                       ) : (
-                        <button className="dangerButton" type="button" onClick={() => setPendingDeleteCaseId(item.id)}>
+                        <button className="dangerButton" type="button" onClick={() => setPendingDeleteCaseId(item.id)} disabled={remoteActionsDisabled}>
                           Delete this case
                         </button>
                       )}
@@ -194,7 +205,7 @@ export function CaseNavigation({
 
           <div className="caseNavigationFooter">
             {hasMore && (
-              <button className="secondaryButton" type="button" onClick={onLoadMore} disabled={loadingMore}>
+              <button className="secondaryButton" type="button" onClick={onLoadMore} disabled={loadingMore || remoteActionsDisabled}>
                 {loadingMore ? "Loading older cases…" : "Load older cases"}
               </button>
             )}
@@ -205,7 +216,7 @@ export function CaseNavigation({
                 <div className="caseDeleteConfirmation" role="group" aria-label="Confirm deletion of all retained cases">
                   <p className="muted" aria-live="polite">Delete every retained private research case? This cannot be undone.</p>
                   <div className="caseDeleteConfirmationActions">
-                    <button className="dangerButton" type="button" onClick={confirmDeleteAll}>
+                    <button className="dangerButton" type="button" onClick={confirmDeleteAll} disabled={remoteActionsDisabled}>
                       Confirm delete all
                     </button>
                     <button className="secondaryButton" type="button" onClick={() => setPendingDeleteAll(false)}>
@@ -214,7 +225,7 @@ export function CaseNavigation({
                   </div>
                 </div>
               ) : (
-                <button className="dangerButton" type="button" onClick={() => setPendingDeleteAll(true)}>
+                <button className="dangerButton" type="button" onClick={() => setPendingDeleteAll(true)} disabled={remoteActionsDisabled}>
                   Delete all retained cases
                 </button>
               )}
