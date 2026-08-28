@@ -7,6 +7,10 @@ function words(value: string) {
   return value.replaceAll("_", " ");
 }
 
+function timestamp(value: string | null) {
+  return value ? value.replace("T", " ").replace("Z", " UTC") : "not recorded";
+}
+
 export default function PublicDemoPage() {
   const caseData = syntheticCase;
   const observations = new Map(caseData.observations.map((item) => [item.id, item]));
@@ -119,6 +123,9 @@ export default function PublicDemoPage() {
                           <div>
                             <strong>evidence score / 100</strong>
                             <small>uncalibrated · not probability</small>
+                            <small>
+                              policy {correlation.policy_version} · evaluated {timestamp(correlation.evaluated_at)}
+                            </small>
                           </div>
                         </div>
                         <ul className={styles.factorList}>
@@ -156,7 +163,12 @@ export default function PublicDemoPage() {
                   <span className={styles.marker} />
                   <div>
                     <strong>{observation.summary}</strong>
-                    <p>{observation.provenance.source_name} · {observation.freshness}</p>
+                    <p>
+                      {observation.provenance.source_name} · {observation.provenance.source_kind} · {observation.freshness}
+                    </p>
+                    <p>
+                      retrieved {timestamp(observation.retrieved_at)} · expires {timestamp(observation.expires_at)}
+                    </p>
                     <code>{observation.provenance.source_locator}</code>
                   </div>
                 </li>
