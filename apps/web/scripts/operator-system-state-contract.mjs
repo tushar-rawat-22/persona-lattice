@@ -7,6 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(here, "..");
 const source = await readFile(path.join(appRoot, "app", "admin", "operator-system-state.tsx"), "utf8");
 const model = await readFile(path.join(appRoot, "app", "admin", "operator-system-state-model.ts"), "utf8");
+const quickResearch = await readFile(path.join(appRoot, "app", "admin", "quick-research.tsx"), "utf8");
 
 for (const token of [
   'type StateTone = "complete" | "partial" | "limited" | "quiet"',
@@ -29,6 +30,8 @@ for (const token of [
 for (const token of [
   "notAttemptedLimitCount: number",
   "export function operatorSystemStateCounts",
+  "export function operatorSystemStateCountsFromSourceRuns",
+  "item?.evaluation?.aggregate",
   "aggregate.unclassified_attempt_count",
   "aggregate.queued_count",
   "aggregate.review_required_count",
@@ -42,6 +45,24 @@ for (const token of [
 ]) {
   assert.ok(model.includes(token), `operator system-state aggregation contract missing: ${token}`);
 }
+
+for (const token of [
+  'import { OperatorSystemState } from "./operator-system-state"',
+  'operatorSystemStateCountsFromSourceRuns',
+  '<OperatorSystemState {...systemStateCounts} />',
+  'converged.nodes.map((node) => node.source_runs)',
+  'operatorSystemStateCountsFromSourceRuns([report.source_runs])',
+]) {
+  assert.ok(quickResearch.includes(token), `live Overview system-state binding missing: ${token}`);
+}
+
+const decisionSurfaceIndex = quickResearch.indexOf("<DecisionSurface report={report} />");
+const operatorStateIndex = quickResearch.indexOf("<OperatorSystemState {...systemStateCounts} />");
+const metricGridIndex = quickResearch.indexOf('<div className="reportMetricGrid">');
+assert.ok(
+  decisionSurfaceIndex >= 0 && operatorStateIndex > decisionSurfaceIndex && metricGridIndex > operatorStateIndex,
+  "operator execution state must sit between decision synthesis and supporting metrics",
+);
 
 const withheldIndex = source.indexOf("if (withheldCount > 0)");
 const notAttemptedIndex = source.indexOf("if (notAttemptedLimitCount > 0)");
