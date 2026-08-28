@@ -782,6 +782,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   const [value, setValue] = useState("");
   const [activeCase, setActiveCase] = useState<StoredCase | null>(null);
   const [recentCases, setRecentCases] = useState<StoredCaseSummary[]>([]);
+  const [initialCasesLoading, setInitialCasesLoading] = useState(true);
   const [nextCaseCursor, setNextCaseCursor] = useState<string | null>(null);
   const [loadingOlderCases, setLoadingOlderCases] = useState(false);
   const [error, setError] = useState("");
@@ -853,7 +854,10 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
           setNextCaseCursor(page.cursor);
         }
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        if (active && isCurrentCaseList(generation)) setInitialCasesLoading(false);
+      });
     return () => { active = false; };
   }, [advanceCaseListGeneration, expireSession, isCurrentCaseList]);
 
@@ -1315,6 +1319,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
         activeCaseId={activeCase?.id}
         hasMore={Boolean(nextCaseCursor)}
         loadingMore={loadingOlderCases}
+        initialLoading={initialCasesLoading}
         remoteActionsDisabled={sessionExpired}
         onOpenCase={openCase}
         onLoadMore={loadOlderCases}

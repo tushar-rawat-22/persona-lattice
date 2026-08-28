@@ -9,8 +9,8 @@ function requireText(source, text, message) {
 
 requireText(navigation, "remoteActionsDisabled?: boolean;", "Case navigation must expose an explicit remote-action lock input.");
 requireText(navigation, "remoteActionsDisabled = false,", "Remote case actions must remain enabled by default for authenticated sessions.");
-requireText(navigation, "if (remoteActionsDisabled) return;", "Destructive confirmation handlers must fail closed when remote actions are locked.");
-requireText(navigation, "disabled={remoteActionsDisabled}", "Remote case controls must render disabled after session expiry.");
+requireText(navigation, "if (initialLoading || remoteActionsDisabled) return;", "Destructive confirmation handlers must fail closed during initial loading and when remote actions are locked.");
+requireText(navigation, "disabled={initialLoading || remoteActionsDisabled}", "Refresh must remain disabled during initial loading and after session expiry.");
 requireText(navigation, "disabled={loadingMore || remoteActionsDisabled}", "Pagination must stop remote loading after session expiry.");
 requireText(navigation, "role=\"status\"", "The navigation lock must explain the unavailable remote actions accessibly.");
 requireText(navigation, "Search, filter, and sort the cases already loaded in this browser remain available.", "Local case navigation must remain usable while remote actions are locked.");

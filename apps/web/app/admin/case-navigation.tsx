@@ -19,6 +19,7 @@ type CaseNavigationProps = {
   cases: CaseNavigationItem[];
   activeCaseId?: string;
   hasMore: boolean;
+  initialLoading?: boolean;
   loadingMore: boolean;
   remoteActionsDisabled?: boolean;
   onOpenCase: (caseId: string) => void;
@@ -71,6 +72,7 @@ export function CaseNavigation({
   cases,
   activeCaseId,
   hasMore,
+  initialLoading = false,
   loadingMore,
   remoteActionsDisabled = false,
   onOpenCase,
@@ -91,26 +93,26 @@ export function CaseNavigation({
   );
 
   function confirmDeleteCase(caseId: string) {
-    if (remoteActionsDisabled) return;
+    if (initialLoading || remoteActionsDisabled) return;
     onDeleteCase(caseId);
     setPendingDeleteCaseId(null);
   }
 
   function confirmDeleteAll() {
-    if (remoteActionsDisabled) return;
+    if (initialLoading || remoteActionsDisabled) return;
     onDeleteAll();
     setPendingDeleteAll(false);
   }
 
   return (
-    <div className="recentCases" aria-label="Stored case navigation">
+    <div className="recentCases" aria-label="Stored case navigation" aria-busy={initialLoading}>
       <div className="panelHeader compactPanelHeader">
         <div>
           <span className="index">RECENT</span>
           <h2>Stored cases</h2>
           <small className="muted">Search and sort the cases already loaded in this session.</small>
         </div>
-        <button className="secondaryButton" type="button" onClick={onRefresh} disabled={remoteActionsDisabled}>Refresh</button>
+        <button className="secondaryButton" type="button" onClick={onRefresh} disabled={initialLoading || remoteActionsDisabled}>Refresh</button>
       </div>
 
       {remoteActionsDisabled && (
@@ -119,7 +121,9 @@ export function CaseNavigation({
         </p>
       )}
 
-      {cases.length === 0 ? (
+      {initialLoading ? (
+        <p className="muted" role="status" aria-live="polite">Loading retained cases…</p>
+      ) : cases.length === 0 ? (
         <p className="muted">No retained research cases yet.</p>
       ) : (
         <>
