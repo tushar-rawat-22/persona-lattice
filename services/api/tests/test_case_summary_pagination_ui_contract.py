@@ -4,23 +4,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 CASE_UI = ROOT / "apps/web/app/admin/quick-research.tsx"
+CASE_NAVIGATION_UI = ROOT / "apps/web/app/admin/case-navigation.tsx"
 
 
 def test_recent_cases_are_typed_as_summaries_not_full_reports() -> None:
     source = CASE_UI.read_text(encoding="utf-8")
+    navigation = CASE_NAVIGATION_UI.read_text(encoding="utf-8")
 
     assert "type StoredCaseSummary = {" in source
     assert "type StoredCase = StoredCaseSummary & {" in source
     assert "useState<StoredCaseSummary[]>([])" in source
     assert "as StoredCaseSummary[]" in source
+    assert "<CaseNavigation" in source
+    assert "cases={recentCases}" in source
 
-    recent_section = source[source.index('<div className="recentCases">') :]
-    assert "recentCases.map" in recent_section
-    assert "item.report" not in recent_section
+    assert "visibleCases.map" in navigation
+    assert "item.report" not in navigation
 
 
 def test_recent_cases_consume_bounded_continuation_cursor() -> None:
     source = CASE_UI.read_text(encoding="utf-8")
+    navigation = CASE_NAVIGATION_UI.read_text(encoding="utf-8")
     load_start = source.index("async function loadOlderCases")
     delete_all_start = source.index("async function deleteAllCases")
     load_older = source[load_start:delete_all_start]
@@ -29,8 +33,11 @@ def test_recent_cases_consume_bounded_continuation_cursor() -> None:
     assert "const [nextCaseCursor, setNextCaseCursor] = useState<string | null>(null);" in source
     assert "const cursor = nextCaseCursor;" in load_older
     assert "encodeURIComponent(cursor)" in load_older
-    assert '"Load older cases"' in source
-    assert "loadingOlderCases" in source
+    assert "hasMore={Boolean(nextCaseCursor)}" in source
+    assert "loadingMore={loadingOlderCases}" in source
+    assert "onLoadMore={loadOlderCases}" in source
+    assert '"Load older cases"' in navigation
+    assert "loadingMore" in navigation
 
 
 def test_older_case_pages_append_without_duplicate_ids() -> None:
