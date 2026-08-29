@@ -74,6 +74,45 @@ const simulatedLifecycleStates = [
   },
 ] as const;
 
+const simulatedWorkspaceStates = [
+  {
+    state: "Case loading",
+    tone: "loading",
+    private_state: "Retained-case history is still being fetched",
+    detail: "The private workbench marks the case list busy and locks remote actions while loading. This observer demonstrates that state without making a request.",
+  },
+  {
+    state: "Case index unavailable",
+    tone: "error",
+    private_state: "Retained-case history failed to load",
+    detail: "A failed index is not an empty workspace. The operator must refresh before concluding that no retained cases exist.",
+  },
+  {
+    state: "Research completed with limits",
+    tone: "partial",
+    private_state: "One or more provider attempts failed or source states remain unresolved",
+    detail: "Usable evidence stays visible while incomplete source coverage remains explicit. Review source states before treating the case as complete.",
+  },
+  {
+    state: "Some source paths were not attempted",
+    tone: "limited",
+    private_state: "Configuration, routing, review, budget or policy stopped provider contact",
+    detail: "Missing observations from an unattempted path are a coverage limit, not negative evidence about the subject or claim.",
+  },
+  {
+    state: "No retained match from attempted sources",
+    tone: "quiet",
+    private_state: "Every attempted source returned no match",
+    detail: "Source silence is not evidence that the subject or claim does not exist elsewhere.",
+  },
+  {
+    state: "Attempted sources completed",
+    tone: "complete",
+    private_state: "Every attempted source reached a terminal result",
+    detail: "Completion applies only to the bounded configured source set; it does not imply exhaustive coverage.",
+  },
+] as const;
+
 function words(value: string) {
   return value.replaceAll("_", " ");
 }
@@ -336,6 +375,32 @@ export default function PublicDemoPage() {
                     <span>{state.private_action}</span>
                   </div>
                   <em>{state.public_state}</em>
+                  <p>{state.detail}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
+              <div>
+                <p className={styles.kicker}>06 / WORKSPACE STATES</p>
+                <h2>Loading, failure and coverage semantics</h2>
+              </div>
+              <span>deterministic simulation</span>
+            </div>
+            <p className={styles.sectionNote}>
+              The private workbench keeps empty, error, partial and complete states distinct so missing evidence is not
+              over-interpreted. These examples are fixed explanatory states and never trigger network activity.
+            </p>
+            <div className={styles.lifecycleList}>
+              {simulatedWorkspaceStates.map((state) => (
+                <article className={styles.lifecycleRow} key={state.state}>
+                  <div>
+                    <strong>{state.state}</strong>
+                    <span>{state.private_state}</span>
+                  </div>
+                  <em>{state.tone}</em>
                   <p>{state.detail}</p>
                 </article>
               ))}
