@@ -16,12 +16,10 @@ type ClassifiedFactor = M5FactorSummaryRow & {
 };
 
 function classifyFactor(factor: M5FactorSummaryRow): FactorClass {
-  const text = `${factor.status} ${factor.rationale}`;
-  if (
-    factor.veto ||
-    factor.applied_weight < 0 ||
-    /conflict|contradict|mismatch|negative|unsupported/i.test(text)
-  ) return "conflicting";
+  // Direction comes from retained M5 semantics, not prose. Rationale/status text is
+  // explanatory and may contain words such as "unsupported" for a zero-weight
+  // withheld factor; interpreting that copy as negative evidence would overstate M5.
+  if (factor.veto || factor.applied_weight < 0) return "conflicting";
   if (factor.applied_weight > 0) return "supporting";
   return "neutral";
 }
