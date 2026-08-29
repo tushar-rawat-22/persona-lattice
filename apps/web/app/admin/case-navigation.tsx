@@ -184,7 +184,17 @@ export function CaseNavigation({
           </div>
 
           {visibleCases.length === 0 ? (
-            <p className="muted">No loaded cases match the current search and kind filter.</p>
+            <div className="caseNavigationEmptyState">
+              <p className="muted">No loaded cases match the current search and kind filter.</p>
+              <button
+                className="secondaryButton"
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setKindFilter("all");
+                }}
+              >Clear filters</button>
+            </div>
           ) : (
             <div className="providerList">
               {visibleCases.map((item) => {
