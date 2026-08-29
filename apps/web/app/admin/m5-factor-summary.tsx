@@ -25,10 +25,13 @@ function classifyFactor(factor: M5FactorSummaryRow): FactorClass {
 }
 
 function decisiveOrder(left: ClassifiedFactor, right: ClassifiedFactor): number {
-  const weightDelta = Math.abs(right.applied_weight) - Math.abs(left.applied_weight);
-  if (weightDelta !== 0) return weightDelta;
+  // A veto is decisive retained semantics even when its applied weight is zero.
+  // Keep vetoes visible ahead of non-veto factors before ranking by magnitude so
+  // the three-row summary cannot hide a veto behind larger non-veto weights.
   const vetoDelta = Number(right.veto) - Number(left.veto);
   if (vetoDelta !== 0) return vetoDelta;
+  const weightDelta = Math.abs(right.applied_weight) - Math.abs(left.applied_weight);
+  if (weightDelta !== 0) return weightDelta;
   return `${left.kind}:${left.independence_group}`.localeCompare(
     `${right.kind}:${right.independence_group}`,
   );
