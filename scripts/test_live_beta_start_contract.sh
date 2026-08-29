@@ -33,7 +33,16 @@ require_text 'npm run start -- --hostname 127.0.0.1'
 require_text 'Publish only the web origin through the stable HTTPS ingress.'
 require_text 'Do not expose the API port directly.'
 require_text '--preflight-only'
+require_text 'wait_for_runtime_failure()'
+require_text 'jobs -pr'
+require_text 'API process exited unexpectedly'
+require_text 'web process exited unexpectedly'
+require_text 'wait_for_runtime_failure'
 
+if grep -F -- 'wait "$API_PID" "$WEB_PID"' "$SCRIPT" >/dev/null; then
+  echo 'live-beta runner must fail closed when either child exits, not wait for both sequentially' >&2
+  exit 1
+fi
 if grep -F -- 'cloudflared tunnel --url' "$SCRIPT" >/dev/null; then
   echo 'live-beta runner must not silently create a Quick Tunnel' >&2
   exit 1
