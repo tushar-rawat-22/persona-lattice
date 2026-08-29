@@ -56,8 +56,12 @@ def _production_api_origin(environ: dict[str, str]) -> str:
         )
 
     origin = raw_origin or (f"http://{raw_hostport}" if raw_hostport else "http://127.0.0.1:8000")
-    parsed = urlsplit(origin)
-    if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost"}:
+    try:
+        parsed = urlsplit(origin)
+        hostname = parsed.hostname
+    except ValueError as exc:
+        raise LaunchPreflightError("The production API origin is not a valid URL.") from exc
+    if parsed.scheme != "http" or hostname not in {"127.0.0.1", "localhost"}:
         raise LaunchPreflightError(
             "The production web proxy must reach the API over a loopback HTTP origin."
         )
@@ -77,7 +81,7 @@ def _production_api_origin(environ: dict[str, str]) -> str:
         raise LaunchPreflightError(
             "The production API origin port must be an integer between 1 and 65535."
         )
-    return f"http://{parsed.hostname}:{port}"
+    return f"http://{hostname}:{port}"
 
 
 def _persistent_database_path(environ: dict[str, str]) -> Path:
