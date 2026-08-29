@@ -124,10 +124,30 @@ function timestamp(value: string | null) {
 export default function PublicDemoPage() {
   const caseData = syntheticCase;
   const observations = new Map(caseData.observations.map((item) => [item.id, item]));
+  const identifiers = new Map(caseData.identifiers.map((item) => [item.id, item]));
   const contradicted = caseData.account_candidates.filter(
     (candidate) => candidate.correlation?.outcome === "contradicted",
   );
   const incompleteSourceRuns = simulatedSourceRuns.filter((run) => run.state !== "executed").length;
+  const unresolvedClaimQuestions = caseData.claims.flatMap((claim) =>
+    claim.evidence_links
+      .filter((link) => link.relation === "unresolved")
+      .map((link) => ({
+        key: `${claim.id}-${link.observation_id}`,
+        heading: claim.statement,
+        status: "unresolved claim link",
+        detail: `${observations.get(link.observation_id)?.summary ?? "Retained observation"} · ${link.rationale}`,
+      })),
+  );
+  const insufficientCandidateQuestions = caseData.account_candidates
+    .filter((candidate) => candidate.correlation?.outcome === "insufficient_evidence")
+    .map((candidate) => ({
+      key: `candidate-${candidate.observation_id}`,
+      heading: `${candidate.site} candidate`,
+      status: "insufficient evidence",
+      detail: "The retained M5 outcome does not support an identity conclusion; more independent evidence or human review is required.",
+    }));
+  const openQuestions = [...unresolvedClaimQuestions, ...insufficientCandidateQuestions];
 
   return (
     <main className={styles.shell}>
@@ -324,10 +344,50 @@ export default function PublicDemoPage() {
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <div>
-                <p className={styles.kicker}>04 / CLAIM REVIEW</p>
-                <h2>Claims and exceptions</h2>
+                <p className={styles.kicker}>04 / EVIDENCE PATH</p>
+                <h2>Clue → evidence → operator decision</h2>
               </div>
-              <span>human review required</span>
+              <span>fixture-derived graph</span>
+            </div>
+            <p className={styles.sectionNote}>
+              This compact graph view traces how a retained clue reaches a candidate, which observations influence M5,
+              where a contradiction enters, and which non-probabilistic outcome remains for human review.
+            </p>
+            <div className={styles.lifecycleList}>
+              {caseData.account_candidates.map((candidate) => {
+                const clue = identifiers.get(candidate.identifier_id);
+                const correlation = candidate.correlation;
+                const factorPath = correlation?.factors.flatMap((factor) =>
+                  factor.observation_ids.map((observationId) => {
+                    const observation = observations.get(observationId);
+                    const evidence = observation?.summary ?? "Retained observation";
+                    return `${words(factor.kind)} → ${evidence}${factor.veto ? " → contradiction veto" : ""}`;
+                  }),
+                ).join(" · ");
+
+                return (
+                  <article className={styles.lifecycleRow} key={`path-${candidate.observation_id}`}>
+                    <div>
+                      <strong>{clue ? `${clue.kind}: ${clue.value}` : "retained clue"}</strong>
+                      <span>clue → {candidate.site} candidate</span>
+                    </div>
+                    <em>{correlation ? words(correlation.outcome) : "not evaluated"}</em>
+                    <p>
+                      {factorPath || "No retained M5 factors."} → decision {correlation ? words(correlation.outcome) : "not evaluated"}
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
+              <div>
+                <p className={styles.kicker}>05 / CLAIM REVIEW</p>
+                <h2>Claims, exceptions and open questions</h2>
+              </div>
+              <span>{openQuestions.length} unresolved · human review required</span>
             </div>
             <div className={styles.claimGrid}>
               {caseData.claims.map((claim) => (
@@ -353,12 +413,24 @@ export default function PublicDemoPage() {
                 </p>
               </article>
             </div>
+            <div className={styles.lifecycleList}>
+              {openQuestions.map((question) => (
+                <article className={styles.lifecycleRow} key={question.key}>
+                  <div>
+                    <strong>{question.heading}</strong>
+                    <span>open question</span>
+                  </div>
+                  <em>{question.status}</em>
+                  <p>{question.detail}</p>
+                </article>
+              ))}
+            </div>
           </section>
 
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <div>
-                <p className={styles.kicker}>05 / OPERATOR LIFECYCLE</p>
+                <p className={styles.kicker}>06 / OPERATOR LIFECYCLE</p>
                 <h2>Private actions, public-safe states</h2>
               </div>
               <span>read-only simulation</span>
@@ -384,7 +456,7 @@ export default function PublicDemoPage() {
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <div>
-                <p className={styles.kicker}>06 / WORKSPACE STATES</p>
+                <p className={styles.kicker}>07 / WORKSPACE STATES</p>
                 <h2>Loading, failure and coverage semantics</h2>
               </div>
               <span>deterministic simulation</span>
