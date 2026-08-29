@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { syntheticCase } from "./dashboard/fixture";
 import styles from "./public.module.css";
 
 const capabilities = [
@@ -12,6 +13,11 @@ const capabilities = [
 ] as const;
 
 export default function Home() {
+  const sourceCount = new Set(syntheticCase.observations.map((item) => item.provenance.source_name)).size;
+  const conflictCount = syntheticCase.account_candidates.filter(
+    (candidate) => candidate.correlation?.outcome === "contradicted",
+  ).length;
+
   return (
     <main className={styles.shell}>
       <header className={styles.topbar}>
@@ -54,10 +60,10 @@ export default function Home() {
             </div>
           </div>
           <dl className={styles.metrics}>
-            <div><dt>Sources</dt><dd>8</dd></div>
-            <div><dt>Observations</dt><dd>11</dd></div>
-            <div><dt>Conflicts</dt><dd>1</dd></div>
-            <div><dt>Candidates</dt><dd>3</dd></div>
+            <div><dt>Sources</dt><dd>{sourceCount}</dd></div>
+            <div><dt>Observations</dt><dd>{syntheticCase.observations.length}</dd></div>
+            <div><dt>Conflicts</dt><dd>{conflictCount}</dd></div>
+            <div><dt>Candidates</dt><dd>{syntheticCase.account_candidates.length}</dd></div>
           </dl>
           <div className={styles.caseRows}>
             <div><span>github_public_api</span><strong className={styles.good}>matched</strong></div>
