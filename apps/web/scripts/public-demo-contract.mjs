@@ -61,10 +61,21 @@ const requiredDemo = [
   "observation.expires_at",
   "correlation.policy_version",
   "correlation.evaluated_at",
+  "Typed source-run states",
+  'state: "executed"',
+  'reason: "results_returned"',
+  'state: "not_found"',
+  'reason: "no_match"',
+  'state: "review_required"',
+  'reason: "review_gate"',
+  'reason: "optional_not_configured"',
+  'reason: "remote_rate_limit"',
+  "They do not describe live requests",
+  'role="table"',
 ];
 for (const token of requiredDemo) {
   if (!normalizedDemo.includes(token)) {
-    throw new Error(`public demo missing required product framing or provenance field: ${token}`);
+    throw new Error(`public demo missing required product framing, provenance or source-state parity: ${token}`);
   }
 }
 
