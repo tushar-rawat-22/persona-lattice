@@ -32,8 +32,15 @@ assert.ok(
 );
 assert.ok(
   source.includes("candidate.source === record.source") &&
-    source.includes("candidate.sourceLocator === record.sourceLocator"),
-  "provenance records may deduplicate only exact source/locator pairs",
+    source.includes("candidate.sourceLocator === record.sourceLocator") &&
+    source.includes("candidate.sourceState === record.sourceState") &&
+    source.includes("candidate.leadKind === record.leadKind"),
+  "provenance deduplication must preserve distinct retained source-state and lead-kind contexts for the same locator",
+);
+assert.ok(
+  source.includes('record.sourceState ?? "state-unavailable"') &&
+    source.includes('record.leadKind ?? "lead-unavailable"'),
+  "rendered provenance keys must distinguish retained context variants instead of collapsing them",
 );
 assert.ok(
   source.includes("navigator.clipboard.writeText(locator)") &&
