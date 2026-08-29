@@ -81,6 +81,17 @@
 .sectionHead { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding-bottom: 13px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
 .sectionHead h2 { margin: 0; font-size: 16px; font-weight: 650; }
 .sectionHead > span { color: var(--muted); font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .05em; }
+.sectionNote { margin: -2px 0 14px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.runTable { border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: #141619; }
+.runHeader, .runRow { display: grid; grid-template-columns: minmax(150px, 1.4fr) minmax(90px, .7fr) minmax(150px, 1fr) 72px 78px; gap: 12px; align-items: center; padding: 9px 11px; }
+.runHeader { color: var(--muted); border-bottom: 1px solid var(--line); font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .04em; }
+.runRow { border-bottom: 1px solid var(--line); font-size: 10px; }
+.runRow:last-child { border-bottom: 0; }
+.runRow strong { font-size: 10px; font-weight: 600; }
+.runRow span { color: var(--muted); overflow-wrap: anywhere; }
+.runRow .good { color: var(--success); }
+.runRow .warn { color: var(--warning); }
+.runRow .neutral { color: #c9b985; }
 
 .candidateGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .candidate { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 7px; background: #141619; }
@@ -147,4 +158,6 @@
   .rail { grid-template-columns: 1fr; }
   .candidateGrid, .claimGrid { grid-template-columns: 1fr; }
   .section { padding: 14px; }
+  .runTable { overflow-x: auto; }
+  .runHeader, .runRow { min-width: 670px; }
 }
