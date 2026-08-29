@@ -188,6 +188,11 @@ assert.ok(
   "decision surface must derive corroboration, unresolved source gaps and conflicting evidence from retained case data",
 );
 assert.ok(
+  !research.includes("factorText") &&
+    !research.includes("/conflict|contradict|mismatch|negative|unsupported/i"),
+  "decision surface must not infer M5 conflict direction from mutable status or rationale prose",
+);
+assert.ok(
   adminPage.includes('className={caseWorkspaceActive ? "workspace caseActive" : "workspace"}') &&
     adminPage.includes('className="panel intakeDrawer"') &&
     adminPage.includes("onActiveCaseChange={handleActiveCaseChange}") &&

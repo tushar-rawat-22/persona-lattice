@@ -521,8 +521,7 @@ function deriveUncertaintyItems(report: QuickReport): DecisionItem[] {
     }
     for (const evaluation of converged.m5.evaluations) {
       for (const factor of evaluation.factors) {
-        const factorText = `${factor.status} ${factor.rationale}`;
-        const isConflict = factor.veto || factor.applied_weight < 0 || /conflict|contradict|mismatch|negative|unsupported/i.test(factorText);
+        const isConflict = factor.veto || factor.applied_weight < 0;
         if (!isConflict) continue;
         items.push({
           key: `m5-${m5EvaluationKey(evaluation)}-${factor.kind}-${factor.independence_group}`,
