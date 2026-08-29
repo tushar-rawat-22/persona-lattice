@@ -65,9 +65,19 @@ def _production_api_origin(environ: dict[str, str]) -> str:
         raise LaunchPreflightError("The production API origin contains unsupported URL components.")
     if parsed.path not in {"", "/"}:
         raise LaunchPreflightError("The production API origin must not contain a path prefix.")
-    if parsed.port is None:
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise LaunchPreflightError(
+            "The production API origin port must be an integer between 1 and 65535."
+        ) from exc
+    if port is None:
         raise LaunchPreflightError("The production API origin must include an explicit port.")
-    return f"http://{parsed.hostname}:{parsed.port}"
+    if not 1 <= port <= 65535:
+        raise LaunchPreflightError(
+            "The production API origin port must be an integer between 1 and 65535."
+        )
+    return f"http://{parsed.hostname}:{port}"
 
 
 def _persistent_database_path(environ: dict[str, str]) -> Path:
