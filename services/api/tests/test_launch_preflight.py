@@ -67,6 +67,22 @@ def test_launch_preflight_rejects_unsafe_production_settings(
         run_launch_preflight(env)
 
 
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "http://127.0.0.1:not-a-port",
+        "http://127.0.0.1:0",
+        "http://127.0.0.1:65536",
+    ],
+)
+def test_launch_preflight_rejects_invalid_api_origin_ports(tmp_path, origin: str) -> None:
+    env = _safe_env(tmp_path)
+    env["PERSONALATTICE_API_ORIGIN"] = origin
+
+    with pytest.raises(LaunchPreflightError, match="integer between 1 and 65535"):
+        run_launch_preflight(env)
+
+
 def test_launch_preflight_rejects_missing_database_parent(tmp_path) -> None:
     env = _safe_env(tmp_path)
     env["PERSONALATTICE_DB_PATH"] = str(tmp_path / "missing" / "personalattice.db")
