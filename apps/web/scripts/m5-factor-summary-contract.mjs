@@ -10,10 +10,8 @@ const quickResearch = await readFile(path.join(appRoot, "app", "admin", "quick-r
 
 for (const token of [
   'type FactorClass = "supporting" | "conflicting" | "neutral"',
-  "factor.veto",
-  "factor.applied_weight < 0",
+  "factor.veto || factor.applied_weight < 0",
   "factor.applied_weight > 0",
-  '/conflict|contradict|mismatch|negative|unsupported/i',
   "Math.abs(right.applied_weight) - Math.abs(left.applied_weight)",
   'label="Supporting"',
   'label="Conflicting"',
@@ -28,6 +26,11 @@ for (const token of [
   assert.ok(source.includes(token), `M5 decisive-factor contract missing: ${token}`);
 }
 
+assert.ok(
+  !source.includes("factor.status} ${factor.rationale") &&
+    !source.includes("/conflict|contradict|mismatch|negative|unsupported/i"),
+  "M5 evidentiary direction must never be inferred from mutable status/rationale prose",
+);
 assert.ok(
   source.includes('hiddenCount === 1 ? "factor" : "factors"'),
   "truncated M5 summaries must disclose the exact hidden-factor count without awkward singular copy",
