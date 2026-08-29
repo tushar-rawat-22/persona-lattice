@@ -83,10 +83,21 @@ const requiredDemo = [
   "cannot list or read private retained cases",
   "cannot mutate the fixture or call a deletion endpoint",
   "never creates an admin session",
+  "Loading, failure and coverage semantics",
+  'state: "Case loading"',
+  'state: "Case index unavailable"',
+  'state: "Research completed with limits"',
+  'state: "Some source paths were not attempted"',
+  'state: "No retained match from attempted sources"',
+  'state: "Attempted sources completed"',
+  "A failed index is not an empty workspace",
+  "Missing observations from an unattempted path are a coverage limit, not negative evidence",
+  "Source silence is not evidence that the subject or claim does not exist elsewhere",
+  "never trigger network activity",
 ];
 for (const token of requiredDemo) {
   if (!normalizedDemo.includes(token)) {
-    throw new Error(`public demo missing required product framing, provenance, source-state or lifecycle parity: ${token}`);
+    throw new Error(`public demo missing required product framing, provenance, source-state, lifecycle or failure-state parity: ${token}`);
   }
 }
 
