@@ -17,6 +17,7 @@ export default function Home() {
   const conflictCount = syntheticCase.account_candidates.filter(
     (candidate) => candidate.correlation?.outcome === "contradicted",
   ).length;
+  const snapshotRows = syntheticCase.observations.slice(0, 3);
 
   return (
     <main className={styles.shell}>
@@ -53,9 +54,9 @@ export default function Home() {
             <span className={styles.caseBriefState}>complete</span>
           </div>
           <div className={styles.caseIdentity}>
-            <span className={styles.avatar} aria-hidden="true">AR</span>
+            <span className={styles.avatar} aria-hidden="true">SM</span>
             <div>
-              <strong>Alex Rowan</strong>
+              <strong>{syntheticCase.display_name}</strong>
               <span>synthetic investigation fixture</span>
             </div>
           </div>
@@ -66,9 +67,14 @@ export default function Home() {
             <div><dt>Candidates</dt><dd>{syntheticCase.account_candidates.length}</dd></div>
           </dl>
           <div className={styles.caseRows}>
-            <div><span>github_public_api</span><strong className={styles.good}>matched</strong></div>
-            <div><span>public DNS</span><strong className={styles.good}>observed</strong></div>
-            <div><span>stale profile claim</span><strong className={styles.warn}>conflict retained</strong></div>
+            {snapshotRows.map((observation) => (
+              <div key={observation.id}>
+                <span>{observation.provenance.source_name}</span>
+                <strong className={observation.freshness === "stale" ? styles.warn : styles.good}>
+                  {observation.freshness}
+                </strong>
+              </div>
+            ))}
           </div>
           <Link className={styles.caseLink} href="/demo">Inspect the full synthetic case →</Link>
         </aside>
