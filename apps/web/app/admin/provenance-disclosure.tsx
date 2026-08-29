@@ -54,7 +54,10 @@ export function ProvenanceDisclosure({
 
   const unique = records.filter((record, index, all) =>
     all.findIndex((candidate) =>
-      candidate.source === record.source && candidate.sourceLocator === record.sourceLocator,
+      candidate.source === record.source &&
+      candidate.sourceLocator === record.sourceLocator &&
+      candidate.sourceState === record.sourceState &&
+      candidate.leadKind === record.leadKind,
     ) === index,
   );
 
@@ -71,10 +74,10 @@ export function ProvenanceDisclosure({
     <details className="provenanceDisclosure">
       <summary>{label}</summary>
       <ul className="provenanceList">
-        {unique.map((record) => {
+        {unique.map((record, index) => {
           const href = safeWebLocator(record.sourceLocator);
           return (
-            <li key={`${record.source}-${record.sourceLocator}`}>
+            <li key={`${record.source}-${record.sourceLocator}-${record.sourceState ?? "state-unavailable"}-${record.leadKind ?? "lead-unavailable"}-${index}`}>
               <div>
                 <strong>{record.source}</strong>
                 {(record.sourceState || record.leadKind) && (
