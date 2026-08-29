@@ -41,6 +41,39 @@ const simulatedSourceRuns = [
   },
 ] as const;
 
+const simulatedLifecycleStates = [
+  {
+    step: "Case intake",
+    private_action: "Create a retained case from reviewed clues",
+    public_state: "simulated only",
+    detail: "The observer shows accepted clue concepts but never accepts a real-person submission or creates storage.",
+  },
+  {
+    step: "Reviewed document",
+    private_action: "Preview, review and explicitly admit extracted clues",
+    public_state: "fixture preview",
+    detail: "A sanitized workflow state is demonstrated without a file input, upload endpoint or document retention.",
+  },
+  {
+    step: "Retained cases",
+    private_action: "Search, switch and reopen retained investigations",
+    public_state: "synthetic navigation",
+    detail: "Case-switching semantics are represented with fixed labels; the visitor cannot list or read private retained cases.",
+  },
+  {
+    step: "Delete case",
+    private_action: "Confirm destructive deletion of a retained case",
+    public_state: "disabled demo",
+    detail: "The destructive boundary is visible but cannot mutate the fixture or call a deletion endpoint.",
+  },
+  {
+    step: "Session boundary",
+    private_action: "Expire or end the authenticated operator session",
+    public_state: "not authenticated",
+    detail: "Logout and expiry concepts are shown as product states; this static observer never creates an admin session.",
+  },
+] as const;
+
 function words(value: string) {
   return value.replaceAll("_", " ");
 }
@@ -280,6 +313,32 @@ export default function PublicDemoPage() {
                   stale supporting evidence is still shown rather than silently removed.
                 </p>
               </article>
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
+              <div>
+                <p className={styles.kicker}>05 / OPERATOR LIFECYCLE</p>
+                <h2>Private actions, public-safe states</h2>
+              </div>
+              <span>read-only simulation</span>
+            </div>
+            <p className={styles.sectionNote}>
+              The private workbench includes write-capable and authenticated lifecycle steps. This observer mirrors
+              their meaning without creating a session, accepting an upload, retaining a case or exposing mutation controls.
+            </p>
+            <div className={styles.lifecycleList}>
+              {simulatedLifecycleStates.map((state) => (
+                <article className={styles.lifecycleRow} key={state.step}>
+                  <div>
+                    <strong>{state.step}</strong>
+                    <span>{state.private_action}</span>
+                  </div>
+                  <em>{state.public_state}</em>
+                  <p>{state.detail}</p>
+                </article>
+              ))}
             </div>
           </section>
         </div>
