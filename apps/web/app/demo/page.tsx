@@ -3,6 +3,44 @@ import Link from "next/link";
 import { syntheticCase } from "../dashboard/fixture";
 import styles from "./demo.module.css";
 
+const simulatedSourceRuns = [
+  {
+    source_name: "Synthetic profile API",
+    state: "executed",
+    reason: "results_returned",
+    observation_count: 2,
+    attempted: true,
+  },
+  {
+    source_name: "Synthetic exact registry",
+    state: "not_found",
+    reason: "no_match",
+    observation_count: 0,
+    attempted: true,
+  },
+  {
+    source_name: "Synthetic metered source",
+    state: "unavailable",
+    reason: "optional_not_configured",
+    observation_count: 0,
+    attempted: false,
+  },
+  {
+    source_name: "Synthetic reviewed source",
+    state: "review_required",
+    reason: "review_gate",
+    observation_count: 0,
+    attempted: false,
+  },
+  {
+    source_name: "Synthetic remote source",
+    state: "unavailable",
+    reason: "remote_rate_limit",
+    observation_count: 0,
+    attempted: true,
+  },
+] as const;
+
 function words(value: string) {
   return value.replaceAll("_", " ");
 }
@@ -17,6 +55,7 @@ export default function PublicDemoPage() {
   const contradicted = caseData.account_candidates.filter(
     (candidate) => candidate.correlation?.outcome === "contradicted",
   );
+  const incompleteSourceRuns = simulatedSourceRuns.filter((run) => run.state !== "executed").length;
 
   return (
     <main className={styles.shell}>
@@ -71,7 +110,7 @@ export default function PublicDemoPage() {
           </section>
 
           <section>
-            <p className={styles.kicker}>SOURCE COVERAGE</p>
+            <p className={styles.kicker}>EVIDENCE SOURCES</p>
             <ul className={styles.sourceList}>
               {Array.from(new Set(caseData.observations.map((item) => item.provenance.source_name))).map(
                 (source) => (
@@ -96,7 +135,41 @@ export default function PublicDemoPage() {
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <div>
-                <p className={styles.kicker}>01 / CORRELATION</p>
+                <p className={styles.kicker}>01 / SOURCE EXECUTION</p>
+                <h2>Typed source-run states</h2>
+              </div>
+              <span>{incompleteSourceRuns} non-result states · simulated</span>
+            </div>
+            <p className={styles.sectionNote}>
+              These rows are deterministic demonstrations of the private operator state vocabulary.
+              They do not describe live requests and do not add observations to this synthetic case.
+            </p>
+            <div className={styles.runTable} role="table" aria-label="Simulated source execution states">
+              <div className={styles.runHeader} role="row">
+                <span role="columnheader">source</span>
+                <span role="columnheader">state</span>
+                <span role="columnheader">reason</span>
+                <span role="columnheader">attempted</span>
+                <span role="columnheader">observations</span>
+              </div>
+              {simulatedSourceRuns.map((run) => (
+                <div className={styles.runRow} role="row" key={`${run.source_name}-${run.reason}`}>
+                  <strong role="cell">{run.source_name}</strong>
+                  <span role="cell" className={run.state === "executed" ? styles.good : run.state === "unavailable" ? styles.warn : styles.neutral}>
+                    {words(run.state)}
+                  </span>
+                  <span role="cell">{words(run.reason)}</span>
+                  <span role="cell">{run.attempted ? "yes" : "no"}</span>
+                  <span role="cell">{run.observation_count}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <div className={styles.sectionHead}>
+              <div>
+                <p className={styles.kicker}>02 / CORRELATION</p>
                 <h2>Account candidates</h2>
               </div>
               <span>{caseData.account_candidates.length} reviewed</span>
@@ -152,7 +225,7 @@ export default function PublicDemoPage() {
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <div>
-                <p className={styles.kicker}>02 / EVIDENCE</p>
+                <p className={styles.kicker}>03 / EVIDENCE</p>
                 <h2>Observation timeline</h2>
               </div>
               <span>provenance retained</span>
@@ -179,7 +252,7 @@ export default function PublicDemoPage() {
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <div>
-                <p className={styles.kicker}>03 / CLAIM REVIEW</p>
+                <p className={styles.kicker}>04 / CLAIM REVIEW</p>
                 <h2>Claims and exceptions</h2>
               </div>
               <span>human review required</span>
