@@ -83,6 +83,10 @@ def _persistent_database_path(environ: dict[str, str]) -> Path:
         validate_private_runtime_database_parent(path)
     except RuntimeError as exc:
         raise LaunchPreflightError(str(exc)) from exc
+    if path.is_symlink():
+        raise LaunchPreflightError("PERSONALATTICE_DB_PATH must not be a symbolic link.")
+    if path.exists() and not path.is_file():
+        raise LaunchPreflightError("PERSONALATTICE_DB_PATH must reference a regular file.")
     return path
 
 
