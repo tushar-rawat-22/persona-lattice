@@ -83,6 +83,14 @@ def test_launch_preflight_rejects_invalid_api_origin_ports(tmp_path, origin: str
         run_launch_preflight(env)
 
 
+def test_launch_preflight_rejects_malformed_api_origin(tmp_path) -> None:
+    env = _safe_env(tmp_path)
+    env["PERSONALATTICE_API_ORIGIN"] = "http://[127.0.0.1:8000"
+
+    with pytest.raises(LaunchPreflightError, match="not a valid URL"):
+        run_launch_preflight(env)
+
+
 def test_launch_preflight_rejects_missing_database_parent(tmp_path) -> None:
     env = _safe_env(tmp_path)
     env["PERSONALATTICE_DB_PATH"] = str(tmp_path / "missing" / "personalattice.db")
