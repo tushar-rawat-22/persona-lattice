@@ -39,9 +39,11 @@ assert.ok(
   !/identity[_ ]probability\s*[:=]\s*[^n]/i.test(source),
   "M5 summary must not introduce a numeric identity-probability channel",
 );
+const vetoOrder = source.indexOf("const vetoDelta = Number(right.veto) - Number(left.veto)");
+const weightOrder = source.indexOf("const weightDelta = Math.abs(right.applied_weight) - Math.abs(left.applied_weight)");
 assert.ok(
-  source.includes("vetoDelta") && source.includes("localeCompare"),
-  "decisive-factor ordering must remain deterministic when absolute weights tie",
+  vetoOrder >= 0 && weightOrder >= 0 && vetoOrder < weightOrder && source.includes("localeCompare"),
+  "decisive-factor ordering must keep retained vetoes visible before magnitude ranking and remain deterministic on ties",
 );
 
 for (const token of [
