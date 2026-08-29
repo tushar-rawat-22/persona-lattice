@@ -72,14 +72,35 @@ const requiredDemo = [
   'reason: "remote_rate_limit"',
   "They do not describe live requests",
   'role="table"',
+  "Private actions, public-safe states",
+  'step: "Case intake"',
+  'step: "Reviewed document"',
+  'step: "Retained cases"',
+  'step: "Delete case"',
+  'step: "Session boundary"',
+  "never accepts a real-person submission",
+  "without a file input, upload endpoint or document retention",
+  "cannot list or read private retained cases",
+  "cannot mutate the fixture or call a deletion endpoint",
+  "never creates an admin session",
 ];
 for (const token of requiredDemo) {
   if (!normalizedDemo.includes(token)) {
-    throw new Error(`public demo missing required product framing, provenance or source-state parity: ${token}`);
+    throw new Error(`public demo missing required product framing, provenance, source-state or lifecycle parity: ${token}`);
   }
 }
 
-const forbiddenDemo = ["fetch(", "/v1/cases/run", "run-converged", 'type="file"', 'type="password"'];
+const forbiddenDemo = [
+  "fetch(",
+  "/v1/cases/run",
+  "/v1/cases/",
+  "/v1/files/preview",
+  "run-converged",
+  'type="file"',
+  'type="password"',
+  "localStorage",
+  "sessionStorage",
+];
 for (const token of forbiddenDemo) {
   if (demo.includes(token)) throw new Error(`public demo must stay non-operational: ${token}`);
 }
