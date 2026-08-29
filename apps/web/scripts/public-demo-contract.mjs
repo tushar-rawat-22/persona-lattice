@@ -21,6 +21,21 @@ for (const token of requiredHome) {
   }
 }
 
+const fixtureBackedHome = [
+  'import { syntheticCase } from "./dashboard/fixture"',
+  "syntheticCase.display_name",
+  "syntheticCase.observations.length",
+  "syntheticCase.account_candidates.length",
+  "item.provenance.source_name",
+  'candidate.correlation?.outcome === "contradicted"',
+  "snapshotRows.map((observation)",
+];
+for (const token of fixtureBackedHome) {
+  if (!home.includes(token)) {
+    throw new Error(`public home snapshot must derive displayed case facts from the shared synthetic fixture: ${token}`);
+  }
+}
+
 const forbiddenHome = [
   "fetch(",
   "/v1/cases/run",
@@ -28,9 +43,12 @@ const forbiddenHome = [
   "run-converged",
   "type=\"file\"",
   "type=\"password\"",
+  "Alex Rowan",
+  "github_public_api",
+  "public DNS",
 ];
 for (const token of forbiddenHome) {
-  if (home.includes(token)) throw new Error(`public home must stay non-operational: ${token}`);
+  if (home.includes(token)) throw new Error(`public home must stay non-operational and fixture-backed: ${token}`);
 }
 
 const requiredDemo = [
