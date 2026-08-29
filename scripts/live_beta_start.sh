@@ -43,6 +43,35 @@ wait_for_url() {
   fail "$url did not become ready"
 }
 
+wait_for_runtime_failure() {
+  while true; do
+    local running_pids=()
+    local pid
+    while IFS= read -r pid; do
+      [[ -n "$pid" ]] && running_pids+=("$pid")
+    done < <(jobs -pr)
+
+    local api_running=false
+    local web_running=false
+    for pid in "${running_pids[@]}"; do
+      [[ "$pid" == "$API_PID" ]] && api_running=true
+      [[ "$pid" == "$WEB_PID" ]] && web_running=true
+    done
+
+    if [[ "$api_running" != true ]]; then
+      local api_status=0
+      if wait "$API_PID"; then api_status=0; else api_status=$?; fi
+      fail "API process exited unexpectedly (status $api_status); see $API_LOG"
+    fi
+    if [[ "$web_running" != true ]]; then
+      local web_status=0
+      if wait "$WEB_PID"; then web_status=0; else web_status=$?; fi
+      fail "web process exited unexpectedly (status $web_status); see $WEB_LOG"
+    fi
+    sleep 1
+  done
+}
+
 cleanup() {
   if [[ -n "$WEB_PID" ]]; then kill "$WEB_PID" 2>/dev/null || true; wait "$WEB_PID" 2>/dev/null || true; fi
   if [[ -n "$API_PID" ]]; then kill "$API_PID" 2>/dev/null || true; wait "$API_PID" 2>/dev/null || true; fi
@@ -127,4 +156,4 @@ printf '%s\n' \
   "Do not expose the API port directly." \
   "Press Control-C to stop the application processes."
 
-wait "$API_PID" "$WEB_PID"
+wait_for_runtime_failure
