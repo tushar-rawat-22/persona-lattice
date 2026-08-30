@@ -79,6 +79,14 @@ jobs:
       - name: Verify isolated public demo export
         working-directory: apps/web
         run: npm run test:public-demo-export
+      - name: Publish verified public demo artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-demo-${{ github.sha }}
+          path: apps/web/out
+          if-no-files-found: error
+          retention-days: 7
 
   launch-process:
     runs-on: ubuntu-latest
@@ -107,11 +115,13 @@ jobs:
           bash -n scripts/test_lc1_python_selection.sh
           bash -n scripts/test_lc1_tunnel_wait_contract.sh
           bash -n scripts/test_live_beta_start_contract.sh
+          bash -n scripts/test_public_demo_release_artifact.sh
           bash scripts/test_lc1_api_process_contract.sh
           bash scripts/test_lc1_npm_worktree.sh
           bash scripts/test_lc1_python_selection.sh
           bash scripts/test_lc1_tunnel_wait_contract.sh
           bash scripts/test_live_beta_start_contract.sh
+          bash scripts/test_public_demo_release_artifact.sh
       - name: Build and exercise production processes
         shell: bash
         run: |
