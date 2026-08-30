@@ -99,6 +99,11 @@ export function CaseNavigation({
     () => filterAndSortLoadedCases(cases, query, kindFilter, sortOrder),
     [cases, query, kindFilter, sortOrder],
   );
+  const activeCaseIsHidden = Boolean(
+    activeCaseId &&
+    cases.some((item) => item.id === activeCaseId) &&
+    !visibleCases.some((item) => item.id === activeCaseId),
+  );
 
   useEffect(() => {
     function focusCaseSearch(event: KeyboardEvent) {
@@ -112,6 +117,11 @@ export function CaseNavigation({
     window.addEventListener("keydown", focusCaseSearch);
     return () => window.removeEventListener("keydown", focusCaseSearch);
   }, []);
+
+  function clearCaseFilters() {
+    setQuery("");
+    setKindFilter("all");
+  }
 
   function confirmDeleteCase(caseId: string) {
     if (initialLoading || remoteActionsDisabled) return;
@@ -183,17 +193,19 @@ export function CaseNavigation({
             </label>
           </div>
 
+          {activeCaseIsHidden && (
+            <div className="caseNavigationEmptyState" role="status" aria-live="polite">
+              <p className="muted">The active case is hidden by the current loaded-case search or kind filter.</p>
+              <button className="secondaryButton" type="button" onClick={clearCaseFilters}>Show active case</button>
+            </div>
+          )}
+
           {visibleCases.length === 0 ? (
             <div className="caseNavigationEmptyState">
               <p className="muted">No loaded cases match the current search and kind filter.</p>
-              <button
-                className="secondaryButton"
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  setKindFilter("all");
-                }}
-              >Clear filters</button>
+              {!activeCaseIsHidden && (
+                <button className="secondaryButton" type="button" onClick={clearCaseFilters}>Clear filters</button>
+              )}
             </div>
           ) : (
             <div className="providerList">
