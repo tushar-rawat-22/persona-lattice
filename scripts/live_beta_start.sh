@@ -11,6 +11,7 @@ API_PORT="${PERSONALATTICE_LIVE_API_PORT:-18000}"
 WEB_PORT="${PERSONALATTICE_LIVE_WEB_PORT:-13000}"
 API_LOG="$RUNTIME_DIR/api.log"
 WEB_LOG="$RUNTIME_DIR/web.log"
+RELEASE_MANIFEST="$RUNTIME_DIR/release.env"
 API_PID=""
 WEB_PID=""
 
@@ -81,6 +82,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 require_command curl
+require_command git
 require_command npm
 require_command python3
 require_command stat
@@ -88,6 +90,12 @@ require_command stat
 [[ -f "$ENV_FILE" ]] || fail "production environment file not found: $ENV_FILE"
 MODE="$(file_mode "$ENV_FILE")"
 [[ "$MODE" == "600" || "$MODE" == "400" ]] || fail "production environment file must be owner-only (mode 600 or 400), got $MODE"
+
+if ! git -C "$ROOT" diff --quiet -- || ! git -C "$ROOT" diff --cached --quiet --; then
+  fail "repository has uncommitted changes; private-beta releases require an exact clean commit"
+fi
+RELEASE_SHA="$(git -C "$ROOT" rev-parse HEAD)"
+ROLLBACK_SHA="$(git -C "$ROOT" rev-parse HEAD^ 2>/dev/null)" || fail "current release has no rollback parent commit"
 
 mkdir -p "$RUNTIME_DIR"
 chmod 700 "$RUNTIME_DIR"
@@ -146,8 +154,16 @@ WEB_PID=$!
 wait_for_url "http://127.0.0.1:$WEB_PORT/"
 wait_for_url "http://127.0.0.1:$WEB_PORT/api/health"
 
+umask 077
+MANIFEST_TMP="$RELEASE_MANIFEST.tmp.$$"
+printf 'release_sha=%s\nrollback_sha=%s\n' "$RELEASE_SHA" "$ROLLBACK_SHA" >"$MANIFEST_TMP"
+mv "$MANIFEST_TMP" "$RELEASE_MANIFEST"
+
 printf '%s\n' \
   "PersonaLattice private-beta processes are running on loopback." \
+  "Release SHA: $RELEASE_SHA" \
+  "Rollback SHA: $ROLLBACK_SHA" \
+  "Release manifest: $RELEASE_MANIFEST" \
   "Web origin: http://127.0.0.1:$WEB_PORT" \
   "API origin: http://127.0.0.1:$API_PORT" \
   "Database:   $PERSONALATTICE_DB_PATH" \
