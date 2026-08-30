@@ -3,6 +3,8 @@ set -euo pipefail
 
 ENV_FILE="${PERSONALATTICE_PRODUCTION_ENV_FILE:-$HOME/.config/persona-lattice/production.env}"
 BACKUP_DIR="${PERSONALATTICE_BACKUP_DIR:-$HOME/.local/share/persona-lattice/backups}"
+RUNTIME_DIR="${PERSONALATTICE_LIVE_RUNTIME_DIR:-$HOME/.local/share/persona-lattice/live}"
+RELEASE_MANIFEST="${PERSONALATTICE_RELEASE_MANIFEST:-$RUNTIME_DIR/release.env}"
 
 fail() {
   printf 'PersonaLattice live-beta backup failed: %s\n' "$1" >&2
@@ -28,14 +30,50 @@ set +a
 [[ "$PERSONALATTICE_DB_PATH" == /* ]] || fail "PERSONALATTICE_DB_PATH must be absolute"
 [[ -f "$PERSONALATTICE_DB_PATH" ]] || fail "database file not found: $PERSONALATTICE_DB_PATH"
 
+RELEASE_SHA="unavailable"
+ROLLBACK_SHA="unavailable"
+if [[ -f "$RELEASE_MANIFEST" ]]; then
+  MANIFEST_MODE="$(file_mode "$RELEASE_MANIFEST")"
+  [[ "$MANIFEST_MODE" == "600" || "$MANIFEST_MODE" == "400" ]] || fail "release manifest must be owner-only (mode 600 or 400), got $MANIFEST_MODE"
+  PROVENANCE="$(python3 - "$RELEASE_MANIFEST" <<'PY'
+import re
+import sys
+
+path = sys.argv[1]
+values = {}
+with open(path, encoding="utf-8") as handle:
+    for raw_line in handle:
+        line = raw_line.strip()
+        if not line:
+            continue
+        key, separator, value = line.partition("=")
+        if separator != "=" or key not in {"release_sha", "rollback_sha"}:
+            continue
+        if key in values:
+            raise SystemExit(f"duplicate {key} in release manifest")
+        values[key] = value
+for key in ("release_sha", "rollback_sha"):
+    value = values.get(key, "")
+    if re.fullmatch(r"[0-9a-f]{40}", value) is None:
+        raise SystemExit(f"invalid {key} in release manifest")
+print(values["release_sha"])
+print(values["rollback_sha"])
+PY
+)" || fail "release manifest could not be parsed safely: $RELEASE_MANIFEST"
+  RELEASE_SHA="$(printf '%s\n' "$PROVENANCE" | sed -n '1p')"
+  ROLLBACK_SHA="$(printf '%s\n' "$PROVENANCE" | sed -n '2p')"
+fi
+
 mkdir -p "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 umask 077
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP_PATH="$BACKUP_DIR/persona-lattice-$TIMESTAMP.sqlite3"
+EVIDENCE_PATH="$BACKUP_PATH.env"
 TEMP_PATH="$BACKUP_PATH.tmp.$$"
+EVIDENCE_TEMP="$EVIDENCE_PATH.tmp.$$"
 RESTORE_CHECK="$BACKUP_DIR/.restore-check-$TIMESTAMP-$$.sqlite3"
-trap 'rm -f "$TEMP_PATH" "$RESTORE_CHECK"' EXIT
+trap 'rm -f "$TEMP_PATH" "$EVIDENCE_TEMP" "$RESTORE_CHECK"' EXIT
 
 python3 - "$PERSONALATTICE_DB_PATH" "$TEMP_PATH" "$RESTORE_CHECK" <<'PY'
 import sqlite3
@@ -72,13 +110,20 @@ import hashlib, sys
 with open(sys.argv[1], "rb") as handle: print(hashlib.sha256(handle.read()).hexdigest())
 PY
 )"
+printf 'backup_sha256=%s\nrelease_sha=%s\nrollback_sha=%s\n' \
+  "$DIGEST" "$RELEASE_SHA" "$ROLLBACK_SHA" >"$EVIDENCE_TEMP"
+chmod 600 "$EVIDENCE_TEMP"
 mv "$TEMP_PATH" "$BACKUP_PATH"
+mv "$EVIDENCE_TEMP" "$EVIDENCE_PATH"
 rm -f "$RESTORE_CHECK"
 trap - EXIT
 printf '%s\n' \
   "PersonaLattice live-beta SQLite backup passed." \
   "Database: $PERSONALATTICE_DB_PATH" \
   "Backup: $BACKUP_PATH" \
+  "Evidence: $EVIDENCE_PATH" \
   "SHA256: $DIGEST" \
+  "Release SHA: $RELEASE_SHA" \
+  "Rollback SHA: $ROLLBACK_SHA" \
   "Integrity: ok" \
   "Restore check: ok"
