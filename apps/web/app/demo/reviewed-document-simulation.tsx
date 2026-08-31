@@ -30,7 +30,7 @@ const candidates: Candidate[] = [
     origin: "synthetic page 3 · chars 121–138",
     initialStatus: "rejected",
   },
-] as const;
+];
 
 export function ReviewedDocumentSimulation() {
   const [statuses, setStatuses] = useState<Record<string, ReviewStatus>>(
