@@ -73,6 +73,12 @@ const requiredResearch = [
   "Raw retained JSON",
   "Canonical pivot provenance could not be resolved safely.",
   "Source execution state is unavailable for this historical case.",
+  "Evidence path",
+  "Retained evidence sequence",
+  "This case format does not retain per-observation timestamps",
+  "Inspect raw topology",
+  "nodeByKey",
+  "observationSequence",
   'role="tablist"',
   'role="tab"',
   'role="tabpanel"',
@@ -191,6 +197,14 @@ assert.ok(
   !research.includes("factorText") &&
     !research.includes("/conflict|contradict|mismatch|negative|unsupported/i"),
   "decision surface must not infer M5 conflict direction from mutable status or rationale prose",
+);
+assert.ok(
+  research.includes("resolveEdgeProvenance(converged, edge)") &&
+    research.includes("provenance?.observation_summary ?? edge.reason") &&
+    research.includes("left.depth - right.depth || left.key.localeCompare(right.key)") &&
+    research.includes('node.depth === 0 ? "seed" : `depth ${node.depth}`') &&
+    research.includes("sequence must not be read as wall-clock time"),
+  "Graph must expose canonical evidence paths and a deterministic retained sequence without fabricating observation timestamps",
 );
 assert.ok(
   adminPage.includes('className={caseWorkspaceActive ? "workspace caseActive" : "workspace"}') &&
