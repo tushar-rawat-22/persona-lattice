@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const layout = fs.readFileSync(path.join(root, "app/demo/layout.tsx"), "utf8");
+const demo = fs.readFileSync(path.join(root, "app/demo/page.tsx"), "utf8");
 const simulation = fs.readFileSync(
   path.join(root, "app/demo/retained-case-navigation-simulation.tsx"),
   "utf8",
@@ -47,8 +47,11 @@ for (const token of forbidden) {
   }
 }
 
-if (!layout.includes("<RetainedCaseNavigationSimulation />")) {
-  throw new Error("public demo layout must mount retained-case navigation simulation");
+if (!demo.includes('import { RetainedCaseNavigationSimulation } from "./retained-case-navigation-simulation";')) {
+  throw new Error("public demo must import retained-case navigation simulation");
+}
+if (!demo.includes("<RetainedCaseNavigationSimulation />")) {
+  throw new Error("public demo must mount retained-case navigation simulation in the evidence workspace");
 }
 
 console.log("public retained-case navigation contract passed");
