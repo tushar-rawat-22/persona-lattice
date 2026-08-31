@@ -6,6 +6,12 @@ type OperatorSystemStateProps = OperatorSystemStateCounts;
 
 type StateTone = "complete" | "partial" | "limited" | "quiet";
 
+type SourceStateLedgerItem = {
+  key: string;
+  label: string;
+  count: number;
+};
+
 function countPhrase(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
@@ -30,6 +36,27 @@ function limitationSummary({
     parts.push(`${countPhrase(notAttemptedLimitCount, "source path")} not attempted because of configuration, routing, review, budget or policy limits before provider contact`);
   }
   return parts;
+}
+
+function sourceStateLedger({
+  attemptCount,
+  completedAttemptCount,
+  failedAttemptCount,
+  noMatchCount,
+  withheldCount,
+  unresolvedCount,
+  notAttemptedLimitCount,
+}: OperatorSystemStateProps): SourceStateLedgerItem[] {
+  const items: SourceStateLedgerItem[] = [
+    { key: "attempted", label: "attempted", count: attemptCount },
+    { key: "completed", label: "completed", count: completedAttemptCount },
+    { key: "failed", label: "failed", count: failedAttemptCount },
+    { key: "no-match", label: "no retained match", count: noMatchCount },
+    { key: "withheld", label: "withheld", count: withheldCount },
+    { key: "unresolved", label: "unresolved", count: unresolvedCount },
+    { key: "not-attempted", label: "not attempted", count: notAttemptedLimitCount },
+  ];
+  return items.filter((item) => item.key === "attempted" || item.count > 0);
 }
 
 function statePresentation({
@@ -101,6 +128,7 @@ function statePresentation({
 
 export function OperatorSystemState(props: OperatorSystemStateProps) {
   const presentation = statePresentation(props);
+  const ledger = sourceStateLedger(props);
   return (
     <section
       className="operatorSystemState"
@@ -110,6 +138,11 @@ export function OperatorSystemState(props: OperatorSystemStateProps) {
     >
       <strong>{presentation.title}</strong>
       <p>{presentation.detail}</p>
+      <div className="sourceSummaryLine" aria-label="Source state counts">
+        {ledger.map((item) => (
+          <span key={item.key}>{item.count} {item.label}</span>
+        ))}
+      </div>
     </section>
   );
 }
