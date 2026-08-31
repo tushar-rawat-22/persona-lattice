@@ -38,8 +38,10 @@ def test_canonical_provenance_surfaces_share_source_locator_renderer() -> None:
 
     assert source.count("<SourceLocator locator={report.seed_provenance.source_locator} />") == 1
     assert source.count("<SourceLocator locator={candidateLocator} />") == 1
-    assert source.count("<SourceLocator locator={provenance.source_locator} />") == 1
-    assert source.count("<SourceLocator locator={observation.source_locator} />") == 2
+    # Accounts & pivots and Graph / Evidence path both expose the same resolved canonical pivot locator.
+    assert source.count("<SourceLocator locator={provenance.source_locator} />") == 2
+    # Raw retained observations plus Graph / Retained evidence sequence expose canonical observation locators.
+    assert source.count("<SourceLocator locator={observation.source_locator} />") == 3
     assert source.count("<SourceLocator locator={resolved.source_locator} />") == 1
 
 
