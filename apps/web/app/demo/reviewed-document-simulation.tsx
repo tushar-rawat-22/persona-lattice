@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import styles from "./demo.module.css";
+import reviewStyles from "./reviewed-document-simulation.module.css";
 
 type ReviewStatus = "pending" | "confirmed" | "rejected";
 
@@ -66,13 +67,13 @@ export function ReviewedDocumentSimulation() {
         creating an operator session or calling an API. Every control below changes browser-memory demo state only.
       </p>
 
-      <div className={styles.reviewArtifact}>
-        <div className={styles.reviewArtifactHead}>
+      <div className={reviewStyles.artifact}>
+        <div className={reviewStyles.artifactHead}>
           <div>
             <strong>synthetic-intake-brief.pdf</strong>
             <span>sanitized fixture · 2 extracted candidates</span>
           </div>
-          <div className={styles.reviewActions}>
+          <div className={reviewStyles.actions}>
             <button type="button" onClick={() => setSessionExpired(true)} disabled={sessionExpired}>
               Simulate session expiry
             </button>
@@ -81,18 +82,18 @@ export function ReviewedDocumentSimulation() {
         </div>
 
         {sessionExpired && (
-          <p className={styles.reviewAlert} role="alert">
+          <p className={reviewStyles.alert} role="alert">
             Operator session expired. The rejected private request would leave review state unchanged; demo review actions are locked until reset.
           </p>
         )}
 
-        <div className={styles.reviewCandidateList}>
+        <div className={reviewStyles.candidateList}>
           {candidates.map((candidate) => {
             const status = statuses[candidate.id] ?? candidate.initialStatus;
             const canResearch = status === "confirmed";
             return (
-              <article className={styles.reviewCandidate} key={candidate.id}>
-                <div className={styles.reviewCandidateTop}>
+              <article className={reviewStyles.candidate} key={candidate.id}>
+                <div className={reviewStyles.candidateTop}>
                   <div>
                     <span>{candidate.kind}</span>
                     <strong>{candidate.value}</strong>
@@ -101,7 +102,7 @@ export function ReviewedDocumentSimulation() {
                   <em>{status} · research {canResearch ? "authorized" : "not authorized"}</em>
                 </div>
 
-                <div className={styles.reviewActions} aria-label={`${candidate.kind} simulated review actions`}>
+                <div className={reviewStyles.actions} aria-label={`${candidate.kind} simulated review actions`}>
                   {status === "pending" ? (
                     <>
                       <button type="button" disabled={sessionExpired} onClick={() => setStatus(candidate.id, "confirmed")}>
@@ -136,12 +137,12 @@ export function ReviewedDocumentSimulation() {
                 </div>
 
                 {previewedLead === candidate.id && (
-                  <p className={styles.reviewResult}>
+                  <p className={reviewStyles.result}>
                     Lead preview: {candidate.kind} · eligible after explicit review. No provider was called by promotion and no retained lead was created.
                   </p>
                 )}
                 {caseSimulation === candidate.id && (
-                  <p className={styles.reviewResult}>
+                  <p className={reviewStyles.result}>
                     Simulated case start stopped at the public boundary. No case was created, no provider ran and nothing was retained.
                   </p>
                 )}
