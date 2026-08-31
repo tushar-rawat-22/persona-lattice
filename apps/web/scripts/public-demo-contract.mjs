@@ -4,8 +4,13 @@ import path from "node:path";
 const root = process.cwd();
 const home = fs.readFileSync(path.join(root, "app/page.tsx"), "utf8");
 const demo = fs.readFileSync(path.join(root, "app/demo/page.tsx"), "utf8");
+const reviewedDocumentDemo = fs.readFileSync(
+  path.join(root, "app/demo/reviewed-document-simulation.tsx"),
+  "utf8",
+);
 const normalizedHome = home.replace(/\s+/g, " ");
 const normalizedDemo = demo.replace(/\s+/g, " ");
+const normalizedReviewedDocumentDemo = reviewedDocumentDemo.replace(/\s+/g, " ");
 
 const requiredHome = [
   "Read-only product demo",
@@ -56,6 +61,7 @@ const requiredDemo = [
   "SYNTHETIC INVESTIGATION WORKSPACE",
   "No provider requests are executed from this demo",
   "Private admin",
+  "ReviewedDocumentSimulation",
   "observation.provenance.source_kind",
   "observation.retrieved_at",
   "observation.expires_at",
@@ -117,6 +123,32 @@ for (const token of requiredDemo) {
   }
 }
 
+const requiredReviewedDocumentDemo = [
+  "REVIEWED DOCUMENT / SAFE SIMULATION",
+  "Extracted clues stay inert until human review",
+  "browser-memory demo state only",
+  "synthetic-intake-brief.pdf",
+  'initialStatus: "pending"',
+  'initialStatus: "rejected"',
+  "Confirm",
+  "Reject",
+  "Re-review",
+  'const canResearch = status === "confirmed"',
+  '? "authorized" : "not authorized"',
+  "Preview promoted lead",
+  "No provider was called by promotion",
+  "Simulate converged case start",
+  "No case was created, no provider ran and nothing was retained",
+  "Simulate session expiry",
+  "Operator session expired",
+  "Reset fixture",
+];
+for (const token of requiredReviewedDocumentDemo) {
+  if (!normalizedReviewedDocumentDemo.includes(token)) {
+    throw new Error(`public reviewed-document simulation missing required private-workflow parity: ${token}`);
+  }
+}
+
 const forbiddenDemo = [
   "fetch(",
   "/v1/cases/run",
@@ -131,6 +163,22 @@ const forbiddenDemo = [
 ];
 for (const token of forbiddenDemo) {
   if (demo.includes(token)) throw new Error(`public demo must stay non-operational: ${token}`);
+}
+
+const forbiddenReviewedDocumentDemo = [
+  "fetch(",
+  "/v1/",
+  "run-converged",
+  'type="file"',
+  'type="password"',
+  "localStorage",
+  "sessionStorage",
+  "document.cookie",
+];
+for (const token of forbiddenReviewedDocumentDemo) {
+  if (reviewedDocumentDemo.includes(token)) {
+    throw new Error(`public reviewed-document simulation must remain local-only and non-operational: ${token}`);
+  }
 }
 
 console.log("public demo contract passed");
