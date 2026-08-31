@@ -1,0 +1,196 @@
+.panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem 0 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.heading,
+.hiddenActive,
+.activeSummary,
+.boundary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.heading p,
+.heading span,
+.note,
+.controls span,
+.caseRow small,
+.activeCase small,
+.activeSummary span,
+.activeSummary p,
+.boundary span,
+.hiddenActive span,
+.empty {
+  color: var(--muted);
+}
+
+.heading p {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.heading h2,
+.note,
+.activeSummary p,
+.empty {
+  margin: 0;
+}
+
+.heading span {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.note,
+.activeSummary p,
+.boundary span,
+.hiddenActive span,
+.empty {
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(10rem, 1fr);
+  gap: 0.75rem;
+}
+
+.controls label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.controls span {
+  font-size: 0.75rem;
+}
+
+.controls input,
+.controls select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  padding: 0.65rem 0.7rem;
+  border-radius: 0.35rem;
+}
+
+.hiddenActive {
+  border-left: 3px solid currentColor;
+  padding: 0.65rem 0.75rem;
+}
+
+.hiddenActive div,
+.activeSummary {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.hiddenActive button,
+.boundary button,
+.caseRow,
+.activeCase {
+  font: inherit;
+}
+
+.hiddenActive button,
+.boundary button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.35rem;
+}
+
+.caseList {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+
+.caseRow,
+.activeCase {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  padding: 0.8rem 0;
+  cursor: pointer;
+}
+
+.activeCase {
+  box-shadow: inset 3px 0 0 currentColor;
+  padding-left: 0.7rem;
+}
+
+.caseRow > span,
+.activeCase > span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.caseRow > span:last-child,
+.activeCase > span:last-child {
+  text-align: right;
+}
+
+.caseRow em,
+.activeCase em {
+  font-style: normal;
+  font-size: 0.75rem;
+}
+
+.empty {
+  padding: 1rem 0;
+}
+
+.activeSummary {
+  padding-top: 0.25rem;
+}
+
+.boundary {
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--line);
+}
+
+.boundary button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 680px) {
+  .heading,
+  .hiddenActive,
+  .activeSummary,
+  .boundary {
+    display: grid;
+  }
+
+  .heading span {
+    white-space: normal;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .caseRow,
+  .activeCase {
+    grid-template-columns: 1fr;
+  }
+
+  .caseRow > span:last-child,
+  .activeCase > span:last-child {
+    text-align: left;
+  }
+}
