@@ -182,8 +182,8 @@ export default function PublicDemoPage() {
       <section className={styles.boundary}>
         <strong>Interpretation boundary</strong>
         <p>
-          Candidate scores below are deterministic evidence-strength triage. They are uncalibrated,
-          they are not identity probabilities, and a hard contradiction can veto positive evidence.
+          Candidate factors below are deterministic evidence-strength triage. They are grouped by evidentiary
+          direction, remain uncalibrated and non-probabilistic, and a hard contradiction can veto positive evidence.
         </p>
       </section>
 
@@ -269,6 +269,22 @@ export default function PublicDemoPage() {
             <div className={styles.candidateGrid}>
               {caseData.account_candidates.map((candidate) => {
                 const correlation = candidate.correlation;
+                const factorGroups = correlation
+                  ? [
+                      {
+                        label: "Supporting factors",
+                        factors: correlation.factors.filter((factor) => !factor.veto && factor.applied_weight > 0),
+                      },
+                      {
+                        label: "Conflicting factors",
+                        factors: correlation.factors.filter((factor) => factor.veto || factor.applied_weight < 0),
+                      },
+                      {
+                        label: "Neutral / withheld factors",
+                        factors: correlation.factors.filter((factor) => !factor.veto && factor.applied_weight === 0),
+                      },
+                    ]
+                  : [];
                 return (
                   <article className={styles.candidate} key={candidate.observation_id}>
                     <div className={styles.candidateTop}>
@@ -283,29 +299,59 @@ export default function PublicDemoPage() {
                     <code>{candidate.profile_url}</code>
                     {correlation && (
                       <>
-                        <div className={styles.scoreLine}>
-                          <span>{correlation.evidence_score}</span>
-                          <div>
-                            <strong>evidence score / 100</strong>
-                            <small>uncalibrated · not probability</small>
-                            <small>
-                              policy {correlation.policy_version} · evaluated {timestamp(correlation.evaluated_at)}
-                            </small>
+                        <p className={styles.sectionNote}>
+                          Non-probabilistic factor assessment. Direction follows retained M5 weight/veto semantics;
+                          rationale wording alone does not create negative evidence.
+                        </p>
+                        {factorGroups.map((group) => (
+                          <div key={group.label}>
+                            <p className={styles.sectionNote}>
+                              <strong>{group.label}</strong> · {group.factors.length} retained
+                            </p>
+                            {group.factors.length === 0 ? (
+                              <p className={styles.sectionNote}>No retained factors in this direction.</p>
+                            ) : (
+                              <ul className={styles.factorList}>
+                                {group.factors.map((factor, index) => (
+                                  <li key={`${group.label}-${factor.kind}-${index}`}>
+                                    <div>
+                                      <strong>{words(factor.kind)}</strong>
+                                      <span>{factor.rationale}</span>
+                                    </div>
+                                    <em
+                                      className={
+                                        factor.veto || factor.applied_weight < 0
+                                          ? styles.bad
+                                          : factor.applied_weight === 0 || factor.status === "excluded_stale"
+                                            ? styles.warn
+                                            : styles.good
+                                      }
+                                    >
+                                      {factor.veto
+                                        ? "veto"
+                                        : factor.status === "excluded_stale"
+                                          ? "stale"
+                                          : `${factor.applied_weight > 0 ? "+" : ""}${factor.applied_weight}`}
+                                    </em>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
                           </div>
-                        </div>
-                        <ul className={styles.factorList}>
-                          {correlation.factors.map((factor, index) => (
-                            <li key={`${factor.kind}-${index}`}>
-                              <div>
-                                <strong>{words(factor.kind)}</strong>
-                                <span>{factor.rationale}</span>
-                              </div>
-                              <em className={factor.veto ? styles.bad : factor.status === "excluded_stale" ? styles.warn : styles.good}>
-                                {factor.veto ? "veto" : factor.status === "excluded_stale" ? "stale" : `${factor.applied_weight > 0 ? "+" : ""}${factor.applied_weight}`}
-                              </em>
-                            </li>
-                          ))}
-                        </ul>
+                        ))}
+                        <details>
+                          <summary>Inspect model mechanics</summary>
+                          <div className={styles.scoreLine}>
+                            <span>{correlation.evidence_score}</span>
+                            <div>
+                              <strong>internal evidence-strength index / 100</strong>
+                              <small>uncalibrated · not an identity probability</small>
+                              <small>
+                                policy {correlation.policy_version} · evaluated {timestamp(correlation.evaluated_at)}
+                              </small>
+                            </div>
+                          </div>
+                        </details>
                       </>
                     )}
                   </article>

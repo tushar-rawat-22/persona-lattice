@@ -61,6 +61,13 @@ const requiredDemo = [
   "observation.expires_at",
   "correlation.policy_version",
   "correlation.evaluated_at",
+  "Non-probabilistic factor assessment",
+  "Supporting factors",
+  "Conflicting factors",
+  "Neutral / withheld factors",
+  "Inspect model mechanics",
+  "internal evidence-strength index / 100",
+  "factor.applied_weight < 0",
   "Typed source-run states",
   'state: "executed"',
   'reason: "results_returned"',
@@ -120,6 +127,7 @@ const forbiddenDemo = [
   'type="password"',
   "localStorage",
   "sessionStorage",
+  "evidence score / 100",
 ];
 for (const token of forbiddenDemo) {
   if (demo.includes(token)) throw new Error(`public demo must stay non-operational: ${token}`);
