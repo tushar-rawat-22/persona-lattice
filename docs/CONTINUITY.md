@@ -8,15 +8,15 @@ Repository: `tushar-rawat-22/persona-lattice`
 
 Default branch: `main`
 
-The product baseline entering this documentation update is PR #275 merged as `994cc50fb1f17a5dd6fde104179ed949e168b708` on 2026-08-28. If `main` is newer, verify that it descends from this checkpoint and treat the current remote branch as authoritative.
+The product baseline entering this documentation update is PR #307 merged as `d70341ae18de948d23203337b1bbcdf0c15875c4` on 2026-08-31. If `main` is newer, verify that it descends from this checkpoint and treat the current remote branch as authoritative.
 
 Do not trust a remembered local SHA, old assistant message or historical section of a document over the current GitHub branch, current PR state and exact-head CI.
 
 ## Product state
 
-PersonaLattice is a private-admin, evidence-first public-source research workbench. The public route contains synthetic/demo material; real intake, provider execution and retained cases require the authenticated operator workflow.
+PersonaLattice is a private-admin, evidence-first public-source research workbench with a live zero-secret public observer at `https://persona-lattice.pages.dev`. The public surface contains deterministic synthetic/demo material; real intake, provider execution and retained cases require the authenticated operator workflow.
 
-The current product is intentionally one admin, one API worker and SQLite-backed retained storage. That architecture is valid for the private operator product and private beta. It is not yet a multi-user SaaS architecture.
+The current private product is intentionally one admin, one API worker and SQLite-backed retained storage. That architecture is valid for the private operator product and private beta. It is not yet a multi-user SaaS architecture.
 
 Permanent boundaries:
 
@@ -38,13 +38,17 @@ The exact host/browser-tested LC1 commit is `18b6b75b7dc28d3883752aec01391122372
 
 That session covered production preflight, same-origin web/API routing, authentication/CSRF, exact URL/domain research, source-state/provenance/M5 contracts, reviewed-document promotion, retained-case operations, restart persistence, SQLite backup/restore, session invalidation, logout, log privacy and Safari/Chrome acceptance.
 
-LC1 is a software + real-host launch candidate. It is not a claim that a stable public beta hostname already exists. The temporary no-domain acceptance route was stopped.
+LC1 is a software + real-host launch candidate. It is not the stable private-beta endpoint.
 
-For the current stable-beta operating choices and the exact deployment gate, read `docs/LIVE_BETA.md` before creating new deployment architecture.
+The zero-secret public observer is live at `https://persona-lattice.pages.dev`. It was created on 2026-08-31 from the canonical repository using `apps/web`'s dedicated `build:public-demo` static export. Founder live smoke screenshots verified the public overview and synthetic evidence workspace. The public `Private admin` path intentionally resolves to the safe operator-access boundary; no admin login, private API URL, provider execution, retained-case mutation or credentials belong in the Pages deployment.
+
+For the current public/private operating split and the exact private deployment gate, read `docs/LIVE_BETA.md` before creating new deployment architecture.
 
 ## Active engineering stream
 
-Issue #252 is the current operator-workspace product-quality stream. It exists to remove remaining engineering-console traits and improve repeated analyst work without changing evidence semantics or provider policy.
+The primary company-level engineering objective is now the stable authenticated private-beta endpoint. Do not keep extending public parity unless a concrete defect is observed on the live Pages deployment.
+
+Issue #252 remains the operator-workspace product-quality stream for concrete usability/correctness bottlenecks. It should not displace the private-live critical path merely to generate more UI PRs.
 
 Major post-LC1 improvements already merged include:
 
@@ -59,7 +63,11 @@ Major post-LC1 improvements already merged include:
 - explicit expired-session handling and fail-closed remote actions;
 - distinct initial loading, failed-index and confirmed-empty case states;
 - `/` shortcut for retained-case search;
-- `N` shortcut for reopening New intake.
+- `N` shortcut for reopening New intake;
+- explicit retained evidence paths in Graph;
+- factor-first public M5 interpretation;
+- reviewed-document workflow simulation in the public observer;
+- retained-case navigation simulation in the public observer.
 
 Do not continue UI polishing merely to generate PR count. The next product change should remove a concrete operator bottleneck or correctness ambiguity.
 
@@ -138,9 +146,10 @@ A new assistant/model should do only this before changing code:
 1. fetch current `main`;
 2. identify the newest open implementation PR and exact head;
 3. inspect exact-head CI and unresolved review threads;
-4. read Issue #222 only if source work is relevant, and Issue #252 if operator-product work is relevant;
-5. read the smallest implementation files needed for the active PR;
-6. fix/ship the active bounded increment before opening another unrelated stream.
+4. verify the live public observer only if deployment state is relevant;
+5. read Issue #222 only if source work is relevant, and Issue #252 only if operator-product work is relevant;
+6. read the smallest implementation/deployment files needed for the active PR;
+7. fix/ship the active bounded increment before opening another unrelated stream.
 
 Do not spend the first several prompts replaying old history. Use this file to establish architecture and boundaries, then verify only the state that can have changed.
 
@@ -157,8 +166,10 @@ For normal implementation work:
 
 ## Immediate company-level priority
 
-The software is already good enough to be shown as a project and has passed LC1. The highest-value company step is now to establish a stable private-beta operating endpoint while continuing bounded product improvements.
+The public observer is live. The highest-value company step is now to establish the stable authenticated private-beta endpoint without weakening persistence, authentication or release provenance.
 
-Do not hold the beta offline waiting for PersonaLattice to become a hypothetical “finished” background checker. Conversely, do not call a temporary Quick Tunnel or an ephemeral SQLite deployment production.
+The preferred low-churn path remains the founder-controlled host with persistent protected SQLite, owner-only production configuration, same-origin web/API routing, and stable HTTPS ingress through a named Cloudflare Tunnel or another explicitly reviewed equivalent. Do not call a Quick Tunnel, localhost exposure, Tailscale Personal for commercial operation, or an ephemeral SQLite host a stable private beta.
 
-The first stable-beta release should preserve the one-admin architecture, durable case storage, server-side secrets, fail-closed provider governance and the already-tested same-origin authentication boundary. After that release, continue operator quality and source coverage incrementally.
+A stable private release must prove restart persistence, backup/restore, Safari/Chrome acceptance, exact deployed release SHA and rollback. If no defensible zero-cost hosted runtime can satisfy durable SQLite and secure private access, keep the workbench on the founder Mac rather than weakening storage durability.
+
+Do not hold the beta offline waiting for PersonaLattice to become a hypothetical finished background checker. After the stable private release, continue operator quality and source coverage incrementally.

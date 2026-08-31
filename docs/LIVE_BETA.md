@@ -1,8 +1,8 @@
 # Live beta
 
-PersonaLattice has passed its first software and real-host launch-candidate gate. That does not mean a permanent private operator endpoint already exists.
+PersonaLattice has passed its first software and real-host launch-candidate gate. The zero-secret public observer is now live, while the stable authenticated private beta remains the current deployment objective.
 
-This document separates three things that are easy to confuse: a public read-only product demo, a stable private beta, and a future multi-user SaaS deployment.
+This document separates three things that are easy to confuse: the live public read-only product demo, a stable private beta, and a future multi-user SaaS deployment.
 
 ## What is ready now
 
@@ -12,9 +12,15 @@ The application can therefore be shown as a working product without waiting for 
 
 Do not describe it as a multi-user production SaaS. The current private runtime intentionally has one admin, one API worker, process-local sessions and SQLite case storage.
 
-## Zero-spend public product demo
+## Live zero-spend public product demo
 
-The public demo is deliberately independent of the private research runtime. It contains fixed synthetic evidence and exposes the product's investigation hierarchy without provider execution, uploads, case mutation, retained private data or admin credentials.
+The public observer is live at:
+
+`https://persona-lattice.pages.dev`
+
+It was created on 2026-08-31 from the canonical `tushar-rawat-22/persona-lattice` repository using the dedicated static public-demo build. Founder live smoke screenshots verified the overview and synthetic evidence workspace, including retained-case navigation, source states, correlation, observation timeline, evidence path, claims/open questions, operator-lifecycle simulation and loading/failure/coverage semantics.
+
+The public demo is deliberately independent of the private research runtime. It contains fixed synthetic evidence and exposes the product's investigation hierarchy without provider execution, uploads, case mutation, retained private data or admin credentials. The `Private admin` path intentionally resolves to a public-safe boundary explanation; the Pages deployment does not provide an admin session.
 
 `apps/web` has a dedicated static-export mode for this surface:
 
@@ -28,7 +34,9 @@ npm run test:public-demo-export
 
 The output is `apps/web/out/`. The export includes the product overview, `/demo/`, an explicit `/operator-access/` boundary page and the static security/redirect policy used by Cloudflare Pages. In the Pages deployment, `/admin` and `/admin/*` redirect to `/operator-access/`; the normal private Next.js server does not interpret that Pages redirect file, so its authenticated `/admin` route remains unchanged.
 
-A Cloudflare Pages Git deployment can use:
+The dedicated public build sets `PERSONALATTICE_PUBLIC_DEMO_ONLY=true`, clears `NEXT_PUBLIC_API_URL`, and removes the private operator route/bundle from the exported artifact. Never add credentials, a private API origin, login capability, provider execution or retained-case writes to this Pages deployment.
+
+The Cloudflare Pages Git deployment contract is:
 
 - repository: `tushar-rawat-22/persona-lattice`;
 - production branch: `main`;
@@ -38,9 +46,7 @@ A Cloudflare Pages Git deployment can use:
 
 No provider key, admin password/hash, case database or private API URL belongs in the public Pages project. The build is intentionally useful with zero secrets and zero backend authority.
 
-Cloudflare currently gives Pages projects a `*.pages.dev` hostname and supports static Next.js exports. Its Free plan currently allows 500 builds per month, while static asset requests do not consume Pages Functions/Workers request quota. Re-check Cloudflare's primary documentation before changing deployment assumptions; these limits are operational facts, not application invariants.
-
-This is the preferred first public launch because it can stay online without keeping the operator's Mac running and cannot turn a visitor into an investigator.
+The stable public URL is a separate deployment truth row from private-admin availability. A green static export or CI run alone is not sufficient evidence of the current live deployment. For future release claims, verify that the public URL is reachable and, where the hosting control plane exposes it, tie the deployed artifact to the exact repository commit before calling a new revision live.
 
 ## Temporary full-stack demonstration
 
@@ -51,6 +57,8 @@ Cloudflare documents Quick Tunnels as testing/development infrastructure, with a
 When the demo ends, stop the tunnel and local runtime.
 
 ## Stable private beta: preferred low-cost path
+
+Now that the public observer is live, the primary deployment objective is the authenticated private workbench.
 
 The lowest-churn private architecture is to keep the already-tested API, web process and SQLite database on a controlled host and publish the web process through a named Cloudflare Tunnel.
 
@@ -132,4 +140,4 @@ Post-LC1 UI improvements and future source additions can continue after that gat
 
 A real multi-user commercial service is a different architecture milestone. Before calling PersonaLattice that, move sessions to shared durable storage, move retained data to a production datastore designed for concurrent service instances, add account/tenant authorization boundaries, production observability and incident handling, governed backup/restore and deletion, and the required privacy/legal operating documents.
 
-Do not hide that distinction in marketing. The current product is a serious private operator workbench with a safe public demonstration surface and can be useful before it becomes a multi-tenant SaaS.
+Do not hide that distinction in marketing. The current product is a serious private operator workbench with a live safe public demonstration surface and can be useful before it becomes a multi-tenant SaaS.
