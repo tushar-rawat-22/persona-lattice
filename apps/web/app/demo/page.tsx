@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { syntheticCase } from "../dashboard/fixture";
 import styles from "./demo.module.css";
+import { RetainedCaseNavigationSimulation } from "./retained-case-navigation-simulation";
 import { ReviewedDocumentSimulation } from "./reviewed-document-simulation";
 
 const simulatedSourceRuns = [
@@ -226,6 +227,7 @@ export default function PublicDemoPage() {
 
         <div className={styles.mainColumn}>
           <ReviewedDocumentSimulation />
+          <RetainedCaseNavigationSimulation />
 
           <section className={styles.section}>
             <div className={styles.sectionHead}>
