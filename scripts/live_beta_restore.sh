@@ -45,7 +45,7 @@ EVIDENCE_MODE="$(file_mode "$EVIDENCE_PATH")"
 [[ "$BACKUP_MODE" == "600" || "$BACKUP_MODE" == "400" ]] || fail "backup file must be owner-only (mode 600 or 400), got $BACKUP_MODE"
 [[ "$EVIDENCE_MODE" == "600" || "$EVIDENCE_MODE" == "400" ]] || fail "backup evidence file must be owner-only (mode 600 or 400), got $EVIDENCE_MODE"
 
-readarray -t EVIDENCE_VALUES < <(python3 - "$EVIDENCE_PATH" <<'PY'
+EVIDENCE_VALUES="$(python3 - "$EVIDENCE_PATH" <<'PY'
 import re
 import sys
 
@@ -73,10 +73,10 @@ print(values["backup_sha256"])
 print(values.get("release_sha", "unavailable"))
 print(values.get("rollback_sha", "unavailable"))
 PY
-) || fail "backup evidence could not be parsed safely: $EVIDENCE_PATH"
-EXPECTED_DIGEST="${EVIDENCE_VALUES[0]}"
-RELEASE_SHA="${EVIDENCE_VALUES[1]}"
-ROLLBACK_SHA="${EVIDENCE_VALUES[2]}"
+)" || fail "backup evidence could not be parsed safely: $EVIDENCE_PATH"
+EXPECTED_DIGEST="$(printf '%s\n' "$EVIDENCE_VALUES" | sed -n '1p')"
+RELEASE_SHA="$(printf '%s\n' "$EVIDENCE_VALUES" | sed -n '2p')"
+ROLLBACK_SHA="$(printf '%s\n' "$EVIDENCE_VALUES" | sed -n '3p')"
 ACTUAL_DIGEST="$(sha256_file "$BACKUP_PATH")"
 [[ "$ACTUAL_DIGEST" == "$EXPECTED_DIGEST" ]] || fail "backup digest does not match evidence"
 
@@ -91,18 +91,23 @@ finally:
     conn.close()
 PY
 
+if [[ -f "$PERSONALATTICE_DB_PATH" ]] && command -v lsof >/dev/null 2>&1 && lsof "$PERSONALATTICE_DB_PATH" >/dev/null 2>&1; then
+  fail "database is open by a running process; stop the private-beta runtime before restore"
+fi
+
 DB_DIR="$(dirname "$PERSONALATTICE_DB_PATH")"
 mkdir -p "$DB_DIR" "$BACKUP_DIR"
 chmod 700 "$BACKUP_DIR"
 umask 077
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 TEMP_RESTORE="$DB_DIR/.persona-lattice-restore-$TIMESTAMP-$$.sqlite3"
-SAFETY_BACKUP="$BACKUP_DIR/pre-restore-$TIMESTAMP.sqlite3"
+SAFETY_BACKUP="unavailable"
 RESTORE_EVIDENCE="$BACKUP_DIR/restore-$TIMESTAMP.env"
 RESTORE_EVIDENCE_TEMP="$RESTORE_EVIDENCE.tmp.$$"
 trap 'rm -f "$TEMP_RESTORE" "$RESTORE_EVIDENCE_TEMP"' EXIT
 
 if [[ -f "$PERSONALATTICE_DB_PATH" ]]; then
+  SAFETY_BACKUP="$BACKUP_DIR/pre-restore-$TIMESTAMP.sqlite3"
   python3 - "$PERSONALATTICE_DB_PATH" "$SAFETY_BACKUP" <<'PY'
 import sqlite3, sys
 source = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
@@ -111,6 +116,13 @@ try:
     source.backup(target)
 finally:
     target.close(); source.close()
+check = sqlite3.connect(sys.argv[2])
+try:
+    result = check.execute("PRAGMA integrity_check").fetchone()
+    if not result or result[0] != "ok":
+        raise SystemExit(f"pre-restore safety backup integrity_check failed: {result!r}")
+finally:
+    check.close()
 PY
   chmod 600 "$SAFETY_BACKUP"
 fi
@@ -132,13 +144,14 @@ finally:
     check.close()
 PY
 chmod 600 "$TEMP_RESTORE"
+rm -f "$PERSONALATTICE_DB_PATH-wal" "$PERSONALATTICE_DB_PATH-shm"
 mv "$TEMP_RESTORE" "$PERSONALATTICE_DB_PATH"
 chmod 600 "$PERSONALATTICE_DB_PATH"
 RESTORED_DIGEST="$(sha256_file "$PERSONALATTICE_DB_PATH")"
 
 printf 'restored_from=%s\nbackup_sha256=%s\nrestored_sha256=%s\nrelease_sha=%s\nrollback_sha=%s\nsafety_backup=%s\n' \
   "$BACKUP_PATH" "$EXPECTED_DIGEST" "$RESTORED_DIGEST" "$RELEASE_SHA" "$ROLLBACK_SHA" \
-  "${SAFETY_BACKUP:-unavailable}" >"$RESTORE_EVIDENCE_TEMP"
+  "$SAFETY_BACKUP" >"$RESTORE_EVIDENCE_TEMP"
 chmod 600 "$RESTORE_EVIDENCE_TEMP"
 mv "$RESTORE_EVIDENCE_TEMP" "$RESTORE_EVIDENCE"
 trap - EXIT
@@ -149,7 +162,7 @@ printf '%s\n' \
   "Restored from: $BACKUP_PATH" \
   "Backup SHA256: $EXPECTED_DIGEST" \
   "Restored SHA256: $RESTORED_DIGEST" \
-  "Safety backup: ${SAFETY_BACKUP:-unavailable}" \
+  "Safety backup: $SAFETY_BACKUP" \
   "Restore evidence: $RESTORE_EVIDENCE" \
   "Release SHA: $RELEASE_SHA" \
   "Rollback SHA: $ROLLBACK_SHA" \
