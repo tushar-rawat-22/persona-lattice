@@ -32,6 +32,27 @@ for (const token of [
 }
 
 for (const token of [
+  "function sourceStateLedger",
+  '{ key: "attempted", label: "attempted", count: attemptCount }',
+  '{ key: "completed", label: "completed", count: completedAttemptCount }',
+  '{ key: "failed", label: "failed", count: failedAttemptCount }',
+  '{ key: "no-match", label: "no retained match", count: noMatchCount }',
+  '{ key: "withheld", label: "withheld", count: withheldCount }',
+  '{ key: "unresolved", label: "unresolved", count: unresolvedCount }',
+  '{ key: "not-attempted", label: "not attempted", count: notAttemptedLimitCount }',
+  'item.key === "attempted" || item.count > 0',
+  'className="sourceSummaryLine" aria-label="Source state counts"',
+  "ledger.map((item)",
+]) {
+  assert.ok(source.includes(token), `operator source-state ledger contract missing: ${token}`);
+}
+
+assert.ok(
+  !source.includes('item.count >= 0'),
+  "source-state ledger must not flood the primary overview with zero-valued secondary categories",
+);
+
+for (const token of [
   "notAttemptedLimitCount: number",
   "export function operatorSystemStateCounts",
   "export function operatorSystemStateCountsFromSourceRuns",
