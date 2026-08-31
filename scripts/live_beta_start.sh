@@ -14,6 +14,7 @@ WEB_LOG="$RUNTIME_DIR/web.log"
 RELEASE_MANIFEST="$RUNTIME_DIR/release.env"
 API_PID=""
 WEB_PID=""
+MODE="${1:-}"
 
 fail() {
   printf 'PersonaLattice live-beta start failed: %s\n' "$1" >&2
@@ -81,6 +82,11 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+case "$MODE" in
+  ""|--preflight-only|--prepare-only|--run-prepared) ;;
+  *) fail "usage: scripts/live_beta_start.sh [--preflight-only|--prepare-only|--run-prepared]" ;;
+esac
+
 require_command curl
 require_command git
 require_command npm
@@ -88,8 +94,8 @@ require_command python3
 require_command stat
 
 [[ -f "$ENV_FILE" ]] || fail "production environment file not found: $ENV_FILE"
-MODE="$(file_mode "$ENV_FILE")"
-[[ "$MODE" == "600" || "$MODE" == "400" ]] || fail "production environment file must be owner-only (mode 600 or 400), got $MODE"
+FILE_MODE="$(file_mode "$ENV_FILE")"
+[[ "$FILE_MODE" == "600" || "$FILE_MODE" == "400" ]] || fail "production environment file must be owner-only (mode 600 or 400), got $FILE_MODE"
 
 if ! git -C "$ROOT" diff --quiet -- || ! git -C "$ROOT" diff --cached --quiet --; then
   fail "repository has uncommitted changes; private-beta releases require an exact clean commit"
@@ -111,28 +117,50 @@ set +a
 [[ "${PERSONALATTICE_COOKIE_SECURE:-}" == "true" ]] || fail "PERSONALATTICE_COOKIE_SECURE must be true"
 [[ "${PERSONALATTICE_SESSION_COOKIE:-}" == __Host-* ]] || fail "PERSONALATTICE_SESSION_COOKIE must use the __Host- prefix"
 
-if [[ ! -x "$VENV/bin/python" ]]; then
-  python3 -m venv "$VENV"
+if [[ "$MODE" == "--run-prepared" ]]; then
+  [[ -x "$VENV/bin/python" ]] || fail "prepared Python environment is missing; run scripts/live_beta_start.sh --prepare-only"
+else
+  if [[ ! -x "$VENV/bin/python" ]]; then
+    python3 -m venv "$VENV"
+  fi
 fi
 PYTHON="$VENV/bin/python"
 
-"$PYTHON" -m pip install -q -e "$API_DIR"
+if [[ "$MODE" != "--run-prepared" ]]; then
+  "$PYTHON" -m pip install -q -e "$API_DIR"
+fi
 
 export PERSONALATTICE_API_ORIGIN="http://127.0.0.1:$API_PORT"
 unset PERSONALATTICE_API_HOSTPORT || true
 "$PYTHON" -m app.launch_preflight >/dev/null
 
-if [[ "${1:-}" == "--preflight-only" ]]; then
+if [[ "$MODE" == "--preflight-only" ]]; then
   printf 'PersonaLattice live-beta preflight passed.\n'
   exit 0
 fi
-[[ $# -eq 0 ]] || fail "usage: scripts/live_beta_start.sh [--preflight-only]"
 
-(
-  cd "$WEB_DIR"
-  npm ci --no-audit --no-fund
-  PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run build
-) >"$RUNTIME_DIR/build.log" 2>&1 || fail "web production build failed; see $RUNTIME_DIR/build.log"
+prepare_web() {
+  (
+    cd "$WEB_DIR"
+    npm ci --no-audit --no-fund
+    PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run build
+  ) >"$RUNTIME_DIR/build.log" 2>&1 || fail "web production build failed; see $RUNTIME_DIR/build.log"
+}
+
+if [[ "$MODE" == "--run-prepared" ]]; then
+  [[ -x "$WEB_DIR/node_modules/.bin/next" ]] || fail "prepared web dependencies are missing; run scripts/live_beta_start.sh --prepare-only"
+  [[ -f "$WEB_DIR/.next/BUILD_ID" ]] || fail "prepared web production build is missing; run scripts/live_beta_start.sh --prepare-only"
+else
+  prepare_web
+fi
+
+if [[ "$MODE" == "--prepare-only" ]]; then
+  printf '%s\n' \
+    "PersonaLattice private-beta runtime prepared for release $RELEASE_SHA." \
+    "Prepared Python environment: $VENV" \
+    "Prepared web build: $WEB_DIR/.next"
+  exit 0
+fi
 
 (
   cd "$ROOT"
