@@ -112,6 +112,7 @@ jobs:
           bash -n scripts/live_beta_start.sh
           bash -n scripts/live_beta_backup.sh
           bash -n scripts/live_beta_restore.sh
+          bash -n scripts/live_beta_launchd.sh
           bash -n scripts/test_lc1_api_process_contract.sh
           bash -n scripts/test_lc1_npm_worktree.sh
           bash -n scripts/test_lc1_python_selection.sh
@@ -119,6 +120,7 @@ jobs:
           bash -n scripts/test_live_beta_start_contract.sh
           bash -n scripts/test_live_beta_backup.sh
           bash -n scripts/test_live_beta_restore.sh
+          bash -n scripts/test_live_beta_launchd.sh
           bash -n scripts/test_public_demo_release_artifact.sh
           bash scripts/test_lc1_api_process_contract.sh
           bash scripts/test_lc1_npm_worktree.sh
@@ -127,6 +129,7 @@ jobs:
           bash scripts/test_live_beta_start_contract.sh
           bash scripts/test_live_beta_backup.sh
           bash scripts/test_live_beta_restore.sh
+          bash scripts/test_live_beta_launchd.sh
           bash scripts/test_public_demo_release_artifact.sh
       - name: Build and exercise production processes
         shell: bash
