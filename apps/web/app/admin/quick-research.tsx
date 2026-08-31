@@ -1170,16 +1170,72 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   }
 
   function renderGraph() {
-    if (!converged) return <p className="muted">Graph topology is unavailable for this historical case.</p>;
+    if (!converged) return <p className="muted">Evidence path is unavailable for this historical case.</p>;
+    const nodeByKey = new Map(converged.nodes.map((node) => [node.key, node]));
+    const observationSequence = converged.nodes
+      .slice()
+      .sort((left, right) => left.depth - right.depth || left.key.localeCompare(right.key))
+      .flatMap((node) => node.observations.map((observation, index) => ({ node, observation, index })));
     return (
       <div className="reportSection">
-        <h3>Research graph</h3>
-        <div className="tableScroll">
-          <table className="compactTable graphTable">
-            <thead><tr><th>Node</th><th>Kind</th><th>Depth</th><th>Parent</th><th>Pivot reason</th></tr></thead>
-            <tbody>{converged.nodes.map((node) => <tr key={node.key}><td>{node.normalized_value}</td><td>{node.kind}</td><td>{node.depth}</td><td>{node.parent_key ?? "seed"}</td><td>{node.pivot_reason}</td></tr>)}</tbody>
-          </table>
-        </div>
+        <h3>Evidence path</h3>
+        <p className="muted">Shows how retained public evidence admitted each pivot. A pivot is a lead to investigate, never proof that identifiers belong to the same person.</p>
+        {converged.edges.length === 0 ? (
+          <p className="muted">No public evidence pivots were admitted beyond the seed.</p>
+        ) : (
+          <div className="tableScroll">
+            <table className="compactTable graphTable">
+              <thead><tr><th>From</th><th>Retained evidence</th><th>To</th><th>Provenance</th></tr></thead>
+              <tbody>
+                {converged.edges.map((edge, index) => {
+                  const parent = nodeByKey.get(edge.parent_key);
+                  const child = nodeByKey.get(edge.child_key);
+                  const provenance = resolveEdgeProvenance(converged, edge);
+                  return (
+                    <tr key={`${edge.parent_key}-${edge.child_key}-${index}`}>
+                      <td>{parent ? `${parent.kind} · ${parent.normalized_value}` : edge.parent_key}</td>
+                      <td>{provenance?.observation_summary ?? edge.reason}{provenance?.source_field ? <><br /><small>field {provenance.source_field}</small></> : null}</td>
+                      <td>{child ? `${child.kind} · ${child.normalized_value}` : edge.child_key}</td>
+                      <td>{provenance ? <>{provenance.source}<br /><SourceLocator locator={provenance.source_locator} /></> : "Canonical pivot provenance could not be resolved safely."}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <h3>Retained evidence sequence</h3>
+        <p className="muted">Ordered by research depth and retained observation order. This case format does not retain per-observation timestamps, so the sequence must not be read as wall-clock time.</p>
+        {observationSequence.length === 0 ? (
+          <p className="muted">No attributable observations were retained for this case.</p>
+        ) : (
+          <div className="tableScroll">
+            <table className="compactTable graphTable">
+              <thead><tr><th>Stage</th><th>Node</th><th>Observation</th><th>Source / locator</th></tr></thead>
+              <tbody>
+                {observationSequence.map(({ node, observation, index }) => (
+                  <tr key={`${node.key}-${observation.source_locator}-${index}`}>
+                    <td>{node.depth === 0 ? "seed" : `depth ${node.depth}`}</td>
+                    <td>{node.kind} · {node.normalized_value}</td>
+                    <td>{observation.summary}</td>
+                    <td>{observation.source}<br /><SourceLocator locator={observation.source_locator} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <details>
+          <summary>Inspect raw topology</summary>
+          <div className="tableScroll">
+            <table className="compactTable graphTable">
+              <thead><tr><th>Node</th><th>Kind</th><th>Depth</th><th>Parent</th><th>Pivot reason</th></tr></thead>
+              <tbody>{converged.nodes.map((node) => <tr key={node.key}><td>{node.normalized_value}</td><td>{node.kind}</td><td>{node.depth}</td><td>{node.parent_key ?? "seed"}</td><td>{node.pivot_reason}</td></tr>)}</tbody>
+            </table>
+          </div>
+        </details>
         <p className="muted">{converged.provenance_rule}</p>
       </div>
     );
