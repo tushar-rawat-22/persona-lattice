@@ -24,6 +24,13 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "required command '$1' is unavailable"
 }
 
+trim_space() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
 case "$MODE" in
   preflight|run) ;;
   *) fail "usage: scripts/live_beta_tunnel.sh [preflight|run]" ;;
@@ -31,6 +38,7 @@ esac
 
 require_command cloudflared
 require_command grep
+require_command head
 require_command sed
 require_command stat
 
@@ -42,11 +50,14 @@ require_command stat
 
 [[ -f "$CONFIG" ]] || fail "cloudflared config not found: $CONFIG"
 
-credentials_file="$(
-  sed -n 's/^[[:space:]]*credentials-file:[[:space:]]*//p' "$CONFIG" \
-    | head -n 1 \
-    | sed -e 's/^[[:space:]"'\''']*//' -e 's/[[:space:]"'\''']*$//'
-)"
+credentials_file="$(sed -n 's/^[[:space:]]*credentials-file:[[:space:]]*//p' "$CONFIG" | head -n 1)"
+credentials_file="$(trim_space "$credentials_file")"
+case "$credentials_file" in
+  \"*\") credentials_file="${credentials_file:1:${#credentials_file}-2}" ;;
+  \'*\') credentials_file="${credentials_file:1:${#credentials_file}-2}" ;;
+esac
+credentials_file="$(trim_space "$credentials_file")"
+
 [[ -n "$credentials_file" ]] || fail "cloudflared config must declare credentials-file"
 [[ "$credentials_file" == /* ]] || fail "credentials-file must use an absolute path"
 [[ -f "$credentials_file" ]] || fail "tunnel credentials file not found: $credentials_file"
