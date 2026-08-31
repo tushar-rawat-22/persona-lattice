@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { syntheticCase } from "../dashboard/fixture";
 import styles from "./demo.module.css";
+import { ReviewedDocumentSimulation } from "./reviewed-document-simulation";
 
 const simulatedSourceRuns = [
   {
@@ -51,8 +52,8 @@ const simulatedLifecycleStates = [
   {
     step: "Reviewed document",
     private_action: "Preview, review and explicitly admit extracted clues",
-    public_state: "fixture preview",
-    detail: "A sanitized workflow state is demonstrated without a file input, upload endpoint or document retention.",
+    public_state: "interactive fixture",
+    detail: "The safe simulation above mirrors confirm, reject, re-review, promotion and case-start boundaries without a file input, upload endpoint or document retention.",
   },
   {
     step: "Retained cases",
@@ -224,6 +225,8 @@ export default function PublicDemoPage() {
         </aside>
 
         <div className={styles.mainColumn}>
+          <ReviewedDocumentSimulation />
+
           <section className={styles.section}>
             <div className={styles.sectionHead}>
               <div>
@@ -483,7 +486,7 @@ export default function PublicDemoPage() {
             </div>
             <p className={styles.sectionNote}>
               The private workbench includes write-capable and authenticated lifecycle steps. This observer mirrors
-              their meaning without creating a session, accepting an upload, retaining a case or exposing mutation controls.
+              their meaning without creating a session, accepting an upload, retaining a case or exposing an enabled mutation path.
             </p>
             <div className={styles.lifecycleList}>
               {simulatedLifecycleStates.map((state) => (
