@@ -3,9 +3,14 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT="$ROOT/scripts/live_beta_start.sh"
+VERIFY_SCRIPT="$ROOT/scripts/live_beta_verify_release.sh"
+NEXT_CONFIG="$ROOT/apps/web/next.config.ts"
 
 [[ -f "$SCRIPT" ]]
+[[ -f "$VERIFY_SCRIPT" ]]
+[[ -f "$NEXT_CONFIG" ]]
 bash -n "$SCRIPT"
+bash -n "$VERIFY_SCRIPT"
 
 require_text() {
   local needle="$1"
@@ -42,11 +47,33 @@ require_text 'repository has uncommitted changes; private-beta releases require 
 require_text 'RELEASE_SHA="$(git -C "$ROOT" rev-parse HEAD)"'
 require_text 'ROLLBACK_SHA="$(git -C "$ROOT" rev-parse HEAD^ 2>/dev/null)"'
 require_text 'RELEASE_MANIFEST="$RUNTIME_DIR/release.env"'
+require_text 'PREPARED_RELEASE_FILE="$RUNTIME_DIR/prepared-release.sha"'
+require_text 'export PERSONALATTICE_RELEASE_SHA="$RELEASE_SHA"'
+require_text 'prepared release identity is missing'
+require_text 'prepared runtime belongs to $PREPARED_RELEASE_SHA, not current release $RELEASE_SHA'
+require_text 'PERSONALATTICE_RELEASE_SHA="$RELEASE_SHA" PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run build'
 require_text "printf 'release_sha=%s\\nrollback_sha=%s\\n' \"\$RELEASE_SHA\" \"\$ROLLBACK_SHA\""
 require_text 'umask 077'
 require_text 'mv "$MANIFEST_TMP" "$RELEASE_MANIFEST"'
 require_text 'Release SHA: $RELEASE_SHA'
 require_text 'Rollback SHA: $ROLLBACK_SHA'
+
+grep -F -- 'X-PersonaLattice-Release' "$NEXT_CONFIG" >/dev/null || {
+  echo 'private web config must expose exact release identity header' >&2
+  exit 1
+}
+grep -F -- '!publicDemoOnly && releaseSha' "$NEXT_CONFIG" >/dev/null || {
+  echo 'release identity header must stay excluded from the public-demo build' >&2
+  exit 1
+}
+grep -F -- 'X-PersonaLattice-Release' "$VERIFY_SCRIPT" >/dev/null || {
+  echo 'remote release verifier must require the release identity header' >&2
+  exit 1
+}
+grep -F -- 'stable endpoint serves $actual_sha, expected $EXPECTED_SHA' "$VERIFY_SCRIPT" >/dev/null || {
+  echo 'remote release verifier must fail on SHA mismatch' >&2
+  exit 1
+}
 
 manifest_line="$(grep -n -F 'mv "$MANIFEST_TMP" "$RELEASE_MANIFEST"' "$SCRIPT" | cut -d: -f1)"
 web_health_line="$(grep -n -F 'wait_for_url "http://127.0.0.1:$WEB_PORT/api/health"' "$SCRIPT" | cut -d: -f1)"
