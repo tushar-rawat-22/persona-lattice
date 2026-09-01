@@ -12,6 +12,7 @@ WEB_PORT="${PERSONALATTICE_LIVE_WEB_PORT:-13000}"
 API_LOG="$RUNTIME_DIR/api.log"
 WEB_LOG="$RUNTIME_DIR/web.log"
 RELEASE_MANIFEST="$RUNTIME_DIR/release.env"
+PREPARED_RELEASE_FILE="$RUNTIME_DIR/prepared-release.sha"
 API_PID=""
 WEB_PID=""
 MODE="${1:-}"
@@ -102,6 +103,7 @@ if ! git -C "$ROOT" diff --quiet -- || ! git -C "$ROOT" diff --cached --quiet --
 fi
 RELEASE_SHA="$(git -C "$ROOT" rev-parse HEAD)"
 ROLLBACK_SHA="$(git -C "$ROOT" rev-parse HEAD^ 2>/dev/null)" || fail "current release has no rollback parent commit"
+[[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "release SHA is not a full lowercase Git commit SHA"
 
 mkdir -p "$RUNTIME_DIR"
 chmod 700 "$RUNTIME_DIR"
@@ -116,9 +118,13 @@ set +a
 [[ -n "${PERSONALATTICE_DB_PATH:-}" ]] || fail "PERSONALATTICE_DB_PATH is missing"
 [[ "${PERSONALATTICE_COOKIE_SECURE:-}" == "true" ]] || fail "PERSONALATTICE_COOKIE_SECURE must be true"
 [[ "${PERSONALATTICE_SESSION_COOKIE:-}" == __Host-* ]] || fail "PERSONALATTICE_SESSION_COOKIE must use the __Host- prefix"
+export PERSONALATTICE_RELEASE_SHA="$RELEASE_SHA"
 
 if [[ "$MODE" == "--run-prepared" ]]; then
   [[ -x "$VENV/bin/python" ]] || fail "prepared Python environment is missing; run scripts/live_beta_start.sh --prepare-only"
+  [[ -f "$PREPARED_RELEASE_FILE" ]] || fail "prepared release identity is missing; run scripts/live_beta_start.sh --prepare-only"
+  PREPARED_RELEASE_SHA="$(tr -d '[:space:]' <"$PREPARED_RELEASE_FILE")"
+  [[ "$PREPARED_RELEASE_SHA" == "$RELEASE_SHA" ]] || fail "prepared runtime belongs to $PREPARED_RELEASE_SHA, not current release $RELEASE_SHA; run scripts/live_beta_start.sh --prepare-only"
 else
   if [[ ! -x "$VENV/bin/python" ]]; then
     python3 -m venv "$VENV"
@@ -143,8 +149,13 @@ prepare_web() {
   (
     cd "$WEB_DIR"
     npm ci --no-audit --no-fund
-    PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run build
+    PERSONALATTICE_RELEASE_SHA="$RELEASE_SHA" PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run build
   ) >"$RUNTIME_DIR/build.log" 2>&1 || fail "web production build failed; see $RUNTIME_DIR/build.log"
+
+  umask 077
+  local prepared_tmp="$PREPARED_RELEASE_FILE.tmp.$$"
+  printf '%s\n' "$RELEASE_SHA" >"$prepared_tmp"
+  mv "$prepared_tmp" "$PREPARED_RELEASE_FILE"
 }
 
 if [[ "$MODE" == "--run-prepared" ]]; then
@@ -157,6 +168,7 @@ fi
 if [[ "$MODE" == "--prepare-only" ]]; then
   printf '%s\n' \
     "PersonaLattice private-beta runtime prepared for release $RELEASE_SHA." \
+    "Prepared release identity: $PREPARED_RELEASE_FILE" \
     "Prepared Python environment: $VENV" \
     "Prepared web build: $WEB_DIR/.next"
   exit 0

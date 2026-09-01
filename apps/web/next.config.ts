@@ -6,6 +6,11 @@ const apiOrigin =
   (process.env.PERSONALATTICE_API_HOSTPORT
     ? `http://${process.env.PERSONALATTICE_API_HOSTPORT}`
     : "http://127.0.0.1:8000");
+const releaseSha = process.env.PERSONALATTICE_RELEASE_SHA;
+const releaseIdentityHeaders =
+  !publicDemoOnly && releaseSha && /^[0-9a-f]{40}$/.test(releaseSha)
+    ? [{ key: "X-PersonaLattice-Release", value: releaseSha }]
+    : [];
 
 const securityHeaders = [
   {
@@ -23,6 +28,7 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=31536000; includeSubDomains",
   },
+  ...releaseIdentityHeaders,
 ];
 
 const nextConfig: NextConfig = {
