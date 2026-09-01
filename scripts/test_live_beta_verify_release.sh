@@ -56,12 +56,12 @@ EXPECTED_SHA="0123456789abcdef0123456789abcdef01234567"
 export PATH="$TMP/bin:$PATH"
 export FAKE_RELEASE_SHA="$EXPECTED_SHA"
 
-output="$($VERIFY 'https://private.example.test/' "$EXPECTED_SHA")"
+output="$(bash "$VERIFY" 'https://private.example.test/' "$EXPECTED_SHA")"
 grep -Fq 'Release SHA: 0123456789abcdef0123456789abcdef01234567' <<<"$output"
 grep -Fq 'Unauthenticated session boundary: HTTP 401' <<<"$output"
 
 export FAKE_AUTH_STATUS=200
-if "$VERIFY" 'https://private.example.test' "$EXPECTED_SHA" >"$TMP/status.out" 2>"$TMP/status.err"; then
+if bash "$VERIFY" 'https://private.example.test' "$EXPECTED_SHA" >"$TMP/status.out" 2>"$TMP/status.err"; then
   echo 'expected HTTP 200 unauthenticated probe to fail' >&2
   exit 1
 fi
@@ -69,7 +69,7 @@ grep -Fq 'expected 401' "$TMP/status.err"
 unset FAKE_AUTH_STATUS
 
 export FAKE_AUTH_SET_COOKIE=1
-if "$VERIFY" 'https://private.example.test' "$EXPECTED_SHA" >"$TMP/cookie.out" 2>"$TMP/cookie.err"; then
+if bash "$VERIFY" 'https://private.example.test' "$EXPECTED_SHA" >"$TMP/cookie.out" 2>"$TMP/cookie.err"; then
   echo 'expected unauthenticated Set-Cookie to fail' >&2
   exit 1
 fi
@@ -77,7 +77,7 @@ grep -Fq 'unexpectedly set a cookie' "$TMP/cookie.err"
 unset FAKE_AUTH_SET_COOKIE
 
 export FAKE_RELEASE_SHA="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-if "$VERIFY" 'https://private.example.test' "$EXPECTED_SHA" >"$TMP/sha.out" 2>"$TMP/sha.err"; then
+if bash "$VERIFY" 'https://private.example.test' "$EXPECTED_SHA" >"$TMP/sha.out" 2>"$TMP/sha.err"; then
   echo 'expected mismatched release SHA to fail' >&2
   exit 1
 fi
