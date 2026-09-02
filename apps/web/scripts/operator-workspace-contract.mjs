@@ -106,6 +106,8 @@ const requiredCaseNavigation = [
   "caseNavigationControls",
   "caseNavigationFooter",
   'className="caseActions"',
+  "Current workspace context",
+  "CASE {activeCase.id.slice(0, 8)}",
   "Delete this case",
   "Delete all retained cases",
   "new Date(item.created_at).toLocaleString()",
@@ -126,6 +128,13 @@ assert.ok(
   caseNavigation.includes('aria-current={activeCaseId === item.id ? "true" : undefined}') &&
     caseNavigation.includes("Search and sort the cases already loaded in this session."),
   "retained-case navigation must expose active state and must not pretend loaded-case search is server-wide",
+);
+assert.ok(
+  caseNavigation.includes("cases.find((item) => item.id === activeCaseId)") &&
+    caseNavigation.includes("KIND_LABELS[activeCase.seed_kind]") &&
+    caseNavigation.includes("activeCase.seed_value") &&
+    caseNavigation.includes("caseRetentionStatus(activeCase.expires_at)"),
+  "retained-case navigation must pin the exact loaded active-case context and retention truth above mutable filters",
 );
 assert.ok(
   research.includes('import { CaseNavigation } from "./case-navigation";') &&

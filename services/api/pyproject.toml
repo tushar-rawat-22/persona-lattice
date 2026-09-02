@@ -14,7 +14,7 @@ dependencies = [
   "phonenumbers==9.0.37",
   "sqlalchemy==2.0.51",
   "python-multipart==0.0.32",
-  "pypdf==6.15.0",
+  "pypdf==6.16.1",
   "sherlock-project==0.16.0",
   "argon2-cffi==25.1.0",
   "pillow==12.3.0",
