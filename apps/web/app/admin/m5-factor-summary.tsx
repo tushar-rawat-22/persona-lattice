@@ -67,7 +67,7 @@ function FactorGroup({
                 <strong>{factor.kind}</strong>
                 <span> · {factor.rationale}</span>
                 <small>
-                  {` · ${factor.independence_group} · weight ${factor.applied_weight}`}
+                  {` · ${factor.independence_group} · status ${factor.status} · weight ${factor.applied_weight}`}
                   {factor.veto ? " · veto" : ""}
                 </small>
               </li>
