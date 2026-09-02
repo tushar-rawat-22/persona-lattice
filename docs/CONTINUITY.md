@@ -42,13 +42,17 @@ LC1 is a software + real-host launch candidate. It is not the stable private-bet
 
 The zero-secret public observer is live at `https://persona-lattice.pages.dev`. It was created on 2026-08-31 from the canonical repository using `apps/web`'s dedicated `build:public-demo` static export. Founder live smoke screenshots verified the public overview and synthetic evidence workspace. The public `Private admin` path intentionally resolves to the safe operator-access boundary; no admin login, private API URL, provider execution, retained-case mutation or credentials belong in the Pages deployment.
 
-For the current public/private operating split and the exact private deployment gate, read `docs/LIVE_BETA.md` before creating new deployment architecture.
+The one-admin private-beta launch gate was proven GREEN on 2026-09-02 against exact release `6bcb51aa5c3ad9e5c7da4352b9a3308d64ada31e`, with rollback `01ebf5ca8968f3cc2cd31ce54204a9ee76571627`. The ingress is an account-assigned development-tier HTTPS tunnel on a zero-cost plan and publishes only the loopback web origin; the API remains loopback-only behind the same-origin web proxy. Real-host evidence covers protected persistent SQLite, backup and isolated restore, app and ingress restart persistence, anonymous denial, login/logout, secure-cookie behavior, current-token CSRF mutation, the unchanged missing/stale-token negative CSRF contract, one bounded research case, retained-case reopen, Safari, Chrome, narrow viewport and keyboard navigation. Owner-only runtime and ingress configuration remains outside Git. Availability still depends on the founder Mac staying awake and online, and the development-tier ingress has provider limits/interstitial behavior; this is private-beta evidence, not a claim of commercial production hosting. `authority_effect=NONE`.
+
+The private hostname, credentials and host-local evidence are intentionally not recorded in Git.
+
+For the current public/private operating split and deployment contract, read `docs/LIVE_BETA.md` before creating new deployment architecture.
 
 ## Active engineering stream
 
-The primary company-level engineering objective is now the stable authenticated private-beta endpoint. Do not keep extending public parity unless a concrete defect is observed on the live Pages deployment.
+The private-beta launch gate is green. The primary company-level engineering objective is now the authenticated operator product: remove concrete friction from clue → evidence → source state → provenance → contradiction/uncertainty → operator decision while preserving the existing public/private and evidence-integrity boundaries.
 
-Issue #252 remains the operator-workspace product-quality stream for concrete usability/correctness bottlenecks. It should not displace the private-live critical path merely to generate more UI PRs.
+Issue #252 remains the operator-workspace product-quality stream for concrete usability/correctness bottlenecks. Deployment work should re-enter NOW only when fresh host/provider evidence shows regression or when uptime, scale, compliance or cost justifies a hosting change.
 
 Major post-LC1 improvements already merged include:
 
@@ -166,10 +170,8 @@ For normal implementation work:
 
 ## Immediate company-level priority
 
-The public observer is live. The highest-value company step is now to establish the stable authenticated private-beta endpoint without weakening persistence, authentication or release provenance.
+Keep the proven one-admin private beta operational while improving the operator workflow itself. The highest-value next changes should reduce context loss, make evidence/source-state/provenance/uncertainty easier to interpret, or remove a verified case-navigation friction point without broadening collection authority.
 
-The preferred low-churn path remains the founder-controlled host with persistent protected SQLite, owner-only production configuration, same-origin web/API routing, and stable HTTPS ingress through a named Cloudflare Tunnel or another explicitly reviewed equivalent. Do not call a Quick Tunnel, localhost exposure, Tailscale Personal for commercial operation, or an ephemeral SQLite host a stable private beta.
+The development-tier HTTPS ingress is sufficient for the current one-admin beta while its observed limits remain acceptable. Do not buy or migrate hosting merely for hostname aesthetics. Revisit hosting only when uptime, scale, compliance, provider limits or cost evidence makes the current founder-Mac architecture materially inadequate.
 
-A stable private release must prove restart persistence, backup/restore, Safari/Chrome acceptance, exact deployed release SHA and rollback. If no defensible zero-cost hosted runtime can satisfy durable SQLite and secure private access, keep the workbench on the founder Mac rather than weakening storage durability.
-
-Do not hold the beta offline waiting for PersonaLattice to become a hypothetical finished background checker. After the stable private release, continue operator quality and source coverage incrementally.
+Do not repeat already-passed SQLite, backup/restore, restart, authentication or browser acceptance work unless relevant inputs change or a concrete defect appears. Keep public observer parity through deterministic sanitized fixtures when private concepts change, and never couple the public Pages observer to the private API.
