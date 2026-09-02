@@ -113,7 +113,8 @@ export function CaseNavigation({
   const remoteSearchGeneration = useRef(0);
 
   const remoteFiltering = normalizedSearch(query).length > 0 || kindFilter !== "all";
-  const sourceCases = remoteFiltering && !remoteSearchFailed ? remoteCases : cases;
+  const remoteSearchActive = remoteFiltering && !remoteActionsDisabled;
+  const sourceCases = remoteSearchActive && !remoteSearchFailed ? remoteCases : cases;
   const visibleCases = useMemo(
     () => filterAndSortLoadedCases(sourceCases, query, kindFilter, sortOrder),
     [sourceCases, query, kindFilter, sortOrder],
@@ -144,12 +145,8 @@ export function CaseNavigation({
   }, []);
 
   useEffect(() => {
-    if (!remoteFiltering || remoteActionsDisabled) {
+    if (!remoteSearchActive) {
       remoteSearchGeneration.current += 1;
-      setRemoteCases([]);
-      setRemoteSearchLoading(false);
-      setRemoteSearchFailed(false);
-      setRemoteSearchTruncated(false);
       return;
     }
 
@@ -181,7 +178,7 @@ export function CaseNavigation({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [query, kindFilter, remoteFiltering, remoteActionsDisabled]);
+  }, [query, kindFilter, remoteSearchActive]);
 
   function clearCaseFilters() {
     setQuery("");
@@ -201,7 +198,7 @@ export function CaseNavigation({
   }
 
   return (
-    <div className="recentCases" aria-label="Stored case navigation" aria-busy={initialLoading || remoteSearchLoading}>
+    <div className="recentCases" aria-label="Stored case navigation" aria-busy={initialLoading || (remoteSearchActive && remoteSearchLoading)}>
       <div className="panelHeader compactPanelHeader">
         <div>
           <span className="index">RECENT</span>
@@ -272,17 +269,17 @@ export function CaseNavigation({
             </label>
           </div>
 
-          {remoteSearchLoading && remoteFiltering && (
+          {remoteSearchActive && remoteSearchLoading && (
             <p className="muted" role="status" aria-live="polite">Searching the retained case index…</p>
           )}
 
-          {remoteSearchFailed && remoteFiltering && (
+          {remoteSearchActive && remoteSearchFailed && (
             <div className="caseNavigationEmptyState" role="status" aria-live="polite">
               <p className="muted">Full retained-case search is unavailable. Showing matching cases already loaded in this browser; do not treat an empty result as proof that no retained case exists.</p>
             </div>
           )}
 
-          {remoteSearchTruncated && remoteFiltering && !remoteSearchFailed && (
+          {remoteSearchActive && remoteSearchTruncated && !remoteSearchFailed && (
             <p className="muted" role="status">Showing the first {REMOTE_SEARCH_LIMIT} retained-case matches. Narrow the search to inspect additional matches.</p>
           )}
 
@@ -293,7 +290,7 @@ export function CaseNavigation({
             </div>
           )}
 
-          {visibleCases.length === 0 && !remoteSearchLoading ? (
+          {visibleCases.length === 0 && !(remoteSearchActive && remoteSearchLoading) ? (
             <div className="caseNavigationEmptyState">
               <p className="muted">No retained cases match the current search and kind filter.</p>
               {!activeCaseIsHidden && (
