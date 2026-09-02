@@ -47,6 +47,32 @@ for (const token of [
   assert.ok(source.includes(token), `operator source-state ledger contract missing: ${token}`);
 }
 
+for (const token of [
+  "reviewSources: boolean",
+  "reviewSources: true",
+  "reviewSources: false",
+  "function openSourcesView()",
+  'document.getElementById("case-tab-sources")',
+  "sourcesTab.click()",
+  "requestAnimationFrame(() => sourcesTab.focus())",
+  "presentation.reviewSources",
+  'type="button" className="secondaryButton" onClick={openSourcesView}',
+  "Open Sources",
+]) {
+  assert.ok(source.includes(token), `operator source-review action contract missing: ${token}`);
+}
+
+assert.equal(
+  source.split("reviewSources: true").length - 1,
+  5,
+  "every state that instructs the operator to review Sources must expose the direct action",
+);
+assert.equal(
+  source.split("reviewSources: false").length - 1,
+  2,
+  "quiet and completed source states must not add an unnecessary review action",
+);
+
 assert.ok(
   !source.includes('item.count >= 0'),
   "source-state ledger must not flood the primary overview with zero-valued secondary categories",
@@ -77,6 +103,7 @@ for (const token of [
   '<OperatorSystemState {...systemStateCounts} />',
   'converged.nodes.map((node) => node.source_runs)',
   'operatorSystemStateCountsFromSourceRuns([report.source_runs])',
+  'id={`case-tab-${view}`}',
 ]) {
   assert.ok(quickResearch.includes(token), `live Overview system-state binding missing: ${token}`);
 }
