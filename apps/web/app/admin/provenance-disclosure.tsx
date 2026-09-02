@@ -88,24 +88,33 @@ export function ProvenanceDisclosure({
                 )}
               </div>
               {href ? (
-                <div className="provenanceActions">
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Open canonical source for ${record.source}`}
+                <>
+                  <small
+                    className="muted"
+                    style={{ overflowWrap: "anywhere" }}
+                    aria-label={`Canonical locator for ${record.source}`}
                   >
-                    Open canonical source
-                  </a>
-                  <button
-                    className="textButton"
-                    type="button"
-                    onClick={() => copyCanonicalLocator(href, record.source)}
-                    aria-label={`Copy canonical locator for ${record.source}`}
-                  >
-                    Copy locator
-                  </button>
-                </div>
+                    {href}
+                  </small>
+                  <div className="provenanceActions">
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Open canonical source for ${record.source}`}
+                    >
+                      Open canonical source
+                    </a>
+                    <button
+                      className="textButton"
+                      type="button"
+                      onClick={() => copyCanonicalLocator(href, record.source)}
+                      aria-label={`Copy canonical locator for ${record.source}`}
+                    >
+                      Copy locator
+                    </button>
+                  </div>
+                </>
               ) : (
                 <span className="muted">Canonical locator is not a safe public web URL.</span>
               )}
