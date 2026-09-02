@@ -54,6 +54,12 @@ assert.ok(
   "canonical locator copy must be keyboard-operable and announce success/failure without modal UI",
 );
 assert.ok(
+  source.includes('aria-label={`Canonical locator for ${record.source}`}') &&
+    source.includes('style={{ overflowWrap: "anywhere" }}') &&
+    source.includes("{href}"),
+  "safe canonical locators must be visible before navigation and wrap on narrow operator viewports",
+);
+assert.ok(
   source.includes("Could not copy canonical locator for ${source}.") &&
     source.includes("Canonical locator is not a safe public web URL."),
   "clipboard failure and unsafe locator states must remain explicit and fail closed",
