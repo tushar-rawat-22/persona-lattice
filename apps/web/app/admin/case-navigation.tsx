@@ -99,9 +99,13 @@ export function CaseNavigation({
     () => filterAndSortLoadedCases(cases, query, kindFilter, sortOrder),
     [cases, query, kindFilter, sortOrder],
   );
+  const activeCase = useMemo(
+    () => activeCaseId ? cases.find((item) => item.id === activeCaseId) : undefined,
+    [activeCaseId, cases],
+  );
   const activeCaseIsHidden = Boolean(
     activeCaseId &&
-    cases.some((item) => item.id === activeCaseId) &&
+    activeCase &&
     !visibleCases.some((item) => item.id === activeCaseId),
   );
 
@@ -145,6 +149,20 @@ export function CaseNavigation({
         </div>
         <button className="secondaryButton" type="button" onClick={onRefresh} disabled={initialLoading || remoteActionsDisabled}>Refresh</button>
       </div>
+
+      {activeCase && (
+        <div className="caseNavigationEmptyState" role="status" aria-live="polite">
+          <p><strong>Current workspace context</strong></p>
+          <p>{KIND_LABELS[activeCase.seed_kind]} · {activeCase.seed_value}</p>
+          <small className="muted">
+            CASE {activeCase.id.slice(0, 8)} · {caseRetentionStatus(activeCase.expires_at) === "elapsed"
+              ? "retention deadline passed — refresh before relying on this row"
+              : caseRetentionStatus(activeCase.expires_at) === "active"
+                ? `retained until ${new Date(activeCase.expires_at).toLocaleString()}`
+                : "retention deadline unavailable — refresh before relying on this row"}
+          </small>
+        </div>
+      )}
 
       {remoteActionsDisabled && (
         <p className="muted" role="status">
