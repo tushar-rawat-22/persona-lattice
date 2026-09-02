@@ -39,9 +39,15 @@ if [[ "$url" == */api/v1/auth/session ]]; then
   printf '{"detail":"Not authenticated"}' >"$output"
   [[ -z "$write_out" ]] || printf '%s' "$status"
 else
+  case "${FAKE_RELEASE_HEADER_CASE:-mixed}" in
+    lower) release_header='x-personalattice-release' ;;
+    upper) release_header='X-PERSONALATTICE-RELEASE' ;;
+    mixed) release_header='X-PersonaLattice-Release' ;;
+    *) echo "unexpected FAKE_RELEASE_HEADER_CASE" >&2; exit 93 ;;
+  esac
   {
     printf 'HTTP/2 200\r\n'
-    printf 'X-PersonaLattice-Release: %s\r\n' "${FAKE_RELEASE_SHA:?}"
+    printf '%s: %s\r\n' "$release_header" "${FAKE_RELEASE_SHA:?}"
     printf 'Strict-Transport-Security: max-age=31536000\r\n'
     printf 'X-Content-Type-Options: nosniff\r\n'
     printf 'X-Frame-Options: DENY\r\n'
@@ -56,9 +62,13 @@ EXPECTED_SHA="0123456789abcdef0123456789abcdef01234567"
 export PATH="$TMP/bin:$PATH"
 export FAKE_RELEASE_SHA="$EXPECTED_SHA"
 
-output="$(bash "$VERIFY" 'https://private.example.test/' "$EXPECTED_SHA")"
-grep -Fq 'Release SHA: 0123456789abcdef0123456789abcdef01234567' <<<"$output"
-grep -Fq 'Unauthenticated session boundary: HTTP 401' <<<"$output"
+for header_case in mixed lower upper; do
+  export FAKE_RELEASE_HEADER_CASE="$header_case"
+  output="$(bash "$VERIFY" 'https://private.example.test/' "$EXPECTED_SHA")"
+  grep -Fq 'Release SHA: 0123456789abcdef0123456789abcdef01234567' <<<"$output"
+  grep -Fq 'Unauthenticated session boundary: HTTP 401' <<<"$output"
+done
+unset FAKE_RELEASE_HEADER_CASE
 
 export FAKE_AUTH_STATUS=200
 if bash "$VERIFY" 'https://private.example.test' "$EXPECTED_SHA" >"$TMP/status.out" 2>"$TMP/status.err"; then

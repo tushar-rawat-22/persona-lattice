@@ -24,7 +24,16 @@ trap 'rm -f "$HEADERS" "$AUTH_HEADERS" "$AUTH_BODY"' EXIT
 curl --disable --silent --show-error --fail --max-time 15 \
   -D "$HEADERS" -o /dev/null "$BASE_URL/"
 
-actual_sha="$(awk 'BEGIN{IGNORECASE=1} /^X-PersonaLattice-Release:/ {gsub("\r", "", $2); print $2}' "$HEADERS" | tail -n 1)"
+# HTTP header field names are case-insensitive. Avoid awk's non-portable IGNORECASE
+# extension so this verifier behaves the same with macOS/BSD awk and GNU awk.
+actual_sha="$(awk -F ':' '
+  tolower($1) == "x-personalattice-release" {
+    value = $0
+    sub(/^[^:]*:[[:space:]]*/, "", value)
+    sub(/\r$/, "", value)
+    print value
+  }
+' "$HEADERS" | tail -n 1)"
 [[ -n "$actual_sha" ]] || fail "stable endpoint did not return X-PersonaLattice-Release"
 [[ "$actual_sha" == "$EXPECTED_SHA" ]] || fail "stable endpoint serves $actual_sha, expected $EXPECTED_SHA"
 
