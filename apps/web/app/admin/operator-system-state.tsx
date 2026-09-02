@@ -150,14 +150,15 @@ export function OperatorSystemState(props: OperatorSystemStateProps) {
       className="operatorSystemState"
       data-state-tone={presentation.tone}
       aria-label="Research execution state"
-      role="status"
     >
-      <strong>{presentation.title}</strong>
-      <p>{presentation.detail}</p>
-      <div className="sourceSummaryLine" aria-label="Source state counts">
-        {ledger.map((item) => (
-          <span key={item.key}>{item.count} {item.label}</span>
-        ))}
+      <div role="status" aria-live="polite">
+        <strong>{presentation.title}</strong>
+        <p>{presentation.detail}</p>
+        <div className="sourceSummaryLine" aria-label="Source state counts">
+          {ledger.map((item) => (
+            <span key={item.key}>{item.count} {item.label}</span>
+          ))}
+        </div>
       </div>
       {presentation.reviewSources ? (
         <button type="button" className="secondaryButton" onClick={openSourcesView}>
