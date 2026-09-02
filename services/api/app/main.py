@@ -446,12 +446,7 @@ def list_cases(
         response.headers["X-PersonaLattice-Next-Cursor"] = next_cursor
     AUDIT_STORE.record(
         "case.list",
-        details={
-            "result_count": len(records),
-            "has_more": next_cursor is not None,
-            "query_present": bool(q and q.strip()),
-            "kind": kind.value if kind is not None else None,
-        },
+        details={"result_count": len(records), "has_more": next_cursor is not None},
     )
     return [_stored_case_summary_response(record) for record in records]
 
