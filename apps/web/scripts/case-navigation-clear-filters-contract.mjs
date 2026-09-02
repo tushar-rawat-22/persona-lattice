@@ -8,7 +8,7 @@ const appRoot = path.resolve(here, "..");
 const source = await readFile(path.join(appRoot, "app", "admin", "case-navigation.tsx"), "utf8");
 
 assert.ok(
-  source.includes("No loaded cases match the current search and kind filter."),
+  source.includes("No retained cases match the current search and kind filter."),
   "filtered-empty state must remain explicit rather than pretending retained history is empty",
 );
 assert.ok(
