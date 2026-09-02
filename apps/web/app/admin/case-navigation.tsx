@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+const REMOTE_SEARCH_LIMIT = 50;
+const REMOTE_SEARCH_DEBOUNCE_MS = 250;
+
 export type CaseNavigationKind = "username" | "phone" | "email" | "url" | "domain";
 
 export type CaseNavigationItem = {
@@ -45,6 +49,14 @@ function normalizedSearch(value: string): string {
 function isEditableShortcutTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
+function retainedCaseSearchPath(query: string, kind: KindFilter): string {
+  const params = new URLSearchParams({ limit: String(REMOTE_SEARCH_LIMIT) });
+  const normalized = query.trim();
+  if (normalized) params.set("q", normalized);
+  if (kind !== "all") params.set("kind", kind);
+  return `/v1/cases?${params.toString()}`;
 }
 
 export function caseRetentionStatus(expiresAt: string, nowMs = Date.now()): "active" | "elapsed" | "unknown" {
@@ -91,21 +103,30 @@ export function CaseNavigation({
   const [query, setQuery] = useState("");
   const [kindFilter, setKindFilter] = useState<KindFilter>("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
+  const [remoteCases, setRemoteCases] = useState<CaseNavigationItem[]>([]);
+  const [remoteSearchLoading, setRemoteSearchLoading] = useState(false);
+  const [remoteSearchFailed, setRemoteSearchFailed] = useState(false);
+  const [remoteSearchTruncated, setRemoteSearchTruncated] = useState(false);
   const [pendingDeleteCaseId, setPendingDeleteCaseId] = useState<string | null>(null);
   const [pendingDeleteAll, setPendingDeleteAll] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const remoteSearchGeneration = useRef(0);
 
+  const remoteFiltering = normalizedSearch(query).length > 0 || kindFilter !== "all";
+  const sourceCases = remoteFiltering && !remoteSearchFailed ? remoteCases : cases;
   const visibleCases = useMemo(
-    () => filterAndSortLoadedCases(cases, query, kindFilter, sortOrder),
-    [cases, query, kindFilter, sortOrder],
+    () => filterAndSortLoadedCases(sourceCases, query, kindFilter, sortOrder),
+    [sourceCases, query, kindFilter, sortOrder],
   );
   const activeCase = useMemo(
-    () => activeCaseId ? cases.find((item) => item.id === activeCaseId) : undefined,
-    [activeCaseId, cases],
+    () => activeCaseId
+      ? [...cases, ...remoteCases].find((item) => item.id === activeCaseId)
+      : undefined,
+    [activeCaseId, cases, remoteCases],
   );
   const activeCaseIsHidden = Boolean(
     activeCaseId &&
-    cases.some((item) => item.id === activeCaseId) &&
+    [...cases, ...remoteCases].some((item) => item.id === activeCaseId) &&
     !visibleCases.some((item) => item.id === activeCaseId),
   );
 
@@ -121,6 +142,46 @@ export function CaseNavigation({
     window.addEventListener("keydown", focusCaseSearch);
     return () => window.removeEventListener("keydown", focusCaseSearch);
   }, []);
+
+  useEffect(() => {
+    if (!remoteFiltering || remoteActionsDisabled) {
+      remoteSearchGeneration.current += 1;
+      setRemoteCases([]);
+      setRemoteSearchLoading(false);
+      setRemoteSearchFailed(false);
+      setRemoteSearchTruncated(false);
+      return;
+    }
+
+    const generation = ++remoteSearchGeneration.current;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setRemoteSearchLoading(true);
+      setRemoteSearchFailed(false);
+      try {
+        const response = await fetch(`${API_URL}${retainedCaseSearchPath(query, kindFilter)}`, {
+          credentials: "include",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`retained-case search failed with ${response.status}`);
+        const page = (await response.json()) as CaseNavigationItem[];
+        if (generation !== remoteSearchGeneration.current) return;
+        setRemoteCases(page);
+        setRemoteSearchTruncated(Boolean(response.headers.get("X-PersonaLattice-Next-Cursor")));
+      } catch (error) {
+        if (controller.signal.aborted || generation !== remoteSearchGeneration.current) return;
+        setRemoteSearchFailed(true);
+        setRemoteCases([]);
+      } finally {
+        if (generation === remoteSearchGeneration.current) setRemoteSearchLoading(false);
+      }
+    }, REMOTE_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, kindFilter, remoteFiltering, remoteActionsDisabled]);
 
   function clearCaseFilters() {
     setQuery("");
@@ -140,12 +201,12 @@ export function CaseNavigation({
   }
 
   return (
-    <div className="recentCases" aria-label="Stored case navigation" aria-busy={initialLoading}>
+    <div className="recentCases" aria-label="Stored case navigation" aria-busy={initialLoading || remoteSearchLoading}>
       <div className="panelHeader compactPanelHeader">
         <div>
           <span className="index">RECENT</span>
           <h2>Stored cases</h2>
-          <small className="muted">Search and sort the cases already loaded in this session.</small>
+          <small className="muted">Search retained case metadata without loading retained report payloads.</small>
         </div>
         <button className="secondaryButton" type="button" onClick={onRefresh} disabled={initialLoading || remoteActionsDisabled}>Refresh</button>
       </div>
@@ -176,13 +237,13 @@ export function CaseNavigation({
         <p className="muted" role="status" aria-live="polite">Stored case history is unavailable until you sign in again. Do not treat this workspace as empty.</p>
       ) : initialLoadFailed && cases.length === 0 ? (
         <p className="muted" role="status" aria-live="polite">Stored case history could not be loaded. Refresh before treating this workspace as empty.</p>
-      ) : cases.length === 0 ? (
+      ) : cases.length === 0 && !remoteFiltering ? (
         <p className="muted">No retained research cases yet.</p>
       ) : (
         <>
           <div className="caseNavigationControls">
             <label>
-              Search loaded cases
+              Search retained cases
               <input
                 ref={searchInputRef}
                 type="search"
@@ -191,7 +252,7 @@ export function CaseNavigation({
                 placeholder="Identifier or case ID"
                 aria-keyshortcuts="/"
               />
-              <small className="muted">Press / to focus case search.</small>
+              <small className="muted">Press / to focus. Search is limited to case ID, identifier kind, and identifier value.</small>
             </label>
             <label>
               Filter by kind
@@ -203,7 +264,7 @@ export function CaseNavigation({
               </select>
             </label>
             <label>
-              Sort loaded cases
+              Sort results
               <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value as SortOrder)}>
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
@@ -211,16 +272,30 @@ export function CaseNavigation({
             </label>
           </div>
 
+          {remoteSearchLoading && remoteFiltering && (
+            <p className="muted" role="status" aria-live="polite">Searching the retained case index…</p>
+          )}
+
+          {remoteSearchFailed && remoteFiltering && (
+            <div className="caseNavigationEmptyState" role="status" aria-live="polite">
+              <p className="muted">Full retained-case search is unavailable. Showing matching cases already loaded in this browser; do not treat an empty result as proof that no retained case exists.</p>
+            </div>
+          )}
+
+          {remoteSearchTruncated && remoteFiltering && !remoteSearchFailed && (
+            <p className="muted" role="status">Showing the first {REMOTE_SEARCH_LIMIT} retained-case matches. Narrow the search to inspect additional matches.</p>
+          )}
+
           {activeCaseIsHidden && (
             <div className="caseNavigationEmptyState" role="status" aria-live="polite">
-              <p className="muted">The active case is hidden by the current loaded-case search or kind filter.</p>
+              <p className="muted">The active case is hidden by the current retained-case search or kind filter.</p>
               <button className="secondaryButton" type="button" onClick={clearCaseFilters}>Show active case</button>
             </div>
           )}
 
-          {visibleCases.length === 0 ? (
+          {visibleCases.length === 0 && !remoteSearchLoading ? (
             <div className="caseNavigationEmptyState">
-              <p className="muted">No loaded cases match the current search and kind filter.</p>
+              <p className="muted">No retained cases match the current search and kind filter.</p>
               {!activeCaseIsHidden && (
                 <button className="secondaryButton" type="button" onClick={clearCaseFilters}>Clear filters</button>
               )}
@@ -276,7 +351,7 @@ export function CaseNavigation({
           )}
 
           <div className="caseNavigationFooter">
-            {hasMore && (
+            {!remoteFiltering && hasMore && (
               <button className="secondaryButton" type="button" onClick={onLoadMore} disabled={loadingMore || remoteActionsDisabled}>
                 {loadingMore ? "Loading older cases…" : "Load older cases"}
               </button>
