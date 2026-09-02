@@ -17,7 +17,7 @@ for (const token of [
   'window.addEventListener("keydown", focusCaseSearch)',
   'window.removeEventListener("keydown", focusCaseSearch)',
   'aria-keyshortcuts="/"',
-  'Press / to focus case search.',
+  'Press / to focus. Search is limited to case ID, identifier kind, and identifier value.',
 ]) {
   assert.ok(source.includes(token), `case-search shortcut contract missing: ${token}`);
 }
@@ -29,7 +29,7 @@ assert.ok(
 );
 assert.ok(
   source.includes('if (!searchInputRef.current) return;'),
-  "case-search shortcut must remain inert when the loaded-case search is not rendered",
+  "case-search shortcut must remain inert when the retained-case search is not rendered",
 );
 
 console.log("case navigation shortcut contract passed");
