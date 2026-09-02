@@ -18,6 +18,7 @@ from .sqlite_storage import private_runtime_database_path
 _DEFAULT_RETENTION_DAYS = 30
 _MAX_RETENTION_DAYS = 365
 _MAX_SUMMARY_PAGE_SIZE = 50
+_MAX_SUMMARY_QUERY_LENGTH = 200
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +81,10 @@ def _initialize(connection: sqlite3.Connection) -> None:
     connection.execute(
         "CREATE INDEX IF NOT EXISTS idx_research_cases_expires_at ON research_cases(expires_at)"
     )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_research_cases_seed_kind_created_at "
+        "ON research_cases(seed_kind, created_at DESC, id DESC)"
+    )
     connection.commit()
 
 
@@ -139,6 +144,18 @@ def _decode_summary_cursor(cursor: str) -> tuple[str, str]:
     except (ValueError, UnicodeDecodeError, binascii.Error) as exc:
         raise ValueError("Case list cursor is invalid.") from exc
     return created_at.isoformat(), str(case_id)
+
+
+def _summary_query_pattern(query: str | None) -> str | None:
+    if query is None:
+        return None
+    normalized = query.strip()
+    if not normalized:
+        return None
+    if len(normalized) > _MAX_SUMMARY_QUERY_LENGTH:
+        raise ValueError("Case search query must be 200 characters or fewer.")
+    escaped = normalized.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
 
 
 class CaseStore:
@@ -242,36 +259,47 @@ class CaseStore:
         *,
         limit: int = 20,
         cursor: str | None = None,
+        query: str | None = None,
+        seed_kind: ResearchKind | None = None,
         now: datetime | None = None,
     ) -> tuple[list[StoredCaseSummary], str | None]:
         if not 1 <= limit <= _MAX_SUMMARY_PAGE_SIZE:
             raise ValueError("Case summary limit must be between 1 and 50.")
         cursor_values = _decode_summary_cursor(cursor) if cursor is not None else None
+        query_pattern = _summary_query_pattern(query)
         self.purge_expired(now=now)
+
+        clauses: list[str] = []
+        parameters: list[object] = []
+        if seed_kind is not None:
+            clauses.append("seed_kind = ?")
+            parameters.append(seed_kind.value)
+        if query_pattern is not None:
+            clauses.append(
+                "(seed_value LIKE ? ESCAPE '\\' COLLATE NOCASE "
+                "OR id LIKE ? ESCAPE '\\' COLLATE NOCASE "
+                "OR seed_kind LIKE ? ESCAPE '\\' COLLATE NOCASE)"
+            )
+            parameters.extend([query_pattern, query_pattern, query_pattern])
+        if cursor_values is not None:
+            created_at_cursor, id_cursor = cursor_values
+            clauses.append("(created_at < ? OR (created_at = ? AND id < ?))")
+            parameters.extend([created_at_cursor, created_at_cursor, id_cursor])
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        parameters.append(limit + 1)
+
         with _connect() as connection:
             _initialize(connection)
-            if cursor_values is None:
-                rows = connection.execute(
-                    """
-                    SELECT id, created_at, expires_at, seed_kind, seed_value
-                    FROM research_cases
-                    ORDER BY created_at DESC, id DESC
-                    LIMIT ?
-                    """,
-                    (limit + 1,),
-                ).fetchall()
-            else:
-                created_at_cursor, id_cursor = cursor_values
-                rows = connection.execute(
-                    """
-                    SELECT id, created_at, expires_at, seed_kind, seed_value
-                    FROM research_cases
-                    WHERE created_at < ? OR (created_at = ? AND id < ?)
-                    ORDER BY created_at DESC, id DESC
-                    LIMIT ?
-                    """,
-                    (created_at_cursor, created_at_cursor, id_cursor, limit + 1),
-                ).fetchall()
+            rows = connection.execute(
+                f"""
+                SELECT id, created_at, expires_at, seed_kind, seed_value
+                FROM research_cases
+                {where_sql}
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                parameters,
+            ).fetchall()
 
         page_rows = rows[:limit]
         records = [_decode_summary_row(row) for row in page_rows]
