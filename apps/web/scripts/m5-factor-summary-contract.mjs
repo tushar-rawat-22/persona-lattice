@@ -18,6 +18,7 @@ for (const token of [
   'label="Neutral / withheld"',
   "const visibleRows = rows.slice(0, 3)",
   "const hiddenCount = Math.max(0, rows.length - visibleRows.length)",
+  "status ${factor.status}",
   "more retained",
   "in the full ledger below",
   "not calibrated probabilities",
