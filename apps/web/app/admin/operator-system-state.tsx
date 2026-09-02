@@ -67,7 +67,7 @@ function statePresentation({
   withheldCount,
   unresolvedCount,
   notAttemptedLimitCount,
-}: OperatorSystemStateProps): { tone: StateTone; title: string; detail: string } {
+}: OperatorSystemStateProps): { tone: StateTone; title: string; detail: string; reviewSources: boolean } {
   const limitations = limitationSummary({
     attemptCount,
     completedAttemptCount,
@@ -82,6 +82,7 @@ function statePresentation({
       tone: "partial",
       title: "Research completed with limits",
       detail: `${limitations.join("; ")}. Review Sources before treating the case as complete.`,
+      reviewSources: true,
     };
   }
   if (withheldCount > 0 && notAttemptedLimitCount > 0) {
@@ -89,6 +90,7 @@ function statePresentation({
       tone: "limited",
       title: "Research completed with coverage limits",
       detail: `${limitations.join("; ")}. Review Sources for the retained reason before drawing conclusions from missing evidence.`,
+      reviewSources: true,
     };
   }
   if (withheldCount > 0) {
@@ -96,6 +98,7 @@ function statePresentation({
       tone: "limited",
       title: "Some evidence was withheld by source policy",
       detail: `${limitations.join("; ")}. Review Sources for the retained reason before drawing conclusions from missing evidence.`,
+      reviewSources: true,
     };
   }
   if (notAttemptedLimitCount > 0) {
@@ -103,6 +106,7 @@ function statePresentation({
       tone: "limited",
       title: "Some source paths were not attempted",
       detail: `${limitations.join("; ")}. Review Sources for the exact reason.`,
+      reviewSources: true,
     };
   }
   if (attemptCount > 0 && noMatchCount === attemptCount) {
@@ -110,6 +114,7 @@ function statePresentation({
       tone: "quiet",
       title: "No retained match from attempted sources",
       detail: "This is source silence, not evidence that the subject or claim does not exist elsewhere.",
+      reviewSources: false,
     };
   }
   if (attemptCount > 0 && completedAttemptCount === attemptCount) {
@@ -117,13 +122,24 @@ function statePresentation({
       tone: "complete",
       title: "Attempted sources completed",
       detail: "All attempted sources reached a terminal result for this bounded run. This does not imply exhaustive coverage beyond the configured source set.",
+      reviewSources: false,
     };
   }
   return {
     tone: "limited",
     title: "Source coverage is limited",
     detail: "The retained report does not prove that every eligible source was attempted. Review Sources for exact execution state.",
+    reviewSources: true,
   };
+}
+
+function openSourcesView() {
+  const sourcesTab = document.getElementById("case-tab-sources");
+  if (!(sourcesTab instanceof HTMLButtonElement)) {
+    return;
+  }
+  sourcesTab.click();
+  requestAnimationFrame(() => sourcesTab.focus());
 }
 
 export function OperatorSystemState(props: OperatorSystemStateProps) {
@@ -143,6 +159,11 @@ export function OperatorSystemState(props: OperatorSystemStateProps) {
           <span key={item.key}>{item.count} {item.label}</span>
         ))}
       </div>
+      {presentation.reviewSources ? (
+        <button type="button" className="secondaryButton" onClick={openSourcesView}>
+          Open Sources
+        </button>
+      ) : null}
     </section>
   );
 }
