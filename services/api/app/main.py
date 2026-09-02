@@ -429,10 +429,17 @@ def list_cases(
     response: Response,
     limit: int = 20,
     cursor: str | None = None,
+    q: str | None = None,
+    kind: ResearchKind | None = None,
     _principal: AuthenticatedPrincipal = Depends(require_admin),
 ) -> list[StoredCaseSummaryResponse]:
     try:
-        records, next_cursor = CASE_STORE.list_summaries(limit=limit, cursor=cursor)
+        records, next_cursor = CASE_STORE.list_summaries(
+            limit=limit,
+            cursor=cursor,
+            query=q,
+            seed_kind=kind,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     if next_cursor is not None:

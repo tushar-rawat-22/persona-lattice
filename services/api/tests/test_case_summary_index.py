@@ -94,7 +94,106 @@ def test_summary_cursor_is_bounded_stable_and_non_overlapping(monkeypatch, tmp_p
     assert {record.id for record in first_page}.isdisjoint(record.id for record in second_page)
 
 
-def test_summary_cursor_and_limit_fail_closed(monkeypatch, tmp_path) -> None:
+def test_summary_search_finds_older_metadata_without_loading_report_json(monkeypatch, tmp_path) -> None:
+    database_path = _configure(monkeypatch, tmp_path)
+    base = datetime(2026, 8, 20, 10, 0, tzinfo=UTC)
+    target = CASE_STORE.create_payload(
+        seed_kind=ResearchKind.DOMAIN,
+        seed_value="needle.example",
+        report_payload={"private": "must-not-be-searched"},
+        now=base,
+    )
+    for index in range(12):
+        CASE_STORE.create_payload(
+            seed_kind=ResearchKind.USERNAME,
+            seed_value=f"newer-{index}",
+            report_payload={"index": index},
+            now=base + timedelta(minutes=index + 1),
+        )
+
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            "UPDATE research_cases SET report_json = ? WHERE id = ?",
+            ("{not-valid-json" + ("x" * 100_000), str(target.id)),
+        )
+        connection.commit()
+
+    summaries, cursor = CASE_STORE.list_summaries(
+        limit=2,
+        query="NEEDLE",
+        now=base + timedelta(hours=1),
+    )
+
+    assert cursor is None
+    assert [record.id for record in summaries] == [target.id]
+    assert summaries[0].seed_value == "needle.example"
+    assert not hasattr(summaries[0], "report")
+
+
+def test_summary_search_treats_sql_wildcards_as_literal_text(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    now = datetime(2026, 8, 20, 11, 0, tzinfo=UTC)
+    literal = CASE_STORE.create_payload(
+        seed_kind=ResearchKind.USERNAME,
+        seed_value="literal%_marker",
+        report_payload={},
+        now=now,
+    )
+    CASE_STORE.create_payload(
+        seed_kind=ResearchKind.USERNAME,
+        seed_value="literalXYmarker",
+        report_payload={},
+        now=now + timedelta(minutes=1),
+    )
+
+    summaries, _ = CASE_STORE.list_summaries(
+        query="%_",
+        now=now + timedelta(hours=1),
+    )
+
+    assert [record.id for record in summaries] == [literal.id]
+
+
+def test_summary_kind_filter_and_filtered_cursor_stay_stable(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    base = datetime(2026, 8, 20, 12, 0, tzinfo=UTC)
+    matching = [
+        CASE_STORE.create_payload(
+            seed_kind=ResearchKind.DOMAIN,
+            seed_value=f"example-{index}.test",
+            report_payload={},
+            now=base + timedelta(minutes=index),
+        )
+        for index in range(3)
+    ]
+    CASE_STORE.create_payload(
+        seed_kind=ResearchKind.USERNAME,
+        seed_value="example-user",
+        report_payload={},
+        now=base + timedelta(minutes=4),
+    )
+
+    first_page, cursor = CASE_STORE.list_summaries(
+        limit=2,
+        query="example",
+        seed_kind=ResearchKind.DOMAIN,
+        now=base + timedelta(hours=1),
+    )
+    assert [record.id for record in first_page] == [matching[2].id, matching[1].id]
+    assert cursor is not None
+
+    second_page, second_cursor = CASE_STORE.list_summaries(
+        limit=2,
+        cursor=cursor,
+        query="example",
+        seed_kind=ResearchKind.DOMAIN,
+        now=base + timedelta(hours=1),
+    )
+    assert [record.id for record in second_page] == [matching[0].id]
+    assert second_cursor is None
+
+
+def test_summary_cursor_limit_and_query_fail_closed(monkeypatch, tmp_path) -> None:
     _configure(monkeypatch, tmp_path)
 
     for limit in (0, 51):
@@ -111,6 +210,13 @@ def test_summary_cursor_and_limit_fail_closed(monkeypatch, tmp_path) -> None:
         assert str(exc) == "Case list cursor is invalid."
     else:
         raise AssertionError("invalid summary cursor was accepted")
+
+    try:
+        CASE_STORE.list_summaries(query="x" * 201)
+    except ValueError as exc:
+        assert str(exc) == "Case search query must be 200 characters or fewer."
+    else:
+        raise AssertionError("oversized case search query was accepted")
 
 
 def test_case_list_api_returns_only_navigation_metadata(monkeypatch, tmp_path) -> None:
@@ -139,6 +245,52 @@ def test_case_list_api_returns_only_navigation_metadata(monkeypatch, tmp_path) -
     loaded = client.get(f"/v1/cases/{created[1].id}")
     assert loaded.status_code == 200, loaded.text
     assert loaded.json()["report"]["secret_evidence"] == "evidence-1"
+
+
+def test_case_list_api_searches_entire_retained_metadata_index(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    _login()
+    base = datetime.now(UTC) - timedelta(hours=1)
+    target = CASE_STORE.create_payload(
+        seed_kind=ResearchKind.DOMAIN,
+        seed_value="rare-target.example",
+        report_payload={"secret_evidence": "private-target-payload"},
+        now=base,
+    )
+    for index in range(12):
+        CASE_STORE.create_payload(
+            seed_kind=ResearchKind.USERNAME,
+            seed_value=f"newer-{index}",
+            report_payload={"secret_evidence": f"private-{index}"},
+            now=base + timedelta(minutes=index + 1),
+        )
+
+    listed = client.get("/v1/cases?limit=2&q=RARE-TARGET&kind=domain")
+
+    assert listed.status_code == 200, listed.text
+    assert listed.headers.get("X-PersonaLattice-Next-Cursor") is None
+    assert listed.json() == [
+        {
+            "id": str(target.id),
+            "created_at": target.created_at.isoformat(),
+            "expires_at": target.expires_at.isoformat(),
+            "seed_kind": "domain",
+            "seed_value": "rare-target.example",
+        }
+    ]
+    assert "private-target-payload" not in listed.text
+
+
+def test_case_list_api_rejects_oversized_query_and_unknown_kind(monkeypatch, tmp_path) -> None:
+    _configure(monkeypatch, tmp_path)
+    _login()
+
+    oversized = client.get(f"/v1/cases?q={'x' * 201}")
+    assert oversized.status_code == 422
+    assert oversized.json()["detail"] == "Case search query must be 200 characters or fewer."
+
+    unknown_kind = client.get("/v1/cases?kind=person")
+    assert unknown_kind.status_code == 422
 
 
 def test_private_web_uses_summary_list_then_full_case_fetch() -> None:
