@@ -99,10 +99,11 @@ for (const token of requiredResearch) {
 }
 
 const requiredCaseNavigation = [
-  "Search loaded cases",
+  "Search retained cases",
   "Filter by kind",
-  "Sort loaded cases",
+  "Sort results",
   "filterAndSortLoadedCases",
+  "retainedCaseSearchPath",
   "caseNavigationControls",
   "caseNavigationFooter",
   'className="caseActions"',
@@ -112,7 +113,7 @@ const requiredCaseNavigation = [
   "Delete all retained cases",
   "new Date(item.created_at).toLocaleString()",
   "left.id.localeCompare(right.id)",
-  "No loaded cases match the current search and kind filter.",
+  "No retained cases match the current search and kind filter.",
 ];
 
 for (const token of requiredCaseNavigation) {
@@ -122,19 +123,21 @@ assert.ok(
   caseNavigation.includes("kind !== \"all\" && item.seed_kind !== kind") &&
     caseNavigation.includes("candidate.toLocaleLowerCase().includes(needle)") &&
     caseNavigation.includes('sortOrder === "newest" ? -createdDelta : createdDelta'),
-  "retained-case navigation must search/filter only loaded data and sort deterministically",
+  "retained-case navigation must preserve deterministic local filtering/sorting for loaded or returned metadata",
 );
 assert.ok(
   caseNavigation.includes('aria-current={activeCaseId === item.id ? "true" : undefined}') &&
-    caseNavigation.includes("Search and sort the cases already loaded in this session."),
-  "retained-case navigation must expose active state and must not pretend loaded-case search is server-wide",
+    caseNavigation.includes("Search retained case metadata without loading retained report payloads.") &&
+    caseNavigation.includes('credentials: "include"') &&
+    caseNavigation.includes('response.headers.get("X-PersonaLattice-Next-Cursor")'),
+  "retained-case navigation must expose active state and use bounded authenticated server metadata search",
 );
 assert.ok(
-  caseNavigation.includes("cases.find((item) => item.id === activeCaseId)") &&
+  caseNavigation.includes("[...cases, ...remoteCases].find((item) => item.id === activeCaseId)") &&
     caseNavigation.includes("KIND_LABELS[activeCase.seed_kind]") &&
     caseNavigation.includes("activeCase.seed_value") &&
     caseNavigation.includes("caseRetentionStatus(activeCase.expires_at)"),
-  "retained-case navigation must pin the exact loaded active-case context and retention truth above mutable filters",
+  "retained-case navigation must pin exact active-case context and retention truth above mutable filters",
 );
 assert.ok(
   research.includes('import { CaseNavigation } from "./case-navigation";') &&
