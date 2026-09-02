@@ -9,9 +9,9 @@ const source = await readFile(path.join(appRoot, "app", "admin", "case-navigatio
 
 for (const token of [
   "const activeCaseIsHidden = Boolean(",
-  "cases.some((item) => item.id === activeCaseId)",
+  "[...cases, ...remoteCases].some((item) => item.id === activeCaseId)",
   "!visibleCases.some((item) => item.id === activeCaseId)",
-  "The active case is hidden by the current loaded-case search or kind filter.",
+  "The active case is hidden by the current retained-case search or kind filter.",
   "Show active case",
   'role="status"',
   'aria-live="polite"',
