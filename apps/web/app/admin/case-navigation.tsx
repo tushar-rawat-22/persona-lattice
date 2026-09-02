@@ -105,7 +105,7 @@ export function CaseNavigation({
   );
   const activeCaseIsHidden = Boolean(
     activeCaseId &&
-    activeCase &&
+    cases.some((item) => item.id === activeCaseId) &&
     !visibleCases.some((item) => item.id === activeCaseId),
   );
 
