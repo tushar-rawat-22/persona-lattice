@@ -26,6 +26,7 @@ for (const token of [
   "does not imply exhaustive coverage",
   "Review Sources",
   'aria-label="Research execution state"',
+  'role="status" aria-live="polite"',
   'import type { OperatorSystemStateCounts } from "./operator-system-state-model"',
 ]) {
   assert.ok(source.includes(token), `operator system-state contract missing: ${token}`);
@@ -61,6 +62,18 @@ for (const token of [
 ]) {
   assert.ok(source.includes(token), `operator source-review action contract missing: ${token}`);
 }
+
+const liveRegionStart = source.indexOf('<div role="status" aria-live="polite">');
+const reviewActionStart = source.indexOf('type="button" className="secondaryButton" onClick={openSourcesView}');
+const liveRegionClose = source.lastIndexOf("</div>", reviewActionStart);
+assert.ok(
+  liveRegionStart >= 0 && liveRegionClose > liveRegionStart && reviewActionStart > liveRegionClose,
+  "interactive source-review action must remain outside the status live region",
+);
+assert.ok(
+  !source.includes('<section\n      className="operatorSystemState"\n      data-state-tone={presentation.tone}\n      aria-label="Research execution state"\n      role="status"'),
+  "the containing section must not turn the interactive review action into status content",
+);
 
 assert.equal(
   source.split("reviewSources: true").length - 1,
