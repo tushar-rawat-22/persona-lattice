@@ -20,4 +20,4 @@ export PERSONALATTICE_LIVE_VENV="$PERSONALATTICE_LIVE_RUNTIME_DIR/venv"
 export PERSONALATTICE_LIVE_API_PORT=18000
 export PERSONALATTICE_LIVE_WEB_PORT=13000
 
-exec "$ROOT/scripts/live_beta_start.sh" --run-prepared
+exec bash "$ROOT/scripts/live_beta_start.sh" --run-prepared
