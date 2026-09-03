@@ -5,6 +5,7 @@ import base64
 import binascii
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
+import hashlib
 import json
 import sqlite3
 from uuid import UUID, uuid4
@@ -127,23 +128,43 @@ def _decode_summary_row(row: sqlite3.Row) -> StoredCaseSummary:
     )
 
 
-def _encode_summary_cursor(record: StoredCaseSummary) -> str:
-    payload = f"{record.created_at.isoformat()}\n{record.id}".encode("utf-8")
+def _summary_cursor_scope(query: str | None, seed_kind: ResearchKind | None) -> str:
+    normalized_query = query.strip().casefold() if query is not None else ""
+    payload = json.dumps(
+        {"kind": seed_kind.value if seed_kind is not None else "", "query": normalized_query},
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()[:24]
+
+
+def _encode_summary_cursor(record: StoredCaseSummary, *, scope: str) -> str:
+    payload = f"v2\n{record.created_at.isoformat()}\n{record.id}\n{scope}".encode("utf-8")
     return base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
 
 
-def _decode_summary_cursor(cursor: str) -> tuple[str, str]:
+def _decode_summary_cursor(cursor: str) -> tuple[str, str, str | None]:
     if not cursor or len(cursor) > 256:
         raise ValueError("Case list cursor is invalid.")
     try:
         padded = cursor + "=" * (-len(cursor) % 4)
         raw = base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
-        created_at_raw, case_id_raw = raw.split("\n", maxsplit=1)
+        parts = raw.split("\n")
+        if len(parts) == 2:
+            created_at_raw, case_id_raw = parts
+            scope = None
+        elif len(parts) == 4 and parts[0] == "v2":
+            _, created_at_raw, case_id_raw, scope = parts
+            if len(scope) != 24:
+                raise ValueError("Case list cursor scope is invalid.")
+        else:
+            raise ValueError("Case list cursor shape is invalid.")
         created_at = datetime.fromisoformat(created_at_raw)
         case_id = UUID(case_id_raw)
     except (ValueError, UnicodeDecodeError, binascii.Error) as exc:
         raise ValueError("Case list cursor is invalid.") from exc
-    return created_at.isoformat(), str(case_id)
+    return created_at.isoformat(), str(case_id), scope
 
 
 def _summary_query_pattern(query: str | None) -> str | None:
@@ -267,6 +288,13 @@ class CaseStore:
             raise ValueError("Case summary limit must be between 1 and 50.")
         cursor_values = _decode_summary_cursor(cursor) if cursor is not None else None
         query_pattern = _summary_query_pattern(query)
+        cursor_scope = _summary_cursor_scope(query, seed_kind)
+        if cursor_values is not None:
+            _, _, encoded_scope = cursor_values
+            if encoded_scope is None and (query_pattern is not None or seed_kind is not None):
+                raise ValueError("Case list cursor does not match the active search filters.")
+            if encoded_scope is not None and encoded_scope != cursor_scope:
+                raise ValueError("Case list cursor does not match the active search filters.")
         self.purge_expired(now=now)
 
         clauses: list[str] = []
@@ -282,7 +310,7 @@ class CaseStore:
             )
             parameters.extend([query_pattern, query_pattern, query_pattern])
         if cursor_values is not None:
-            created_at_cursor, id_cursor = cursor_values
+            created_at_cursor, id_cursor, _ = cursor_values
             clauses.append("(created_at < ? OR (created_at = ? AND id < ?))")
             parameters.extend([created_at_cursor, created_at_cursor, id_cursor])
         where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
@@ -305,7 +333,7 @@ class CaseStore:
         records = [_decode_summary_row(row) for row in page_rows]
         next_cursor = None
         if len(rows) > limit and records:
-            next_cursor = _encode_summary_cursor(records[-1])
+            next_cursor = _encode_summary_cursor(records[-1], scope=cursor_scope)
         return records, next_cursor
 
     def delete(self, case_id: UUID) -> bool:
