@@ -20,9 +20,10 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/prepare-release.sh <full-lowercase-git-sha>"
 
-for command in git python3 npm curl stat systemctl runuser install readlink useradd chown chmod; do
+for command in git python3 node npm curl stat systemctl runuser install readlink useradd chown chmod; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
+python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' || fail "Python 3.11 or newer is required"
 
 if ! id "$SERVICE_USER" >/dev/null 2>&1; then
   useradd --system --home-dir "$STATE_ROOT" --create-home --shell /usr/sbin/nologin "$SERVICE_USER"
@@ -48,6 +49,9 @@ git -C "$RELEASE_DIR" fetch --depth=1 origin "$TARGET_SHA"
 git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"
 [[ "$(git -C "$RELEASE_DIR" rev-parse HEAD)" == "$TARGET_SHA" ]] || fail "release checkout identity mismatch"
 [[ -z "$(git -C "$RELEASE_DIR" status --porcelain)" ]] || fail "release checkout is not clean"
+EXPECTED_NODE_MAJOR="$(tr -d '[:space:]' <"$RELEASE_DIR/.nvmrc")"
+ACTUAL_NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
+[[ "$ACTUAL_NODE_MAJOR" == "$EXPECTED_NODE_MAJOR" ]] || fail "Node $EXPECTED_NODE_MAJOR.x is required by the release; found $(node --version)"
 
 # Preparation needs write access for the venv, node_modules and .next build. The
 # release tree is sealed back to root ownership before the service can start.
