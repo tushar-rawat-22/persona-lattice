@@ -40,19 +40,21 @@ That session covered production preflight, same-origin web/API routing, authenti
 
 LC1 is a software + real-host launch candidate. It is not the stable private-beta endpoint.
 
-The zero-secret public observer is live at `https://persona-lattice.pages.dev`. It was created on 2026-08-31 from the canonical repository using `apps/web`'s dedicated `build:public-demo` static export. Founder live smoke screenshots verified the public overview and synthetic evidence workspace. The public `Private admin` path intentionally resolves to the safe operator-access boundary; no admin login, private API URL, provider execution, retained-case mutation or credentials belong in the Pages deployment.
+The zero-secret public observer is live at `https://persona-lattice.pages.dev`. It was created on 2026-08-31 from the canonical repository using `apps/web`'s dedicated `build:public-demo` static export. Founder live smoke screenshots verified the public overview and synthetic evidence workspace. The public `Private admin` path intentionally resolves to the safe operator-access boundary; no admin login, private API URL, provider execution, retained-case mutation or credentials belong in the Pages deployment. Cloudflare Pages is the canonical public link and must remain independent of founder-Mac availability.
 
-The one-admin private beta is GREEN and current on exact release `7a124d73da9bf82979ecc8032464502f123b74f2`, with rollback `6bcb51aa5c3ad9e5c7da4352b9a3308d64ada31e`, after the 2026-09-03 bounded deployment batch. The ingress is an account-assigned development-tier HTTPS tunnel on a zero-cost plan and publishes only the loopback web origin; the API remains loopback-only behind the same-origin web proxy. Prior launch evidence for protected persistent SQLite, backup and isolated restore, app and ingress restart persistence, authentication/CSRF and browser acceptance remains valid because those runtime/security inputs did not change. The deployment-batch smoke additionally passed the changed operator/source-state/provenance/M5 contracts, lint/typecheck, pypdf extraction, dependency audit, production preflight/build, anonymous denial, admin login, retained-case reopen, Chrome/Safari render, persistence and the API loopback-only boundary. Owner-only runtime and ingress configuration remains outside Git. Availability still depends on the founder Mac staying awake and online, and the development-tier ingress has provider limits/interstitial behavior; this is private-beta evidence, not a claim of commercial production hosting. `authority_effect=NONE`.
+The one-admin Mac-hosted private beta is GREEN on exact release `369378a8d2401c6f8a1322929c530909aa5123c8`, with rollback `7a124d73da9bf82979ecc8032464502f123b74f2`, based on the accepted 2026-09-03 changed-surface deployment evidence. That release passed the macOS release-verifier regression, retained server search/reopen with safe fallback, persistence, anonymous denial/admin login, API loopback-only boundary, Chrome/Safari quick smoke and exact live release identity. Its HTTPS development ingress publishes only the loopback web origin; the API remains loopback-only behind the same-origin web proxy. Owner-only runtime and ingress configuration remains outside Git. The private beta is validation infrastructure and is expected to be unavailable when the founder Mac sleeps; never market or document its private hostname as an always-on public endpoint. `authority_effect=NONE`.
+
+GitHub main subsequently advanced beyond the deployed Mac release through retained-case cursor scope binding. That is a bounded product/runtime delta, not evidence that the accepted Mac release regressed. Batch the next Mac acceptance rather than forcing a deploy for every merge.
 
 The private hostname, credentials and host-local evidence are intentionally not recorded in Git.
 
-For the current public/private operating split and deployment contract, read `docs/LIVE_BETA.md` before creating new deployment architecture.
+For the current public/private operating split and deployment contract, read `docs/LIVE_BETA.md` and `docs/hosted-zero-spend.md` before creating new deployment architecture.
 
 ## Active engineering stream
 
-The private-beta launch gate is green. The primary company-level engineering objective is now the authenticated operator product: remove concrete friction from clue → evidence → source state → provenance → contradiction/uncertainty → operator decision while preserving the existing public/private and evidence-integrity boundaries.
+The private-beta launch gate is green. The primary company-level engineering objective is the authenticated operator product: remove concrete friction from clue → evidence → source state → provenance → contradiction/uncertainty → operator decision while preserving the existing public/private and evidence-integrity boundaries.
 
-Issue #252 remains the operator-workspace product-quality stream for concrete usability/correctness bottlenecks. Deployment work should re-enter NOW only when fresh host/provider evidence shows regression or when uptime, scale, compliance or cost justifies a hosting change.
+Issue #252 remains the operator-workspace product-quality stream for concrete usability/correctness bottlenecks. Deployment work is now limited to reliability preparation that can be completed at zero cash without changing current authority. The provider-neutral Linux bundle under `deploy/linux/` prepares exact-SHA releases, persistent SQLite, systemd restart, backup/restore, loopback-only app ports and optional web-only Cloudflare Tunnel ingress before any founder provider signup.
 
 Major post-LC1 improvements already merged include:
 
@@ -106,7 +108,9 @@ Current production constraints:
 - provider credentials/operator metadata remain server-side;
 - optional provider configuration must degrade to typed unavailable/not-configured states rather than fabricate evidence.
 
-Primary deployment documentation: `docs/DEPLOYMENT.md` and `docs/LIVE_BETA.md`.
+SQLite remains the private-beta store until measured concurrency, tenancy, query or HA requirements justify Postgres or another storage architecture. Do not move retained state onto an ephemeral free filesystem simply to obtain hosted compute.
+
+Primary deployment documentation: `docs/DEPLOYMENT.md`, `docs/LIVE_BETA.md` and `docs/hosted-zero-spend.md`.
 
 ## Required configuration
 
@@ -131,6 +135,7 @@ Human/public documentation:
 - `docs/ARCHITECTURE.md` — system design;
 - `docs/DEPLOYMENT.md` — deployment architecture/configuration;
 - `docs/LIVE_BETA.md` — current live/demo/private-beta operating choices;
+- `docs/hosted-zero-spend.md` — zero-cash public/private hosting and Linux migration path;
 - `SECURITY.md` and `THIRD_PARTY.md` — security and external-license/integration boundaries.
 
 AI/maintainer continuity:
@@ -170,8 +175,10 @@ For normal implementation work:
 
 ## Immediate company-level priority
 
-Keep the proven one-admin private beta operational while improving the operator workflow itself. The highest-value next changes should reduce context loss, make evidence/source-state/provenance/uncertainty easier to interpret, or remove a verified case-navigation friction point without broadening collection authority.
+Keep the public observer independent of founder hardware and keep the accepted one-admin private beta useful while preparing a true zero-cash stable-host fallback without changing application authority. No current action may require paid hosting, paid databases, paid storage, a purchased domain or a billing-enabled service.
 
-The development-tier HTTPS ingress is sufficient for the current one-admin beta while its observed limits remain acceptable. Do not buy or migrate hosting merely for hostname aesthetics. Revisit hosting only when uptime, scale, compliance, provider limits or cost evidence makes the current founder-Mac architecture materially inadequate.
+OCI Always Free is the first VM candidate to attempt only after the provider-neutral Linux bundle is green. Oracle's own availability/capacity limits mean this is not a guaranteed migration. If zero-cash provisioning fails, remain on the Mac private beta rather than accepting ephemeral retained storage or weakening the API/ingress boundary.
+
+Do not request founder provider signup until the Linux exact-SHA preparation, systemd, owner-only config, persistent SQLite path, health/boundary checks, backup/restore, rollback identity and optional web-only Cloudflare Tunnel artifacts are all present and CI-guarded. Any later Cloudflare Tunnel activation must publish only web `127.0.0.1:13000`; API `127.0.0.1:18000` remains loopback-only.
 
 Do not repeat already-passed SQLite, backup/restore, restart, authentication or browser acceptance work unless relevant inputs change or a concrete defect appears. Keep public observer parity through deterministic sanitized fixtures when private concepts change, and never couple the public Pages observer to the private API.
