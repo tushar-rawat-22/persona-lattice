@@ -1,0 +1,12 @@
+# Optional zero-cash ingress when a Cloudflare-managed hostname is already available.
+# A tunnel account/hostname is a founder manual action; do not put credentials in Git.
+tunnel: <TUNNEL-UUID>
+credentials-file: /etc/cloudflared/<TUNNEL-UUID>.json
+
+ingress:
+  - hostname: <PRIVATE-BETA-HOSTNAME>
+    service: http://127.0.0.1:13000
+  - service: http_status:404
+
+# Never route 127.0.0.1:18000. The API remains reachable only through the
+# same-origin web /api proxy.
