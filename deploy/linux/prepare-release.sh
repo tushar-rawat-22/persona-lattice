@@ -20,7 +20,7 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/prepare-release.sh <full-lowercase-git-sha>"
 
-for command in git python3 npm curl stat systemctl runuser install readlink; do
+for command in git python3 npm curl stat systemctl runuser install readlink useradd chown chmod; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 
@@ -48,8 +48,10 @@ git -C "$RELEASE_DIR" fetch --depth=1 origin "$TARGET_SHA"
 git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"
 [[ "$(git -C "$RELEASE_DIR" rev-parse HEAD)" == "$TARGET_SHA" ]] || fail "release checkout identity mismatch"
 [[ -z "$(git -C "$RELEASE_DIR" status --porcelain)" ]] || fail "release checkout is not clean"
-chown -R "$SERVICE_USER:$SERVICE_GROUP" "$RELEASE_DIR"
 
+# Preparation needs write access for the venv, node_modules and .next build. The
+# release tree is sealed back to root ownership before the service can start.
+chown -R "$SERVICE_USER:$SERVICE_GROUP" "$RELEASE_DIR"
 RUNTIME_DIR="$STATE_ROOT/runtime/$TARGET_SHA"
 install -d -m 0700 -o "$SERVICE_USER" -g "$SERVICE_GROUP" "$RUNTIME_DIR"
 
@@ -61,6 +63,8 @@ runuser -u "$SERVICE_USER" -- env \
   PERSONALATTICE_LIVE_WEB_PORT=13000 \
   bash "$RELEASE_DIR/scripts/live_beta_start.sh" --prepare-only
 
+chown -R "root:$SERVICE_GROUP" "$RELEASE_DIR"
+chmod -R u=rwX,g=rX,o= "$RELEASE_DIR"
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
 install -m 0644 "$RELEASE_DIR/$UNIT_SOURCE" "$UNIT_TARGET"
 systemctl daemon-reload
