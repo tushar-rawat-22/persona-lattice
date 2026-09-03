@@ -1,47 +1,75 @@
-# Zero-spend hosted demo architecture
+# Zero-spend hosted architecture
 
-PersonaLattice's hosted project/demo path must remain usable at ₹0 and must not pretend that a free ephemeral filesystem is durable.
+PersonaLattice has two deliberately different deployment classes.
 
-## Chosen shape
+The **public observer** is the canonical always-on public link. It is a static Cloudflare Pages export containing synthetic fixtures only. It must not depend on the founder Mac, run providers, accept uploads, expose retained cases, or contain a private API origin or credential.
 
-The public read-only product demo is served from a free edge/static deployment and contains only synthetic fixtures. It may show the same hierarchy, source-state vocabulary, provenance, contradictions and M5 factor presentation as the private operator workspace, but it cannot start research, mutate retained cases, upload evidence or expose protected data.
+The **private beta** is a one-admin authenticated evidence workspace with persistent SQLite. The current Mac/ngrok deployment is validation infrastructure: it is allowed to be offline while the Mac sleeps and must never be marketed as an always-on service.
 
-The private one-admin API remains a separate authenticated service. For a no-spend hosted beta, its retained evidence store must move away from local ephemeral SQLite before using a free stateless web host. The preferred migration target is a remote libSQL/Turso database because its Python driver is SQLite-compatible and the current free tier provides durable cloud storage without Render's 30-day free-Postgres expiry.
+## Zero-cash rule
 
-## Why not free Render SQLite
+Current infrastructure decisions must cost ₹0. Do not require a purchased domain, paid database, paid storage, billing-enabled hosting, or a paid uptime tier. Prepare migration and recovery artifacts before asking the founder to activate any provider account.
 
-Render free web services spin down after inactivity and lose local filesystem changes on restarts, redeploys and spin-down. That makes a local SQLite case database unsuitable for retained evidence.
+Free stateless web hosts are not acceptable for the retained private-beta database when their local filesystem is ephemeral or disappears during spin-down/redeploy. Persistence and recovery are product requirements, not optional hosting details.
 
-Render free Postgres is also not a durable baseline because free databases expire after 30 days.
+## Provider-neutral Linux bundle
 
-## Why Turso for the retained store
+`deploy/linux/` prepares the current one-admin architecture for a small Linux VM without changing application authority:
 
-Turso's current free tier provides cloud databases with a 5 GB storage allowance and its Python libSQL client exposes a sqlite3-compatible API. This makes it a smaller migration from PersonaLattice's existing storage layer than replacing every persistence contract with a new relational abstraction.
+- an exact-SHA release checkout under `/opt/persona-lattice/releases/`;
+- a dedicated `personalattice` system user;
+- owner-only configuration at `/etc/persona-lattice/production.env`;
+- persistent SQLite under `/var/lib/persona-lattice/data/`;
+- release-specific prepared runtime state under `/var/lib/persona-lattice/runtime/<sha>/`;
+- a systemd service with restart-on-failure and basic process hardening;
+- web bound only to `127.0.0.1:13000`;
+- API bound only to `127.0.0.1:18000` and reachable externally only through the web `/api` proxy;
+- the existing SQLite integrity-checked backup/restore contracts through Linux wrappers;
+- a host verifier that checks release identity, service health, same-origin API health and loopback-only listeners;
+- an optional Cloudflare Tunnel configuration that publishes the web port only.
 
-The migration must still be test-first. Do not switch production storage until existing retention, migration, delete, backup/export and fail-closed database tests pass against the remote-store adapter.
+Preparation is intentionally release-addressed. `prepare-release.sh <full-sha>` builds a release before switching `/opt/persona-lattice/current`; the same command with a previously accepted SHA is the rollback mechanism. The runtime user does not own the prepared source tree after preparation.
 
-## Public demo boundary
+The environment template contains placeholders only. A real password hash, provider key, tunnel token or tunnel credential file must never be committed.
 
-The hosted public surface must remain non-operational:
+## First stable-host candidate: OCI Always Free
 
-- synthetic fixture data only;
-- no real-person seed form;
-- no provider execution;
-- no uploads;
-- no retained-case mutation;
-- no admin session token in public JavaScript;
-- no hidden API endpoint that accepts public research jobs;
-- clear link to the private admin login without exposing credentials.
+Oracle Cloud Infrastructure is the first zero-cash VM candidate to attempt because Oracle currently documents Always Free compute and persistent block storage. That is a candidate, not an availability promise. Oracle also documents capacity limitations for Always Free compute, and account/signup availability can block provisioning.
 
-The point of the demo is to show what the operator sees and how PersonaLattice reasons about evidence, not to provide anonymous background-check execution.
+The Linux bundle therefore does not contain OCI-specific application logic. If an OCI Always Free VM can be provisioned, install a supported Python/Node/Git toolchain, copy the owner-only environment file, then run the exact-SHA preparation script. If provisioning is unavailable, remain on the accepted Mac private beta rather than weakening persistence or security on an ephemeral host.
 
-## Hosting sequence
+Reference evidence (reviewed 2026-09-04):
 
-1. Finish the public read-only demo surface and its regression contract.
-2. Add an edge/static deployment target that works on a provider-generated hostname without a purchased domain.
-3. Add a remote libSQL storage adapter behind the existing storage contract and keep local SQLite as the zero-spend local mode.
-4. Deploy the private API on a free Python web-service tier using the remote store; accept cold starts rather than faking always-on compute with keep-alive traffic.
-5. Run the full deployed launch gate: auth, CSRF, synthetic public boundary, exact research, retained-case reopen, restart persistence and browser checks.
-6. Record the deployed URLs and release SHA in `docs/CONTINUITY.md`.
+- Oracle Always Free resources: https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm
+- Cloudflare Tunnel Linux service: https://developers.cloudflare.com/tunnel/advanced/local-management/as-a-service/linux/
+- Cloudflare Tunnel architecture: https://developers.cloudflare.com/tunnel/
 
-This architecture is for a project/private beta. A commercial multi-user launch remains a later milestone with paid/reliable infrastructure, shared sessions, tenant authorization, production backups and incident operations.
+Provider quotas and free-tier terms can change. Re-check official provider documentation immediately before any founder signup or deployment decision.
+
+## Cloudflare ingress option
+
+Cloudflare Tunnel can connect outward from the VM, so the PersonaLattice application ports do not need public inbound firewall rules. `deploy/linux/cloudflared-config.yml.example` intentionally routes only `127.0.0.1:13000` and terminates unmatched ingress with HTTP 404. Port `18000` must never be a tunnel route.
+
+A stable tunnel hostname may require a Cloudflare-managed hostname/zone. Do not purchase a domain merely to make the private beta look polished. If a zero-cash stable hostname is not already available, keep the existing private-beta ingress until a justified option exists. Cloudflare quick tunnels are useful for testing but are not the stable private-beta target.
+
+## Backup posture
+
+SQLite remains the correct store while the product is one-admin and measured concurrency/tenancy/HA requirements do not justify a database migration. The existing backup process creates an integrity-checked SQLite backup plus SHA-256 and release provenance, then performs a restore check before declaring success.
+
+An off-host object-store adapter can be prepared later, but activation requires a genuinely zero-cash durable target. Until then, keep verified owner-only local backups and do not pretend an ephemeral free filesystem is disaster recovery.
+
+## Activation gate
+
+Before moving the accepted private beta from the Mac to any Linux VM:
+
+1. Re-check current provider free-tier, capacity and account requirements from official sources.
+2. Provision only a zero-cash VM/storage combination; stop if billing or purchase becomes required.
+3. Install the required runtime toolchain without changing PersonaLattice's application contracts.
+4. Create `/etc/persona-lattice/production.env` from the example, fill secrets outside Git, set mode `600`.
+5. Run `sudo bash deploy/linux/prepare-release.sh <accepted-release-sha>` from a trusted checkout.
+6. Run `sudo bash /opt/persona-lattice/current/deploy/linux/verify-host.sh <accepted-release-sha>`.
+7. Run and retain one integrity-checked backup before changing ingress.
+8. If Cloudflare Tunnel is available at zero cash, publish only the loopback web origin and keep API `18000` un-routed.
+9. Perform only the changed-host acceptance surface: anonymous denial, admin login/logout, secure cookie/CSRF mutation, one retained-case reopen, persistence across service restart, release identity, browser quick smoke, and API loopback-only. Reuse unchanged application-contract evidence rather than rerunning unrelated broad suites.
+
+A commercial multi-user launch is a different milestone. Team authorization, HA, stronger off-host backup, operational monitoring and a database migration should be justified by measured demand rather than installed pre-emptively.
