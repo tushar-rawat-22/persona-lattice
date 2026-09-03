@@ -128,6 +128,7 @@ jobs:
           bash -n scripts/test_live_beta_tunnel_launchd.sh
           bash -n scripts/test_live_beta_verify_release.sh
           bash -n scripts/test_public_demo_release_artifact.sh
+          bash -n scripts/test_linux_private_beta_bundle.sh
           bash scripts/test_lc1_api_process_contract.sh
           bash scripts/test_lc1_npm_worktree.sh
           bash scripts/test_lc1_python_selection.sh
@@ -140,6 +141,7 @@ jobs:
           bash scripts/test_live_beta_tunnel_launchd.sh
           bash scripts/test_live_beta_verify_release.sh
           bash scripts/test_public_demo_release_artifact.sh
+          bash scripts/test_linux_private_beta_bundle.sh
       - name: Build and exercise production processes
         shell: bash
         run: |

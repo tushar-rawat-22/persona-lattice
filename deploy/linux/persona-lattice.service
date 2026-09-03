@@ -1,0 +1,32 @@
+[Unit]
+Description=PersonaLattice one-admin private beta
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=personalattice
+Group=personalattice
+WorkingDirectory=/opt/persona-lattice/current
+ExecStart=/usr/bin/bash /opt/persona-lattice/current/deploy/linux/run-current.sh
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=full
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/persona-lattice
+
+[Install]
+WantedBy=multi-user.target
