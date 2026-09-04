@@ -18,6 +18,7 @@ type Brief = {
   contradictionCount: number;
   warningCount: number;
   coverageGapCount: number | null;
+  openQuestions: string[];
   traversalLimited: boolean;
   sourceStates: Array<[string, number]>;
 };
@@ -95,6 +96,7 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
       contradictionCount,
       warningCount: stringList(converged.warnings).length,
       coverageGapCount: null,
+      openQuestions: [],
       traversalLimited: executiveSummary.truncated === true,
       sourceStates: [...sourceStateTotals.entries()].sort(([left], [right]) => left.localeCompare(right)),
     };
@@ -107,6 +109,7 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
       .filter((source): source is string => typeof source === "string" && source.length > 0),
   );
   const structured = objectValue(report.structured_report);
+  const openQuestions = stringList(structured.coverage_gaps).map((gap) => gap.trim()).filter(Boolean);
   const indexedContradictions = new Set<number>();
   const contradictionIndexes = structured.contradiction_observation_indexes;
   if (Array.isArray(contradictionIndexes)) {
@@ -125,7 +128,8 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
     corroboratedFindingCount: countIndependentlyCorroboratedFindings(observations),
     contradictionCount: indexedContradictions.size,
     warningCount: stringList(report.warnings).length,
-    coverageGapCount: stringList(structured.coverage_gaps).length,
+    coverageGapCount: openQuestions.length,
+    openQuestions,
     traversalLimited: false,
     sourceStates: countEntries(sourceRuns.state_counts),
   };
@@ -184,6 +188,8 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
       : brief.coverageGapCount === 0
         ? "No recorded coverage gaps"
         : `${brief.coverageGapCount} open coverage gap${brief.coverageGapCount === 1 ? "" : "s"}`;
+  const visibleOpenQuestions = brief.openQuestions.slice(0, 3);
+  const hiddenOpenQuestionCount = Math.max(0, brief.openQuestions.length - visibleOpenQuestions.length);
 
   return (
     <div className="caseNavigationEmptyState" aria-label="Retained case decision brief">
@@ -217,6 +223,17 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
                 ? "Coverage gaps were not recorded for this report shape; unknown must not be presented as none."
                 : "Coverage gaps are retained report findings, not evidence of absence."}
           </small>
+          {visibleOpenQuestions.length > 0 && (
+            <div aria-label="Open questions">
+              <small><strong>Open questions</strong></small>
+              <ul>
+                {visibleOpenQuestions.map((question) => <li key={question}>{question}</li>)}
+              </ul>
+              {hiddenOpenQuestionCount > 0 && (
+                <small className="muted">+{hiddenOpenQuestionCount} more in the retained report</small>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
