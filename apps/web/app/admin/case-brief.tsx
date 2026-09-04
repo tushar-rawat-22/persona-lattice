@@ -16,7 +16,8 @@ type Brief = {
   sourceCount: number;
   contradictionCount: number;
   warningCount: number;
-  coverageGapCount: number;
+  coverageGapCount: number | null;
+  traversalLimited: boolean;
   sourceStates: Array<[string, number]>;
 };
 
@@ -71,12 +72,14 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
       }
     }
 
+    const executiveSummary = objectValue(converged.executive_summary);
     return {
       observationCount,
       sourceCount: sources.size,
       contradictionCount,
       warningCount: stringList(converged.warnings).length,
-      coverageGapCount: 0,
+      coverageGapCount: null,
+      traversalLimited: executiveSummary.truncated === true,
       sourceStates: [...sourceStateTotals.entries()].sort(([left], [right]) => left.localeCompare(right)),
     };
   }
@@ -106,6 +109,7 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
     contradictionCount: indexedContradictions.size,
     warningCount: stringList(report.warnings).length,
     coverageGapCount: stringList(structured.coverage_gaps).length,
+    traversalLimited: false,
     sourceStates: countEntries(sourceRuns.state_counts),
   };
 }
@@ -147,10 +151,17 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
   }
   if (!brief) return <p className="muted" role="status">Building case brief from the retained report…</p>;
 
+  const coverageSummary = brief.coverageGapCount === null
+    ? "coverage gaps not recorded"
+    : `${brief.coverageGapCount} coverage gaps`;
+
   return (
     <div className="caseNavigationEmptyState" aria-label="Retained case brief">
       <p><strong>Case brief</strong></p>
-      <p>{brief.observationCount} observations · {brief.sourceCount} sources · {brief.contradictionCount} conflicts · {brief.warningCount} warnings · {brief.coverageGapCount} gaps</p>
+      <p>{brief.observationCount} observations · {brief.sourceCount} sources · {brief.contradictionCount} conflicts · {brief.warningCount} warnings · {coverageSummary}</p>
+      {brief.traversalLimited ? (
+        <small className="muted">Traversal limit reached. Treat unexplored leads as open questions rather than negative findings.</small>
+      ) : null}
       {brief.sourceStates.length > 0 ? (
         <small className="muted">Source states: {brief.sourceStates.map(([state, count]) => `${state} ${count}`).join(" · ")}</small>
       ) : (

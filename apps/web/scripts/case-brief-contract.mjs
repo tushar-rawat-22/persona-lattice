@@ -16,7 +16,11 @@ const requiredBriefFragments = [
   "sourceCount",
   "contradictionCount",
   "warningCount",
-  "coverageGapCount",
+  "coverageGapCount: number | null",
+  "coverageGapCount: null",
+  "executiveSummary.truncated === true",
+  "coverage gaps not recorded",
+  "Traversal limit reached. Treat unexplored leads as open questions rather than negative findings.",
   "Source states:",
   "No identity probability is calculated",
   "same-handle overlap is not identity proof",
@@ -25,6 +29,10 @@ const requiredBriefFragments = [
 
 for (const fragment of requiredBriefFragments) {
   if (!brief.includes(fragment)) throw new Error(`case brief contract missing: ${fragment}`);
+}
+
+if (brief.includes("coverageGapCount: 0")) {
+  throw new Error("converged case brief must not invent zero coverage gaps when none are recorded");
 }
 
 if (!navigation.includes('<CaseBrief caseId={activeCaseId} disabled={remoteActionsDisabled} />')) {
