@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { CaseBrief } from "./case-brief";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 const REMOTE_SEARCH_LIMIT = 50;
 const REMOTE_SEARCH_DEBOUNCE_MS = 250;
@@ -221,6 +223,8 @@ export function CaseNavigation({
           </small>
         </div>
       )}
+
+      <CaseBrief caseId={activeCaseId} disabled={remoteActionsDisabled} />
 
       {remoteActionsDisabled && (
         <p className="muted" role="status">
