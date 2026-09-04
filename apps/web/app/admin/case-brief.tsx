@@ -14,6 +14,7 @@ type StoredCasePayload = {
 type Brief = {
   observationCount: number;
   sourceCount: number;
+  corroboratedFindingCount: number;
   contradictionCount: number;
   warningCount: number;
   coverageGapCount: number | null;
@@ -50,18 +51,32 @@ function observationIsContradiction(observation: JsonObject): boolean {
   return details.contradiction === true || details.account_state === "illegal";
 }
 
+function countIndependentlyCorroboratedFindings(observations: JsonObject[]): number {
+  const sourcesBySummary = new Map<string, Set<string>>();
+  for (const observation of observations) {
+    const summary = typeof observation.summary === "string" ? observation.summary.trim() : "";
+    const source = typeof observation.source === "string" ? observation.source.trim() : "";
+    if (!summary || !source) continue;
+    const summaryKey = summary.toLocaleLowerCase();
+    const sources = sourcesBySummary.get(summaryKey) ?? new Set<string>();
+    sources.add(source);
+    sourcesBySummary.set(summaryKey, sources);
+  }
+  return [...sourcesBySummary.values()].filter((sources) => sources.size >= 2).length;
+}
+
 export function summarizeRetainedCase(report: JsonObject): Brief {
   const converged = objectValue(report.converged_report);
   if (Object.keys(converged).length > 0) {
     const nodes = objectList(converged.nodes);
     const sources = new Set<string>();
-    let observationCount = 0;
+    const retainedObservations: JsonObject[] = [];
     let contradictionCount = 0;
     const sourceStateTotals = new Map<string, number>();
 
     for (const node of nodes) {
       const observations = objectList(node.observations);
-      observationCount += observations.length;
+      retainedObservations.push(...observations);
       for (const observation of observations) {
         if (typeof observation.source === "string" && observation.source) sources.add(observation.source);
         if (observationIsContradiction(observation)) contradictionCount += 1;
@@ -74,8 +89,9 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
 
     const executiveSummary = objectValue(converged.executive_summary);
     return {
-      observationCount,
+      observationCount: retainedObservations.length,
       sourceCount: sources.size,
+      corroboratedFindingCount: countIndependentlyCorroboratedFindings(retainedObservations),
       contradictionCount,
       warningCount: stringList(converged.warnings).length,
       coverageGapCount: null,
@@ -106,6 +122,7 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
   return {
     observationCount: observations.length,
     sourceCount: sources.size,
+    corroboratedFindingCount: countIndependentlyCorroboratedFindings(observations),
     contradictionCount: indexedContradictions.size,
     warningCount: stringList(report.warnings).length,
     coverageGapCount: stringList(structured.coverage_gaps).length,
@@ -154,6 +171,9 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
   const coverageSummary = brief.coverageGapCount === null
     ? "coverage gaps not recorded"
     : `${brief.coverageGapCount} coverage gaps`;
+  const corroboratedSummary = brief.corroboratedFindingCount === 0
+    ? "No independently corroborated retained findings"
+    : `${brief.corroboratedFindingCount} independently corroborated retained finding${brief.corroboratedFindingCount === 1 ? "" : "s"}`;
   const conflictSummary = brief.contradictionCount === 0
     ? "No recorded conflicts"
     : `${brief.contradictionCount} recorded conflict${brief.contradictionCount === 1 ? "" : "s"}`;
@@ -174,9 +194,9 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
         <div className="provider">
           <div>
             <strong>Corroborated</strong>
-            <span>Not classified by retained report</span>
+            <span>{corroboratedSummary}</span>
           </div>
-          <small className="muted">Do not infer corroboration from observation count.</small>
+          <small className="muted">Requires the same retained observation summary from at least two distinct retained sources. Observation volume alone never counts as corroboration.</small>
         </div>
         <div className="provider">
           <div>
