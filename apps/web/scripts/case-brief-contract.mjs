@@ -14,6 +14,10 @@ const requiredBriefFragments = [
   "case brief identity mismatch",
   "observationCount",
   "sourceCount",
+  "corroboratedFindingCount",
+  "countIndependentlyCorroboratedFindings",
+  "sourcesBySummary",
+  "sources.size >= 2",
   "contradictionCount",
   "warningCount",
   "coverageGapCount: number | null",
@@ -22,8 +26,9 @@ const requiredBriefFragments = [
   "coverage gaps not recorded",
   "Decision brief",
   "Corroborated",
-  "Not classified by retained report",
-  "Do not infer corroboration from observation count.",
+  "No independently corroborated retained findings",
+  "Requires the same retained observation summary from at least two distinct retained sources.",
+  "Observation volume alone never counts as corroboration.",
   "Conflicting",
   "No recorded conflicts is not proof that the evidence is consistent.",
   "Unknown",
@@ -42,6 +47,10 @@ for (const fragment of requiredBriefFragments) {
 
 if (brief.includes("coverageGapCount: 0")) {
   throw new Error("converged case brief must not invent zero coverage gaps when none are recorded");
+}
+
+if (brief.includes("Not classified by retained report")) {
+  throw new Error("retained case brief must use the same evidence-bounded corroboration rule as the active workspace");
 }
 
 for (const forbiddenInference of ["corroboratedObservationCount", "corroborationCount", "identityProbability"]) {
