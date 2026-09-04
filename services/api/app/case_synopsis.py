@@ -4,8 +4,12 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from collections.abc import Mapping
+import hashlib
 import json
+import os
+from pathlib import Path
 import sys
+import tempfile
 from uuid import UUID
 
 from .cases import CASE_STORE, StoredCase
@@ -188,12 +192,84 @@ def build_case_synopsis(record: StoredCase) -> dict[str, object]:
     }
 
 
+def render_case_synopsis(payload: Mapping[str, object], *, pretty: bool = False) -> bytes:
+    """Serialize a synopsis deterministically so its digest can be verified later."""
+
+    if pretty:
+        encoded = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True)
+    else:
+        encoded = json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    return f"{encoded}\n".encode("utf-8")
+
+
+def _atomic_owner_only_write(path: Path, content: bytes) -> None:
+    if not path.parent.exists() or not path.parent.is_dir():
+        raise ValueError("Export parent directory does not exist.")
+
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        dir=path.parent,
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+        os.chmod(path, 0o600)
+    except BaseException:
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+        temporary_path.unlink(missing_ok=True)
+        raise
+
+
+def write_case_synopsis_export(
+    payload: Mapping[str, object],
+    destination: str | Path,
+    *,
+    pretty: bool = False,
+) -> str:
+    """Write an owner-only synopsis plus a SHA-256 sidecar and return the digest."""
+
+    path = Path(destination).expanduser()
+    if path.name in {"", ".", ".."}:
+        raise ValueError("Export path must name a file.")
+
+    content = render_case_synopsis(payload, pretty=pretty)
+    digest = hashlib.sha256(content).hexdigest()
+    checksum_path = path.with_name(f"{path.name}.sha256")
+    checksum = f"{digest}  {path.name}\n".encode("ascii")
+
+    _atomic_owner_only_write(path, content)
+    try:
+        _atomic_owner_only_write(checksum_path, checksum)
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+    return digest
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Render a privacy-bounded synopsis for one retained PersonaLattice case."
     )
     parser.add_argument("case_id", type=UUID, help="retained case UUID")
     parser.add_argument("--pretty", action="store_true", help="pretty-print JSON")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="write an owner-only JSON handoff plus a .sha256 verification sidecar",
+    )
     return parser
 
 
@@ -204,10 +280,16 @@ def main(argv: list[str] | None = None) -> int:
         print("Case not found or expired.", file=sys.stderr)
         return 2
     payload = build_case_synopsis(record)
-    if args.pretty:
-        print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    else:
-        print(json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True))
+    if args.output is not None:
+        try:
+            digest = write_case_synopsis_export(payload, args.output, pretty=args.pretty)
+        except (OSError, ValueError) as exc:
+            print(f"Synopsis export failed: {exc}", file=sys.stderr)
+            return 3
+        print(f"{digest}  {args.output.name}")
+        return 0
+
+    sys.stdout.buffer.write(render_case_synopsis(payload, pretty=args.pretty))
     return 0
 
 
