@@ -1,6 +1,6 @@
 # PersonaLattice continuity
 
-This is the current engineering handover for PersonaLattice. Read it before reconstructing old chats or making architectural changes. Detailed historical decisions remain in Git history, merged pull requests, issues and `docs/decisions/`; this file intentionally stays focused on the state needed to continue correctly.
+This is the current engineering handover for PersonaLattice. Read it before reconstructing old chats or making architectural changes. Current GitHub, provider and live evidence outrank historical notes.
 
 ## Repository authority
 
@@ -8,15 +8,15 @@ Repository: `tushar-rawat-22/persona-lattice`
 
 Default branch: `main`
 
-The product baseline entering this documentation update is PR #307 merged as `d70341ae18de948d23203337b1bbcdf0c15875c4` on 2026-08-31. If `main` is newer, verify that it descends from this checkpoint and treat the current remote branch as authoritative.
+At this checkpoint, canonical `main` is `ad467d249402fbbf6300a06713b8e29b7739bed0`, merged through PR #327. Verify that SHA before acting because main can advance between runs. Exact-main CI #2907 passed on that release.
 
-Do not trust a remembered local SHA, old assistant message or historical section of a document over the current GitHub branch, current PR state and exact-head CI.
+Do not trust a remembered local SHA, old assistant message or historical section over the current GitHub branch, current PR state and exact-head CI.
 
 ## Product state
 
-PersonaLattice is a private-admin, evidence-first public-source research workbench with a live zero-secret public observer at `https://persona-lattice.pages.dev`. The public surface contains deterministic synthetic/demo material; real intake, provider execution and retained cases require the authenticated operator workflow.
+PersonaLattice is a private-admin, evidence-first public-source research workbench with a zero-secret public observer at `https://persona-lattice.pages.dev`. The public surface contains deterministic synthetic/demo material only; real intake, provider execution and retained cases require the authenticated operator workflow.
 
-The current private product is intentionally one admin, one API worker and SQLite-backed retained storage. That architecture is valid for the private operator product and private beta. It is not yet a multi-user SaaS architecture.
+The private product intentionally remains one admin, one API worker and SQLite-backed retained storage. That architecture is valid for the current private operator product. It is not a multi-user SaaS architecture.
 
 Permanent boundaries:
 
@@ -28,39 +28,71 @@ Permanent boundaries:
 - no private-account bypass, credential/OTP/token collection, hidden KYC/government-ID acquisition, contact harvesting, covert personal/device IP discovery, live tracking, broad ownership traversal, reverse/bulk enumeration or regulated eligibility decisioning;
 - provider execution fails closed on policy, routing, configuration, budget and malformed-result boundaries.
 
-## Launch state
+## Reliability matrix
 
-`LAUNCH_CANDIDATE_1` is complete. Issue #218 closed on 2026-08-27 after software, host and browser evidence was recorded.
+### Public observer
 
-The exact host/browser-tested LC1 commit is `18b6b75b7dc28d3883752aec013911223726423c`. Exact-commit post-merge CI was run `33008932692` / CI #2226 and passed. The private host evidence summary is outside Git at:
+The canonical public observer is the static Cloudflare Pages deployment at `https://persona-lattice.pages.dev`. It must remain synthetic, sanitized, read-only and independent of the founder Mac, ngrok, localhost, private API, retained cases and credentials.
 
-`$HOME/Library/Application Support/PersonaLattice/lc1/20260826T200923Z.json`
+The dedicated public build lives under `apps/web` and uses the `build:public-demo` static export. CI verifies the public boundary and public-demo artifact. A green artifact proves the repository export boundary; live-host reachability should still be checked separately when making a current availability claim.
 
-That session covered production preflight, same-origin web/API routing, authentication/CSRF, exact URL/domain research, source-state/provenance/M5 contracts, reviewed-document promotion, retained-case operations, restart persistence, SQLite backup/restore, session invalidation, logout, log privacy and Safari/Chrome acceptance.
+Never place the authenticated private-beta hostname in README, repository profile text or marketing copy.
 
-LC1 is a software + real-host launch candidate. It is not the stable private-beta endpoint.
+### Private beta
 
-The zero-secret public observer is live at `https://persona-lattice.pages.dev`. It was created on 2026-08-31 from the canonical repository using `apps/web`'s dedicated `build:public-demo` static export. Founder live smoke screenshots verified the public overview and synthetic evidence workspace. The public `Private admin` path intentionally resolves to the safe operator-access boundary; no admin login, private API URL, provider execution, retained-case mutation or credentials belong in the Pages deployment. Cloudflare Pages is the canonical public link and must remain independent of founder-Mac availability.
+The accepted Mac-hosted private beta is GREEN on exact release `369378a8d2401c6f8a1322929c530909aa5123c8`, with rollback `7a124d73da9bf82979ecc8032464502f123b74f2`, based on the accepted 2026-09-03 changed-surface deployment evidence.
 
-The one-admin Mac-hosted private beta is GREEN on exact release `369378a8d2401c6f8a1322929c530909aa5123c8`, with rollback `7a124d73da9bf82979ecc8032464502f123b74f2`, based on the accepted 2026-09-03 changed-surface deployment evidence. That release passed the macOS release-verifier regression, retained server search/reopen with safe fallback, persistence, anonymous denial/admin login, API loopback-only boundary, Chrome/Safari quick smoke and exact live release identity. Its HTTPS development ingress publishes only the loopback web origin; the API remains loopback-only behind the same-origin web proxy. Owner-only runtime and ingress configuration remains outside Git. The private beta is validation infrastructure and is expected to be unavailable when the founder Mac sleeps; never market or document its private hostname as an always-on public endpoint. `authority_effect=NONE`.
+That release passed the macOS release-verifier regression, retained server search/reopen with safe fallback, persistence, anonymous denial/admin login, API loopback-only boundary, Chrome/Safari quick smoke and exact live release identity. Its HTTPS validation ingress publishes only the loopback web origin; the API remains loopback-only behind the same-origin web proxy.
 
-GitHub main subsequently advanced beyond the deployed Mac release through retained-case cursor scope binding. That is a bounded product/runtime delta, not evidence that the accepted Mac release regressed. Batch the next Mac acceptance rather than forcing a deploy for every merge.
+The Mac deployment is validation infrastructure. It is expected to be unavailable when the founder Mac sleeps and must never be described as always-on.
 
-The private hostname, credentials and host-local evidence are intentionally not recorded in Git.
+GitHub main has advanced beyond that deployed release through retained-case cursor scope binding, the provider-neutral Linux deployment bundle, a privacy-bounded retained-case analyst synopsis and public reliability documentation. Batch the next Mac acceptance rather than forcing a deploy for every merge.
 
-For the current public/private operating split and deployment contract, read `docs/LIVE_BETA.md` and `docs/hosted-zero-spend.md` before creating new deployment architecture.
+Private always-on hosting is NOT YET ESTABLISHED.
+
+## Zero-cash infrastructure policy
+
+Current founder spend is zero. Do not recommend, request or activate:
+
+- paid hosting, database or storage;
+- a purchased domain;
+- a billing-enabled service;
+- a card-required signup;
+- a VM, object store, database or API subscription that can incur charges.
+
+OCI Always Free is a future option only if the founder later changes the no-card/no-billing-activation policy. Oracle's current Free Tier signup documentation requires valid credit/debit-card information and can use temporary authorization holds, so OCI signup is not a current action and is not a blocker.
+
+The same rule applies to every alternative provider. A nominally free tier does not qualify as a current action if account creation requires a card or billing activation.
+
+If no truly no-card, hard-free persistent host satisfies the current security and storage contracts, keep the private beta local rather than weakening persistence, authentication, ingress or recovery.
+
+## Provider-neutral Linux deployment bundle
+
+`deploy/linux/` prepares the current one-admin architecture for a small persistent Linux host later without creating provider authority now. The bundle must preserve:
+
+- exact-SHA release preparation and rollback identity;
+- one dedicated runtime user;
+- owner-only configuration outside Git;
+- persistent protected SQLite storage;
+- systemd restart persistence;
+- one web origin;
+- API loopback-only isolation;
+- health and release verification;
+- integrity-checked backup/restore;
+- optional web-only Cloudflare Tunnel ingress with unmatched routes failing closed.
+
+Do not add provider-specific deployment logic merely to make a future signup easier. The deployment contract should remain portable.
 
 ## Active engineering stream
 
-The private-beta launch gate is green. The primary company-level engineering objective is the authenticated operator product: remove concrete friction from clue → evidence → source state → provenance → contradiction/uncertainty → operator decision while preserving the existing public/private and evidence-integrity boundaries.
+The private-beta launch gate is green. The primary engineering objective is the authenticated analyst product: remove concrete friction from clue → evidence → source state → provenance → contradiction/uncertainty → operator decision while preserving the public/private and evidence-integrity boundaries.
 
-Issue #252 remains the operator-workspace product-quality stream for concrete usability/correctness bottlenecks. Deployment work is now limited to reliability preparation that can be completed at zero cash without changing current authority. The provider-neutral Linux bundle under `deploy/linux/` prepares exact-SHA releases, persistent SQLite, systemd restart, backup/restore, loopback-only app ports and optional web-only Cloudflare Tunnel ingress before any founder provider signup.
-
-Major post-LC1 improvements already merged include:
+Issue #252 is the operator-workspace product-quality stream. Major post-LC1 improvements already merged include:
 
 - compact authenticated application bar;
 - explicit corroborated/conflicting/open-question decision surface;
 - searchable/filterable/sortable retained-case navigation;
+- pagination cursors bound to normalized active search/filter scope;
 - one-action provenance disclosure and safe canonical-locator copy;
 - decisive M5 factor summaries with explicit truncation disclosure;
 - retained source-execution state summaries that distinguish failed, withheld, not-attempted and no-match states;
@@ -68,29 +100,19 @@ Major post-LC1 improvements already merged include:
 - stale retention-deadline handling without inventing server deletion state;
 - explicit expired-session handling and fail-closed remote actions;
 - distinct initial loading, failed-index and confirmed-empty case states;
-- `/` shortcut for retained-case search;
-- `N` shortcut for reopening New intake;
-- explicit retained evidence paths in Graph;
-- factor-first public M5 interpretation;
-- reviewed-document workflow simulation in the public observer;
-- retained-case navigation simulation in the public observer.
+- retained evidence paths in Graph;
+- privacy-bounded retained-case analyst synopsis/handoff;
+- reviewed-document and retained-case workflow simulation in the public observer.
 
 Do not continue UI polishing merely to generate PR count. The next product change should remove a concrete operator bottleneck or correctness ambiguity.
 
 ## Source governance
 
-Issue #222 is the governing zero-spend source admission matrix. Its body was corrected after LC1 to remove the obsolete pre-LC1 freeze. Source work remains one source per PR and requires current primary-source terms/privacy/auth/rate-limit/contact-risk review before activation.
+Issue #222 is the governing zero-spend source-admission matrix. Source work remains one source per PR and requires current primary-source terms/privacy/auth/rate-limit/contact-risk review before activation.
 
 Community OSINT directories are candidate indexes only. They never authorize execution against every listed site.
 
-Two important post-LC1 corrections to older handovers:
-
-- GLEIF exact LEI is active. PR #245 merged as `f7a7b19e31bc86d70a2c2e9dc4de1c42730bebdb`. It accepts only an exact canonical GLEIF LEI record URL, validates the identifier locally, performs a bounded exact lookup, retains narrow legal-entity registry metadata, emits no recursive leads and keeps `identity_claim=false`.
-- SEC EDGAR exact CIK is active through the governed runtime and Quick Research. PR #254 merged as `ef0dcecf7fa8438ca869f80a43b395655ebf5ee0`. It accepts only the exact canonical submissions URL shape, performs one bounded submissions request, retains narrow filer metadata, emits no recursive leads and keeps `identity_claim=false`. `SEC_EDGAR_USER_AGENT` is required non-secret operator configuration and must fail before network contact when absent.
-
-If an older file or issue comment says those sources are still deferred, that statement is historical and no longer authoritative.
-
-Other active exact/bounded source families include reviewed Sherlock username discovery, GitHub, GitLab, Keybase, Bluesky, local phone metadata, public DNS infrastructure metadata, Wayback availability, exact Stack Overflow profiles, OpenAlex when configured, Wikidata, Zenodo, ROR, Companies House when configured, DBLP, Crossref/DataCite DOI handling and public RDAP. The source admission records and current provider/catalog/binding/runtime code are authoritative for exact applicability and retained fields.
+Active exact/bounded source families include reviewed Sherlock username discovery, GitHub, GitLab, Keybase, Bluesky, local phone metadata, public DNS infrastructure metadata, Wayback availability, exact Stack Overflow profiles, OpenAlex when configured, Wikidata, Zenodo, ROR, Companies House when configured, DBLP, Crossref/DataCite DOI handling, GLEIF, SEC EDGAR and public RDAP. The source-admission records and current provider/catalog/binding/runtime code are authoritative for exact applicability and retained fields.
 
 Do not broaden an exact source into fuzzy person search, account enumeration, contact enrichment, private data, content scraping or ownership traversal because the upstream API supports it.
 
@@ -103,14 +125,12 @@ The API owns authentication, CSRF validation, provider governance/execution, evi
 Current production constraints:
 
 - exactly one API worker/replica because session records are process-local;
-- SQLite database must live on protected persistent storage;
+- SQLite must live on protected persistent storage;
 - secure `__Host-personalattice_session` cookie on HTTPS;
 - provider credentials/operator metadata remain server-side;
 - optional provider configuration must degrade to typed unavailable/not-configured states rather than fabricate evidence.
 
 SQLite remains the private-beta store until measured concurrency, tenancy, query or HA requirements justify Postgres or another storage architecture. Do not move retained state onto an ephemeral free filesystem simply to obtain hosted compute.
-
-Primary deployment documentation: `docs/DEPLOYMENT.md`, `docs/LIVE_BETA.md` and `docs/hosted-zero-spend.md`.
 
 ## Required configuration
 
@@ -134,51 +154,43 @@ Human/public documentation:
 - `docs/PRODUCT_CHARTER.md` — product intent and scope;
 - `docs/ARCHITECTURE.md` — system design;
 - `docs/DEPLOYMENT.md` — deployment architecture/configuration;
-- `docs/LIVE_BETA.md` — current live/demo/private-beta operating choices;
-- `docs/hosted-zero-spend.md` — zero-cash public/private hosting and Linux migration path;
+- `docs/LIVE_BETA.md` — public/private operating choices and release gate;
+- `docs/hosted-zero-spend.md` — zero-cash hosting constraints and provider-neutral migration path;
 - `SECURITY.md` and `THIRD_PARTY.md` — security and external-license/integration boundaries.
 
-AI/maintainer continuity:
+Maintainer continuity:
 
 - this file — current authoritative handover;
-- `docs/ROADMAP.md` — engineering sequence, but verify its status lines against current GitHub before acting;
+- `docs/ROADMAP.md` — engineering sequence, but verify status against current GitHub before acting;
 - Issue #222 — source admission/governance;
 - Issue #252 — current operator-product quality stream;
-- source admission records — exact provider contracts.
-
-Public docs should read like ordinary maintainer documentation, not assistant transcripts. Continuity may be dense and operational because its job is to prevent context reconstruction.
+- source-admission records — exact provider contracts.
 
 ## Start-of-session procedure
 
-A new assistant/model should do only this before changing code:
+Before changing code:
 
 1. fetch current `main`;
 2. identify the newest open implementation PR and exact head;
 3. inspect exact-head CI and unresolved review threads;
-4. verify the live public observer only if deployment state is relevant;
-5. read Issue #222 only if source work is relevant, and Issue #252 only if operator-product work is relevant;
-6. read the smallest implementation/deployment files needed for the active PR;
-7. fix/ship the active bounded increment before opening another unrelated stream.
-
-Do not spend the first several prompts replaying old history. Use this file to establish architecture and boundaries, then verify only the state that can have changed.
+4. verify the public observer separately when current deployment availability matters;
+5. read Issue #222 only for source work and Issue #252 only for operator-product work;
+6. read the smallest implementation/deployment files needed for the active change;
+7. ship the active bounded increment before opening an unrelated stream.
 
 ## Merge discipline
 
-For normal implementation work:
-
 - keep each PR bounded;
 - source expansion stays one source per PR;
-- do not weaken a failing regression simply to obtain green CI;
+- do not weaken a failing regression merely to obtain green CI;
 - merge only after the exact unchanged head is fully green and review blockers are resolved;
 - use an expected-head merge guard;
-- after a merge, choose the next highest-value safe increment rather than manufacturing cosmetic churn.
+- after merge, choose the next highest-value safe increment rather than manufacturing cosmetic churn.
 
 ## Immediate company-level priority
 
-Keep the public observer independent of founder hardware and keep the accepted one-admin private beta useful while preparing a true zero-cash stable-host fallback without changing application authority. No current action may require paid hosting, paid databases, paid storage, a purchased domain or a billing-enabled service.
+Keep the public observer independent of founder hardware, keep the accepted one-admin private beta useful, and improve analyst decision efficiency while the private always-on hosting question remains intentionally unresolved under the no-card/no-billing policy.
 
-OCI Always Free is the first VM candidate to attempt only after the provider-neutral Linux bundle is green. Oracle's own availability/capacity limits mean this is not a guaranteed migration. If zero-cash provisioning fails, remain on the Mac private beta rather than accepting ephemeral retained storage or weakening the API/ingress boundary.
-
-Do not request founder provider signup until the Linux exact-SHA preparation, systemd, owner-only config, persistent SQLite path, health/boundary checks, backup/restore, rollback identity and optional web-only Cloudflare Tunnel artifacts are all present and CI-guarded. Any later Cloudflare Tunnel activation must publish only web `127.0.0.1:13000`; API `127.0.0.1:18000` remains loopback-only.
+Continue provider-neutral Linux preparation and recovery contracts, but do not request any provider signup. Evaluate a truly no-card, hard-free host only if it offers durable persistent storage and can preserve exact release identity, protected SQLite, loopback API isolation, restart persistence, backup/restore and stable HTTPS ingress. Otherwise stay local.
 
 Do not repeat already-passed SQLite, backup/restore, restart, authentication or browser acceptance work unless relevant inputs change or a concrete defect appears. Keep public observer parity through deterministic sanitized fixtures when private concepts change, and never couple the public Pages observer to the private API.
