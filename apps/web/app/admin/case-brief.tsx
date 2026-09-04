@@ -136,8 +136,9 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
     return () => controller.abort();
   }, [caseId, disabled]);
 
-  const currentPayload = requestState?.caseId === caseId ? requestState.payload : null;
-  const currentFailed = requestState?.caseId === caseId && requestState.failed;
+  const currentRequest = requestState && requestState.caseId === caseId ? requestState : null;
+  const currentPayload = currentRequest?.payload ?? null;
+  const currentFailed = currentRequest?.failed ?? false;
   const brief = useMemo(() => currentPayload ? summarizeRetainedCase(currentPayload.report) : null, [currentPayload]);
   if (!caseId || disabled) return null;
 
