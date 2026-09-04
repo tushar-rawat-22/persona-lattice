@@ -20,6 +20,12 @@ type Brief = {
   sourceStates: Array<[string, number]>;
 };
 
+type BriefRequestState = {
+  caseId: string;
+  payload: StoredCasePayload | null;
+  failed: boolean;
+};
+
 function objectValue(value: unknown): JsonObject {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : {};
 }
@@ -105,17 +111,12 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
 }
 
 export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disabled?: boolean }) {
-  const [payload, setPayload] = useState<StoredCasePayload | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [requestState, setRequestState] = useState<BriefRequestState | null>(null);
 
   useEffect(() => {
-    setPayload(null);
-    setFailed(false);
     if (!caseId || disabled) return;
 
     const controller = new AbortController();
-    setLoading(true);
     void fetch(`${API_URL}/v1/cases/${encodeURIComponent(caseId)}`, {
       credentials: "include",
       signal: controller.signal,
@@ -126,25 +127,24 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
       })
       .then((record) => {
         if (record.id !== caseId) throw new Error("case brief identity mismatch");
-        setPayload(record);
+        if (!controller.signal.aborted) setRequestState({ caseId, payload: record, failed: false });
       })
       .catch(() => {
-        if (!controller.signal.aborted) setFailed(true);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) setRequestState({ caseId, payload: null, failed: true });
       });
 
     return () => controller.abort();
   }, [caseId, disabled]);
 
-  const brief = useMemo(() => payload ? summarizeRetainedCase(payload.report) : null, [payload]);
+  const currentPayload = requestState?.caseId === caseId ? requestState.payload : null;
+  const currentFailed = requestState?.caseId === caseId && requestState.failed;
+  const brief = useMemo(() => currentPayload ? summarizeRetainedCase(currentPayload.report) : null, [currentPayload]);
   if (!caseId || disabled) return null;
 
-  if (loading) return <p className="muted" role="status">Building case brief from the retained report…</p>;
-  if (failed || !brief) {
+  if (currentFailed) {
     return <p className="muted" role="status">Case brief unavailable. Use the reopened retained report as the source of truth.</p>;
   }
+  if (!brief) return <p className="muted" role="status">Building case brief from the retained report…</p>;
 
   return (
     <div className="caseNavigationEmptyState" aria-label="Retained case brief">
