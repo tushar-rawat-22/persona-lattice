@@ -20,7 +20,16 @@ const requiredBriefFragments = [
   "coverageGapCount: null",
   "executiveSummary.truncated === true",
   "coverage gaps not recorded",
+  "Decision brief",
+  "Corroborated",
+  "Not classified by retained report",
+  "Do not infer corroboration from observation count.",
+  "Conflicting",
+  "No recorded conflicts is not proof that the evidence is consistent.",
+  "Unknown",
+  "unknown must not be presented as none.",
   "Traversal limit reached. Treat unexplored leads as open questions rather than negative findings.",
+  "Coverage gaps are retained report findings, not evidence of absence.",
   "Source states:",
   "No identity probability is calculated",
   "same-handle overlap is not identity proof",
@@ -33,6 +42,10 @@ for (const fragment of requiredBriefFragments) {
 
 if (brief.includes("coverageGapCount: 0")) {
   throw new Error("converged case brief must not invent zero coverage gaps when none are recorded");
+}
+
+for (const forbiddenInference of ["corroboratedObservationCount", "corroborationCount", "identityProbability"]) {
+  if (brief.includes(forbiddenInference)) throw new Error(`case brief must not infer unsupported decision metric: ${forbiddenInference}`);
 }
 
 if (!navigation.includes('<CaseBrief caseId={activeCaseId} disabled={remoteActionsDisabled} />')) {
