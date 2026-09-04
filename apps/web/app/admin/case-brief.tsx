@@ -154,14 +154,52 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
   const coverageSummary = brief.coverageGapCount === null
     ? "coverage gaps not recorded"
     : `${brief.coverageGapCount} coverage gaps`;
+  const conflictSummary = brief.contradictionCount === 0
+    ? "No recorded conflicts"
+    : `${brief.contradictionCount} recorded conflict${brief.contradictionCount === 1 ? "" : "s"}`;
+  const unknownSummary = brief.traversalLimited
+    ? "Traversal incomplete"
+    : brief.coverageGapCount === null
+      ? "Not classified"
+      : brief.coverageGapCount === 0
+        ? "No recorded coverage gaps"
+        : `${brief.coverageGapCount} open coverage gap${brief.coverageGapCount === 1 ? "" : "s"}`;
 
   return (
-    <div className="caseNavigationEmptyState" aria-label="Retained case brief">
-      <p><strong>Case brief</strong></p>
-      <p>{brief.observationCount} observations · {brief.sourceCount} sources · {brief.contradictionCount} conflicts · {brief.warningCount} warnings · {coverageSummary}</p>
-      {brief.traversalLimited ? (
-        <small className="muted">Traversal limit reached. Treat unexplored leads as open questions rather than negative findings.</small>
-      ) : null}
+    <div className="caseNavigationEmptyState" aria-label="Retained case decision brief">
+      <p><strong>Decision brief</strong></p>
+      <p>{brief.observationCount} observations · {brief.sourceCount} sources · {brief.warningCount} warnings · {coverageSummary}</p>
+
+      <div className="providerList" aria-label="Decision states">
+        <div className="provider">
+          <div>
+            <strong>Corroborated</strong>
+            <span>Not classified by retained report</span>
+          </div>
+          <small className="muted">Do not infer corroboration from observation count.</small>
+        </div>
+        <div className="provider">
+          <div>
+            <strong>Conflicting</strong>
+            <span>{conflictSummary}</span>
+          </div>
+          <small className="muted">No recorded conflicts is not proof that the evidence is consistent.</small>
+        </div>
+        <div className="provider">
+          <div>
+            <strong>Unknown</strong>
+            <span>{unknownSummary}</span>
+          </div>
+          <small className="muted">
+            {brief.traversalLimited
+              ? "Traversal limit reached. Treat unexplored leads as open questions rather than negative findings."
+              : brief.coverageGapCount === null
+                ? "Coverage gaps were not recorded for this report shape; unknown must not be presented as none."
+                : "Coverage gaps are retained report findings, not evidence of absence."}
+          </small>
+        </div>
+      </div>
+
       {brief.sourceStates.length > 0 ? (
         <small className="muted">Source states: {brief.sourceStates.map(([state, count]) => `${state} ${count}`).join(" · ")}</small>
       ) : (
