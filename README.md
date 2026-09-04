@@ -10,7 +10,7 @@ The repository is public. Real research data is not. Unauthenticated visitors on
 
 The one-admin application has passed its first production-shaped host and browser acceptance gate (`LAUNCH_CANDIDATE_1`). It is usable as a project/private operator tool today.
 
-A permanent public beta hostname has not been provisioned yet. The remaining go-live work is operational: stable HTTPS, persistent protected storage, deployment configuration and a final smoke test on the exact release commit. See `docs/LIVE_BETA.md`.
+The canonical public observer is a static, synthetic/read-only Cloudflare Pages deployment that is independent of the founder Mac. The authenticated private beta is validation infrastructure: it can be offline when its host sleeps and is not advertised as an always-on public service. The next private-beta reliability step is a provider-neutral zero-cash Linux deployment path with persistent protected storage, exact-release identity and bounded ingress; see `docs/LIVE_BETA.md` and `docs/DEPLOYMENT.md`.
 
 Post-LC1 product work continues without holding the usable build offline. The current focus is operator efficiency and decision clarity rather than cosmetic dashboard work.
 
@@ -90,14 +90,11 @@ For the authenticated one-admin setup, use `docs/ZERO_SPEND_RUNBOOK.md`. Keep pa
 
 ## Deployment
 
-PersonaLattice's required baseline remains usable without paid enrichment APIs or a hosted database. A stable Internet-facing private beta still needs an operating endpoint and durable storage.
+PersonaLattice's required baseline remains usable without paid enrichment APIs or a hosted database. The canonical public observer is static and synthetic/read-only; it does not depend on the private operator host.
 
-The two current deployment choices are documented in `docs/LIVE_BETA.md` and `docs/DEPLOYMENT.md`:
+For the stateful private beta, the current zero-cash path is documented in `docs/LIVE_BETA.md` and `docs/DEPLOYMENT.md`: prepare the provider-neutral Linux bundle first, keep SQLite on persistent protected storage, bind the API to loopback, and use bounded ingress such as Cloudflare Tunnel/Access when a suitable zero-cash host is available. Provider signup/capacity is treated as an external constraint, not a reason to weaken persistence or security.
 
-- controlled host + named Cloudflare Tunnel on a domain you control;
-- optional paid hosted topology, with the current Render reference at `deploy/render-paid.yaml`.
-
-A random Quick Tunnel is a short-lived demo/smoke tool, not the permanent beta endpoint. An ephemeral hosted filesystem is not acceptable for the current SQLite retained-case store.
+Paid hosted references may remain in the repository as future fallback/migration evidence, but they are not a current founder action while the zero-cash constraint applies. A random Quick Tunnel is a short-lived validation/smoke tool, not an always-on private-beta endpoint. An ephemeral hosted filesystem is not acceptable for the current SQLite retained-case store.
 
 ## Documentation
 
