@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -34,6 +34,33 @@ type BriefRequestState = {
   caseId: string;
   payload: StoredCasePayload | null;
   failed: boolean;
+};
+
+type CaseDecisionDisposition =
+  | "continue_research"
+  | "await_more_evidence"
+  | "ready_for_handoff"
+  | "close_case";
+
+type CaseDecision = {
+  id: string;
+  case_id: string;
+  created_at: string;
+  disposition: CaseDecisionDisposition;
+  rationale: string;
+};
+
+type DecisionRequestState = {
+  caseId: string;
+  items: CaseDecision[];
+  failed: boolean;
+};
+
+const DECISION_LABELS: Record<CaseDecisionDisposition, string> = {
+  continue_research: "Continue research",
+  await_more_evidence: "Await more evidence",
+  ready_for_handoff: "Ready for handoff",
+  close_case: "Close case",
 };
 
 function objectValue(value: unknown): JsonObject {
@@ -167,6 +194,11 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
 
 export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disabled?: boolean }) {
   const [requestState, setRequestState] = useState<BriefRequestState | null>(null);
+  const [decisionState, setDecisionState] = useState<DecisionRequestState | null>(null);
+  const [disposition, setDisposition] = useState<CaseDecisionDisposition>("await_more_evidence");
+  const [rationale, setRationale] = useState("");
+  const [decisionSaving, setDecisionSaving] = useState(false);
+  const [decisionSaveError, setDecisionSaveError] = useState("");
 
   useEffect(() => {
     if (!caseId || disabled) return;
@@ -191,9 +223,83 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
     return () => controller.abort();
   }, [caseId, disabled]);
 
+  useEffect(() => {
+    setDecisionSaveError("");
+    setRationale("");
+    if (!caseId || disabled) return;
+
+    const controller = new AbortController();
+    void fetch(`${API_URL}/v1/cases/${encodeURIComponent(caseId)}/decisions`, {
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`case decisions failed with ${response.status}`);
+        return await response.json() as CaseDecision[];
+      })
+      .then((items) => {
+        if (!controller.signal.aborted) setDecisionState({ caseId, items, failed: false });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setDecisionState({ caseId, items: [], failed: true });
+      });
+
+    return () => controller.abort();
+  }, [caseId, disabled]);
+
+  async function appendDecision(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!caseId || disabled || decisionSaving) return;
+    const trimmedRationale = rationale.trim();
+    if (!trimmedRationale) {
+      setDecisionSaveError("Add a rationale before recording the decision.");
+      return;
+    }
+
+    setDecisionSaving(true);
+    setDecisionSaveError("");
+    try {
+      const sessionResponse = await fetch(`${API_URL}/v1/auth/session`, { credentials: "include" });
+      if (!sessionResponse.ok) throw new Error("Your operator session expired. Sign in again before recording a decision.");
+      const session = await sessionResponse.json() as { csrf_token?: unknown };
+      if (typeof session.csrf_token !== "string" || !session.csrf_token) {
+        throw new Error("Decision write authority is unavailable. Sign in again before retrying.");
+      }
+
+      const response = await fetch(`${API_URL}/v1/cases/${encodeURIComponent(caseId)}/decisions`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-PersonaLattice-CSRF": session.csrf_token,
+        },
+        body: JSON.stringify({ disposition, rationale: trimmedRationale }),
+      });
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error("Decision write authority was rejected. Sign in again before retrying.");
+        }
+        throw new Error("Decision could not be recorded. The retained case was not changed.");
+      }
+      const created = await response.json() as CaseDecision;
+      if (created.case_id !== caseId) throw new Error("Decision response did not match the active case.");
+      setDecisionState((current) => ({
+        caseId,
+        items: [created, ...(current?.caseId === caseId ? current.items : [])],
+        failed: false,
+      }));
+      setRationale("");
+    } catch (error) {
+      setDecisionSaveError(error instanceof Error ? error.message : "Decision could not be recorded.");
+    } finally {
+      setDecisionSaving(false);
+    }
+  }
+
   const currentRequest = requestState && requestState.caseId === caseId ? requestState : null;
   const currentPayload = currentRequest?.payload ?? null;
   const currentFailed = currentRequest?.failed ?? false;
+  const currentDecisionState = decisionState && decisionState.caseId === caseId ? decisionState : null;
   const brief = useMemo(() => currentPayload ? summarizeRetainedCase(currentPayload.report) : null, [currentPayload]);
   if (!caseId || disabled) return null;
 
@@ -224,6 +330,8 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
   const hiddenConflictingCount = Math.max(0, brief.conflictingFindings.length - visibleConflictingFindings.length);
   const visibleOpenQuestions = brief.openQuestions.slice(0, 3);
   const hiddenOpenQuestionCount = Math.max(0, brief.openQuestions.length - visibleOpenQuestions.length);
+  const visibleDecisions = currentDecisionState?.items.slice(0, 5) ?? [];
+  const hiddenDecisionCount = Math.max(0, (currentDecisionState?.items.length ?? 0) - visibleDecisions.length);
 
   return (
     <div className="caseNavigationEmptyState" aria-label="Retained case decision brief">
@@ -296,7 +404,65 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
       ) : (
         <small className="muted">Source states were not recorded for this case.</small>
       )}
-      <small className="muted">Read-only synopsis. No identity probability is calculated; same-handle overlap is not identity proof. Inspect canonical observations for evidence and provenance.</small>
+      <small className="muted">Read-only evidence synopsis. No identity probability is calculated; same-handle overlap is not identity proof. Inspect canonical observations for evidence and provenance.</small>
+
+      <div className="provider" aria-label="Analyst decision log">
+        <div>
+          <strong>Analyst decision log</strong>
+          <span>Append-only rationale retained with this case</span>
+        </div>
+        <form onSubmit={appendDecision}>
+          <label>
+            Decision
+            <select
+              value={disposition}
+              onChange={(event) => setDisposition(event.target.value as CaseDecisionDisposition)}
+              disabled={decisionSaving}
+            >
+              {Object.entries(DECISION_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Rationale
+            <textarea
+              value={rationale}
+              onChange={(event) => setRationale(event.target.value)}
+              maxLength={1200}
+              rows={3}
+              placeholder="Record what the evidence supports, what remains unresolved, and why this is the next action."
+              disabled={decisionSaving}
+            />
+          </label>
+          <button type="submit" className="secondaryButton" disabled={decisionSaving || !rationale.trim()}>
+            {decisionSaving ? "Recording…" : "Record decision"}
+          </button>
+          {decisionSaveError && <small className="errorText" role="alert">{decisionSaveError}</small>}
+        </form>
+
+        {currentDecisionState?.failed ? (
+          <small className="muted" role="status">Decision history could not be loaded. Do not treat this case as having no prior analyst decisions.</small>
+        ) : currentDecisionState === null ? (
+          <small className="muted" role="status">Loading analyst decision history…</small>
+        ) : visibleDecisions.length === 0 ? (
+          <small className="muted">No analyst decision has been recorded for this retained case.</small>
+        ) : (
+          <div aria-label="Recorded analyst decisions">
+            <ol>
+              {visibleDecisions.map((decision) => (
+                <li key={decision.id}>
+                  <strong>{DECISION_LABELS[decision.disposition]}</strong>{" · "}
+                  <time dateTime={decision.created_at}>{new Date(decision.created_at).toLocaleString()}</time>
+                  <p>{decision.rationale}</p>
+                </li>
+              ))}
+            </ol>
+            {hiddenDecisionCount > 0 && <small className="muted">+{hiddenDecisionCount} older retained decision{hiddenDecisionCount === 1 ? "" : "s"}</small>}
+          </div>
+        )}
+        <small className="muted">Decisions are analyst-authored workflow records, not evidence and not identity claims. Entries cannot be edited in place.</small>
+      </div>
     </div>
   );
 }
