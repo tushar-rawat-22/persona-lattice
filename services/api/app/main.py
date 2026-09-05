@@ -18,6 +18,7 @@ from .admin_auth import (
 )
 from .audit import AUDIT_STORE, AuditEvent
 from .authz import AuthenticatedPrincipal
+from .case_decisions import router as case_decision_router
 from .cases import CASE_STORE, StoredCase, StoredCaseSummary
 from .convergence import build_converged_payload, run_converged_research
 from .evidence import IdentifierKind, InvalidIdentifier, normalize_collection, normalize_identifier
@@ -54,6 +55,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-PersonaLattice-CSRF"],
 )
 app.include_router(upload_review_router)
+app.include_router(case_decision_router)
 
 
 class AdminLoginRequest(BaseModel):
