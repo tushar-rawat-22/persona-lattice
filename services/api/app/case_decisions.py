@@ -18,8 +18,6 @@ from .sqlite_storage import private_runtime_database_path
 
 router = APIRouter(prefix="/v1/cases", tags=["case-decisions"])
 
-_MAX_DECISION_ENTRIES = 100
-
 
 class CaseDecisionDisposition(StrEnum):
     CONTINUE_RESEARCH = "continue_research"
@@ -100,9 +98,8 @@ def list_case_decisions(
             FROM case_decisions
             WHERE case_id = ?
             ORDER BY created_at DESC, id DESC
-            LIMIT ?
             """,
-            (str(case_id), _MAX_DECISION_ENTRIES),
+            (str(case_id),),
         ).fetchall()
     return [_response(row) for row in rows]
 
