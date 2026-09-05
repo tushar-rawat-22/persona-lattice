@@ -11,11 +11,18 @@ type StoredCasePayload = {
   report: JsonObject;
 };
 
+type Finding = {
+  summary: string;
+  sources: string[];
+};
+
 type Brief = {
   observationCount: number;
   sourceCount: number;
   corroboratedFindingCount: number;
+  corroboratedFindings: Finding[];
   contradictionCount: number;
+  conflictingFindings: string[];
   warningCount: number;
   coverageGapCount: number | null;
   openQuestions: string[];
@@ -47,23 +54,40 @@ function countEntries(value: unknown): Array<[string, number]> {
     .sort(([left], [right]) => left.localeCompare(right));
 }
 
+function observationSummary(observation: JsonObject): string {
+  return typeof observation.summary === "string" ? observation.summary.trim() : "";
+}
+
 function observationIsContradiction(observation: JsonObject): boolean {
   const details = objectValue(observation.details);
   return details.contradiction === true || details.account_state === "illegal";
 }
 
-function countIndependentlyCorroboratedFindings(observations: JsonObject[]): number {
-  const sourcesBySummary = new Map<string, Set<string>>();
+function collectIndependentlyCorroboratedFindings(observations: JsonObject[]): Finding[] {
+  const findingsBySummary = new Map<string, Finding>();
   for (const observation of observations) {
-    const summary = typeof observation.summary === "string" ? observation.summary.trim() : "";
+    const summary = observationSummary(observation);
     const source = typeof observation.source === "string" ? observation.source.trim() : "";
     if (!summary || !source) continue;
     const summaryKey = summary.toLocaleLowerCase();
-    const sources = sourcesBySummary.get(summaryKey) ?? new Set<string>();
-    sources.add(source);
-    sourcesBySummary.set(summaryKey, sources);
+    const finding = findingsBySummary.get(summaryKey) ?? { summary, sources: [] };
+    if (!finding.sources.includes(source)) finding.sources.push(source);
+    findingsBySummary.set(summaryKey, finding);
   }
-  return [...sourcesBySummary.values()].filter((sources) => sources.size >= 2).length;
+  return [...findingsBySummary.values()]
+    .filter((finding) => finding.sources.length >= 2)
+    .map((finding) => ({ ...finding, sources: [...finding.sources].sort((left, right) => left.localeCompare(right)) }))
+    .sort((left, right) => left.summary.localeCompare(right.summary));
+}
+
+function collectConflictingFindings(observations: JsonObject[], indexedContradictions?: Set<number>): string[] {
+  const findings = new Set<string>();
+  observations.forEach((observation, index) => {
+    if (!observationIsContradiction(observation) && !indexedContradictions?.has(index)) return;
+    const summary = observationSummary(observation);
+    if (summary) findings.add(summary);
+  });
+  return [...findings].sort((left, right) => left.localeCompare(right));
 }
 
 export function summarizeRetainedCase(report: JsonObject): Brief {
@@ -72,7 +96,6 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
     const nodes = objectList(converged.nodes);
     const sources = new Set<string>();
     const retainedObservations: JsonObject[] = [];
-    let contradictionCount = 0;
     const sourceStateTotals = new Map<string, number>();
 
     for (const node of nodes) {
@@ -80,7 +103,6 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
       retainedObservations.push(...observations);
       for (const observation of observations) {
         if (typeof observation.source === "string" && observation.source) sources.add(observation.source);
-        if (observationIsContradiction(observation)) contradictionCount += 1;
       }
       const sourceRuns = objectValue(node.source_runs);
       for (const [state, count] of countEntries(sourceRuns.state_counts)) {
@@ -88,12 +110,16 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
       }
     }
 
+    const corroboratedFindings = collectIndependentlyCorroboratedFindings(retainedObservations);
+    const conflictingFindings = collectConflictingFindings(retainedObservations);
     const executiveSummary = objectValue(converged.executive_summary);
     return {
       observationCount: retainedObservations.length,
       sourceCount: sources.size,
-      corroboratedFindingCount: countIndependentlyCorroboratedFindings(retainedObservations),
-      contradictionCount,
+      corroboratedFindingCount: corroboratedFindings.length,
+      corroboratedFindings,
+      contradictionCount: retainedObservations.filter(observationIsContradiction).length,
+      conflictingFindings,
       warningCount: stringList(converged.warnings).length,
       coverageGapCount: null,
       openQuestions: [],
@@ -120,13 +146,17 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
   observations.forEach((observation, index) => {
     if (observationIsContradiction(observation)) indexedContradictions.add(index);
   });
+  const corroboratedFindings = collectIndependentlyCorroboratedFindings(observations);
+  const conflictingFindings = collectConflictingFindings(observations, indexedContradictions);
   const sourceRuns = objectValue(report.source_runs);
 
   return {
     observationCount: observations.length,
     sourceCount: sources.size,
-    corroboratedFindingCount: countIndependentlyCorroboratedFindings(observations),
+    corroboratedFindingCount: corroboratedFindings.length,
+    corroboratedFindings,
     contradictionCount: indexedContradictions.size,
+    conflictingFindings,
     warningCount: stringList(report.warnings).length,
     coverageGapCount: openQuestions.length,
     openQuestions,
@@ -188,6 +218,10 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
       : brief.coverageGapCount === 0
         ? "No recorded coverage gaps"
         : `${brief.coverageGapCount} open coverage gap${brief.coverageGapCount === 1 ? "" : "s"}`;
+  const visibleCorroboratedFindings = brief.corroboratedFindings.slice(0, 3);
+  const hiddenCorroboratedCount = Math.max(0, brief.corroboratedFindings.length - visibleCorroboratedFindings.length);
+  const visibleConflictingFindings = brief.conflictingFindings.slice(0, 3);
+  const hiddenConflictingCount = Math.max(0, brief.conflictingFindings.length - visibleConflictingFindings.length);
   const visibleOpenQuestions = brief.openQuestions.slice(0, 3);
   const hiddenOpenQuestionCount = Math.max(0, brief.openQuestions.length - visibleOpenQuestions.length);
 
@@ -203,6 +237,17 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
             <span>{corroboratedSummary}</span>
           </div>
           <small className="muted">Requires the same retained observation summary from at least two distinct retained sources. Observation volume alone never counts as corroboration.</small>
+          {visibleCorroboratedFindings.length > 0 && (
+            <div aria-label="Corroborated findings">
+              <small><strong>Evidence</strong></small>
+              <ul>
+                {visibleCorroboratedFindings.map((finding) => (
+                  <li key={finding.summary}>{finding.summary} <small className="muted">({finding.sources.join(" · ")})</small></li>
+                ))}
+              </ul>
+              {hiddenCorroboratedCount > 0 && <small className="muted">+{hiddenCorroboratedCount} more corroborated finding{hiddenCorroboratedCount === 1 ? "" : "s"} in the retained report</small>}
+            </div>
+          )}
         </div>
         <div className="provider">
           <div>
@@ -210,6 +255,15 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
             <span>{conflictSummary}</span>
           </div>
           <small className="muted">No recorded conflicts is not proof that the evidence is consistent.</small>
+          {visibleConflictingFindings.length > 0 && (
+            <div aria-label="Conflicting findings">
+              <small><strong>Evidence</strong></small>
+              <ul>
+                {visibleConflictingFindings.map((finding) => <li key={finding}>{finding}</li>)}
+              </ul>
+              {hiddenConflictingCount > 0 && <small className="muted">+{hiddenConflictingCount} more conflict{hiddenConflictingCount === 1 ? "" : "s"} in the retained report</small>}
+            </div>
+          )}
         </div>
         <div className="provider">
           <div>

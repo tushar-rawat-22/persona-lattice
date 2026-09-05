@@ -15,9 +15,12 @@ const requiredBriefFragments = [
   "observationCount",
   "sourceCount",
   "corroboratedFindingCount",
-  "countIndependentlyCorroboratedFindings",
-  "sourcesBySummary",
-  "sources.size >= 2",
+  "corroboratedFindings: Finding[]",
+  "collectIndependentlyCorroboratedFindings",
+  "findingsBySummary",
+  "finding.sources.length >= 2",
+  "conflictingFindings: string[]",
+  "collectConflictingFindings",
   "contradictionCount",
   "warningCount",
   "coverageGapCount: number | null",
@@ -32,8 +35,13 @@ const requiredBriefFragments = [
   "No independently corroborated retained findings",
   "Requires the same retained observation summary from at least two distinct retained sources.",
   "Observation volume alone never counts as corroboration.",
+  'aria-label="Corroborated findings"',
+  "finding.sources.join(\" · \")",
+  "more corroborated finding",
   "Conflicting",
   "No recorded conflicts is not proof that the evidence is consistent.",
+  'aria-label="Conflicting findings"',
+  "more conflict",
   "Unknown",
   "Open questions",
   "brief.openQuestions.slice(0, 3)",
@@ -57,6 +65,14 @@ if (brief.includes("coverageGapCount: 0")) {
 
 if (brief.includes("Not classified by retained report")) {
   throw new Error("retained case brief must use the same evidence-bounded corroboration rule as the active workspace");
+}
+
+if (!brief.includes("visibleCorroboratedFindings = brief.corroboratedFindings.slice(0, 3)")) {
+  throw new Error("retained decision brief must bound corroborated evidence rather than turning the first screen into the raw report");
+}
+
+if (!brief.includes("visibleConflictingFindings = brief.conflictingFindings.slice(0, 3)")) {
+  throw new Error("retained decision brief must bound conflicting evidence rather than turning the first screen into the raw report");
 }
 
 for (const forbiddenInference of ["corroboratedObservationCount", "corroborationCount", "identityProbability"]) {
