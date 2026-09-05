@@ -118,7 +118,7 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
       sourceCount: sources.size,
       corroboratedFindingCount: corroboratedFindings.length,
       corroboratedFindings,
-      contradictionCount: conflictingFindings.length,
+      contradictionCount: retainedObservations.filter(observationIsContradiction).length,
       conflictingFindings,
       warningCount: stringList(converged.warnings).length,
       coverageGapCount: null,
