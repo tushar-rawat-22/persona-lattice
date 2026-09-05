@@ -35,6 +35,7 @@ _ALLOWED_DETAIL_KEYS_BY_EVENT: dict[str, frozenset[str]] = {
     "case.delete_all": frozenset({"count"}),
     "case.read": frozenset(),
     "case.delete": frozenset({"deleted"}),
+    "case.decision.append": frozenset({"disposition"}),
     "file.preview": frozenset({"file_count"}),
     "file.review.confirm": frozenset({"candidate_type", "identifier_kind"}),
     "file.review.reject": frozenset({"candidate_type", "identifier_kind"}),
@@ -48,6 +49,9 @@ _SAFE_MODE_VALUES = frozenset({"quick", "converged"})
 _SAFE_CANDIDATE_TYPE_VALUES = frozenset({"identifier", "claim"})
 _SAFE_IDENTIFIER_KIND_VALUES = frozenset(
     {"name", "phone", "email", "username", "url", "domain", "organization"}
+)
+_SAFE_DECISION_DISPOSITION_VALUES = frozenset(
+    {"continue_research", "await_more_evidence", "ready_for_handoff", "close_case"}
 )
 _COUNT_DETAIL_KEYS = frozenset({"node_count", "result_count", "count", "file_count"})
 _BOOL_DETAIL_KEYS = frozenset({"has_more", "deleted"})
@@ -113,6 +117,10 @@ def _validate_detail_value(key: str, value: object) -> None:
     if key == "identifier_kind":
         if value is not None and value not in _SAFE_IDENTIFIER_KIND_VALUES:
             raise ValueError("audit detail 'identifier_kind' is outside the approved vocabulary")
+        return
+    if key == "disposition":
+        if value not in _SAFE_DECISION_DISPOSITION_VALUES:
+            raise ValueError("audit detail 'disposition' is outside the approved vocabulary")
         return
     raise ValueError(f"audit detail key {key!r} has no approved value contract")
 
