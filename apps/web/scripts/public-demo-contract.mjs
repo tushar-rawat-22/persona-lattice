@@ -13,10 +13,13 @@ const normalizedDemo = demo.replace(/\s+/g, " ");
 const normalizedReviewedDocumentDemo = reviewedDocumentDemo.replace(/\s+/g, " ");
 
 const requiredHome = [
-  "Read-only product demo",
-  "Open the evidence workspace",
-  "No research runs from this page",
-  "Synthetic case only",
+  "evidence casebook",
+  "Public-source research, kept inspectable",
+  "Inspect the synthetic case",
+  "Read-only fixture · no live research or private case access",
+  "Public observer",
+  "Synthetic evidence, real product semantics.",
+  "They cannot submit identifiers, execute providers, mutate retained cases or access private authority.",
   'href="/demo"',
   'href="/admin"',
 ];
