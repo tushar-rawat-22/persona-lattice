@@ -195,6 +195,7 @@ export function summarizeRetainedCase(report: JsonObject): Brief {
 export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disabled?: boolean }) {
   const [requestState, setRequestState] = useState<BriefRequestState | null>(null);
   const [decisionState, setDecisionState] = useState<DecisionRequestState | null>(null);
+  const [decisionEditorCaseId, setDecisionEditorCaseId] = useState(caseId);
   const [disposition, setDisposition] = useState<CaseDecisionDisposition>("await_more_evidence");
   const [rationale, setRationale] = useState("");
   const [decisionSaving, setDecisionSaving] = useState(false);
@@ -224,8 +225,6 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
   }, [caseId, disabled]);
 
   useEffect(() => {
-    setDecisionSaveError("");
-    setRationale("");
     if (!caseId || disabled) return;
 
     const controller = new AbortController();
@@ -247,15 +246,21 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
     return () => controller.abort();
   }, [caseId, disabled]);
 
+  const activeDisposition = decisionEditorCaseId === caseId ? disposition : "await_more_evidence";
+  const activeRationale = decisionEditorCaseId === caseId ? rationale : "";
+  const activeDecisionSaveError = decisionEditorCaseId === caseId ? decisionSaveError : "";
+
   async function appendDecision(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!caseId || disabled || decisionSaving) return;
-    const trimmedRationale = rationale.trim();
+    const trimmedRationale = activeRationale.trim();
     if (!trimmedRationale) {
+      setDecisionEditorCaseId(caseId);
       setDecisionSaveError("Add a rationale before recording the decision.");
       return;
     }
 
+    setDecisionEditorCaseId(caseId);
     setDecisionSaving(true);
     setDecisionSaveError("");
     try {
@@ -273,7 +278,7 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
           "Content-Type": "application/json",
           "X-PersonaLattice-CSRF": session.csrf_token,
         },
-        body: JSON.stringify({ disposition, rationale: trimmedRationale }),
+        body: JSON.stringify({ disposition: activeDisposition, rationale: trimmedRationale }),
       });
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
@@ -415,8 +420,11 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
           <label>
             Decision
             <select
-              value={disposition}
-              onChange={(event) => setDisposition(event.target.value as CaseDecisionDisposition)}
+              value={activeDisposition}
+              onChange={(event) => {
+                setDecisionEditorCaseId(caseId);
+                setDisposition(event.target.value as CaseDecisionDisposition);
+              }}
               disabled={decisionSaving}
             >
               {Object.entries(DECISION_LABELS).map(([value, label]) => (
@@ -427,18 +435,21 @@ export function CaseBrief({ caseId, disabled = false }: { caseId?: string; disab
           <label>
             Rationale
             <textarea
-              value={rationale}
-              onChange={(event) => setRationale(event.target.value)}
+              value={activeRationale}
+              onChange={(event) => {
+                setDecisionEditorCaseId(caseId);
+                setRationale(event.target.value);
+              }}
               maxLength={1200}
               rows={3}
               placeholder="Record what the evidence supports, what remains unresolved, and why this is the next action."
               disabled={decisionSaving}
             />
           </label>
-          <button type="submit" className="secondaryButton" disabled={decisionSaving || !rationale.trim()}>
+          <button type="submit" className="secondaryButton" disabled={decisionSaving || !activeRationale.trim()}>
             {decisionSaving ? "Recording…" : "Record decision"}
           </button>
-          {decisionSaveError && <small className="errorText" role="alert">{decisionSaveError}</small>}
+          {activeDecisionSaveError && <small className="errorText" role="alert">{activeDecisionSaveError}</small>}
         </form>
 
         {currentDecisionState?.failed ? (
