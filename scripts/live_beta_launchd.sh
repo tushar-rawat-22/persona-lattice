@@ -82,7 +82,7 @@ require_macos() {
 
 install_service() {
   require_macos
-  [[ -x "$START_SCRIPT" ]] || fail "private-beta runner is not executable: $START_SCRIPT"
+  [[ -f "$START_SCRIPT" ]] || fail "private-beta runner is missing: $START_SCRIPT"
   mkdir -p "$PLIST_DIR" "$RUNTIME_DIR"
   chmod 700 "$RUNTIME_DIR"
 

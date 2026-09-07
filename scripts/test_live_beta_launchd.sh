@@ -24,6 +24,7 @@ require_text "$START" '--run-prepared'
 require_text "$START" 'prepared Python environment is missing'
 require_text "$START" 'prepared web production build is missing'
 require_text "$SCRIPT" '"$START_SCRIPT" --prepare-only'
+require_text "$SCRIPT" '[[ -f "$START_SCRIPT" ]]'
 require_text "$SCRIPT" '<string>--run-prepared</string>'
 require_text "$SCRIPT" '<key>RunAtLoad</key>'
 require_text "$SCRIPT" '<key>KeepAlive</key>'
@@ -31,6 +32,11 @@ require_text "$SCRIPT" '<key>SuccessfulExit</key>'
 require_text "$SCRIPT" 'launchctl bootstrap'
 require_text "$SCRIPT" 'launchctl kickstart -k'
 require_text "$SCRIPT" 'chmod 600 "$PLIST"'
+
+if grep -F -- '[[ -x "$START_SCRIPT" ]]' "$SCRIPT" >/dev/null; then
+  echo 'launchd invokes the runner through /bin/bash and must not require a Git-untracked executable bit' >&2
+  exit 1
+fi
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
