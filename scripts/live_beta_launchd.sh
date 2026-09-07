@@ -86,7 +86,7 @@ install_service() {
   mkdir -p "$PLIST_DIR" "$RUNTIME_DIR"
   chmod 700 "$RUNTIME_DIR"
 
-  "$START_SCRIPT" --prepare-only
+  bash "$START_SCRIPT" --prepare-only
 
   local tmp="$PLIST.tmp.$$"
   umask 077
