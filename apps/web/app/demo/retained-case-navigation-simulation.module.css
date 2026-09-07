@@ -1,5 +1,6 @@
 .panel {
   display: grid;
+  min-width: 0;
   gap: 1rem;
   padding: 1.25rem 0 1.5rem;
   border-bottom: 1px solid var(--line);

@@ -14,10 +14,10 @@ def test_public_preview_has_no_private_api_fetch_or_environment_access() -> None
     assert "fetch(" not in source
     assert '"/api/' not in source
     assert "process.env" not in source
-    assert "Visitors can inspect the product, not operate it." in normalized
-    assert "Synthetic case only · No research runs from this page" in normalized
+    assert "Read-only fixture · no live research or private case access" in normalized
+    assert "Visitors can inspect source states, provenance, contradictions and correlation behavior." in normalized
     assert (
-        "Real-person intake and retained cases remain behind the admin session and CSRF boundary."
+        "They cannot submit identifiers, execute providers, mutate retained cases or access private authority."
         in normalized
     )
 
