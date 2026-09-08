@@ -17,6 +17,12 @@ Last reviewed against GitHub authority: 2026-09-08.
 
 PR #344 fixed a P1 deployment-contract defect discovered during Tranche A: the Git-tracked `0644` private-beta preparation runner must be invoked explicitly through Bash. The targeted launchd regression passes on current main. Deployment preflight must continue to verify executable-vs-interpreter invocation semantics before live bootstrap.
 
+### Release-governance gap
+
+GitHub currently reports `main` as unprotected and the repository has no active repository ruleset. The release process therefore relies on operator discipline rather than a server-side control to prevent an accidental direct push from moving the exact acceptance target. This does not invalidate evidence already tied to unchanged `758b6ae3e96691e7f4880524e1ea49b826da0508`, but it is a real release-governance weakness.
+
+The smallest eventual correction is a repository-admin branch protection/ruleset that requires pull-request based changes and the established CI checks before `main` moves. Do not change the accepted Tranche-A release merely to document or remediate this governance gap, and do not claim the server-side control exists until GitHub authority confirms it.
+
 ## Public observer
 
 The canonical public observer is `https://persona-lattice.pages.dev`.
