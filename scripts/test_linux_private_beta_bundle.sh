@@ -55,6 +55,10 @@ require_literal 'git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"' 
 require_literal 'bash "$RELEASE_DIR/scripts/live_beta_start.sh" --prepare-only' "$PREPARE"
 require_literal 'chown -R "root:$SERVICE_GROUP" "$RELEASE_DIR"' "$PREPARE"
 require_literal 'chmod -R u=rwX,g=rX,o= "$RELEASE_DIR"' "$PREPARE"
+require_literal 'chown "root:$SERVICE_GROUP" "$ENV_FILE"' "$PREPARE"
+require_literal 'chmod 0640 "$ENV_FILE"' "$PREPARE"
+require_literal 'chmod 0440 "$ENV_FILE"' "$PREPARE"
+forbid_literal 'chown "$SERVICE_USER:$SERVICE_GROUP" "$ENV_FILE"' "$PREPARE"
 require_literal 'systemctl restart persona-lattice.service' "$PREPARE"
 
 require_literal 'exec bash "$ROOT/scripts/live_beta_backup.sh"' "$BACKUP"
