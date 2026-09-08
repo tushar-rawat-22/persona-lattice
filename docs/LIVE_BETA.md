@@ -44,7 +44,7 @@ The Cloudflare Pages Git deployment contract is:
 
 No provider key, admin password/hash, case database or private API URL belongs in the public Pages project. The build is intentionally useful with zero secrets and zero backend authority.
 
-Cloudflare's current deployment control-plane evidence reports successful deployment for exact main `758b6ae3e96691e7f4880524e1ea49b826da0508`. That establishes deployment identity, not independent live-browser reachability. A green static export, CI run or deployment control-plane check alone is not sufficient evidence for a fresh end-user reachability claim.
+Cloudflare currently reports a successful PR/branch-preview Pages deployment for commit `758b6ae3e96691e7f4880524e1ea49b826da0508`. Because that check is PR-associated and reports preview URLs, it proves a successful Pages build/deployment for that commit in the preview context; it does **not** prove that the canonical production hostname is currently serving that SHA. A green static export, CI run or preview/control-plane check alone is not sufficient evidence for a fresh canonical-production or end-user reachability claim.
 
 ## Temporary full-stack demonstration
 
