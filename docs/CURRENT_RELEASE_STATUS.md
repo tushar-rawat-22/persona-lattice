@@ -34,7 +34,7 @@ It must remain:
 - independent of the founder Mac;
 - free of private case data, provider credentials, private source execution, retained-case identifiers, mutation authority, and private-beta hostnames.
 
-GitHub/Cloudflare deployment evidence ties the public Pages deployment to exact main `758b6ae3e96691e7f4880524e1ea49b826da0508`. A deployment/control-plane success is release-identity evidence, not a substitute for a fresh independent HTTP/browser reachability check when making a live-availability claim.
+Cloudflare reports successful Pages checks for exact commit identities, including the current PR head. However, the Cloudflare check currently attached to exact main `758b6ae3e96691e7f4880524e1ea49b826da0508` is PR-associated and reports preview/branch-preview URLs. That proves a successful Pages build/deployment for that commit in the PR context; it does **not** by itself prove that the canonical production hostname `persona-lattice.pages.dev` is currently serving that exact SHA. Do not promote preview/control-plane evidence into a canonical-production or live-reachability claim without independent production-host or provider-environment proof.
 
 ## Private beta
 
