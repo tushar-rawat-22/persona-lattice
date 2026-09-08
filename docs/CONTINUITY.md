@@ -8,7 +8,9 @@ Repository: `tushar-rawat-22/persona-lattice`
 
 Default branch: `main`
 
-At this checkpoint, canonical `main` is `ad467d249402fbbf6300a06713b8e29b7739bed0`, merged through PR #327. Verify that SHA before acting because main can advance between runs. Exact-main CI #2907 passed on that release.
+At this checkpoint, canonical `main` is `758b6ae3e96691e7f4880524e1ea49b826da0508`, merged through PR #344. Verify that SHA before acting because main can advance between runs. Exact-main CI is green on that release.
+
+The current private-beta acceptance release is the same exact SHA: `758b6ae3e96691e7f4880524e1ea49b826da0508`. Operational rollback is `8b773b4dc1560ab1160f1a3ce30705f6a4bae179`; the runtime-manifest parent rollback is `4c0b05d4a0ae6215d8e1b884c78ef10f14432847`.
 
 Do not trust a remembered local SHA, old assistant message or historical section over the current GitHub branch, current PR state and exact-head CI.
 
@@ -36,17 +38,23 @@ The canonical public observer is the static Cloudflare Pages deployment at `http
 
 The dedicated public build lives under `apps/web` and uses the `build:public-demo` static export. CI verifies the public boundary and public-demo artifact. A green artifact proves the repository export boundary; live-host reachability should still be checked separately when making a current availability claim.
 
+Cloudflare's deployment control plane currently reports successful deployment for exact main `758b6ae3e96691e7f4880524e1ea49b826da0508`. Treat that as deployment-identity evidence, not as a substitute for an independent live browser/HTTP reachability check.
+
 Never place the authenticated private-beta hostname in README, repository profile text or marketing copy.
 
 ### Private beta
 
-The accepted Mac-hosted private beta is GREEN on exact release `369378a8d2401c6f8a1322929c530909aa5123c8`, with rollback `7a124d73da9bf82979ecc8032464502f123b74f2`, based on the accepted 2026-09-03 changed-surface deployment evidence.
+The current Mac-hosted private beta is under Issue #340 pre-external-operator acceptance on exact release `758b6ae3e96691e7f4880524e1ea49b826da0508`, with operational rollback `8b773b4dc1560ab1160f1a3ce30705f6a4bae179` and runtime-manifest parent rollback `4c0b05d4a0ae6215d8e1b884c78ef10f14432847`.
 
-That release passed the macOS release-verifier regression, retained server search/reopen with safe fallback, persistence, anonymous denial/admin login, API loopback-only boundary, Chrome/Safari quick smoke and exact live release identity. Its HTTPS validation ingress publishes only the loopback web origin; the API remains loopback-only behind the same-origin web proxy.
+Tranche A is PARTIAL, not complete. Reuse passed proof while inputs remain unchanged: API/web loopback boundary, persistent SQLite invariants, Safari authentication, retained safe-case reopen, Chrome login, Chrome 390/320px rendering and keyboard focus have passed.
+
+Remaining Tranche A work is MAC-DEPENDENT: complete and inspect one new bounded safe case; add an analyst decision and verify reload retention; search/reopen; synopsis/handoff; export/checksum review; logout denial and stale-UI behavior; restart, re-authenticate and prove case/decision/provenance persistence; authenticated Chrome journey; and the remaining Safari journey plus narrow viewport/keyboard checks.
+
+External operator beta remains NO-GO until Issue #340 completes its A→B→C acceptance sequence and no unresolved P0/P1 defect remains.
+
+PR #344 corrected a P1 deployment-contract defect exposed by Tranche A: the Git-tracked 0644 launchd preparation runner must be invoked through Bash rather than assumed executable. Future private-beta deployment preflight must explicitly verify executable-vs-interpreter invocation semantics before live bootstrap.
 
 The Mac deployment is validation infrastructure. It is expected to be unavailable when the founder Mac sleeps and must never be described as always-on.
-
-GitHub main has advanced beyond that deployed release through retained-case cursor scope binding, the provider-neutral Linux deployment bundle, a privacy-bounded retained-case analyst synopsis and public reliability documentation. Batch the next Mac acceptance rather than forcing a deploy for every merge.
 
 Private always-on hosting is NOT YET ESTABLISHED.
 
@@ -85,26 +93,15 @@ Do not add provider-specific deployment logic merely to make a future signup eas
 
 ## Active engineering stream
 
-The private-beta launch gate is green. The primary engineering objective is the authenticated analyst product: remove concrete friction from clue → evidence → source state → provenance → contradiction/uncertainty → operator decision while preserving the public/private and evidence-integrity boundaries.
+Issue #340 is the active company gate. #341/#339 visual differentiation is complete. Acceptance proceeds in bounded tranches A → B → C, and source expansion under Issue #222 must not outrun #340 when a source changes operator-visible behavior.
 
-Issue #252 is the operator-workspace product-quality stream. Major post-LC1 improvements already merged include:
+Tranche A is currently partial on exact release `758b6ae3e96691e7f4880524e1ea49b826da0508`. Stop after Tranche A closure; do not automatically begin Tranche B or #222 source expansion.
 
-- compact authenticated application bar;
-- explicit corroborated/conflicting/open-question decision surface;
-- searchable/filterable/sortable retained-case navigation;
-- pagination cursors bound to normalized active search/filter scope;
-- one-action provenance disclosure and safe canonical-locator copy;
-- decisive M5 factor summaries with explicit truncation disclosure;
-- retained source-execution state summaries that distinguish failed, withheld, not-attempted and no-match states;
-- inline confirmation for single and bulk case deletion;
-- stale retention-deadline handling without inventing server deletion state;
-- explicit expired-session handling and fail-closed remote actions;
-- distinct initial loading, failed-index and confirmed-empty case states;
-- retained evidence paths in Graph;
-- privacy-bounded retained-case analyst synopsis/handoff;
-- reviewed-document and retained-case workflow simulation in the public observer.
+After Tranche A closes, Tranche B attacks degraded-source and evidence-integrity states: no-match, blocked/rate-limit/timeout/malformed/partial outage/all-unavailable, stale/duplicate/conflicting evidence, weak-vs-strong correlation and deliberate false-correlation/M5 semantics. Provider failure must never become identity evidence.
 
-Do not continue UI polishing merely to generate PR count. The next product change should remove a concrete operator bottleneck or correctness ambiguity.
+Tranche C then covers the remaining destructive/recovery/session/browser matrix and final external-operator GO/NO-GO evidence.
+
+Do not continue UI polishing merely to generate PR count. The next product change should remove a concrete operator bottleneck or correctness ambiguity and must respect the active acceptance tranche.
 
 ## Source governance
 
@@ -161,9 +158,10 @@ Human/public documentation:
 Maintainer continuity:
 
 - this file — current authoritative handover;
+- `docs/CURRENT_RELEASE_STATUS.md` — narrow current release/acceptance checkpoint;
 - `docs/ROADMAP.md` — engineering sequence, but verify status against current GitHub before acting;
+- Issue #340 — active pre-external-operator acceptance gate;
 - Issue #222 — source admission/governance;
-- Issue #252 — current operator-product quality stream;
 - source-admission records — exact provider contracts.
 
 ## Start-of-session procedure
@@ -174,7 +172,7 @@ Before changing code:
 2. identify the newest open implementation PR and exact head;
 3. inspect exact-head CI and unresolved review threads;
 4. verify the public observer separately when current deployment availability matters;
-5. read Issue #222 only for source work and Issue #252 only for operator-product work;
+5. read Issue #340 for active acceptance authority and Issue #222 only for source work;
 6. read the smallest implementation/deployment files needed for the active change;
 7. ship the active bounded increment before opening an unrelated stream.
 
@@ -185,12 +183,13 @@ Before changing code:
 - do not weaken a failing regression merely to obtain green CI;
 - merge only after the exact unchanged head is fully green and review blockers are resolved;
 - use an expected-head merge guard;
+- while Tranche A is accepting exact release `758b6ae3e96691e7f4880524e1ea49b826da0508`, do not merge documentation-only work that would move canonical main unless the acceptance checkpoint is intentionally advanced;
 - after merge, choose the next highest-value safe increment rather than manufacturing cosmetic churn.
 
 ## Immediate company-level priority
 
-Keep the public observer independent of founder hardware, keep the accepted one-admin private beta useful, and improve analyst decision efficiency while the private always-on hosting question remains intentionally unresolved under the no-card/no-billing policy.
+Close Issue #340 Tranche A on the exact private release without rerunning already-valid proof or allowing unrelated source/product work to move the acceptance target. Keep the public observer independent of founder hardware and the private runtime truthful about its Mac-dependent availability.
 
-Continue provider-neutral Linux preparation and recovery contracts, but do not request any provider signup. Evaluate a truly no-card, hard-free host only if it offers durable persistent storage and can preserve exact release identity, protected SQLite, loopback API isolation, restart persistence, backup/restore and stable HTTPS ingress. Otherwise stay local.
+When local authenticated browser/runtime acceptance is blocked, continue only safe GitHub/cloud/provider/documentation/release-truth work that does not violate A→B→C sequencing. Do not weaken persistence, authentication, ingress, recovery or evidence semantics to obtain an always-on claim.
 
-Do not repeat already-passed SQLite, backup/restore, restart, authentication or browser acceptance work unless relevant inputs change or a concrete defect appears. Keep public observer parity through deterministic sanitized fixtures when private concepts change, and never couple the public Pages observer to the private API.
+Do not repeat already-passed SQLite, browser, authentication or deployment checks unless relevant inputs change or a concrete defect appears. Every genuine runtime/browser/CI failure becomes the smallest regression/eval and, if the class repeats, a preflight/process correction rather than another symptom patch.

@@ -8,11 +8,11 @@ The repository is public. Real research data is not. Unauthenticated visitors on
 
 ## Project status
 
-The one-admin application has passed its first production-shaped host and browser acceptance gate (`LAUNCH_CANDIDATE_1`). It is usable as a project/private operator tool today.
+The one-admin application has passed its first production-shaped host and browser acceptance gate (`LAUNCH_CANDIDATE_1`) and remains usable as a private operator tool. External-operator beta is **not ready yet**: Issue #340 is the active pre-external-operator acceptance gate, and its current Tranche A remains partial on exact private release `758b6ae3e96691e7f4880524e1ea49b826da0508`.
 
-The canonical public observer is a static, synthetic/read-only Cloudflare Pages deployment that is independent of the founder Mac. The authenticated private beta is validation infrastructure: it can be offline when its host sleeps and is not advertised as an always-on public service. The next private-beta reliability step is a provider-neutral zero-cash Linux deployment path with persistent protected storage, exact-release identity and bounded ingress; see `docs/LIVE_BETA.md` and `docs/DEPLOYMENT.md`.
+The canonical public observer is a static, synthetic/read-only Cloudflare Pages deployment that is independent of the founder Mac. The authenticated private beta is protected validation infrastructure: it can be offline when its host sleeps and is not an always-on public service. Current release and rollback truth, including the remaining Mac-dependent Tranche A checks, is tracked in `docs/CURRENT_RELEASE_STATUS.md`.
 
-Post-LC1 product work continues without holding the usable build offline. The current focus is operator efficiency and decision clarity rather than cosmetic dashboard work.
+Source expansion and additional external-operator behavior changes remain behind the #340 acceptance gate where they could affect operator-visible semantics. The current focus is proving the existing analyst journey and release/recovery truth rather than adding breadth or cosmetic UI churn.
 
 ## How a case works
 
