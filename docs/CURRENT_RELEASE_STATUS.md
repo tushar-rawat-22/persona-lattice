@@ -56,7 +56,7 @@ Tranche A still requires:
 8. complete the authenticated Chrome journey;
 9. complete the remaining Safari journey plus narrow viewport/keyboard checks.
 
-Those remaining items require the protected local runtime/browser environment and are **MAC-DEPENDENT**. They are the only work allowed before Tranche A closure. Do not begin Tranche B or Issue #222 source expansion automatically.
+Those remaining acceptance items require the protected local runtime/browser environment and are **MAC-DEPENDENT**. While they are blocked, safe GitHub/cloud/provider/documentation/release-truth work may continue provided it does not move the accepted private release, begin Tranche B, advance Issue #222 source expansion, or change operator-visible behavior. Do not begin Tranche B or Issue #222 source expansion automatically.
 
 ## Next gates
 
