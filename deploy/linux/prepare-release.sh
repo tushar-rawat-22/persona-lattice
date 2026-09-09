@@ -49,15 +49,25 @@ if [[ ! -d "$RELEASE_DIR/.git" ]]; then
   git clone --filter=blob:none --no-checkout "$REPOSITORY_URL" "$RELEASE_DIR"
 fi
 
-git -C "$RELEASE_DIR" fetch --depth=1 origin "$TARGET_SHA"
+# A target release is allowed to execute as the service identity and can read
+# production secrets during preparation. Therefore a caller-supplied SHA is not
+# sufficient authority: it must already be part of the repository's canonical
+# main history. Draft/PR-only or otherwise unaccepted commits are preparation
+# inputs only in CI, never deployable host authority.
+git -C "$RELEASE_DIR" fetch origin \
+  '+refs/heads/main:refs/remotes/origin/main' "$TARGET_SHA"
+git -C "$RELEASE_DIR" merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main \
+  || fail "target release is not an accepted commit in origin/main history"
+
 git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"
 [[ "$(git -C "$RELEASE_DIR" rev-parse HEAD)" == "$TARGET_SHA" ]] || fail "release checkout identity mismatch"
 [[ -z "$(git -C "$RELEASE_DIR" status --porcelain)" ]] || fail "release checkout is not clean"
 
 # Security policy must come from the exact target release, not from whichever
 # checkout happened to invoke this bootstrap script. Validate that target-owned
-# policy under the constrained service identity: a requested release must never
-# gain root shell execution merely because root is preparing it for activation.
+# policy under the constrained service identity. The accepted-main check above
+# is the authority boundary that makes target code eligible to run with access
+# to the production environment.
 ENV_PERMISSION_HELPER="$RELEASE_DIR/scripts/live_beta_env_permissions.sh"
 [[ -f "$ENV_PERMISSION_HELPER" ]] || fail "target release environment-permission helper is missing: $ENV_PERMISSION_HELPER"
 if ! runuser -u "$SERVICE_USER" -- bash -c '
