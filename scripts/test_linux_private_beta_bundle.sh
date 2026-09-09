@@ -97,7 +97,8 @@ require_literal 'usermod --append --groups "$SERVICE_GROUP" "$SERVICE_USER"' "$P
 
 # Activation must be reversible as one unit. A failed unit install/reload/start
 # or a service that never becomes healthy must restore both the prior /current
-# selection and the prior systemd unit.
+# selection and the prior systemd unit. Recovery itself must then become healthy
+# or fail loudly rather than claiming that rollback succeeded.
 require_literal 'PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"' "$PREPARE"
 require_literal 'UNIT_BACKUP="$UNIT_TARGET.rollback.$$"' "$PREPARE"
 require_literal 'systemctl is-enabled --quiet persona-lattice.service' "$PREPARE"
@@ -107,11 +108,16 @@ require_literal 'http://127.0.0.1:18000/health' "$PREPARE"
 require_literal 'http://127.0.0.1:13000/api/health' "$PREPARE"
 require_literal '|| ! wait_for_release_health; then' "$PREPARE"
 require_literal 'rollback_activation() {' "$PREPARE"
-require_literal 'ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK"' "$PREPARE"
-require_literal 'cp -p "$UNIT_BACKUP" "$UNIT_TARGET"' "$PREPARE"
-require_literal 'systemctl disable persona-lattice.service' "$PREPARE"
-require_literal 'release activation failed health verification; previous release selection was restored' "$PREPARE"
-require_literal 'systemctl restart persona-lattice.service' "$PREPARE"
+require_literal 'local rollback_failed=0' "$PREPARE"
+require_literal 'ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK" || rollback_failed=1' "$PREPARE"
+require_literal 'cp -p "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1' "$PREPARE"
+require_literal 'systemctl daemon-reload || rollback_failed=1' "$PREPARE"
+require_literal 'if ! systemctl restart persona-lattice.service || ! wait_for_release_health; then' "$PREPARE"
+require_literal 'systemctl disable persona-lattice.service >/dev/null 2>&1 || rollback_failed=1' "$PREPARE"
+require_literal 'if ! rollback_activation; then' "$PREPARE"
+require_literal 'release activation failed and rollback could not restore a healthy prior state; manual recovery is required' "$PREPARE"
+require_literal 'release activation failed health verification; prior host state was restored and verified' "$PREPARE"
+forbid_literal 'systemctl restart persona-lattice.service || true' "$PREPARE"
 
 require_literal 'source "$ENV_PERMISSION_HELPER"' "$LIVE_START"
 require_literal 'personalattice_validate_env_file "$ENV_FILE"' "$LIVE_START"
