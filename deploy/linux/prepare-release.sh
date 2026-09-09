@@ -20,7 +20,7 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/prepare-release.sh <full-lowercase-git-sha>"
 
-for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod tr grep cp rm; do
+for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod tr grep cp rm sleep; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' || fail "Python 3.11 or newer is required"
@@ -111,6 +111,19 @@ if systemctl is-enabled --quiet persona-lattice.service >/dev/null 2>&1; then
   WAS_ENABLED=1
 fi
 
+wait_for_release_health() {
+  local attempt
+  for ((attempt=1; attempt<=40; attempt++)); do
+    if systemctl is-active --quiet persona-lattice.service \
+      && curl --silent --show-error --fail --max-time 3 http://127.0.0.1:18000/health >/dev/null 2>&1 \
+      && curl --silent --show-error --fail --max-time 3 http://127.0.0.1:13000/api/health >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.5
+  done
+  return 1
+}
+
 rollback_activation() {
   if [[ -n "$PREVIOUS_RELEASE" ]]; then
     ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK"
@@ -136,9 +149,10 @@ if ! ln -sfn "$RELEASE_DIR" "$CURRENT_LINK" \
   || ! install -m 0644 "$RELEASE_DIR/$UNIT_SOURCE" "$UNIT_TARGET" \
   || ! systemctl daemon-reload \
   || ! systemctl enable persona-lattice.service >/dev/null \
-  || ! systemctl restart persona-lattice.service; then
+  || ! systemctl restart persona-lattice.service \
+  || ! wait_for_release_health; then
   rollback_activation
-  fail "release activation failed; previous release selection was restored"
+  fail "release activation failed health verification; previous release selection was restored"
 fi
 [[ -z "$UNIT_BACKUP" ]] || rm -f "$UNIT_BACKUP"
 
