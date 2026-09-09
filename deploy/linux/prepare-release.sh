@@ -44,10 +44,19 @@ install -d -m 0700 -o "$SERVICE_USER" -g "$SERVICE_GROUP" \
 install -d -m 0750 -o root -g "$SERVICE_GROUP" /etc/persona-lattice
 
 RELEASE_DIR="$RELEASE_ROOT/$TARGET_SHA"
-if [[ ! -d "$RELEASE_DIR/.git" ]]; then
+# Preparation temporarily gives the service identity write access to the release
+# checkout. If a previous preparation is interrupted, target code can therefore
+# leave Git metadata behind. Never run root-owned Git commands through that
+# persisted checkout on a later attempt. Reclone from canonical origin instead.
+# Refuse to replace the currently selected release in place; rollback to another
+# SHA remains safe because its release directory is not /current at that point.
+if [[ -e "$RELEASE_DIR" || -L "$RELEASE_DIR" ]]; then
+  if [[ -L "$CURRENT_LINK" && "$(readlink -f "$CURRENT_LINK")" == "$RELEASE_DIR" ]]; then
+    fail "target release is currently active; refusing in-place re-preparation"
+  fi
   rm -rf "$RELEASE_DIR"
-  git clone --filter=blob:none --no-checkout "$REPOSITORY_URL" "$RELEASE_DIR"
 fi
+git clone --filter=blob:none --no-checkout "$REPOSITORY_URL" "$RELEASE_DIR"
 
 # A target release is allowed to execute as the service identity and can read
 # production secrets during preparation. Therefore a caller-supplied SHA is not
