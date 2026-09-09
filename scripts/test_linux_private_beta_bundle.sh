@@ -105,10 +105,19 @@ require_literal 'groupadd --system "$SERVICE_GROUP"' "$PREPARE"
 require_literal 'useradd --system --gid "$SERVICE_GROUP"' "$PREPARE"
 require_literal 'usermod --append --groups "$SERVICE_GROUP" "$SERVICE_USER"' "$PREPARE"
 
-# Activation must be reversible as one unit. A failed unit install/reload/start
-# or a service that never becomes healthy must restore both the prior /current
-# selection and the prior systemd unit. Recovery itself must then become healthy
-# or fail loudly rather than claiming that rollback succeeded.
+# Activation must be reversible as one unit. Refuse ambiguous current-release
+# state before mutation; a real file/directory at /current makes ln -sfn create
+# a nested link rather than select the requested release, while a broken link
+# cannot provide a trustworthy rollback checkpoint.
+require_literal 'if [[ -e "$CURRENT_LINK" && ! -L "$CURRENT_LINK" ]]; then' "$PREPARE"
+require_literal 'current release path exists but is not a symlink' "$PREPARE"
+require_literal 'if [[ -L "$CURRENT_LINK" && ! -d "$CURRENT_LINK" ]]; then' "$PREPARE"
+require_literal 'current release symlink is broken or does not resolve to a directory' "$PREPARE"
+
+# A failed unit install/reload/start or a service that never becomes healthy
+# must restore both the prior /current selection and the prior systemd unit.
+# Recovery itself must then become healthy or fail loudly rather than claiming
+# that rollback succeeded.
 require_literal 'PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"' "$PREPARE"
 require_literal 'UNIT_BACKUP="$UNIT_TARGET.rollback.$$"' "$PREPARE"
 require_literal 'systemctl is-enabled --quiet persona-lattice.service' "$PREPARE"
