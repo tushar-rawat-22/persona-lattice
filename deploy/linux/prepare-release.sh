@@ -125,24 +125,31 @@ wait_for_release_health() {
 }
 
 rollback_activation() {
+  local rollback_failed=0
+
   if [[ -n "$PREVIOUS_RELEASE" ]]; then
-    ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK"
+    ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK" || rollback_failed=1
   else
-    rm -f "$CURRENT_LINK"
+    rm -f "$CURRENT_LINK" || rollback_failed=1
   fi
   if [[ -n "$UNIT_BACKUP" && -f "$UNIT_BACKUP" ]]; then
-    cp -p "$UNIT_BACKUP" "$UNIT_TARGET"
+    cp -p "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1
   else
-    rm -f "$UNIT_TARGET"
+    rm -f "$UNIT_TARGET" || rollback_failed=1
   fi
-  systemctl daemon-reload || true
-  if [[ "$WAS_ENABLED" -eq 1 && -n "$PREVIOUS_RELEASE" ]]; then
-    systemctl restart persona-lattice.service || true
+  systemctl daemon-reload || rollback_failed=1
+
+  if [[ "$rollback_failed" -eq 0 && "$WAS_ENABLED" -eq 1 && -n "$PREVIOUS_RELEASE" ]]; then
+    if ! systemctl restart persona-lattice.service || ! wait_for_release_health; then
+      rollback_failed=1
+    fi
   else
-    systemctl stop persona-lattice.service >/dev/null 2>&1 || true
-    systemctl disable persona-lattice.service >/dev/null 2>&1 || true
+    systemctl stop persona-lattice.service >/dev/null 2>&1 || rollback_failed=1
+    systemctl disable persona-lattice.service >/dev/null 2>&1 || rollback_failed=1
   fi
-  [[ -z "$UNIT_BACKUP" ]] || rm -f "$UNIT_BACKUP"
+
+  [[ -z "$UNIT_BACKUP" ]] || rm -f "$UNIT_BACKUP" || rollback_failed=1
+  [[ "$rollback_failed" -eq 0 ]]
 }
 
 if ! ln -sfn "$RELEASE_DIR" "$CURRENT_LINK" \
@@ -151,8 +158,10 @@ if ! ln -sfn "$RELEASE_DIR" "$CURRENT_LINK" \
   || ! systemctl enable persona-lattice.service >/dev/null \
   || ! systemctl restart persona-lattice.service \
   || ! wait_for_release_health; then
-  rollback_activation
-  fail "release activation failed health verification; previous release selection was restored"
+  if ! rollback_activation; then
+    fail "release activation failed and rollback could not restore a healthy prior state; manual recovery is required"
+  fi
+  fail "release activation failed health verification; prior host state was restored and verified"
 fi
 [[ -z "$UNIT_BACKUP" ]] || rm -f "$UNIT_BACKUP"
 
