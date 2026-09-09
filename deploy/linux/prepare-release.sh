@@ -2,7 +2,7 @@
 set -euo pipefail
 
 TARGET_SHA="${1:-}"
-REPOSITORY_URL="${PERSONALATTICE_REPOSITORY_URL:-https://github.com/tushar-rawat-22/persona-lattice.git}"
+REPOSITORY_URL="https://github.com/tushar-rawat-22/persona-lattice.git"
 SERVICE_USER="personalattice"
 SERVICE_GROUP="personalattice"
 RELEASE_ROOT="/opt/persona-lattice/releases"
@@ -51,9 +51,10 @@ fi
 
 # A target release is allowed to execute as the service identity and can read
 # production secrets during preparation. Therefore a caller-supplied SHA is not
-# sufficient authority: it must already be part of the repository's canonical
-# main history. Draft/PR-only or otherwise unaccepted commits are preparation
-# inputs only in CI, never deployable host authority.
+# sufficient authority: it must already be part of the canonical PersonaLattice
+# repository's main history. Keep the canonical repository URL fixed here; an
+# overridable origin would let a caller redefine what "accepted main" means.
+git -C "$RELEASE_DIR" remote set-url origin "$REPOSITORY_URL"
 git -C "$RELEASE_DIR" fetch origin \
   '+refs/heads/main:refs/remotes/origin/main' "$TARGET_SHA"
 git -C "$RELEASE_DIR" merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main \
