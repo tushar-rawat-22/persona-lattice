@@ -112,9 +112,20 @@ runuser -u "$SERVICE_USER" -- env \
 chown -R "root:$SERVICE_GROUP" "$RELEASE_DIR"
 chmod -R u=rwX,g=rX,o= "$RELEASE_DIR"
 
-# Activation is the only part that mutates the host's selected release. Keep a
-# precise rollback checkpoint so a failed unit install/reload/restart cannot
-# leave /current pointing at a release that never became runnable.
+# Activation is the only part that mutates the host's selected release. Refuse
+# ambiguous/tampered host state before capturing rollback authority: /current is
+# either absent or a resolving symlink managed by this installer, never a real
+# file/directory where ln -sfn could create a nested link instead of selecting
+# the requested release.
+if [[ -e "$CURRENT_LINK" && ! -L "$CURRENT_LINK" ]]; then
+  fail "current release path exists but is not a symlink: $CURRENT_LINK"
+fi
+if [[ -L "$CURRENT_LINK" && ! -d "$CURRENT_LINK" ]]; then
+  fail "current release symlink is broken or does not resolve to a directory: $CURRENT_LINK"
+fi
+
+# Keep a precise rollback checkpoint so a failed unit install/reload/restart
+# cannot leave /current pointing at a release that never became runnable.
 PREVIOUS_RELEASE=""
 if [[ -L "$CURRENT_LINK" ]]; then
   PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"
