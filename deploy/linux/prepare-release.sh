@@ -22,7 +22,7 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/prepare-release.sh <full-lowercase-git-sha>"
 
-for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod; do
+for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod tr grep; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' || fail "Python 3.11 or newer is required"
