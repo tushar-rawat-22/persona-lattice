@@ -125,6 +125,13 @@ if [[ -L "$CURRENT_LINK" && ! -d "$CURRENT_LINK" ]]; then
   fail "current release symlink is broken or does not resolve to a directory: $CURRENT_LINK"
 fi
 
+# The canonical unit path is root-controlled release state, not an extension
+# point. Refuse symlinks and other non-regular objects before backup/install so
+# a compromised or ambiguous host path cannot redirect a root write elsewhere.
+if [[ -L "$UNIT_TARGET" || ( -e "$UNIT_TARGET" && ! -f "$UNIT_TARGET" ) ]]; then
+  fail "systemd unit target exists but is not a regular non-symlink file: $UNIT_TARGET"
+fi
+
 # Keep a precise rollback checkpoint so a failed unit install/reload/restart
 # cannot leave /current pointing at a release that never became runnable.
 PREVIOUS_RELEASE=""
