@@ -96,15 +96,21 @@ require_literal 'useradd --system --gid "$SERVICE_GROUP"' "$PREPARE"
 require_literal 'usermod --append --groups "$SERVICE_GROUP" "$SERVICE_USER"' "$PREPARE"
 
 # Activation must be reversible as one unit. A failed unit install/reload/start
-# must restore both the prior /current selection and the prior systemd unit.
+# or a service that never becomes healthy must restore both the prior /current
+# selection and the prior systemd unit.
 require_literal 'PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"' "$PREPARE"
 require_literal 'UNIT_BACKUP="$UNIT_TARGET.rollback.$$"' "$PREPARE"
 require_literal 'systemctl is-enabled --quiet persona-lattice.service' "$PREPARE"
+require_literal 'wait_for_release_health() {' "$PREPARE"
+require_literal 'systemctl is-active --quiet persona-lattice.service' "$PREPARE"
+require_literal 'http://127.0.0.1:18000/health' "$PREPARE"
+require_literal 'http://127.0.0.1:13000/api/health' "$PREPARE"
+require_literal '|| ! wait_for_release_health; then' "$PREPARE"
 require_literal 'rollback_activation() {' "$PREPARE"
 require_literal 'ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK"' "$PREPARE"
 require_literal 'cp -p "$UNIT_BACKUP" "$UNIT_TARGET"' "$PREPARE"
 require_literal 'systemctl disable persona-lattice.service' "$PREPARE"
-require_literal 'release activation failed; previous release selection was restored' "$PREPARE"
+require_literal 'release activation failed health verification; previous release selection was restored' "$PREPARE"
 require_literal 'systemctl restart persona-lattice.service' "$PREPARE"
 
 require_literal 'source "$ENV_PERMISSION_HELPER"' "$LIVE_START"
