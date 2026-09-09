@@ -20,7 +20,7 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/prepare-release.sh <full-lowercase-git-sha>"
 
-for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod tr grep; do
+for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod tr grep cp rm; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' || fail "Python 3.11 or newer is required"
@@ -93,11 +93,54 @@ runuser -u "$SERVICE_USER" -- env \
 
 chown -R "root:$SERVICE_GROUP" "$RELEASE_DIR"
 chmod -R u=rwX,g=rX,o= "$RELEASE_DIR"
-ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
-install -m 0644 "$RELEASE_DIR/$UNIT_SOURCE" "$UNIT_TARGET"
-systemctl daemon-reload
-systemctl enable persona-lattice.service >/dev/null
-systemctl restart persona-lattice.service
+
+# Activation is the only part that mutates the host's selected release. Keep a
+# precise rollback checkpoint so a failed unit install/reload/restart cannot
+# leave /current pointing at a release that never became runnable.
+PREVIOUS_RELEASE=""
+if [[ -L "$CURRENT_LINK" ]]; then
+  PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"
+fi
+UNIT_BACKUP=""
+if [[ -f "$UNIT_TARGET" ]]; then
+  UNIT_BACKUP="$UNIT_TARGET.rollback.$$"
+  cp -p "$UNIT_TARGET" "$UNIT_BACKUP"
+fi
+WAS_ENABLED=0
+if systemctl is-enabled --quiet persona-lattice.service >/dev/null 2>&1; then
+  WAS_ENABLED=1
+fi
+
+rollback_activation() {
+  if [[ -n "$PREVIOUS_RELEASE" ]]; then
+    ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK"
+  else
+    rm -f "$CURRENT_LINK"
+  fi
+  if [[ -n "$UNIT_BACKUP" && -f "$UNIT_BACKUP" ]]; then
+    cp -p "$UNIT_BACKUP" "$UNIT_TARGET"
+  else
+    rm -f "$UNIT_TARGET"
+  fi
+  systemctl daemon-reload || true
+  if [[ "$WAS_ENABLED" -eq 1 && -n "$PREVIOUS_RELEASE" ]]; then
+    systemctl restart persona-lattice.service || true
+  else
+    systemctl stop persona-lattice.service >/dev/null 2>&1 || true
+    systemctl disable persona-lattice.service >/dev/null 2>&1 || true
+  fi
+  [[ -z "$UNIT_BACKUP" ]] || rm -f "$UNIT_BACKUP"
+}
+
+if ! ln -sfn "$RELEASE_DIR" "$CURRENT_LINK" \
+  || ! install -m 0644 "$RELEASE_DIR/$UNIT_SOURCE" "$UNIT_TARGET" \
+  || ! systemctl daemon-reload \
+  || ! systemctl enable persona-lattice.service >/dev/null \
+  || ! systemctl restart persona-lattice.service; then
+  rollback_activation
+  fail "release activation failed; previous release selection was restored"
+fi
+[[ -z "$UNIT_BACKUP" ]] || rm -f "$UNIT_BACKUP"
 
 printf '%s\n' \
   "PersonaLattice Linux private-beta release prepared and started." \
