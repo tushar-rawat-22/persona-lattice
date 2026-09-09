@@ -10,13 +10,16 @@ RESTORE="$ROOT/deploy/linux/restore-offline.sh"
 VERIFY="$ROOT/deploy/linux/verify-host.sh"
 ENV_EXAMPLE="$ROOT/deploy/linux/production.env.example"
 TUNNEL="$ROOT/deploy/linux/cloudflared-config.yml.example"
+ENV_PERMISSION_HELPER="$ROOT/scripts/live_beta_env_permissions.sh"
+LIVE_START="$ROOT/scripts/live_beta_start.sh"
+LIVE_BACKUP="$ROOT/scripts/live_beta_backup.sh"
 
 fail() {
   printf 'Linux private-beta bundle contract failed: %s\n' "$1" >&2
   exit 1
 }
 
-for script in "$RUNNER" "$PREPARE" "$BACKUP" "$RESTORE" "$VERIFY"; do
+for script in "$RUNNER" "$PREPARE" "$BACKUP" "$RESTORE" "$VERIFY" "$ENV_PERMISSION_HELPER" "$LIVE_START" "$LIVE_BACKUP"; do
   bash -n "$script" || fail "shell syntax failed: ${script#$ROOT/}"
 done
 
@@ -31,6 +34,29 @@ forbid_literal() {
     fail "forbidden '$needle' present in ${path#$ROOT/}"
   fi
 }
+
+# Exercise the permission policy itself, rather than only grepping deployment
+# scripts. Local owner-only files remain valid; Linux group readability is valid
+# only for the root-owned service-group handoff created by prepare-release.sh.
+# shellcheck disable=SC1090
+source "$ENV_PERMISSION_HELPER"
+assert_env_metadata_pass() {
+  personalattice_validate_env_metadata "$1" "$2" "$3" || \
+    fail "expected env metadata to pass: mode=$1 owner=$2 group=$3 ($personalattice_env_permissions_error)"
+}
+assert_env_metadata_fail() {
+  if personalattice_validate_env_metadata "$1" "$2" "$3"; then
+    fail "expected env metadata to fail: mode=$1 owner=$2 group=$3"
+  fi
+}
+assert_env_metadata_pass 600 analyst staff
+assert_env_metadata_pass 400 analyst staff
+assert_env_metadata_pass 640 root personalattice
+assert_env_metadata_pass 440 root personalattice
+assert_env_metadata_fail 640 analyst personalattice
+assert_env_metadata_fail 640 root root
+assert_env_metadata_fail 440 personalattice personalattice
+assert_env_metadata_fail 644 root personalattice
 
 require_literal 'User=personalattice' "$UNIT"
 require_literal 'Restart=on-failure' "$UNIT"
@@ -60,6 +86,11 @@ require_literal 'chmod 0640 "$ENV_FILE"' "$PREPARE"
 require_literal 'chmod 0440 "$ENV_FILE"' "$PREPARE"
 forbid_literal 'chown "$SERVICE_USER:$SERVICE_GROUP" "$ENV_FILE"' "$PREPARE"
 require_literal 'systemctl restart persona-lattice.service' "$PREPARE"
+
+require_literal 'source "$ENV_PERMISSION_HELPER"' "$LIVE_START"
+require_literal 'personalattice_validate_env_file "$ENV_FILE"' "$LIVE_START"
+require_literal 'source "$ENV_PERMISSION_HELPER"' "$LIVE_BACKUP"
+require_literal 'personalattice_validate_env_file "$ENV_FILE"' "$LIVE_BACKUP"
 
 require_literal 'exec bash "$ROOT/scripts/live_beta_backup.sh"' "$BACKUP"
 require_literal 'systemctl is-active --quiet persona-lattice.service' "$RESTORE"
