@@ -36,8 +36,13 @@ install -d -m 0750 -o root -g "$SERVICE_GROUP" /etc/persona-lattice
 
 [[ -f "$ENV_FILE" ]] || fail "owner-only environment file is missing: $ENV_FILE (copy deploy/linux/production.env.example and fill secrets first)"
 ENV_MODE="$(stat -c '%a' "$ENV_FILE")"
-[[ "$ENV_MODE" == "600" || "$ENV_MODE" == "400" ]] || fail "environment file must be mode 600 or 400, got $ENV_MODE"
-chown "$SERVICE_USER:$SERVICE_GROUP" "$ENV_FILE"
+[[ "$ENV_MODE" == "600" || "$ENV_MODE" == "400" ]] || fail "environment file must be mode 600 or 400 before preparation, got $ENV_MODE"
+chown "root:$SERVICE_GROUP" "$ENV_FILE"
+if [[ "$ENV_MODE" == "600" ]]; then
+  chmod 0640 "$ENV_FILE"
+else
+  chmod 0440 "$ENV_FILE"
+fi
 
 RELEASE_DIR="$RELEASE_ROOT/$TARGET_SHA"
 if [[ ! -d "$RELEASE_DIR/.git" ]]; then
