@@ -6,7 +6,7 @@ on:
       - fix/324-web-audit-next-sharp
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   refresh:
@@ -19,10 +19,15 @@ jobs:
       - name: Regenerate web lockfile only
         working-directory: apps/web
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Upload regenerated lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-package-lock
-          path: apps/web/package-lock.json
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit regenerated lockfile
+        shell: bash
+        run: |
+          if git diff --quiet -- apps/web/package-lock.json; then
+            echo "package-lock.json already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/package-lock.json
+          git commit -m "Regenerate patched web lockfile"
+          git push
