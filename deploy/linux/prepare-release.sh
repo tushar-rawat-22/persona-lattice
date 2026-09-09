@@ -11,8 +11,6 @@ STATE_ROOT="/var/lib/persona-lattice"
 ENV_FILE="/etc/persona-lattice/production.env"
 UNIT_SOURCE="deploy/linux/persona-lattice.service"
 UNIT_TARGET="/etc/systemd/system/persona-lattice.service"
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-ENV_PERMISSION_HELPER="$ROOT/scripts/live_beta_env_permissions.sh"
 
 fail() {
   printf 'PersonaLattice Linux release preparation failed: %s\n' "$1" >&2
@@ -26,10 +24,6 @@ for command in git python3 node npm curl stat systemctl runuser install readlink
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' || fail "Python 3.11 or newer is required"
-
-[[ -f "$ENV_PERMISSION_HELPER" ]] || fail "environment-permission helper is missing: $ENV_PERMISSION_HELPER"
-# shellcheck disable=SC1090
-source "$ENV_PERMISSION_HELPER"
 
 # Do not rely on distribution-specific useradd defaults to create a matching
 # private group. The service group is part of the environment-file access
@@ -49,6 +43,25 @@ install -d -m 0700 -o "$SERVICE_USER" -g "$SERVICE_GROUP" \
   "$STATE_ROOT" "$STATE_ROOT/data" "$STATE_ROOT/backups" "$STATE_ROOT/runtime"
 install -d -m 0750 -o root -g "$SERVICE_GROUP" /etc/persona-lattice
 
+RELEASE_DIR="$RELEASE_ROOT/$TARGET_SHA"
+if [[ ! -d "$RELEASE_DIR/.git" ]]; then
+  rm -rf "$RELEASE_DIR"
+  git clone --filter=blob:none --no-checkout "$REPOSITORY_URL" "$RELEASE_DIR"
+fi
+
+git -C "$RELEASE_DIR" fetch --depth=1 origin "$TARGET_SHA"
+git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"
+[[ "$(git -C "$RELEASE_DIR" rev-parse HEAD)" == "$TARGET_SHA" ]] || fail "release checkout identity mismatch"
+[[ -z "$(git -C "$RELEASE_DIR" status --porcelain)" ]] || fail "release checkout is not clean"
+
+# Security policy must come from the exact target release, not from whichever
+# checkout happened to invoke this bootstrap script. That keeps upgrades and
+# rollbacks self-contained and prevents stale local policy from qualifying a
+# different release SHA.
+ENV_PERMISSION_HELPER="$RELEASE_DIR/scripts/live_beta_env_permissions.sh"
+[[ -f "$ENV_PERMISSION_HELPER" ]] || fail "target release environment-permission helper is missing: $ENV_PERMISSION_HELPER"
+# shellcheck disable=SC1090
+source "$ENV_PERMISSION_HELPER"
 if ! personalattice_validate_env_file "$ENV_FILE"; then
   fail "$personalattice_env_permissions_error"
 fi
@@ -60,16 +73,6 @@ case "$ENV_MODE" in
   *) fail "validated environment file has unexpected mode $ENV_MODE" ;;
 esac
 
-RELEASE_DIR="$RELEASE_ROOT/$TARGET_SHA"
-if [[ ! -d "$RELEASE_DIR/.git" ]]; then
-  rm -rf "$RELEASE_DIR"
-  git clone --filter=blob:none --no-checkout "$REPOSITORY_URL" "$RELEASE_DIR"
-fi
-
-git -C "$RELEASE_DIR" fetch --depth=1 origin "$TARGET_SHA"
-git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"
-[[ "$(git -C "$RELEASE_DIR" rev-parse HEAD)" == "$TARGET_SHA" ]] || fail "release checkout identity mismatch"
-[[ -z "$(git -C "$RELEASE_DIR" status --porcelain)" ]] || fail "release checkout is not clean"
 EXPECTED_NODE_MAJOR="$(tr -d '[:space:]' <"$RELEASE_DIR/.nvmrc")"
 ACTUAL_NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
 [[ "$ACTUAL_NODE_MAJOR" == "$EXPECTED_NODE_MAJOR" ]] || fail "Node $EXPECTED_NODE_MAJOR.x is required by the release; found $(node --version)"
