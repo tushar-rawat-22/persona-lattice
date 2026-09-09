@@ -11,6 +11,8 @@ STATE_ROOT="/var/lib/persona-lattice"
 ENV_FILE="/etc/persona-lattice/production.env"
 UNIT_SOURCE="deploy/linux/persona-lattice.service"
 UNIT_TARGET="/etc/systemd/system/persona-lattice.service"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ENV_PERMISSION_HELPER="$ROOT/scripts/live_beta_env_permissions.sh"
 
 fail() {
   printf 'PersonaLattice Linux release preparation failed: %s\n' "$1" >&2
@@ -25,6 +27,10 @@ for command in git python3 node npm curl stat systemctl runuser install readlink
 done
 python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' || fail "Python 3.11 or newer is required"
 
+[[ -f "$ENV_PERMISSION_HELPER" ]] || fail "environment-permission helper is missing: $ENV_PERMISSION_HELPER"
+# shellcheck disable=SC1090
+source "$ENV_PERMISSION_HELPER"
+
 if ! id "$SERVICE_USER" >/dev/null 2>&1; then
   useradd --system --home-dir "$STATE_ROOT" --create-home --shell /usr/sbin/nologin "$SERVICE_USER"
 fi
@@ -34,15 +40,16 @@ install -d -m 0700 -o "$SERVICE_USER" -g "$SERVICE_GROUP" \
   "$STATE_ROOT" "$STATE_ROOT/data" "$STATE_ROOT/backups" "$STATE_ROOT/runtime"
 install -d -m 0750 -o root -g "$SERVICE_GROUP" /etc/persona-lattice
 
-[[ -f "$ENV_FILE" ]] || fail "owner-only environment file is missing: $ENV_FILE (copy deploy/linux/production.env.example and fill secrets first)"
-ENV_MODE="$(stat -c '%a' "$ENV_FILE")"
-[[ "$ENV_MODE" == "600" || "$ENV_MODE" == "400" ]] || fail "environment file must be mode 600 or 400 before preparation, got $ENV_MODE"
-chown "root:$SERVICE_GROUP" "$ENV_FILE"
-if [[ "$ENV_MODE" == "600" ]]; then
-  chmod 0640 "$ENV_FILE"
-else
-  chmod 0440 "$ENV_FILE"
+if ! personalattice_validate_env_file "$ENV_FILE"; then
+  fail "$personalattice_env_permissions_error"
 fi
+ENV_MODE="$(stat -c '%a' "$ENV_FILE")"
+chown "root:$SERVICE_GROUP" "$ENV_FILE"
+case "$ENV_MODE" in
+  600|640) chmod 0640 "$ENV_FILE" ;;
+  400|440) chmod 0440 "$ENV_FILE" ;;
+  *) fail "validated environment file has unexpected mode $ENV_MODE" ;;
+esac
 
 RELEASE_DIR="$RELEASE_ROOT/$TARGET_SHA"
 if [[ ! -d "$RELEASE_DIR/.git" ]]; then
