@@ -55,15 +55,23 @@ git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"
 [[ -z "$(git -C "$RELEASE_DIR" status --porcelain)" ]] || fail "release checkout is not clean"
 
 # Security policy must come from the exact target release, not from whichever
-# checkout happened to invoke this bootstrap script. That keeps upgrades and
-# rollbacks self-contained and prevents stale local policy from qualifying a
-# different release SHA.
+# checkout happened to invoke this bootstrap script. Validate that target-owned
+# policy under the constrained service identity: a requested release must never
+# gain root shell execution merely because root is preparing it for activation.
 ENV_PERMISSION_HELPER="$RELEASE_DIR/scripts/live_beta_env_permissions.sh"
 [[ -f "$ENV_PERMISSION_HELPER" ]] || fail "target release environment-permission helper is missing: $ENV_PERMISSION_HELPER"
-# shellcheck disable=SC1090
-source "$ENV_PERMISSION_HELPER"
-if ! personalattice_validate_env_file "$ENV_FILE"; then
-  fail "$personalattice_env_permissions_error"
+if ! runuser -u "$SERVICE_USER" -- bash -c '
+  set -euo pipefail
+  helper="$1"
+  env_file="$2"
+  # shellcheck disable=SC1090
+  source "$helper"
+  if ! personalattice_validate_env_file "$env_file"; then
+    printf "%s\n" "$personalattice_env_permissions_error" >&2
+    exit 1
+  fi
+' -- "$ENV_PERMISSION_HELPER" "$ENV_FILE"; then
+  fail "target release environment-permission validation failed"
 fi
 ENV_MODE="$(stat -c '%a' "$ENV_FILE")"
 chown "root:$SERVICE_GROUP" "$ENV_FILE"
