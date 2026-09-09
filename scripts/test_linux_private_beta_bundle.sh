@@ -118,6 +118,12 @@ require_literal 'current release path exists but is not a symlink' "$PREPARE"
 require_literal 'if [[ -L "$CURRENT_LINK" && ! -d "$CURRENT_LINK" ]]; then' "$PREPARE"
 require_literal 'current release symlink is broken or does not resolve to a directory' "$PREPARE"
 
+# The canonical systemd unit path is also root-controlled host authority. It
+# must be absent or a regular file; a symlink/non-regular object could redirect
+# install/rollback writes outside the intended release boundary.
+require_literal 'if [[ -L "$UNIT_TARGET" || ( -e "$UNIT_TARGET" && ! -f "$UNIT_TARGET" ) ]]; then' "$PREPARE"
+require_literal 'systemd unit target exists but is not a regular non-symlink file' "$PREPARE"
+
 # A failed unit install/reload/start or a service that never becomes healthy
 # must restore both the prior /current selection and the prior systemd unit.
 # Recovery itself must then become healthy or fail loudly rather than claiming
