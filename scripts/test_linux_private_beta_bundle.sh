@@ -94,6 +94,17 @@ forbid_literal 'chown "$SERVICE_USER:$SERVICE_GROUP" "$ENV_FILE"' "$PREPARE"
 require_literal 'groupadd --system "$SERVICE_GROUP"' "$PREPARE"
 require_literal 'useradd --system --gid "$SERVICE_GROUP"' "$PREPARE"
 require_literal 'usermod --append --groups "$SERVICE_GROUP" "$SERVICE_USER"' "$PREPARE"
+
+# Activation must be reversible as one unit. A failed unit install/reload/start
+# must restore both the prior /current selection and the prior systemd unit.
+require_literal 'PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"' "$PREPARE"
+require_literal 'UNIT_BACKUP="$UNIT_TARGET.rollback.$$"' "$PREPARE"
+require_literal 'systemctl is-enabled --quiet persona-lattice.service' "$PREPARE"
+require_literal 'rollback_activation() {' "$PREPARE"
+require_literal 'ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK"' "$PREPARE"
+require_literal 'cp -p "$UNIT_BACKUP" "$UNIT_TARGET"' "$PREPARE"
+require_literal 'systemctl disable persona-lattice.service' "$PREPARE"
+require_literal 'release activation failed; previous release selection was restored' "$PREPARE"
 require_literal 'systemctl restart persona-lattice.service' "$PREPARE"
 
 require_literal 'source "$ENV_PERMISSION_HELPER"' "$LIVE_START"
