@@ -79,7 +79,11 @@ require_literal 'service: http_status:404' "$TUNNEL"
 
 # Target code runs as the service identity during preparation and therefore can
 # read production secrets. A raw caller-supplied SHA must never be enough host
-# authority: only commits already accepted into canonical origin/main may run.
+# authority: only commits already accepted into canonical origin/main may run,
+# and callers must not be able to redefine that canonical origin.
+require_literal 'REPOSITORY_URL="https://github.com/tushar-rawat-22/persona-lattice.git"' "$PREPARE"
+require_literal 'git -C "$RELEASE_DIR" remote set-url origin "$REPOSITORY_URL"' "$PREPARE"
+forbid_literal 'PERSONALATTICE_REPOSITORY_URL' "$PREPARE"
 require_literal "'+refs/heads/main:refs/remotes/origin/main' \"\$TARGET_SHA\"" "$PREPARE"
 require_literal 'git -C "$RELEASE_DIR" merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main' "$PREPARE"
 require_literal 'target release is not an accepted commit in origin/main history' "$PREPARE"
