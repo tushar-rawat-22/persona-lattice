@@ -22,7 +22,7 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/prepare-release.sh <full-lowercase-git-sha>"
 
-for command in git python3 node npm curl stat systemctl runuser install readlink useradd chown chmod; do
+for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' || fail "Python 3.11 or newer is required"
@@ -31,8 +31,17 @@ python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1
 # shellcheck disable=SC1090
 source "$ENV_PERMISSION_HELPER"
 
+# Do not rely on distribution-specific useradd defaults to create a matching
+# private group. The service group is part of the environment-file access
+# boundary, so create it explicitly and ensure an existing service account is
+# actually a member before handing it a root-owned 0640/0440 environment file.
+if ! getent group "$SERVICE_GROUP" >/dev/null 2>&1; then
+  groupadd --system "$SERVICE_GROUP"
+fi
 if ! id "$SERVICE_USER" >/dev/null 2>&1; then
-  useradd --system --home-dir "$STATE_ROOT" --create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+  useradd --system --gid "$SERVICE_GROUP" --home-dir "$STATE_ROOT" --create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+elif ! id -nG "$SERVICE_USER" | tr ' ' '\n' | grep -Fxq "$SERVICE_GROUP"; then
+  usermod --append --groups "$SERVICE_GROUP" "$SERVICE_USER"
 fi
 
 install -d -m 0755 -o root -g root /opt/persona-lattice "$RELEASE_ROOT"
