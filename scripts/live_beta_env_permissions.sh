@@ -34,14 +34,14 @@ personalattice_validate_env_file() {
     return 1
   }
 
-  if stat -f '%Lp' "$path" >/dev/null 2>&1; then
-    mode="$(stat -f '%Lp' "$path")"
-    owner="$(stat -f '%Su' "$path")"
-    group="$(stat -f '%Sg' "$path")"
-  else
+  if stat -c '%a' "$path" >/dev/null 2>&1; then
     mode="$(stat -c '%a' "$path")"
     owner="$(stat -c '%U' "$path")"
     group="$(stat -c '%G' "$path")"
+  else
+    mode="$(stat -f '%Lp' "$path")"
+    owner="$(stat -f '%Su' "$path")"
+    group="$(stat -f '%Sg' "$path")"
   fi
 
   personalattice_validate_env_metadata "$mode" "$owner" "$group"
