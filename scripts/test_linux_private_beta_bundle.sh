@@ -89,6 +89,17 @@ require_literal 'git -C "$RELEASE_DIR" merge-base --is-ancestor "$TARGET_SHA" re
 require_literal 'target release is not an accepted commit in origin/main history' "$PREPARE"
 forbid_literal 'git -C "$RELEASE_DIR" fetch --depth=1 origin "$TARGET_SHA"' "$PREPARE"
 require_literal 'git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"' "$PREPARE"
+
+# Never trust persisted Git metadata from a prior preparation. The service
+# identity temporarily owns the target checkout while dependencies/builds are
+# prepared, so a later root invocation must discard any inactive target tree
+# and clone it again from canonical origin. The currently selected release is
+# never replaced in place.
+require_literal 'if [[ -e "$RELEASE_DIR" || -L "$RELEASE_DIR" ]]; then' "$PREPARE"
+require_literal 'target release is currently active; refusing in-place re-preparation' "$PREPARE"
+require_literal 'rm -rf "$RELEASE_DIR"' "$PREPARE"
+require_literal 'git clone --filter=blob:none --no-checkout "$REPOSITORY_URL" "$RELEASE_DIR"' "$PREPARE"
+
 require_literal 'ENV_PERMISSION_HELPER="$RELEASE_DIR/scripts/live_beta_env_permissions.sh"' "$PREPARE"
 require_literal 'target release environment-permission helper is missing' "$PREPARE"
 require_literal 'runuser -u "$SERVICE_USER" -- bash -c' "$PREPARE"
