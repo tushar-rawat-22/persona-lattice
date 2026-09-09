@@ -77,6 +77,13 @@ require_literal 'service: http://127.0.0.1:13000' "$TUNNEL"
 forbid_literal 'service: http://127.0.0.1:18000' "$TUNNEL"
 require_literal 'service: http_status:404' "$TUNNEL"
 
+# Target code runs as the service identity during preparation and therefore can
+# read production secrets. A raw caller-supplied SHA must never be enough host
+# authority: only commits already accepted into canonical origin/main may run.
+require_literal "'+refs/heads/main:refs/remotes/origin/main' \"\$TARGET_SHA\"" "$PREPARE"
+require_literal 'git -C "$RELEASE_DIR" merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main' "$PREPARE"
+require_literal 'target release is not an accepted commit in origin/main history' "$PREPARE"
+forbid_literal 'git -C "$RELEASE_DIR" fetch --depth=1 origin "$TARGET_SHA"' "$PREPARE"
 require_literal 'git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"' "$PREPARE"
 require_literal 'ENV_PERMISSION_HELPER="$RELEASE_DIR/scripts/live_beta_env_permissions.sh"' "$PREPARE"
 require_literal 'target release environment-permission helper is missing' "$PREPARE"
