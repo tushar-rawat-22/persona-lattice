@@ -135,6 +135,25 @@ if [[ -L "$CURRENT_LINK" && ! -d "$CURRENT_LINK" ]]; then
   fail "current release symlink is broken or does not resolve to a directory: $CURRENT_LINK"
 fi
 
+# A resolving symlink is still not sufficient rollback authority. It must point
+# to one of our immutable, root-owned release directories and that directory name
+# must itself be a full lowercase SHA. Otherwise a tampered /current path could
+# be accepted as rollback state and later restarted with access to private-beta
+# secrets after a failed activation.
+PREVIOUS_RELEASE=""
+if [[ -L "$CURRENT_LINK" ]]; then
+  PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"
+  PREVIOUS_RELEASE_NAME="${PREVIOUS_RELEASE##*/}"
+  [[ "$PREVIOUS_RELEASE" == "$RELEASE_ROOT/$PREVIOUS_RELEASE_NAME" ]] \
+    || fail "current release symlink resolves outside the managed release root"
+  [[ "$PREVIOUS_RELEASE_NAME" =~ ^[0-9a-f]{40}$ ]] \
+    || fail "current release symlink does not resolve to a SHA-named release directory"
+  [[ -d "$PREVIOUS_RELEASE" && ! -L "$PREVIOUS_RELEASE" ]] \
+    || fail "current release target is not a regular release directory"
+  [[ "$(stat -c '%u' "$PREVIOUS_RELEASE")" == "0" ]] \
+    || fail "current release target is not root-owned"
+fi
+
 # The canonical unit path is root-controlled release state, not an extension
 # point. Refuse symlinks and other non-regular objects before backup/install so
 # a compromised or ambiguous host path cannot redirect a root write elsewhere.
@@ -144,10 +163,6 @@ fi
 
 # Keep a precise rollback checkpoint so a failed unit install/reload/restart
 # cannot leave /current pointing at a release that never became runnable.
-PREVIOUS_RELEASE=""
-if [[ -L "$CURRENT_LINK" ]]; then
-  PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"
-fi
 UNIT_BACKUP=""
 if [[ -f "$UNIT_TARGET" ]]; then
   UNIT_BACKUP="$UNIT_TARGET.rollback.$$"
