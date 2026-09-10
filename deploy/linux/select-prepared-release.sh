@@ -56,6 +56,9 @@ PREVIOUS_NAME="${PREVIOUS_RELEASE##*/}"
   || fail "current release target is not a regular release directory"
 [[ "$(stat -c '%u' "$PREVIOUS_RELEASE")" == "0" ]] \
   || fail "current release target is not root-owned"
+UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"
+[[ -z "$UNSAFE_PREVIOUS_PATH" ]] \
+  || fail "current release contains non-root-owned or writable retained state"
 
 if [[ -L "$UNIT_TARGET" || ( -e "$UNIT_TARGET" && ! -f "$UNIT_TARGET" ) ]]; then
   fail "systemd unit target exists but is not a regular non-symlink file"
