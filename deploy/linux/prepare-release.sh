@@ -21,7 +21,7 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/prepare-release.sh <full-lowercase-git-sha>"
 
-for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod tr grep cp rm sleep mktemp find; do
+for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod tr grep cp rm sleep mktemp find cmp; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' || fail "Python 3.11 or newer is required"
@@ -109,9 +109,11 @@ if [[ -L "$CURRENT_LINK" && ! -d "$CURRENT_LINK" ]]; then
 fi
 
 PREVIOUS_RELEASE=""
+PREVIOUS_UNIT=""
 if [[ -L "$CURRENT_LINK" ]]; then
   PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"
   PREVIOUS_RELEASE_NAME="${PREVIOUS_RELEASE##*/}"
+  PREVIOUS_UNIT="$PREVIOUS_RELEASE/$UNIT_SOURCE"
   [[ "$PREVIOUS_RELEASE" == "$RELEASE_ROOT/$PREVIOUS_RELEASE_NAME" ]] \
     || fail "current release symlink resolves outside the managed release root"
   [[ "$PREVIOUS_RELEASE_NAME" =~ ^[0-9a-f]{40}$ ]] \
@@ -123,10 +125,18 @@ if [[ -L "$CURRENT_LINK" ]]; then
   UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"
   [[ -z "$UNSAFE_PREVIOUS_PATH" ]] \
     || fail "current release contains non-root-owned or writable retained state"
+  [[ -f "$PREVIOUS_UNIT" && ! -L "$PREVIOUS_UNIT" ]] \
+    || fail "current release systemd unit is missing or not a regular file"
 fi
 
 if [[ -L "$UNIT_TARGET" || ( -e "$UNIT_TARGET" && ! -f "$UNIT_TARGET" ) ]]; then
   fail "systemd unit target exists but is not a regular non-symlink file: $UNIT_TARGET"
+fi
+if [[ -n "$PREVIOUS_RELEASE" ]]; then
+  [[ -f "$UNIT_TARGET" ]] \
+    || fail "installed systemd unit is missing for the current prepared release"
+  cmp -s -- "$UNIT_TARGET" "$PREVIOUS_UNIT" \
+    || fail "installed systemd unit does not match the current prepared release; repair host state before preparing another release"
 fi
 
 UNIT_BACKUP=""
