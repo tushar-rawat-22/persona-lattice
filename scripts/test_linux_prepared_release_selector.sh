@@ -47,12 +47,20 @@ require_literal '[[ "$PREVIOUS_NAME" =~ ^[0-9a-f]{40}$ ]]'
 require_literal '[[ "$(stat -c '\''%u'\'' "$PREVIOUS_RELEASE")" == "0" ]]'
 require_literal 'UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"'
 require_literal 'current release contains non-root-owned or writable retained state'
+require_literal 'PREVIOUS_UNIT="$PREVIOUS_RELEASE/$UNIT_SOURCE"'
+require_literal '[[ -f "$PREVIOUS_UNIT" && ! -L "$PREVIOUS_UNIT" ]]'
 require_literal 'systemd unit target exists but is not a regular non-symlink file'
+require_literal 'cmp -s -- "$UNIT_TARGET" "$PREVIOUS_UNIT"'
+require_literal 'installed systemd unit does not match the current prepared release'
 
 # Forward activation can restart the previous release after a failed deployment.
-# It must apply the same recursive retained-tree boundary before host mutation.
+# It must apply the same recursive retained-tree and installed-unit bindings before host mutation.
 require_literal 'UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"' "$PREPARE"
 require_literal 'current release contains non-root-owned or writable retained state' "$PREPARE"
+require_literal 'PREVIOUS_UNIT="$PREVIOUS_RELEASE/$UNIT_SOURCE"' "$PREPARE"
+require_literal '[[ -f "$PREVIOUS_UNIT" && ! -L "$PREVIOUS_UNIT" ]]' "$PREPARE"
+require_literal 'cmp -s -- "$UNIT_TARGET" "$PREVIOUS_UNIT"' "$PREPARE"
+require_literal 'installed systemd unit does not match the current prepared release' "$PREPARE"
 
 require_literal 'install -d -m 0700 -o root -g root "$RUNTIME_ROOT"'
 require_literal 'UNIT_BACKUP="$(mktemp "$RUNTIME_ROOT/select-unit.XXXXXX")"'
