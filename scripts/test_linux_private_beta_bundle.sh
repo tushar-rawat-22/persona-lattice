@@ -154,13 +154,16 @@ require_literal 'systemd unit target exists but is not a regular non-symlink fil
 
 # Unit rollback material must be created atomically inside a dedicated root-only
 # runtime directory. A predictable PID-derived path beside the systemd unit is
-# forbidden because a pre-existing symlink there could redirect a root write.
+# forbidden, and copying into the pre-created file must not preserve the source
+# mode because that would undo the intended 0600 backup boundary.
 require_literal 'RELEASE_RUNTIME_ROOT="/run/persona-lattice-release"' "$PREPARE"
 require_literal 'install -d -m 0700 -o root -g root "$RELEASE_RUNTIME_ROOT"' "$PREPARE"
 require_literal 'UNIT_BACKUP="$(mktemp "$RELEASE_RUNTIME_ROOT/unit.XXXXXX")"' "$PREPARE"
 require_literal 'chmod 0600 "$UNIT_BACKUP"' "$PREPARE"
-require_literal 'cp -p -- "$UNIT_TARGET" "$UNIT_BACKUP"' "$PREPARE"
+require_literal 'cp -- "$UNIT_TARGET" "$UNIT_BACKUP"' "$PREPARE"
+require_literal 'install -m 0644 "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1' "$PREPARE"
 forbid_literal 'UNIT_BACKUP="$UNIT_TARGET.rollback.$$"' "$PREPARE"
+forbid_literal 'cp -p -- "$UNIT_TARGET" "$UNIT_BACKUP"' "$PREPARE"
 
 # A failed unit install/reload/start or a service that never becomes healthy
 # must restore both the prior /current selection and the prior systemd unit.
@@ -176,7 +179,6 @@ require_literal '|| ! wait_for_release_health; then' "$PREPARE"
 require_literal 'rollback_activation() {' "$PREPARE"
 require_literal 'local rollback_failed=0' "$PREPARE"
 require_literal 'ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK" || rollback_failed=1' "$PREPARE"
-require_literal 'cp -p -- "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1' "$PREPARE"
 require_literal 'systemctl daemon-reload || rollback_failed=1' "$PREPARE"
 require_literal 'if ! systemctl restart persona-lattice.service || ! wait_for_release_health; then' "$PREPARE"
 require_literal 'systemctl disable persona-lattice.service >/dev/null 2>&1 || rollback_failed=1' "$PREPARE"
