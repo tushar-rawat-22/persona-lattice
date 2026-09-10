@@ -167,12 +167,13 @@ fi
 # cannot leave /current pointing at a release that never became runnable. The
 # backup lives in a root-only runtime directory and mktemp creates it atomically;
 # never derive a writable root destination from a predictable PID pathname next
-# to the systemd unit.
+# to the systemd unit. Copy bytes into the pre-created 0600 file without
+# preserving source metadata, so the backup cannot become world-readable.
 UNIT_BACKUP=""
 if [[ -f "$UNIT_TARGET" ]]; then
   UNIT_BACKUP="$(mktemp "$RELEASE_RUNTIME_ROOT/unit.XXXXXX")"
   chmod 0600 "$UNIT_BACKUP"
-  cp -p -- "$UNIT_TARGET" "$UNIT_BACKUP"
+  cp -- "$UNIT_TARGET" "$UNIT_BACKUP"
 fi
 WAS_ENABLED=0
 if systemctl is-enabled --quiet persona-lattice.service >/dev/null 2>&1; then
@@ -201,7 +202,7 @@ rollback_activation() {
     rm -f "$CURRENT_LINK" || rollback_failed=1
   fi
   if [[ -n "$UNIT_BACKUP" && -f "$UNIT_BACKUP" ]]; then
-    cp -p -- "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1
+    install -m 0644 "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1
   else
     rm -f "$UNIT_TARGET" || rollback_failed=1
   fi
