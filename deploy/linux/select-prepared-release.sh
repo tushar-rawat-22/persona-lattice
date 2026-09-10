@@ -17,7 +17,7 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/select-prepared-release.sh <full-lowercase-git-sha>"
 
-for command in stat systemctl install readlink chmod cp rm mktemp curl sleep ln; do
+for command in stat systemctl install readlink chmod cp rm mktemp curl sleep ln find; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 
@@ -34,6 +34,13 @@ TARGET_UNIT="$TARGET_RELEASE/$UNIT_SOURCE"
   || fail "target prepared release is not root-owned"
 [[ -f "$TARGET_UNIT" && ! -L "$TARGET_UNIT" ]] \
   || fail "target prepared release systemd unit is missing or not a regular file"
+
+# Older prepared releases are rollback authority only if the entire retained tree
+# still satisfies the current immutability boundary. A root-owned top directory
+# is insufficient when nested scripts or units could have been service-writable.
+UNSAFE_TARGET_PATH="$(find "$TARGET_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"
+[[ -z "$UNSAFE_TARGET_PATH" ]] \
+  || fail "target prepared release contains non-root-owned or writable retained state"
 
 # A bounded rollback needs trustworthy prior state so a failed selection can be
 # reversed. Refuse manual/tampered host state instead of guessing.
