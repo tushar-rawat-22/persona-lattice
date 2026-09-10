@@ -132,6 +132,20 @@ require_literal 'current release path exists but is not a symlink' "$PREPARE"
 require_literal 'if [[ -L "$CURRENT_LINK" && ! -d "$CURRENT_LINK" ]]; then' "$PREPARE"
 require_literal 'current release symlink is broken or does not resolve to a directory' "$PREPARE"
 
+# A resolving /current symlink is valid rollback state only when it identifies a
+# root-owned SHA-named directory directly under the managed release root. This
+# prevents a tampered symlink to an arbitrary directory from becoming trusted
+# executable rollback authority after a failed activation.
+require_literal 'PREVIOUS_RELEASE_NAME="${PREVIOUS_RELEASE##*/}"' "$PREPARE"
+require_literal '[[ "$PREVIOUS_RELEASE" == "$RELEASE_ROOT/$PREVIOUS_RELEASE_NAME" ]]' "$PREPARE"
+require_literal 'current release symlink resolves outside the managed release root' "$PREPARE"
+require_literal '[[ "$PREVIOUS_RELEASE_NAME" =~ ^[0-9a-f]{40}$ ]]' "$PREPARE"
+require_literal 'current release symlink does not resolve to a SHA-named release directory' "$PREPARE"
+require_literal '[[ -d "$PREVIOUS_RELEASE" && ! -L "$PREVIOUS_RELEASE" ]]' "$PREPARE"
+require_literal 'current release target is not a regular release directory' "$PREPARE"
+require_literal '[[ "$(stat -c '\''%u'\'' "$PREVIOUS_RELEASE")" == "0" ]]' "$PREPARE"
+require_literal 'current release target is not root-owned' "$PREPARE"
+
 # The canonical systemd unit path is also root-controlled host authority. It
 # must be absent or a regular file; a symlink/non-regular object could redirect
 # install/rollback writes outside the intended release boundary.
