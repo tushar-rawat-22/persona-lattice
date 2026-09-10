@@ -58,16 +58,17 @@ if [[ -e "$RELEASE_DIR" || -L "$RELEASE_DIR" ]]; then
 fi
 git clone --filter=blob:none --no-checkout "$REPOSITORY_URL" "$RELEASE_DIR"
 
-# A target release is allowed to execute as the service identity and can read
-# production secrets during preparation. Therefore a caller-supplied SHA is not
-# sufficient authority: it must already be part of the canonical PersonaLattice
-# repository's main history. Keep the canonical repository URL fixed here; an
-# overridable origin would let a caller redefine what "accepted main" means.
+# Target-owned preparation code executes as the service identity and can read
+# production secrets. Fresh host preparation therefore requires current release
+# authority, not merely historical membership in main. Fetch canonical main,
+# resolve its exact head, and require the requested SHA to equal it before any
+# target release code is checked out or executed. Historical prepared releases
+# remain rollback state; they do not regain fresh preparation authority.
 git -C "$RELEASE_DIR" remote set-url origin "$REPOSITORY_URL"
-git -C "$RELEASE_DIR" fetch origin \
-  '+refs/heads/main:refs/remotes/origin/main' "$TARGET_SHA"
-git -C "$RELEASE_DIR" merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main \
-  || fail "target release is not an accepted commit in origin/main history"
+git -C "$RELEASE_DIR" fetch origin '+refs/heads/main:refs/remotes/origin/main'
+CANONICAL_MAIN_SHA="$(git -C "$RELEASE_DIR" rev-parse refs/remotes/origin/main)"
+[[ "$TARGET_SHA" == "$CANONICAL_MAIN_SHA" ]] \
+  || fail "target release is not the current canonical origin/main head"
 
 git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"
 [[ "$(git -C "$RELEASE_DIR" rev-parse HEAD)" == "$TARGET_SHA" ]] || fail "release checkout identity mismatch"
@@ -75,9 +76,9 @@ git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"
 
 # Security policy must come from the exact target release, not from whichever
 # checkout happened to invoke this bootstrap script. Validate that target-owned
-# policy under the constrained service identity. The accepted-main check above
-# is the authority boundary that makes target code eligible to run with access
-# to the production environment.
+# policy under the constrained service identity. The exact canonical-main check
+# above is the authority boundary that makes target code eligible to run with
+# access to the production environment.
 ENV_PERMISSION_HELPER="$RELEASE_DIR/scripts/live_beta_env_permissions.sh"
 [[ -f "$ENV_PERMISSION_HELPER" ]] || fail "target release environment-permission helper is missing: $ENV_PERMISSION_HELPER"
 if ! runuser -u "$SERVICE_USER" -- bash -c '
@@ -218,4 +219,4 @@ printf '%s\n' \
   "Persistent SQLite directory: $STATE_ROOT/data" \
   "API: loopback 127.0.0.1:18000 only" \
   "Web: loopback 127.0.0.1:13000 only" \
-  "Rollback: rerun this script with the previous full release SHA."
+  "Rollback: select a previously prepared, root-owned release through the recovery procedure; do not re-prepare historical code."
