@@ -152,12 +152,21 @@ require_literal 'current release target is not root-owned' "$PREPARE"
 require_literal 'if [[ -L "$UNIT_TARGET" || ( -e "$UNIT_TARGET" && ! -f "$UNIT_TARGET" ) ]]; then' "$PREPARE"
 require_literal 'systemd unit target exists but is not a regular non-symlink file' "$PREPARE"
 
+# Unit rollback material must be created atomically inside a dedicated root-only
+# runtime directory. A predictable PID-derived path beside the systemd unit is
+# forbidden because a pre-existing symlink there could redirect a root write.
+require_literal 'RELEASE_RUNTIME_ROOT="/run/persona-lattice-release"' "$PREPARE"
+require_literal 'install -d -m 0700 -o root -g root "$RELEASE_RUNTIME_ROOT"' "$PREPARE"
+require_literal 'UNIT_BACKUP="$(mktemp "$RELEASE_RUNTIME_ROOT/unit.XXXXXX")"' "$PREPARE"
+require_literal 'chmod 0600 "$UNIT_BACKUP"' "$PREPARE"
+require_literal 'cp -p -- "$UNIT_TARGET" "$UNIT_BACKUP"' "$PREPARE"
+forbid_literal 'UNIT_BACKUP="$UNIT_TARGET.rollback.$$"' "$PREPARE"
+
 # A failed unit install/reload/start or a service that never becomes healthy
 # must restore both the prior /current selection and the prior systemd unit.
 # Recovery itself must then become healthy or fail loudly rather than claiming
 # that rollback succeeded.
 require_literal 'PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"' "$PREPARE"
-require_literal 'UNIT_BACKUP="$UNIT_TARGET.rollback.$$"' "$PREPARE"
 require_literal 'systemctl is-enabled --quiet persona-lattice.service' "$PREPARE"
 require_literal 'wait_for_release_health() {' "$PREPARE"
 require_literal 'systemctl is-active --quiet persona-lattice.service' "$PREPARE"
@@ -167,7 +176,7 @@ require_literal '|| ! wait_for_release_health; then' "$PREPARE"
 require_literal 'rollback_activation() {' "$PREPARE"
 require_literal 'local rollback_failed=0' "$PREPARE"
 require_literal 'ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK" || rollback_failed=1' "$PREPARE"
-require_literal 'cp -p "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1' "$PREPARE"
+require_literal 'cp -p -- "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1' "$PREPARE"
 require_literal 'systemctl daemon-reload || rollback_failed=1' "$PREPARE"
 require_literal 'if ! systemctl restart persona-lattice.service || ! wait_for_release_health; then' "$PREPARE"
 require_literal 'systemctl disable persona-lattice.service >/dev/null 2>&1 || rollback_failed=1' "$PREPARE"
