@@ -14,6 +14,22 @@ fail() {
   exit 1
 }
 
+validate_retained_release_tree() {
+  local release="$1" label="$2" unsafe_path symlink resolved
+
+  unsafe_path="$(find "$release" -xdev ! -type l \( ! -user root -o -perm /022 \) -print -quit)"
+  [[ -z "$unsafe_path" ]] \
+    || fail "$label contains non-root-owned or writable retained state: $unsafe_path"
+
+  while IFS= read -r -d '' symlink; do
+    if ! resolved="$(readlink -f -- "$symlink")"; then
+      fail "$label contains a broken retained symlink: $symlink"
+    fi
+    [[ "$resolved" == "$release" || "$resolved" == "$release/"* ]] \
+      || fail "$label contains a retained symlink that escapes its release tree: $symlink"
+  done < <(find "$release" -xdev -type l -print0)
+}
+
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/select-prepared-release.sh <full-lowercase-git-sha>"
 
@@ -35,12 +51,10 @@ TARGET_UNIT="$TARGET_RELEASE/$UNIT_SOURCE"
 [[ -f "$TARGET_UNIT" && ! -L "$TARGET_UNIT" ]] \
   || fail "target prepared release systemd unit is missing or not a regular file"
 
-# Older prepared releases are rollback authority only if the entire retained tree
-# still satisfies the current immutability boundary. A root-owned top directory
-# is insufficient when nested scripts or units could have been service-writable.
-UNSAFE_TARGET_PATH="$(find "$TARGET_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"
-[[ -z "$UNSAFE_TARGET_PATH" ]] \
-  || fail "target prepared release contains non-root-owned or writable retained state"
+# Regular files/directories must be immutable to the service identity. Symlink
+# mode bits are not meaningful on Linux, so validate links separately and only
+# permit links that resolve inside this exact prepared release tree.
+validate_retained_release_tree "$TARGET_RELEASE" "target prepared release"
 
 # A bounded rollback needs trustworthy prior state so a failed selection can be
 # reversed. Refuse manual/tampered host state instead of guessing.
@@ -57,9 +71,7 @@ PREVIOUS_UNIT="$PREVIOUS_RELEASE/$UNIT_SOURCE"
   || fail "current release target is not a regular release directory"
 [[ "$(stat -c '%u' "$PREVIOUS_RELEASE")" == "0" ]] \
   || fail "current release target is not root-owned"
-UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"
-[[ -z "$UNSAFE_PREVIOUS_PATH" ]] \
-  || fail "current release contains non-root-owned or writable retained state"
+validate_retained_release_tree "$PREVIOUS_RELEASE" "current release"
 [[ -f "$PREVIOUS_UNIT" && ! -L "$PREVIOUS_UNIT" ]] \
   || fail "current release systemd unit is missing or not a regular file"
 
