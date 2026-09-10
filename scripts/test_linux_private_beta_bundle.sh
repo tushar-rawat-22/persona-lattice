@@ -78,15 +78,18 @@ forbid_literal 'service: http://127.0.0.1:18000' "$TUNNEL"
 require_literal 'service: http_status:404' "$TUNNEL"
 
 # Target code runs as the service identity during preparation and therefore can
-# read production secrets. A raw caller-supplied SHA must never be enough host
-# authority: only commits already accepted into canonical origin/main may run,
-# and callers must not be able to redefine that canonical origin.
+# read production secrets. Fresh preparation must bind to the exact freshly
+# fetched canonical main head, not merely any historical ancestor of main.
+# Callers must also be unable to redefine the canonical repository.
 require_literal 'REPOSITORY_URL="https://github.com/tushar-rawat-22/persona-lattice.git"' "$PREPARE"
 require_literal 'git -C "$RELEASE_DIR" remote set-url origin "$REPOSITORY_URL"' "$PREPARE"
 forbid_literal 'PERSONALATTICE_REPOSITORY_URL' "$PREPARE"
-require_literal "'+refs/heads/main:refs/remotes/origin/main' \"\$TARGET_SHA\"" "$PREPARE"
-require_literal 'git -C "$RELEASE_DIR" merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main' "$PREPARE"
-require_literal 'target release is not an accepted commit in origin/main history' "$PREPARE"
+require_literal "git -C \"\$RELEASE_DIR\" fetch origin '+refs/heads/main:refs/remotes/origin/main'" "$PREPARE"
+require_literal 'CANONICAL_MAIN_SHA="$(git -C "$RELEASE_DIR" rev-parse refs/remotes/origin/main)"' "$PREPARE"
+require_literal '[[ "$TARGET_SHA" == "$CANONICAL_MAIN_SHA" ]]' "$PREPARE"
+require_literal 'target release is not the current canonical origin/main head' "$PREPARE"
+forbid_literal 'merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main' "$PREPARE"
+forbid_literal 'target release is not an accepted commit in origin/main history' "$PREPARE"
 forbid_literal 'git -C "$RELEASE_DIR" fetch --depth=1 origin "$TARGET_SHA"' "$PREPARE"
 require_literal 'git -C "$RELEASE_DIR" checkout --detach --force "$TARGET_SHA"' "$PREPARE"
 
