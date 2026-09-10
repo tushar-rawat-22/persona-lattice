@@ -17,7 +17,7 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/select-prepared-release.sh <full-lowercase-git-sha>"
 
-for command in stat systemctl install readlink chmod cp rm mktemp curl sleep ln find; do
+for command in stat systemctl install readlink chmod cp rm mktemp curl sleep ln find cmp; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 
@@ -48,6 +48,7 @@ UNSAFE_TARGET_PATH="$(find "$TARGET_RELEASE" -xdev \( ! -user root -o -perm /022
   || fail "current release is not a resolving managed symlink"
 PREVIOUS_RELEASE="$(readlink -f "$CURRENT_LINK")"
 PREVIOUS_NAME="${PREVIOUS_RELEASE##*/}"
+PREVIOUS_UNIT="$PREVIOUS_RELEASE/$UNIT_SOURCE"
 [[ "$PREVIOUS_RELEASE" == "$RELEASE_ROOT/$PREVIOUS_NAME" ]] \
   || fail "current release resolves outside the managed release root"
 [[ "$PREVIOUS_NAME" =~ ^[0-9a-f]{40}$ ]] \
@@ -59,11 +60,15 @@ PREVIOUS_NAME="${PREVIOUS_RELEASE##*/}"
 UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"
 [[ -z "$UNSAFE_PREVIOUS_PATH" ]] \
   || fail "current release contains non-root-owned or writable retained state"
+[[ -f "$PREVIOUS_UNIT" && ! -L "$PREVIOUS_UNIT" ]] \
+  || fail "current release systemd unit is missing or not a regular file"
 
 if [[ -L "$UNIT_TARGET" || ( -e "$UNIT_TARGET" && ! -f "$UNIT_TARGET" ) ]]; then
   fail "systemd unit target exists but is not a regular non-symlink file"
 fi
 [[ -f "$UNIT_TARGET" ]] || fail "current systemd unit is missing; repair host state before selecting a rollback release"
+cmp -s -- "$UNIT_TARGET" "$PREVIOUS_UNIT" \
+  || fail "installed systemd unit does not match the current prepared release; repair host state before selecting a rollback release"
 
 if [[ "$PREVIOUS_RELEASE" == "$TARGET_RELEASE" ]]; then
   printf 'PersonaLattice prepared release already selected: %s\n' "$TARGET_SHA"
