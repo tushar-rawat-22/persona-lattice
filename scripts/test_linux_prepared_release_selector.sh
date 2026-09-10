@@ -30,8 +30,14 @@ require_literal 'TARGET_RELEASE="$RELEASE_ROOT/$TARGET_SHA"'
 require_literal '[[ -d "$TARGET_RELEASE" && ! -L "$TARGET_RELEASE" ]]'
 require_literal '[[ "$(readlink -f "$TARGET_RELEASE")" == "$TARGET_RELEASE" ]]'
 require_literal '[[ "$(stat -c '\''%u'\'' "$TARGET_RELEASE")" == "0" ]]'
-require_literal 'UNSAFE_TARGET_PATH="$(find "$TARGET_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"'
-require_literal 'target prepared release contains non-root-owned or writable retained state'
+require_literal 'validate_retained_release_tree() {'
+require_literal 'find "$release" -xdev ! -type l \( ! -user root -o -perm /022 \) -print -quit'
+require_literal 'find "$release" -xdev -type l -print0'
+require_literal 'readlink -f -- "$symlink"'
+require_literal '[[ "$resolved" == "$release" || "$resolved" == "$release/"* ]]'
+require_literal 'contains a broken retained symlink'
+require_literal 'contains a retained symlink that escapes its release tree'
+require_literal 'validate_retained_release_tree "$TARGET_RELEASE" "target prepared release"'
 require_literal '[[ -f "$TARGET_UNIT" && ! -L "$TARGET_UNIT" ]]'
 
 forbid_literal 'git fetch'
@@ -45,8 +51,7 @@ require_literal '[[ -L "$CURRENT_LINK" && -d "$CURRENT_LINK" ]]'
 require_literal '[[ "$PREVIOUS_RELEASE" == "$RELEASE_ROOT/$PREVIOUS_NAME" ]]'
 require_literal '[[ "$PREVIOUS_NAME" =~ ^[0-9a-f]{40}$ ]]'
 require_literal '[[ "$(stat -c '\''%u'\'' "$PREVIOUS_RELEASE")" == "0" ]]'
-require_literal 'UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"'
-require_literal 'current release contains non-root-owned or writable retained state'
+require_literal 'validate_retained_release_tree "$PREVIOUS_RELEASE" "current release"'
 require_literal 'PREVIOUS_UNIT="$PREVIOUS_RELEASE/$UNIT_SOURCE"'
 require_literal '[[ -f "$PREVIOUS_UNIT" && ! -L "$PREVIOUS_UNIT" ]]'
 require_literal 'systemd unit target exists but is not a regular non-symlink file'
@@ -54,13 +59,27 @@ require_literal 'cmp -s -- "$UNIT_TARGET" "$PREVIOUS_UNIT"'
 require_literal 'installed systemd unit does not match the current prepared release'
 
 # Forward activation can restart the previous release after a failed deployment.
-# It must apply the same recursive retained-tree and installed-unit bindings before host mutation.
-require_literal 'UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"' "$PREPARE"
-require_literal 'current release contains non-root-owned or writable retained state' "$PREPARE"
+# It must apply the same retained-tree and installed-unit bindings before host mutation.
+require_literal 'validate_retained_release_tree() {' "$PREPARE"
+require_literal 'find "$release" -xdev ! -type l \( ! -user root -o -perm /022 \) -print -quit' "$PREPARE"
+require_literal 'find "$release" -xdev -type l -print0' "$PREPARE"
+require_literal 'readlink -f -- "$symlink"' "$PREPARE"
+require_literal '[[ "$resolved" == "$release" || "$resolved" == "$release/"* ]]' "$PREPARE"
+require_literal 'validate_retained_release_tree "$PREVIOUS_RELEASE" "current release"' "$PREPARE"
 require_literal 'PREVIOUS_UNIT="$PREVIOUS_RELEASE/$UNIT_SOURCE"' "$PREPARE"
 require_literal '[[ -f "$PREVIOUS_UNIT" && ! -L "$PREVIOUS_UNIT" ]]' "$PREPARE"
 require_literal 'cmp -s -- "$UNIT_TARGET" "$PREVIOUS_UNIT"' "$PREPARE"
 require_literal 'installed systemd unit does not match the current prepared release' "$PREPARE"
+
+# Symlink mode bits must never be treated as ordinary writable-file authority.
+# npm creates legitimate internal links such as node_modules/.bin/*; the scripts
+# must instead reject broken links or links that resolve outside the exact release.
+if grep -Fq -- 'find "$TARGET_RELEASE" -xdev \( ! -user root -o -perm /022 \)' "$SELECTOR"; then
+  fail "selector still applies writable-mode checks directly to symlinks"
+fi
+if grep -Fq -- 'find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \)' "$PREPARE"; then
+  fail "prepare-release still applies writable-mode checks directly to symlinks"
+fi
 
 require_literal 'install -d -m 0700 -o root -g root "$RUNTIME_ROOT"'
 require_literal 'UNIT_BACKUP="$(mktemp "$RUNTIME_ROOT/select-unit.XXXXXX")"'
