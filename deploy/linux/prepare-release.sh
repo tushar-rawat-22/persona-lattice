@@ -11,6 +11,7 @@ STATE_ROOT="/var/lib/persona-lattice"
 ENV_FILE="/etc/persona-lattice/production.env"
 UNIT_SOURCE="deploy/linux/persona-lattice.service"
 UNIT_TARGET="/etc/systemd/system/persona-lattice.service"
+RELEASE_RUNTIME_ROOT="/run/persona-lattice-release"
 
 fail() {
   printf 'PersonaLattice Linux release preparation failed: %s\n' "$1" >&2
@@ -20,7 +21,7 @@ fail() {
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
 [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "usage: bash deploy/linux/prepare-release.sh <full-lowercase-git-sha>"
 
-for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod tr grep cp rm sleep; do
+for command in git python3 node npm curl stat systemctl runuser install readlink getent groupadd useradd usermod chown chmod tr grep cp rm sleep mktemp; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)' || fail "Python 3.11 or newer is required"
@@ -42,6 +43,7 @@ install -d -m 0755 -o root -g root /opt/persona-lattice "$RELEASE_ROOT"
 install -d -m 0700 -o "$SERVICE_USER" -g "$SERVICE_GROUP" \
   "$STATE_ROOT" "$STATE_ROOT/data" "$STATE_ROOT/backups" "$STATE_ROOT/runtime"
 install -d -m 0750 -o root -g "$SERVICE_GROUP" /etc/persona-lattice
+install -d -m 0700 -o root -g root "$RELEASE_RUNTIME_ROOT"
 
 RELEASE_DIR="$RELEASE_ROOT/$TARGET_SHA"
 # Preparation temporarily gives the service identity write access to the release
@@ -162,11 +164,15 @@ if [[ -L "$UNIT_TARGET" || ( -e "$UNIT_TARGET" && ! -f "$UNIT_TARGET" ) ]]; then
 fi
 
 # Keep a precise rollback checkpoint so a failed unit install/reload/restart
-# cannot leave /current pointing at a release that never became runnable.
+# cannot leave /current pointing at a release that never became runnable. The
+# backup lives in a root-only runtime directory and mktemp creates it atomically;
+# never derive a writable root destination from a predictable PID pathname next
+# to the systemd unit.
 UNIT_BACKUP=""
 if [[ -f "$UNIT_TARGET" ]]; then
-  UNIT_BACKUP="$UNIT_TARGET.rollback.$$"
-  cp -p "$UNIT_TARGET" "$UNIT_BACKUP"
+  UNIT_BACKUP="$(mktemp "$RELEASE_RUNTIME_ROOT/unit.XXXXXX")"
+  chmod 0600 "$UNIT_BACKUP"
+  cp -p -- "$UNIT_TARGET" "$UNIT_BACKUP"
 fi
 WAS_ENABLED=0
 if systemctl is-enabled --quiet persona-lattice.service >/dev/null 2>&1; then
@@ -195,7 +201,7 @@ rollback_activation() {
     rm -f "$CURRENT_LINK" || rollback_failed=1
   fi
   if [[ -n "$UNIT_BACKUP" && -f "$UNIT_BACKUP" ]]; then
-    cp -p "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1
+    cp -p -- "$UNIT_BACKUP" "$UNIT_TARGET" || rollback_failed=1
   else
     rm -f "$UNIT_TARGET" || rollback_failed=1
   fi
