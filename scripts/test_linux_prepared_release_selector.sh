@@ -32,8 +32,6 @@ require_literal 'UNSAFE_TARGET_PATH="$(find "$TARGET_RELEASE" -xdev \( ! -user r
 require_literal 'target prepared release contains non-root-owned or writable retained state'
 require_literal '[[ -f "$TARGET_UNIT" && ! -L "$TARGET_UNIT" ]]'
 
-# Historical rollback reuses retained immutable state. It must never regain fresh
-# release-preparation authority or network/build authority.
 forbid_literal 'git fetch'
 forbid_literal 'git clone'
 forbid_literal 'npm ci'
@@ -45,6 +43,8 @@ require_literal '[[ -L "$CURRENT_LINK" && -d "$CURRENT_LINK" ]]'
 require_literal '[[ "$PREVIOUS_RELEASE" == "$RELEASE_ROOT/$PREVIOUS_NAME" ]]'
 require_literal '[[ "$PREVIOUS_NAME" =~ ^[0-9a-f]{40}$ ]]'
 require_literal '[[ "$(stat -c '\''%u'\'' "$PREVIOUS_RELEASE")" == "0" ]]'
+require_literal 'UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"'
+require_literal 'current release contains non-root-owned or writable retained state'
 require_literal 'systemd unit target exists but is not a regular non-symlink file'
 
 require_literal 'install -d -m 0700 -o root -g root "$RUNTIME_ROOT"'
