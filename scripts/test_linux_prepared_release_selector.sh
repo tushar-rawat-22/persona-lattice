@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SELECTOR="$ROOT/deploy/linux/select-prepared-release.sh"
+PREPARE="$ROOT/deploy/linux/prepare-release.sh"
 
 fail() {
   printf 'Linux prepared-release selector contract failed: %s\n' "$1" >&2
@@ -10,10 +11,11 @@ fail() {
 }
 
 bash -n "$SELECTOR" || fail "selector shell syntax failed"
+bash -n "$PREPARE" || fail "prepare-release shell syntax failed"
 
 require_literal() {
-  local needle="$1"
-  grep -Fq -- "$needle" "$SELECTOR" || fail "missing selector contract: $needle"
+  local needle="$1" path="${2:-$SELECTOR}"
+  grep -Fq -- "$needle" "$path" || fail "missing rollback contract in ${path#$ROOT/}: $needle"
 }
 
 forbid_literal() {
@@ -46,6 +48,11 @@ require_literal '[[ "$(stat -c '\''%u'\'' "$PREVIOUS_RELEASE")" == "0" ]]'
 require_literal 'UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"'
 require_literal 'current release contains non-root-owned or writable retained state'
 require_literal 'systemd unit target exists but is not a regular non-symlink file'
+
+# Forward activation can restart the previous release after a failed deployment.
+# It must apply the same recursive retained-tree boundary before host mutation.
+require_literal 'UNSAFE_PREVIOUS_PATH="$(find "$PREVIOUS_RELEASE" -xdev \( ! -user root -o -perm /022 \) -print -quit)"' "$PREPARE"
+require_literal 'current release contains non-root-owned or writable retained state' "$PREPARE"
 
 require_literal 'install -d -m 0700 -o root -g root "$RUNTIME_ROOT"'
 require_literal 'UNIT_BACKUP="$(mktemp "$RUNTIME_ROOT/select-unit.XXXXXX")"'
