@@ -66,16 +66,20 @@ function walkTextAssets(directory) {
   return assets;
 }
 
+const leakedMarkers = [];
 for (const absolute of walkTextAssets(out)) {
   const relative = path.relative(out, absolute);
   const body = fs.readFileSync(absolute, "utf8");
   for (const marker of forbiddenRuntimeMarkers) {
-    if (body.includes(marker)) {
-      throw new Error(
-        `public artifact ${relative} contains private runtime marker ${JSON.stringify(marker)}`,
-      );
-    }
+    if (body.includes(marker)) leakedMarkers.push({ relative, marker });
   }
+}
+
+if (leakedMarkers.length > 0) {
+  const detail = leakedMarkers
+    .map(({ relative, marker }) => `${relative}: ${JSON.stringify(marker)}`)
+    .join("\n");
+  throw new Error(`public export contains private runtime markers:\n${detail}`);
 }
 
 console.log("public demo static export contract passed");
