@@ -77,6 +77,14 @@ function statePresentation({
     unresolvedCount,
     notAttemptedLimitCount,
   });
+  if (attemptCount > 0 && failedAttemptCount === attemptCount && completedAttemptCount === 0) {
+    return {
+      tone: "partial",
+      title: "Attempted sources unavailable",
+      detail: `${limitations.join("; ")}. No attempted source completed, so provider failure must not be interpreted as identity evidence or absence of evidence. Review Sources for the retained failure reasons.`,
+      reviewSources: true,
+    };
+  }
   if (failedAttemptCount > 0 || unresolvedCount > 0) {
     return {
       tone: "partial",
