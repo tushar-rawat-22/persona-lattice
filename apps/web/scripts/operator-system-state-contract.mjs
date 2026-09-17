@@ -11,6 +11,7 @@ const quickResearch = await readFile(path.join(appRoot, "app", "admin", "quick-r
 
 for (const token of [
   'type StateTone = "complete" | "partial" | "limited" | "quiet"',
+  'title: "Attempted sources unavailable"',
   'title: "Research completed with limits"',
   'title: "Research completed with coverage limits"',
   'title: "Some evidence was withheld by source policy"',
@@ -28,9 +29,7 @@ for (const token of [
   'aria-label="Research execution state"',
   'role="status" aria-live="polite"',
   'import type { OperatorSystemStateCounts } from "./operator-system-state-model"',
-]) {
-  assert.ok(source.includes(token), `operator system-state contract missing: ${token}`);
-}
+]) assert.ok(source.includes(token), `operator system-state contract missing: ${token}`);
 
 for (const token of [
   "function sourceStateLedger",
@@ -44,120 +43,63 @@ for (const token of [
   'item.key === "attempted" || item.count > 0',
   'className="sourceSummaryLine" aria-label="Source state counts"',
   "ledger.map((item)",
-]) {
-  assert.ok(source.includes(token), `operator source-state ledger contract missing: ${token}`);
-}
+]) assert.ok(source.includes(token), `operator source-state ledger contract missing: ${token}`);
 
 for (const token of [
-  "reviewSources: boolean",
-  "reviewSources: true",
-  "reviewSources: false",
-  "function openSourcesView()",
-  'document.getElementById("case-tab-sources")',
-  "sourcesTab.click()",
-  "requestAnimationFrame(() => sourcesTab.focus())",
-  "presentation.reviewSources",
-  'type="button" className="secondaryButton" onClick={openSourcesView}',
-  "Open Sources",
-]) {
-  assert.ok(source.includes(token), `operator source-review action contract missing: ${token}`);
-}
+  "reviewSources: boolean", "reviewSources: true", "reviewSources: false",
+  "function openSourcesView()", 'document.getElementById("case-tab-sources")',
+  "sourcesTab.click()", "requestAnimationFrame(() => sourcesTab.focus())", "presentation.reviewSources",
+  'type="button" className="secondaryButton" onClick={openSourcesView}', "Open Sources",
+]) assert.ok(source.includes(token), `operator source-review action contract missing: ${token}`);
 
 const liveRegionStart = source.indexOf('<div role="status" aria-live="polite">');
 const reviewActionStart = source.indexOf('type="button" className="secondaryButton" onClick={openSourcesView}');
 const liveRegionClose = source.lastIndexOf("</div>", reviewActionStart);
-assert.ok(
-  liveRegionStart >= 0 && liveRegionClose > liveRegionStart && reviewActionStart > liveRegionClose,
-  "interactive source-review action must remain outside the status live region",
-);
-assert.ok(
-  !source.includes('<section\n      className="operatorSystemState"\n      data-state-tone={presentation.tone}\n      aria-label="Research execution state"\n      role="status"'),
-  "the containing section must not turn the interactive review action into status content",
-);
-
-assert.equal(
-  source.split("reviewSources: true").length - 1,
-  5,
-  "every state that instructs the operator to review Sources must expose the direct action",
-);
-assert.equal(
-  source.split("reviewSources: false").length - 1,
-  2,
-  "quiet and completed source states must not add an unnecessary review action",
-);
-
-assert.ok(
-  !source.includes('item.count >= 0'),
-  "source-state ledger must not flood the primary overview with zero-valued secondary categories",
-);
+assert.ok(liveRegionStart >= 0 && liveRegionClose > liveRegionStart && reviewActionStart > liveRegionClose,
+  "interactive source-review action must remain outside the status live region");
+assert.ok(!source.includes('<section\n      className="operatorSystemState"\n      data-state-tone={presentation.tone}\n      aria-label="Research execution state"\n      role="status"'),
+  "the containing section must not turn the interactive review action into status content");
+assert.equal(source.split("reviewSources: true").length - 1, 6,
+  "every state that instructs the operator to review Sources must expose the direct action");
+assert.equal(source.split("reviewSources: false").length - 1, 2,
+  "quiet and completed source states must not add an unnecessary review action");
+assert.ok(!source.includes('item.count >= 0'),
+  "source-state ledger must not flood the primary overview with zero-valued secondary categories");
 
 for (const token of [
-  "notAttemptedLimitCount: number",
-  "export function operatorSystemStateCounts",
-  "export function operatorSystemStateCountsFromSourceRuns",
-  "item?.evaluation?.aggregate",
-  "aggregate.unclassified_attempt_count",
-  "aggregate.queued_count",
-  "aggregate.review_required_count",
-  "aggregate.routing_unavailable_count",
-  "aggregate.local_budget_stop_count",
-  "aggregate.optional_not_configured_count",
-  "aggregate.missing_secret_config_count",
-  "aggregate.provider_policy_block_count",
-  "aggregate.display_only_count",
-  "aggregate.blocked_count",
-]) {
-  assert.ok(model.includes(token), `operator system-state aggregation contract missing: ${token}`);
-}
+  "notAttemptedLimitCount: number", "export function operatorSystemStateCounts",
+  "export function operatorSystemStateCountsFromSourceRuns", "item?.evaluation?.aggregate",
+  "aggregate.unclassified_attempt_count", "aggregate.queued_count", "aggregate.review_required_count",
+  "aggregate.routing_unavailable_count", "aggregate.local_budget_stop_count", "aggregate.optional_not_configured_count",
+  "aggregate.missing_secret_config_count", "aggregate.provider_policy_block_count", "aggregate.display_only_count", "aggregate.blocked_count",
+]) assert.ok(model.includes(token), `operator system-state aggregation contract missing: ${token}`);
 
 for (const token of [
-  'import { OperatorSystemState } from "./operator-system-state"',
-  'operatorSystemStateCountsFromSourceRuns',
-  '<OperatorSystemState {...systemStateCounts} />',
-  'converged.nodes.map((node) => node.source_runs)',
-  'operatorSystemStateCountsFromSourceRuns([report.source_runs])',
-  'id={`case-tab-${view}`}',
-]) {
-  assert.ok(quickResearch.includes(token), `live Overview system-state binding missing: ${token}`);
-}
+  'import { OperatorSystemState } from "./operator-system-state"', "operatorSystemStateCountsFromSourceRuns",
+  '<OperatorSystemState {...systemStateCounts} />', 'converged.nodes.map((node) => node.source_runs)',
+  'operatorSystemStateCountsFromSourceRuns([report.source_runs])', 'id={`case-tab-${view}`}',
+]) assert.ok(quickResearch.includes(token), `live Overview system-state binding missing: ${token}`);
 
 const decisionSurfaceIndex = quickResearch.indexOf("<DecisionSurface report={report} />");
 const operatorStateIndex = quickResearch.indexOf("<OperatorSystemState {...systemStateCounts} />");
 const metricGridIndex = quickResearch.indexOf('<div className="reportMetricGrid">');
-assert.ok(
-  decisionSurfaceIndex >= 0 && operatorStateIndex > decisionSurfaceIndex && metricGridIndex > operatorStateIndex,
-  "operator execution state must sit between decision synthesis and supporting metrics",
-);
+assert.ok(decisionSurfaceIndex >= 0 && operatorStateIndex > decisionSurfaceIndex && metricGridIndex > operatorStateIndex,
+  "operator execution state must sit between decision synthesis and supporting metrics");
 
 const presentationSource = source.slice(source.indexOf("function statePresentation"));
+const allUnavailableIndex = presentationSource.indexOf("if (attemptCount > 0 && failedAttemptCount === attemptCount && completedAttemptCount === 0)");
 const combinedLimitsIndex = presentationSource.indexOf("if (withheldCount > 0 && notAttemptedLimitCount > 0)");
 const withheldIndex = presentationSource.indexOf("if (withheldCount > 0)");
 const notAttemptedIndex = presentationSource.indexOf("if (notAttemptedLimitCount > 0)");
 const noMatchIndex = presentationSource.indexOf("if (attemptCount > 0 && noMatchCount === attemptCount)");
-assert.ok(
-  combinedLimitsIndex >= 0 && withheldIndex > combinedLimitsIndex && notAttemptedIndex > withheldIndex && noMatchIndex > notAttemptedIndex,
-  "combined policy/configuration limits must be surfaced before narrower or quiet source states",
-);
-assert.ok(
-  source.includes("if (failedAttemptCount > 0)") &&
-    source.includes("if (unresolvedCount > 0)") &&
-    source.includes("if (withheldCount > 0)") &&
-    source.includes("if (notAttemptedLimitCount > 0)"),
-  "overview limitation detail must omit zero-count categories while retaining every material source limit",
-);
-assert.ok(
-  !source.includes("${failedAttemptCount} provider attempt") &&
-    !source.includes("${unresolvedCount} source state"),
-  "partial-state copy must not hard-code zero-valued failure or unresolved categories",
-);
+assert.ok(allUnavailableIndex >= 0 && combinedLimitsIndex > allUnavailableIndex && withheldIndex > combinedLimitsIndex && notAttemptedIndex > withheldIndex && noMatchIndex > notAttemptedIndex,
+  "all-attempts-unavailable must take precedence over narrower policy/configuration, withheld, not-attempted, or no-match states");
+assert.ok(source.includes("if (failedAttemptCount > 0)") && source.includes("if (unresolvedCount > 0)") && source.includes("if (withheldCount > 0)") && source.includes("if (notAttemptedLimitCount > 0)"),
+  "overview limitation detail must omit zero-count categories while retaining every material source limit");
+assert.ok(!source.includes("${failedAttemptCount} provider attempt") && !source.includes("${unresolvedCount} source state"),
+  "partial-state copy must not hard-code zero-valued failure or unresolved categories");
 
-for (const forbidden of [
-  "all clear",
-  "no evidence exists",
-  "fully verified",
-  "100% complete",
-]) {
+for (const forbidden of ["all clear", "no evidence exists", "fully verified", "100% complete"]) {
   assert.ok(!source.toLowerCase().includes(forbidden), `operator state must not overclaim: ${forbidden}`);
 }
-
 console.log("Operator system-state contract passed");
