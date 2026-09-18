@@ -85,6 +85,8 @@ install_service() {
   [[ -f "$START_SCRIPT" ]] || fail "private-beta runner is missing: $START_SCRIPT"
   mkdir -p "$PLIST_DIR" "$RUNTIME_DIR"
   chmod 700 "$RUNTIME_DIR"
+  touch "$SERVICE_STDOUT" "$SERVICE_STDERR"
+  chmod 600 "$SERVICE_STDOUT" "$SERVICE_STDERR"
 
   bash "$START_SCRIPT" --prepare-only
 

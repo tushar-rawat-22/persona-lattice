@@ -15,6 +15,7 @@ API_PORT="${PERSONALATTICE_LIVE_API_PORT:-18000}"
 WEB_PORT="${PERSONALATTICE_LIVE_WEB_PORT:-13000}"
 API_LOG="$RUNTIME_DIR/api.log"
 WEB_LOG="$RUNTIME_DIR/web.log"
+BUILD_LOG="$RUNTIME_DIR/build.log"
 RELEASE_MANIFEST="$RUNTIME_DIR/release.env"
 PREPARED_RELEASE_FILE="$RUNTIME_DIR/prepared-release.sha"
 API_PID=""
@@ -111,6 +112,8 @@ ROLLBACK_SHA="$(git -C "$ROOT" rev-parse HEAD^ 2>/dev/null)" || fail "current re
 
 mkdir -p "$RUNTIME_DIR"
 chmod 700 "$RUNTIME_DIR"
+touch "$API_LOG" "$WEB_LOG" "$BUILD_LOG"
+chmod 600 "$API_LOG" "$WEB_LOG" "$BUILD_LOG"
 
 set -a
 # shellcheck disable=SC1090
@@ -154,7 +157,7 @@ prepare_web() {
     cd "$WEB_DIR"
     npm ci --no-audit --no-fund
     PERSONALATTICE_RELEASE_SHA="$RELEASE_SHA" PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run build
-  ) >"$RUNTIME_DIR/build.log" 2>&1 || fail "web production build failed; see $RUNTIME_DIR/build.log"
+  ) >"$BUILD_LOG" 2>&1 || fail "web production build failed; see $BUILD_LOG"
 
   local prepared_tmp="$PREPARED_RELEASE_FILE.tmp.$$"
   printf '%s\n' "$RELEASE_SHA" >"$prepared_tmp"
