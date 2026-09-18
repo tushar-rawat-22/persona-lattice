@@ -49,17 +49,30 @@ if (!operatorBoundary.includes("The public demo does not expose research authori
 }
 
 const forbiddenRuntimeMarkers = ["Unlock operator console", "/v1/auth/login"];
-for (const relative of [
-  "index.html",
-  path.join("demo", "index.html"),
-  path.join("operator-access", "index.html"),
-  "404.html",
-]) {
-  const body = fs.readFileSync(path.join(out, relative), "utf8");
+const textAssetExtensions = new Set([".css", ".html", ".js", ".json", ".map", ".txt"]);
+
+function walkTextAssets(directory) {
+  const assets = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const absolute = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      assets.push(...walkTextAssets(absolute));
+      continue;
+    }
+    if (entry.isFile() && textAssetExtensions.has(path.extname(entry.name))) {
+      assets.push(absolute);
+    }
+  }
+  return assets;
+}
+
+for (const absolute of walkTextAssets(out)) {
+  const relative = path.relative(out, absolute);
+  const body = fs.readFileSync(absolute, "utf8");
   for (const marker of forbiddenRuntimeMarkers) {
     if (body.includes(marker)) {
       throw new Error(
-        `public route ${relative} contains private runtime marker ${JSON.stringify(marker)}`,
+        `public artifact ${relative} contains private runtime marker ${JSON.stringify(marker)}`,
       );
     }
   }
