@@ -23,6 +23,8 @@ require_text "$START" '--prepare-only'
 require_text "$START" '--run-prepared'
 require_text "$START" 'prepared Python environment is missing'
 require_text "$START" 'prepared web production build is missing'
+require_text "$START" 'umask 077'
+require_text "$START" '--no-access-log'
 require_text "$SCRIPT" 'bash "$START_SCRIPT" --prepare-only'
 require_text "$SCRIPT" '[[ -f "$START_SCRIPT" ]]'
 require_text "$SCRIPT" '<string>--run-prepared</string>'
@@ -32,6 +34,23 @@ require_text "$SCRIPT" '<key>SuccessfulExit</key>'
 require_text "$SCRIPT" 'launchctl bootstrap'
 require_text "$SCRIPT" 'launchctl kickstart -k'
 require_text "$SCRIPT" 'chmod 600 "$PLIST"'
+
+# The private umask must be active before any runtime log redirection can
+# create files, and API access logging must stay disabled so retained search
+# terms and case identifiers cannot be copied into production access logs.
+UMASK_LINE="$(grep -n -m1 -F -- 'umask 077' "$START" | cut -d: -f1)"
+API_LOG_LINE="$(grep -n -m1 -F -- ') >"$API_LOG" 2>&1 &' "$START" | cut -d: -f1)"
+WEB_LOG_LINE="$(grep -n -m1 -F -- ') >"$WEB_LOG" 2>&1 &' "$START" | cut -d: -f1)"
+[[ -n "$UMASK_LINE" && -n "$API_LOG_LINE" && -n "$WEB_LOG_LINE" ]]
+[[ "$UMASK_LINE" -lt "$API_LOG_LINE" && "$UMASK_LINE" -lt "$WEB_LOG_LINE" ]] || {
+  echo 'private umask must be established before runtime log creation' >&2
+  exit 1
+}
+
+if grep -F -- '--access-log' "$START" >/dev/null; then
+  echo 'private API launcher must not enable raw request-target access logging' >&2
+  exit 1
+fi
 
 if grep -F -- '[[ -x "$START_SCRIPT" ]]' "$SCRIPT" >/dev/null; then
   echo 'launchd invokes the runner through /bin/bash and must not require a Git-untracked executable bit' >&2
