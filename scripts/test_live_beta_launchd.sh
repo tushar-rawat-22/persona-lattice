@@ -34,6 +34,7 @@ require_text "$SCRIPT" '<key>SuccessfulExit</key>'
 require_text "$SCRIPT" 'launchctl bootstrap'
 require_text "$SCRIPT" 'launchctl kickstart -k'
 require_text "$SCRIPT" 'chmod 600 "$PLIST"'
+require_text "$SCRIPT" 'chmod 600 "$SERVICE_STDOUT" "$SERVICE_STDERR"'
 
 # The private umask must be active before any runtime log redirection can
 # create files, and API access logging must stay disabled so retained search
@@ -56,6 +57,13 @@ if grep -F -- '[[ -x "$START_SCRIPT" ]]' "$SCRIPT" >/dev/null; then
   echo 'launchd invokes the runner through /bin/bash and must not require a Git-untracked executable bit' >&2
   exit 1
 fi
+
+SERVICE_LOG_MODE_LINE="$(grep -n -m1 -F -- 'chmod 600 "$SERVICE_STDOUT" "$SERVICE_STDERR"' "$SCRIPT" | cut -d: -f1)"
+BOOTSTRAP_LINE="$(grep -n -m1 -F -- 'launchctl bootstrap' "$SCRIPT" | cut -d: -f1)"
+[[ -n "$SERVICE_LOG_MODE_LINE" && -n "$BOOTSTRAP_LINE" && "$SERVICE_LOG_MODE_LINE" -lt "$BOOTSTRAP_LINE" ]] || {
+  echo 'launchd logs must be owner-only before service bootstrap' >&2
+  exit 1
+}
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT

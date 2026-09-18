@@ -54,6 +54,7 @@ require_text 'prepared runtime belongs to $PREPARED_RELEASE_SHA, not current rel
 require_text 'PERSONALATTICE_RELEASE_SHA="$RELEASE_SHA" PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run build'
 require_text "printf 'release_sha=%s\\nrollback_sha=%s\\n' \"\$RELEASE_SHA\" \"\$ROLLBACK_SHA\""
 require_text 'umask 077'
+require_text 'chmod 600 "$API_LOG" "$WEB_LOG" "$BUILD_LOG"'
 require_text 'mv "$MANIFEST_TMP" "$RELEASE_MANIFEST"'
 require_text 'Release SHA: $RELEASE_SHA'
 require_text 'Rollback SHA: $ROLLBACK_SHA'
@@ -79,6 +80,15 @@ manifest_line="$(grep -n -F 'mv "$MANIFEST_TMP" "$RELEASE_MANIFEST"' "$SCRIPT" |
 web_health_line="$(grep -n -F 'wait_for_url "http://127.0.0.1:$WEB_PORT/api/health"' "$SCRIPT" | cut -d: -f1)"
 if [[ -z "$manifest_line" || -z "$web_health_line" || "$manifest_line" -le "$web_health_line" ]]; then
   echo 'release manifest must be written only after API and web health checks pass' >&2
+  exit 1
+fi
+
+log_mode_line="$(grep -n -F 'chmod 600 "$API_LOG" "$WEB_LOG" "$BUILD_LOG"' "$SCRIPT" | cut -d: -f1)"
+api_redirect_line="$(grep -n -F ') >"$API_LOG" 2>&1 &' "$SCRIPT" | cut -d: -f1)"
+web_redirect_line="$(grep -n -F ') >"$WEB_LOG" 2>&1 &' "$SCRIPT" | cut -d: -f1)"
+if [[ -z "$log_mode_line" || -z "$api_redirect_line" || -z "$web_redirect_line" || \
+      "$log_mode_line" -ge "$api_redirect_line" || "$log_mode_line" -ge "$web_redirect_line" ]]; then
+  echo 'existing runtime logs must be owner-only before process redirection' >&2
   exit 1
 fi
 
