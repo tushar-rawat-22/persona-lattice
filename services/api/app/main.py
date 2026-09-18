@@ -23,6 +23,7 @@ from .cases import CASE_STORE, StoredCase, StoredCaseSummary
 from .convergence import build_converged_payload, run_converged_research
 from .evidence import IdentifierKind, InvalidIdentifier, normalize_collection, normalize_identifier
 from .models import CaseIntake, IntakePreview, ProviderPlan, Purpose
+from .operational_access_logging import install_operational_access_logging
 from .policy import enforce_purpose
 from .providers.errors import (
     ProviderExecutionError,
@@ -54,6 +55,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "X-PersonaLattice-CSRF"],
 )
+install_operational_access_logging(app)
 app.include_router(upload_review_router)
 app.include_router(case_decision_router)
 
