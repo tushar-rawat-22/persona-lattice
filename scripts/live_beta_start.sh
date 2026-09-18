@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Private-beta runtime artifacts can contain operational metadata. Make every
+# file created by this launcher owner-only before any log redirection occurs.
+umask 077
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_DIR="$ROOT/services/api"
 WEB_DIR="$ROOT/apps/web"
@@ -152,7 +156,6 @@ prepare_web() {
     PERSONALATTICE_RELEASE_SHA="$RELEASE_SHA" PERSONALATTICE_API_ORIGIN="$PERSONALATTICE_API_ORIGIN" npm run build
   ) >"$RUNTIME_DIR/build.log" 2>&1 || fail "web production build failed; see $RUNTIME_DIR/build.log"
 
-  umask 077
   local prepared_tmp="$PREPARED_RELEASE_FILE.tmp.$$"
   printf '%s\n' "$RELEASE_SHA" >"$prepared_tmp"
   mv "$prepared_tmp" "$PREPARED_RELEASE_FILE"
@@ -181,7 +184,8 @@ fi
     --host 127.0.0.1 \
     --port "$API_PORT" \
     --workers 1 \
-    --no-proxy-headers
+    --no-proxy-headers \
+    --no-access-log
 ) >"$API_LOG" 2>&1 &
 API_PID=$!
 wait_for_url "http://127.0.0.1:$API_PORT/health"
@@ -194,7 +198,6 @@ WEB_PID=$!
 wait_for_url "http://127.0.0.1:$WEB_PORT/"
 wait_for_url "http://127.0.0.1:$WEB_PORT/api/health"
 
-umask 077
 MANIFEST_TMP="$RELEASE_MANIFEST.tmp.$$"
 printf 'release_sha=%s\nrollback_sha=%s\n' "$RELEASE_SHA" "$ROLLBACK_SHA" >"$MANIFEST_TMP"
 mv "$MANIFEST_TMP" "$RELEASE_MANIFEST"
