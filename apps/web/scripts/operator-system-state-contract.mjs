@@ -11,6 +11,9 @@ const quickResearch = await readFile(path.join(appRoot, "app", "admin", "quick-r
 
 for (const token of [
   'type StateTone = "complete" | "partial" | "limited" | "quiet"',
+  'title: "Attempted sources unavailable"',
+  "No attempted source completed",
+  "provider failure must not be interpreted as identity evidence or absence of evidence",
   'title: "Research completed with limits"',
   'title: "Research completed with coverage limits"',
   'title: "Some evidence was withheld by source policy"',
@@ -77,7 +80,7 @@ assert.ok(
 
 assert.equal(
   source.split("reviewSources: true").length - 1,
-  5,
+  6,
   "every state that instructs the operator to review Sources must expose the direct action",
 );
 assert.equal(
@@ -130,13 +133,20 @@ assert.ok(
 );
 
 const presentationSource = source.slice(source.indexOf("function statePresentation"));
+const allUnavailableIndex = presentationSource.indexOf(
+  "if (attemptCount > 0 && failedAttemptCount === attemptCount && completedAttemptCount === 0)",
+);
 const combinedLimitsIndex = presentationSource.indexOf("if (withheldCount > 0 && notAttemptedLimitCount > 0)");
 const withheldIndex = presentationSource.indexOf("if (withheldCount > 0)");
 const notAttemptedIndex = presentationSource.indexOf("if (notAttemptedLimitCount > 0)");
 const noMatchIndex = presentationSource.indexOf("if (attemptCount > 0 && noMatchCount === attemptCount)");
 assert.ok(
-  combinedLimitsIndex >= 0 && withheldIndex > combinedLimitsIndex && notAttemptedIndex > withheldIndex && noMatchIndex > notAttemptedIndex,
-  "combined policy/configuration limits must be surfaced before narrower or quiet source states",
+  allUnavailableIndex >= 0 &&
+    combinedLimitsIndex > allUnavailableIndex &&
+    withheldIndex > combinedLimitsIndex &&
+    notAttemptedIndex > withheldIndex &&
+    noMatchIndex > notAttemptedIndex,
+  "all-attempts-unavailable must take precedence over narrower policy/configuration, withheld, not-attempted, or no-match states",
 );
 assert.ok(
   source.includes("if (failedAttemptCount > 0)") &&
