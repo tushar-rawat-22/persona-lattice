@@ -65,6 +65,33 @@ def test_authenticated_write_without_csrf_is_denied(monkeypatch) -> None:
     assert "csrf" in response.json()["detail"].lower()
 
 
+def test_stale_csrf_from_prior_session_is_denied(monkeypatch) -> None:
+    stale_csrf = _login(monkeypatch)
+
+    relogin = client.post(
+        "/v1/auth/login",
+        json={"username": "admin", "password": PASSWORD},
+    )
+    assert relogin.status_code == 200, relogin.text
+    current_csrf = relogin.json()["csrf_token"]
+    assert current_csrf != stale_csrf
+
+    denied = client.post(
+        "/v1/intake/preview",
+        headers=_csrf(stale_csrf),
+        json={"purpose": "self_audit", "consent_acknowledged": True},
+    )
+    assert denied.status_code == 403
+    assert "csrf" in denied.json()["detail"].lower()
+
+    accepted = client.post(
+        "/v1/intake/preview",
+        headers=_csrf(current_csrf),
+        json={"purpose": "self_audit", "consent_acknowledged": True},
+    )
+    assert accepted.status_code == 200
+
+
 def test_wrong_admin_password_is_denied(monkeypatch) -> None:
     client.cookies.clear()
     SESSION_STORE.clear()
