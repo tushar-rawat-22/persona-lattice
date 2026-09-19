@@ -76,10 +76,15 @@ def test_stale_csrf_from_prior_session_is_denied(monkeypatch) -> None:
     current_csrf = relogin.json()["csrf_token"]
     assert current_csrf != stale_csrf
 
+    payload = {
+        "purpose": "self_audit",
+        "consent_acknowledged": True,
+        "usernames": ["session_boundary_fixture"],
+    }
     denied = client.post(
         "/v1/intake/preview",
         headers=_csrf(stale_csrf),
-        json={"purpose": "self_audit", "consent_acknowledged": True},
+        json=payload,
     )
     assert denied.status_code == 403
     assert "csrf" in denied.json()["detail"].lower()
@@ -87,7 +92,7 @@ def test_stale_csrf_from_prior_session_is_denied(monkeypatch) -> None:
     accepted = client.post(
         "/v1/intake/preview",
         headers=_csrf(current_csrf),
-        json={"purpose": "self_audit", "consent_acknowledged": True},
+        json=payload,
     )
     assert accepted.status_code == 200
 
