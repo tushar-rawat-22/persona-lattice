@@ -26,6 +26,16 @@ chmod 700 "$RUNTIME"
 printf 'release_sha=%s\nrollback_sha=%s\n' "$RELEASE_SHA" "$ROLLBACK_SHA" >"$RELEASE_MANIFEST"
 chmod 600 "$RELEASE_MANIFEST"
 
+grep -q 'ENV_PERMISSION_HELPER=.*live_beta_env_permissions\.sh' "$ROOT/scripts/live_beta_restore.sh"
+grep -q 'personalattice_validate_env_file "\$ENV_FILE"' "$ROOT/scripts/live_beta_restore.sh"
+# shellcheck disable=SC1091
+source "$ROOT/scripts/live_beta_env_permissions.sh"
+personalattice_validate_env_metadata 640 root personalattice
+if personalattice_validate_env_metadata 640 root root; then
+  echo "restore permission policy unexpectedly accepted root:root group-readable environment" >&2
+  exit 1
+fi
+
 BACKUP_OUTPUT="$(PERSONALATTICE_PRODUCTION_ENV_FILE="$ENV_FILE" PERSONALATTICE_BACKUP_DIR="$BACKUPS" PERSONALATTICE_LIVE_RUNTIME_DIR="$RUNTIME" bash "$ROOT/scripts/live_beta_backup.sh")"
 BACKUP="$(printf '%s\n' "$BACKUP_OUTPUT" | sed -n 's/^Backup: //p')"
 [[ -n "$BACKUP" && -f "$BACKUP" ]]

@@ -53,10 +53,10 @@ PY
 
 chmod 644 "$ENV_FILE"
 if PERSONALATTICE_PRODUCTION_ENV_FILE="$ENV_FILE" PERSONALATTICE_BACKUP_DIR="$BACKUPS" PERSONALATTICE_LIVE_RUNTIME_DIR="$RUNTIME" bash "$ROOT/scripts/live_beta_backup.sh" >"$TMP/out" 2>"$TMP/err"; then
-  echo "backup unexpectedly accepted a non-owner-only environment file" >&2
+  echo "backup unexpectedly accepted an unsafe environment file" >&2
   exit 1
 fi
-grep -q 'production environment file must be owner-only' "$TMP/err"
+grep -q 'production environment file must be mode 600/400, or 640/440 when owned by root:personalattice' "$TMP/err"
 
 chmod 600 "$ENV_FILE"
 printf 'release_sha=not-a-commit\nrollback_sha=%s\n' "$ROLLBACK_SHA" >"$RELEASE_MANIFEST"
