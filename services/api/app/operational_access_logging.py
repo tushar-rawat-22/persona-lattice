@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request, Response
 LOGGER_NAME = "uvicorn.error"
 _LOGGER = logging.getLogger(LOGGER_NAME)
 _UNMATCHED_ROUTE = "unmatched"
+_PRIVATE_CACHE_CONTROL = "no-store"
 
 
 def _route_class(request: Request) -> str:
@@ -38,11 +39,14 @@ def _record(request: Request, status_code: int, started_ns: int) -> None:
 
 
 def install_operational_access_logging(app: FastAPI) -> None:
-    """Install metadata-safe HTTP observability for the private API.
+    """Install metadata-safe observability and private-response cache policy.
 
     The middleware records only method, registered route template, status and
     duration. It deliberately never reads the raw target, query string,
-    headers, cookies or request body.
+    headers, cookies or request body. Every API response is marked ``no-store``
+    because this service is a private authenticated evidence surface and even
+    error/session responses can reveal operator state when cached by a browser
+    or intermediary.
     """
 
     @app.middleware("http")
@@ -56,5 +60,6 @@ def install_operational_access_logging(app: FastAPI) -> None:
         except BaseException:
             _record(request, 500, started_ns)
             raise
+        response.headers["Cache-Control"] = _PRIVATE_CACHE_CONTROL
         _record(request, response.status_code, started_ns)
         return response
