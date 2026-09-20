@@ -61,7 +61,7 @@ assert.ok(
 
 assert.match(
   styles,
-  /@media \\(max-width: 560px\\)[\\s\\S]*?\\.recentCases \\.caseRow \\{\\s*grid-template-columns:\\s*minmax\\(0,\\s*1fr\\);\\s*\\}/,
+  /@media \(max-width: 560px\)[\s\S]*?\.recentCases \.caseRow \{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);\s*\}/,
   "narrow mobile retained-case rows must stack destructive actions below case metadata",
 );
 
