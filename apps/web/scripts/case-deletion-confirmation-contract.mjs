@@ -7,6 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.join(here, "..");
 const source = await readFile(path.join(appRoot, "app", "admin", "case-navigation.tsx"), "utf8");
 const quickResearch = await readFile(path.join(appRoot, "app", "admin", "quick-research.tsx"), "utf8");
+const styles = await readFile(path.join(appRoot, "app", "globals.css"), "utf8");
 
 for (const token of [
   'const [pendingDeleteCaseId, setPendingDeleteCaseId] = useState<string | null>(null)',
@@ -56,6 +57,12 @@ assert.ok(
 assert.ok(
   !quickResearch.includes('window.confirm("Delete every retained private research case?")'),
   "bulk deletion confirmation must live in the retained-case surface instead of a browser modal",
+);
+
+assert.match(
+  styles,
+  /@media \(max-width: 560px\)[\s\S]*?\.recentCases \.caseRow \{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);\s*\}/,
+  "narrow mobile retained-case rows must stack destructive actions below case metadata",
 );
 
 console.log("Case deletion confirmation contract passed");
