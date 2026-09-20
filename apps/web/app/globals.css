@@ -394,6 +394,7 @@ summary { cursor: pointer; color: #c4c0b9; font-size: 11px; }
   .evidenceAssessmentBody { grid-template-columns: 1fr; gap: 8px; }
   .evidenceAssessmentHeader { flex-direction: column; }
   .recentCases .dangerButton { opacity: 1; }
+  .recentCases .caseRow { grid-template-columns: minmax(0, 1fr); }
   .recentCases .caseOpen { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .recentCases .caseOpen small { justify-self: start; }
   .workspaceBoundary { align-items: flex-start; flex-direction: column; gap: 4px; }
