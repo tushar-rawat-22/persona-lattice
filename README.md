@@ -10,9 +10,9 @@ The repository is public. Real research data is not. Unauthenticated visitors on
 
 The canonical public observer is a static, synthetic/read-only Cloudflare Pages deployment. It exists to show PersonaLattice's evidence model and public/private boundary; it is not the authenticated private product and carries no real case data, provider credentials, private source execution or mutation authority.
 
-The one-admin private application is still under pre-external-user acceptance in issue #340. Core private workflows have passed substantial production-shaped host, browser and evidence-integrity checks, but external operator access remains **NO-GO** until the remaining private runtime, recovery and browser acceptance gates close. A green public deployment or repository CI run does not advance private-runtime authority.
+The bounded one-admin private beta passed its external-operator acceptance gate in issue #340 on exact release `af10d1c14615f439df46d050bb3850f001fb22d2`. The accepted private runtime keeps the API loopback-only, retains real case data outside Git and preserves the authenticated session/CSRF boundary. This acceptance does not make the private service always-on: availability still depends on the current Mac-hosted runtime, tracked separately in issue #324.
 
-Current work is therefore acceptance and failure containment, not broad source expansion or cosmetic dashboard work. The private operator experience remains evidence-first: clue → source state → attributable evidence → provenance → contradiction/unknown → human decision.
+Current work prioritizes product correctness, public/repository truth and the remaining availability gap rather than treating a green public deployment as private-runtime authority. The private operator experience remains evidence-first: clue → source state → attributable evidence → provenance → contradiction/unknown → human decision.
 
 ## How a case works
 
@@ -92,7 +92,7 @@ For the authenticated one-admin setup, use `docs/ZERO_SPEND_RUNBOOK.md`. Keep pa
 
 PersonaLattice's required baseline remains usable without paid enrichment APIs or a hosted database. The canonical public observer is static and synthetic/read-only; it does not depend on the private operator host.
 
-The stateful private beta is deliberately separate from that observer. Its accepted runtime, persistent SQLite store, exact release/rollback identity and recovery evidence are governed by the pre-external-user acceptance gate in issue #340. Do not infer private readiness from the public Pages deployment, repository CI or a preview environment.
+The stateful private beta is deliberately separate from that observer. Issue #340 records the completed bounded external-operator acceptance for exact release `af10d1c14615f439df46d050bb3850f001fb22d2`; the accepted rollback is `a9a82e17e8a6edb0815374daac9edfccbb182ca5`. Private always-on availability is not established and remains tracked in issue #324. Do not infer private availability or authority from the public Pages deployment, repository CI or a preview environment.
 
 Deployment tooling for protected persistent storage, loopback API binding and bounded ingress remains in `docs/LIVE_BETA.md` and `docs/DEPLOYMENT.md`. Paid hosted references may remain in the repository as future fallback/migration evidence, but they are not a current founder action while the zero-cash constraint applies. A random Quick Tunnel is a short-lived validation/smoke tool, not an always-on private-beta endpoint. An ephemeral hosted filesystem is not acceptable for the SQLite retained-case store.
 
