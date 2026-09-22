@@ -43,6 +43,38 @@ for (const header of [
   if (!headers.includes(header)) throw new Error(`public demo export missing security header: ${header}`);
 }
 
+const cspLine = headers
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .find((line) => line.startsWith("Content-Security-Policy:"));
+if (!cspLine) throw new Error("public demo export missing CSP policy");
+
+const csp = cspLine.slice("Content-Security-Policy:".length).trim();
+const requiredCspDirectives = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "connect-src 'none'",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "manifest-src 'self'",
+  "worker-src 'self'",
+];
+for (const directive of requiredCspDirectives) {
+  if (!csp.split(";").map((part) => part.trim()).includes(directive)) {
+    throw new Error(`public demo CSP missing or broadened directive: ${directive}`);
+  }
+}
+for (const forbidden of ["*", "https:", "http:", "data:*"]) {
+  if (csp.split(/\s+/).includes(forbidden)) {
+    throw new Error(`public demo CSP contains forbidden broad source: ${forbidden}`);
+  }
+}
+
 const operatorBoundary = fs.readFileSync(path.join(out, "operator-access", "index.html"), "utf8");
 if (!operatorBoundary.includes("The public demo does not expose research authority.")) {
   throw new Error("public demo operator boundary page lost its non-operational framing");
