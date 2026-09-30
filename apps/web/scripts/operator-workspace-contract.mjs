@@ -34,6 +34,8 @@ const requiredCss = [
   ".evidenceFactors",
   ".workspaceBoundary",
   ".workspace.caseActive, .publicGrid { grid-template-columns: 1fr; }",
+  ".appBarCaseContext { grid-column: 1; grid-row: 2;",
+  ".operatorAppBar .adminActions { grid-column: 1; grid-row: 3;",
 ];
 
 for (const token of requiredCss) {
@@ -239,7 +241,29 @@ assert.ok(
   "authenticated application bar must expose a non-submitting, keyboard-discoverable new-case action wired to the existing intake drawer",
 );
 assert.ok(
-  research.includes("onActiveCaseChange?.(Boolean(activeCase))") &&
+  adminPage.includes("activeCaseContext") &&
+    adminPage.includes('aria-label="Current case"') &&
+    adminPage.includes("activeCaseContext.seed_value") &&
+    adminPage.includes("activeCaseContext.id.slice(0, 8)") &&
+    adminPage.includes("No active case"),
+  "authenticated application bar must expose truthful current-case context without inventing a case",
+);
+assert.ok(
+  adminPage.includes("caseSearchRequestId") &&
+    adminPage.includes('>Find case</button>') &&
+    adminPage.includes("setCaseSearchRequestId((requestId) => requestId + 1)") &&
+    adminPage.includes("caseSearchRequestId={caseSearchRequestId}"),
+  "authenticated application bar must route Find case to the existing retained-case search",
+);
+assert.ok(
+  research.includes("onActiveCaseChange?.(activeCase ?") &&
+    research.includes("caseSearchRequestId={caseSearchRequestId}") &&
+    caseNavigation.includes("caseSearchRequestId") &&
+    caseNavigation.includes("searchInputRef.current?.focus()"),
+  "active-case context and case-search focus must be wired through the real workspace state",
+);
+assert.ok(
+  research.includes("onActiveCaseChange?.(activeCase ?") &&
     research.includes("setLauncherOpen(false)") &&
     research.includes("Inspect {factorRows.length} retained factor"),
   "case-first layout and progressive M5 factor disclosure must remain wired to real case state",

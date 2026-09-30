@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
-import { QuickResearch } from "./quick-research";
+import { QuickResearch, type ActiveCaseContext } from "./quick-research";
 import { UploadReviewWorkflow } from "./upload-review-workflow";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
@@ -106,6 +106,8 @@ export default function AdminConsole() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [caseWorkspaceActive, setCaseWorkspaceActive] = useState(false);
+  const [activeCaseContext, setActiveCaseContext] = useState<ActiveCaseContext | null>(null);
+  const [caseSearchRequestId, setCaseSearchRequestId] = useState(0);
   const [intakeExpanded, setIntakeExpanded] = useState(true);
 
   useEffect(() => {
@@ -157,9 +159,10 @@ export default function AdminConsole() {
     [fullName, phones, emails, usernames, urls, organizations, notes, files],
   );
 
-  const handleActiveCaseChange = useCallback((active: boolean) => {
-    setCaseWorkspaceActive(active);
-    if (active) setIntakeExpanded(false);
+  const handleActiveCaseChange = useCallback((activeCase: ActiveCaseContext | null) => {
+    setActiveCaseContext(activeCase);
+    setCaseWorkspaceActive(Boolean(activeCase));
+    if (activeCase) setIntakeExpanded(false);
   }, []);
 
   async function login(event: FormEvent<HTMLFormElement>) {
@@ -199,6 +202,7 @@ export default function AdminConsole() {
     setResult(null);
     setFileResult(null);
     setCaseWorkspaceActive(false);
+    setActiveCaseContext(null);
     setIntakeExpanded(true);
     setCsrfToken("");
     setAuthState("anonymous");
@@ -334,9 +338,20 @@ export default function AdminConsole() {
   return (
     <main className="shell">
       <header className="hero operatorAppBar">
-        <div>
+        <div className="operatorIdentity">
           <p className="eyebrow">PersonaLattice</p>
           <h1>Operator workspace</h1>
+        </div>
+        <div className="appBarCaseContext" aria-label="Current case" aria-live="polite">
+          <span>Current case</span>
+          {activeCaseContext ? (
+            <>
+              <strong>{activeCaseContext.seed_kind.toUpperCase()} · {activeCaseContext.seed_value}</strong>
+              <small>CASE {activeCaseContext.id.slice(0, 8)}</small>
+            </>
+          ) : (
+            <strong>No active case</strong>
+          )}
         </div>
         <div className="adminActions">
           <button
@@ -345,6 +360,12 @@ export default function AdminConsole() {
             aria-keyshortcuts="n"
             onClick={() => setIntakeExpanded(true)}
           >New case</button>
+          <button
+            className="appBarTextAction"
+            type="button"
+            aria-keyshortcuts="/"
+            onClick={() => setCaseSearchRequestId((requestId) => requestId + 1)}
+          >Find case</button>
           <span className="status"><span className="dot" /> authenticated</span>
           <button className="secondaryButton" type="button" onClick={logout}>Log out</button>
         </div>
@@ -416,7 +437,11 @@ export default function AdminConsole() {
         </details>
 
         <aside className={caseWorkspaceActive ? "sideStack caseWorkspace" : "sideStack"}>
-          <QuickResearch csrfToken={csrfToken} onActiveCaseChange={handleActiveCaseChange} />
+          <QuickResearch
+            csrfToken={csrfToken}
+            caseSearchRequestId={caseSearchRequestId}
+            onActiveCaseChange={handleActiveCaseChange}
+          />
 
           {(!caseWorkspaceActive || result) && <section className="panel">
             <div className="panelHeader"><div><span className="index">03</span><h2>Research plan</h2></div></div>
