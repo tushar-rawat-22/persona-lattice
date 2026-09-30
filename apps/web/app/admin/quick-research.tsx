@@ -243,9 +243,15 @@ type StoredCase = StoredCaseSummary & {
   report: QuickReport;
 };
 
+export type ActiveCaseContext = Pick<
+  StoredCaseSummary,
+  "id" | "seed_kind" | "seed_value" | "expires_at"
+>;
+
 type QuickResearchProps = {
   csrfToken: string;
-  onActiveCaseChange?: (active: boolean) => void;
+  caseSearchRequestId?: number;
+  onActiveCaseChange?: (activeCase: ActiveCaseContext | null) => void;
 };
 
 type ResolvedProvenance = {
@@ -776,7 +782,7 @@ function ConvergedSources({ report }: { report: ConvergedReport }) {
   );
 }
 
-export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchProps) {
+export function QuickResearch({ csrfToken, caseSearchRequestId = 0, onActiveCaseChange }: QuickResearchProps) {
   const [kind, setKind] = useState<ResearchKind>("username");
   const [value, setValue] = useState("");
   const [activeCase, setActiveCase] = useState<StoredCase | null>(null);
@@ -809,7 +815,12 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
   }, []);
 
   useEffect(() => {
-    onActiveCaseChange?.(Boolean(activeCase));
+    onActiveCaseChange?.(activeCase ? {
+      id: activeCase.id,
+      seed_kind: activeCase.seed_kind,
+      seed_value: activeCase.seed_value,
+      expires_at: activeCase.expires_at,
+    } : null);
   }, [activeCase, onActiveCaseChange]);
 
   const refreshCases = useCallback(async () => {
@@ -1380,6 +1391,7 @@ export function QuickResearch({ csrfToken, onActiveCaseChange }: QuickResearchPr
       <CaseNavigation
         cases={recentCases}
         activeCaseId={activeCase?.id}
+        caseSearchRequestId={caseSearchRequestId}
         hasMore={Boolean(nextCaseCursor)}
         loadingMore={loadingOlderCases}
         initialLoading={initialCasesLoading}

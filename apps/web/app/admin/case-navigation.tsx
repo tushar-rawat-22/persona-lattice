@@ -24,6 +24,7 @@ type KindFilter = "all" | CaseNavigationKind;
 type CaseNavigationProps = {
   cases: CaseNavigationItem[];
   activeCaseId?: string;
+  caseSearchRequestId?: number;
   hasMore: boolean;
   initialLoading?: boolean;
   initialLoadFailed?: boolean;
@@ -91,6 +92,7 @@ export function filterAndSortLoadedCases(
 export function CaseNavigation({
   cases,
   activeCaseId,
+  caseSearchRequestId = 0,
   hasMore,
   initialLoading = false,
   initialLoadFailed = false,
@@ -145,6 +147,11 @@ export function CaseNavigation({
     window.addEventListener("keydown", focusCaseSearch);
     return () => window.removeEventListener("keydown", focusCaseSearch);
   }, []);
+
+  useEffect(() => {
+    if (caseSearchRequestId === 0) return;
+    searchInputRef.current?.focus();
+  }, [caseSearchRequestId, initialLoading, cases.length]);
 
   useEffect(() => {
     if (!remoteSearchActive) {
