@@ -32,6 +32,11 @@ from .providers.errors import (
 )
 from .providers.registry import PROVIDERS
 from .research import QuickResearchReport, ResearchKind, run_quick_research
+from .relationship_clarity import (
+    RelationshipClarityProjection,
+    RelationshipClarityProjectionError,
+    build_relationship_clarity_projection,
+)
 from .upload_review_api import router as upload_review_router
 from .uploads import (
     FileBatchPreview,
@@ -483,6 +488,36 @@ def get_case(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found.")
     AUDIT_STORE.record("case.read", case_id=record.id)
     return _stored_case_response(record)
+
+
+@app.get(
+    "/v1/cases/{case_id}/relationship-clarity",
+    response_model=RelationshipClarityProjection,
+)
+def get_relationship_clarity(
+    case_id: UUID,
+    response: Response,
+    _principal: AuthenticatedPrincipal = Depends(require_admin),
+) -> RelationshipClarityProjection:
+    response.headers["Cache-Control"] = "no-store"
+    record = CASE_STORE.get(case_id)
+    if record is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Case not found.",
+            headers={"Cache-Control": "no-store"},
+        )
+    try:
+        return build_relationship_clarity_projection(record)
+    except RelationshipClarityProjectionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Relationship clarity is unavailable because retained evidence references "
+                "are incomplete."
+            ),
+            headers={"Cache-Control": "no-store"},
+        ) from exc
 
 
 @app.delete("/v1/cases/{case_id}", status_code=status.HTTP_204_NO_CONTENT)

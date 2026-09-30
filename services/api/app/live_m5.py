@@ -46,7 +46,29 @@ def _source_kind(source: str) -> ObservationSourceKind:
     return ObservationSourceKind.PUBLIC_WEB
 
 
-def _result_payload(result, *, candidate: _Candidate) -> dict[str, object]:
+def _result_payload(
+    result,
+    *,
+    candidate: _Candidate,
+    observation_refs: dict[str, dict[str, object]],
+    identifier_refs: dict[str, str],
+) -> dict[str, object]:
+    def factor_observation_refs(factor) -> list[dict[str, object]]:
+        try:
+            return [observation_refs[str(value)] for value in factor.observation_ids]
+        except KeyError as exc:
+            raise RuntimeError(
+                "M5 factor observation lacks canonical retained provenance."
+            ) from exc
+
+    def factor_identifier_refs(factor) -> list[str]:
+        try:
+            return [identifier_refs[str(value)] for value in factor.identifier_ids]
+        except KeyError as exc:
+            raise RuntimeError(
+                "M5 factor identifier lacks a canonical retained node reference."
+            ) from exc
+
     return {
         "candidate_node": candidate.node.key,
         "candidate_observation_index": candidate.observation_index,
@@ -67,6 +89,8 @@ def _result_payload(result, *, candidate: _Candidate) -> dict[str, object]:
                 "status": factor.status.value,
                 "rationale": factor.rationale,
                 "veto": factor.veto,
+                "observation_refs": factor_observation_refs(factor),
+                "identifier_refs": factor_identifier_refs(factor),
             }
             for factor in result.factors
         ],
@@ -90,6 +114,8 @@ def evaluate_live_m5(report: ConvergedResearchReport) -> dict[str, object]:
         store = EvidenceStore(session)
         subject = store.add_subject()
         identifier_by_node: dict[str, Any] = {}
+        identifier_refs: dict[str, str] = {}
+        observation_refs: dict[str, dict[str, object]] = {}
         seed_identifier = None
 
         for node in report.nodes:
@@ -97,6 +123,7 @@ def evaluate_live_m5(report: ConvergedResearchReport) -> dict[str, object]:
             normalized = normalize_identifier(kind, node.report.normalized_value)
             identifier = store.add_identifier(subject.id, normalized)
             identifier_by_node[node.key] = identifier
+            identifier_refs[str(identifier.id)] = node.key
             if node.depth == 0:
                 seed_identifier = identifier
 
@@ -123,6 +150,10 @@ def evaluate_live_m5(report: ConvergedResearchReport) -> dict[str, object]:
                     payload=payload,
                     retrieved_at=evaluated_at,
                 )
+                observation_refs[str(stored.id)] = {
+                    "node_key": node.key,
+                    "observation_index": observation_index,
+                }
                 observation_count += 1
                 if (
                     node.kind is ResearchKind.USERNAME
@@ -176,6 +207,10 @@ def evaluate_live_m5(report: ConvergedResearchReport) -> dict[str, object]:
                         },
                         retrieved_at=evaluated_at,
                     )
+                    observation_refs[str(support.id)] = {
+                        "node_key": candidate.node.key,
+                        "observation_index": candidate.observation_index,
+                    }
                     observation_count += 1
                     factors.append(
                         CorrelationFactorInput(
@@ -196,7 +231,14 @@ def evaluate_live_m5(report: ConvergedResearchReport) -> dict[str, object]:
                     factors=tuple(factors),
                 )
             )
-            evaluations.append(_result_payload(result, candidate=candidate))
+            evaluations.append(
+                _result_payload(
+                    result,
+                    candidate=candidate,
+                    observation_refs=observation_refs,
+                    identifier_refs=identifier_refs,
+                )
+            )
 
         return {
             "engine": "m5-deterministic-evidence-strength",
