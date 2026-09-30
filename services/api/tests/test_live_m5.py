@@ -63,6 +63,10 @@ def test_live_m5_same_username_candidate_remains_uncalibrated_weak_triage() -> N
     assert evaluation["candidate_observation_index"] == 0
     assert "candidate_source" not in evaluation
     assert "candidate_source_locator" not in evaluation
+    assert evaluation["factors"][0]["observation_refs"] == [
+        {"node_key": "username:public-user", "observation_index": 0}
+    ]
+    assert evaluation["factors"][0]["identifier_refs"] == []
 
 
 def test_live_m5_exact_original_email_overlap_is_possible_not_identity_claim() -> None:
@@ -109,6 +113,12 @@ def test_live_m5_exact_original_email_overlap_is_possible_not_identity_claim() -
     factors = {factor["kind"]: factor for factor in evaluation["factors"]}
     assert factors["exact_confirmed_identifier_overlap"]["applied_weight"] == 55
     assert factors["same_username"]["applied_weight"] == 0
+    assert factors["exact_confirmed_identifier_overlap"]["observation_refs"] == [
+        {"node_key": "username:public-user", "observation_index": 0}
+    ]
+    assert factors["exact_confirmed_identifier_overlap"]["identifier_refs"] == [
+        "email:known@example.test"
+    ]
 
 
 def test_live_m5_does_not_bootstrap_strong_overlap_from_discovered_email() -> None:
