@@ -1,23 +1,9 @@
 import Link from "next/link";
 
-import { syntheticCase } from "./dashboard/fixture";
+import { InvestigationDesk } from "./investigation-desk";
 import styles from "./public.module.css";
 
-const capabilities = [
-  ["Clue", "Start with bounded identifiers", "Normalize phones, emails, usernames, domains, public URLs and reviewed files without assuming every clue belongs to the same person."],
-  ["Source", "Show what was actually checked", "Keep executed, unavailable, no-match and review-required source states visible so missing coverage is never mistaken for negative evidence."],
-  ["Evidence", "Retain the native trail", "Preserve source locator, retrieval time, freshness, query context and the research pivot that produced each observation."],
-  ["Conflict", "Keep disagreement visible", "Stale observations, hard contradictions and unresolved links remain part of the case instead of being buried by positive signals."],
-  ["Decision", "Leave identity judgment to the analyst", "Correlation is deterministic evidence-strength triage, not an identity probability. The operator records the decision and rationale."],
-] as const;
-
 export default function Home() {
-  const sourceCount = new Set(syntheticCase.observations.map((item) => item.provenance.source_name)).size;
-  const conflictCount = syntheticCase.account_candidates.filter(
-    (candidate) => candidate.correlation?.outcome === "contradicted",
-  ).length;
-  const snapshotRows = syntheticCase.observations.slice(0, 3);
-
   return (
     <main className={styles.shell}>
       <header className={styles.topbar}>
@@ -25,138 +11,64 @@ export default function Home() {
           <span className={styles.brandMark}>PL</span>
           <span>
             <strong>PersonaLattice</strong>
-            <small>evidence casebook</small>
+            <small>investigation desk</small>
           </span>
         </Link>
         <nav className={styles.nav} aria-label="Public navigation">
-          <Link className={styles.navLink} href="#method">Method</Link>
-          <Link className={styles.navLink} href="/demo">Synthetic case</Link>
-          <Link className={styles.adminLink} href="/admin">Private operator</Link>
+          <Link className={styles.navLink} href="#how-it-works">How it works</Link>
+          <Link className={styles.navLink} href="/demo">Synthetic investigation</Link>
+          <Link className={styles.operatorLink} href="/operator-access">Operator access</Link>
         </nav>
       </header>
 
-      <section className={styles.hero}>
-        <div className={styles.heroCopy}>
-          <p className={styles.kicker}>Public-source research, kept inspectable</p>
-          <h1>Follow the evidence without forcing the identity.</h1>
-          <p className={styles.lead}>
-            PersonaLattice turns sparse clues into an analyst casebook: what was checked, what was
-            observed, where it came from, what conflicts, what remains unknown, and why a human made
-            the final decision.
-          </p>
-          <div className={styles.heroActions}>
-            <Link className={styles.primaryLink} href="/demo">Inspect the synthetic case</Link>
-            <span className={styles.boundaryText}>Read-only fixture · no live research or private case access</span>
-          </div>
+      <section className={styles.intro}>
+        <div>
+          <p className={styles.kicker}>Public synthetic investigation · read only</p>
+          <h1>Trace a clue to evidence, provenance, and the questions left open.</h1>
         </div>
-
-        <aside className={styles.caseBrief} aria-label="Synthetic case file preview">
-          <div className={styles.caseBriefHead}>
-            <span>Case file / synthetic fixture</span>
-            <strong>Read only</strong>
-          </div>
-          <div className={styles.caseIdentity}>
-            <span className={styles.avatar} aria-hidden="true">SM</span>
-            <div>
-              <strong>{syntheticCase.display_name}</strong>
-              <span>demonstration investigation</span>
-            </div>
-          </div>
-          <dl className={styles.metrics}>
-            <div><dt>Sources</dt><dd>{sourceCount}</dd></div>
-            <div><dt>Observations</dt><dd>{syntheticCase.observations.length}</dd></div>
-            <div><dt>Conflicts</dt><dd>{conflictCount}</dd></div>
-            <div><dt>Candidates</dt><dd>{syntheticCase.account_candidates.length}</dd></div>
-          </dl>
-          <div className={styles.evidencePath} aria-label="Evidence path preview">
-            <span>clue</span><i />
-            <span>source</span><i />
-            <span>observation</span><i />
-            <span>human review</span>
-          </div>
-          <div className={styles.caseRows}>
-            {snapshotRows.map((observation) => (
-              <div key={observation.id}>
-                <span>{observation.provenance.source_name}</span>
-                <strong className={observation.freshness === "stale" ? styles.warn : styles.good}>
-                  {observation.freshness}
-                </strong>
-              </div>
-            ))}
-          </div>
-          <Link className={styles.caseLink} href="/demo">Open the evidence record →</Link>
-        </aside>
+        <div className={styles.introAside}>
+          <p>
+            PersonaLattice keeps public-source observations, contradictions, coverage gaps, and source context in one inspectable path. It refuses to turn correlation into an identity verdict.
+          </p>
+          <Link className={styles.primaryLink} href="/demo">Open the full synthetic investigation <span aria-hidden="true">→</span></Link>
+        </div>
       </section>
 
-      <section className={styles.boundary} aria-label="Public demo boundary">
+      <InvestigationDesk />
+
+      <section className={styles.method} id="how-it-works" aria-label="Investigation hierarchy">
         <div>
-          <span className={styles.boundaryLabel}>Public observer</span>
-          <strong>Synthetic evidence, real product semantics.</strong>
+          <span>01</span>
+          <strong>Start with a bounded clue</strong>
+          <p>A username, email, phone, domain, public URL, or reviewed file becomes a lead—not an identity assumption.</p>
+        </div>
+        <div>
+          <span>02</span>
+          <strong>Keep evidence attached to provenance</strong>
+          <p>Source locator, retrieval time, freshness, and execution state stay visible beside every retained observation.</p>
+        </div>
+        <div>
+          <span>03</span>
+          <strong>Expose conflict and unknowns</strong>
+          <p>Contradictions, stale signals, source failure, and missing coverage remain visible before a person decides.</p>
+        </div>
+      </section>
+
+      <section className={styles.boundary} aria-label="Public and private authority boundary">
+        <div>
+          <span>Public observer</span>
+          <strong>Synthetic evidence. Real product semantics. No research authority.</strong>
         </div>
         <p>
-          Visitors can inspect source states, provenance, contradictions and correlation behavior.
-          They cannot submit identifiers, execute providers, mutate retained cases or access private authority.
+          This page cannot submit identifiers, call providers, mutate retained cases, or access private investigations. The authenticated operator workspace is separately controlled.
         </p>
       </section>
 
-      <section className={styles.method} id="method">
-        <div className={styles.methodIntro}>
-          <p className={styles.kicker}>The casebook method</p>
-          <h2>A research trail that survives scrutiny.</h2>
-          <p>
-            The useful outcome is an inspectable case, not a single score. Each step keeps enough
-            context for another analyst to understand how the conclusion was reached—or why it was withheld.
-          </p>
-        </div>
-        <ol className={styles.capabilityList}>
-          {capabilities.map(([label, title, description], index) => (
-            <li className={styles.capabilityRow} key={label}>
-              <span className={styles.stepNumber}>{String(index + 1).padStart(2, "0")}</span>
-              <div>
-                <small>{label}</small>
-                <h3>{title}</h3>
-              </div>
-              <p>{description}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className={styles.provenance}>
-        <div className={styles.provenanceCopy}>
-          <p className={styles.kicker}>Why provenance matters</p>
-          <h2>A finding is only as defensible as its path back to the source.</h2>
-          <p>
-            PersonaLattice keeps source-native locators, retrieval timing, freshness and source state beside
-            the observation. Failed or unavailable sources stay visible as coverage limits; they do not become evidence.
-          </p>
-        </div>
-        <div className={styles.provenanceCard} aria-label="Synthetic provenance example">
-          <span className={styles.marginNote}>synthetic example</span>
-          <div>
-            <small>Observation</small>
-            <strong>{snapshotRows[0]?.summary ?? "Public observation"}</strong>
-          </div>
-          <div>
-            <small>Source</small>
-            <strong>{snapshotRows[0]?.provenance.source_name ?? "Synthetic source"}</strong>
-          </div>
-          <div>
-            <small>Locator</small>
-            <code>{snapshotRows[0]?.provenance.source_locator ?? "synthetic://fixture"}</code>
-          </div>
-          <div className={styles.provenanceDecision}>
-            <small>Analyst boundary</small>
-            <strong>Evidence informs the decision; it does not impersonate one.</strong>
-          </div>
-        </div>
-      </section>
-
       <footer className={styles.footer}>
-        <span>PersonaLattice · evidence casebook</span>
+        <span>PersonaLattice · evidence investigation workspace</span>
         <div>
-          <Link href="/demo">Synthetic case</Link>
-          <Link href="/admin">Private operator</Link>
+          <Link href="/demo">Synthetic investigation</Link>
+          <Link href="/operator-access">Operator boundary</Link>
         </div>
       </footer>
     </main>
