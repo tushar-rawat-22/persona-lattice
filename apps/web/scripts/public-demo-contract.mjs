@@ -3,25 +3,26 @@ import path from "node:path";
 
 const root = process.cwd();
 const home = fs.readFileSync(path.join(root, "app/page.tsx"), "utf8");
+const investigationDesk = fs.readFileSync(path.join(root, "app/investigation-desk.tsx"), "utf8");
+const publicSourceRuns = fs.readFileSync(path.join(root, "app/public-source-runs.ts"), "utf8");
 const demo = fs.readFileSync(path.join(root, "app/demo/page.tsx"), "utf8");
 const reviewedDocumentDemo = fs.readFileSync(
   path.join(root, "app/demo/reviewed-document-simulation.tsx"),
   "utf8",
 );
 const normalizedHome = home.replace(/\s+/g, " ");
-const normalizedDemo = demo.replace(/\s+/g, " ");
+const normalizedDemo = `${demo} ${publicSourceRuns}`.replace(/\s+/g, " ");
 const normalizedReviewedDocumentDemo = reviewedDocumentDemo.replace(/\s+/g, " ");
 
 const requiredHome = [
-  "evidence casebook",
-  "Public-source research, kept inspectable",
-  "Inspect the synthetic case",
-  "Read-only fixture · no live research or private case access",
+  "investigation desk",
+  "Public synthetic investigation · read only",
+  "Open the full synthetic investigation",
   "Public observer",
-  "Synthetic evidence, real product semantics.",
-  "They cannot submit identifiers, execute providers, mutate retained cases or access private authority.",
+  "Synthetic evidence. Real product semantics. No research authority.",
+  "This page cannot submit identifiers, call providers, mutate retained cases, or access private investigations.",
   'href="/demo"',
-  'href="/admin"',
+  'href="/operator-access"',
 ];
 for (const token of requiredHome) {
   if (!normalizedHome.includes(token)) {
@@ -32,14 +33,14 @@ for (const token of requiredHome) {
 const fixtureBackedHome = [
   'import { syntheticCase } from "./dashboard/fixture"',
   "syntheticCase.display_name",
-  "syntheticCase.observations.length",
-  "syntheticCase.account_candidates.length",
-  "item.provenance.source_name",
-  'candidate.correlation?.outcome === "contradicted"',
-  "snapshotRows.map((observation)",
+  "syntheticCase.identifiers.map((identifier)",
+  "syntheticCase.observations",
+  "syntheticCase.account_candidates.flatMap",
+  "observation.provenance.source_name",
+  "observation.provenance.source_locator",
 ];
 for (const token of fixtureBackedHome) {
-  if (!home.includes(token)) {
+  if (!investigationDesk.includes(token)) {
     throw new Error(`public home snapshot must derive displayed case facts from the shared synthetic fixture: ${token}`);
   }
 }
@@ -56,7 +57,7 @@ const forbiddenHome = [
   "public DNS",
 ];
 for (const token of forbiddenHome) {
-  if (home.includes(token)) throw new Error(`public home must stay non-operational and fixture-backed: ${token}`);
+  if (`${home}\n${investigationDesk}`.includes(token)) throw new Error(`public home must stay non-operational and fixture-backed: ${token}`);
 }
 
 const requiredDemo = [
