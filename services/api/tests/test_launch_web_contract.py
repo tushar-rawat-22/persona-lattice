@@ -4,20 +4,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 PUBLIC_PAGE = ROOT / "apps/web/app/page.tsx"
+PUBLIC_DESK = ROOT / "apps/web/app/investigation-desk.tsx"
 NEXT_CONFIG = ROOT / "apps/web/next.config.ts"
 
 
 def test_public_preview_has_no_private_api_fetch_or_environment_access() -> None:
-    source = PUBLIC_PAGE.read_text(encoding="utf-8")
+    source = "\n".join(
+        [
+            PUBLIC_PAGE.read_text(encoding="utf-8"),
+            PUBLIC_DESK.read_text(encoding="utf-8"),
+        ]
+    )
     normalized = " ".join(source.split())
 
     assert "fetch(" not in source
     assert '"/api/' not in source
     assert "process.env" not in source
-    assert "Read-only fixture · no live research or private case access" in normalized
-    assert "Visitors can inspect source states, provenance, contradictions and correlation behavior." in normalized
+    assert "Public synthetic investigation · read only" in normalized
+    assert "Synthetic evidence. Real product semantics. No research authority." in normalized
     assert (
-        "They cannot submit identifiers, execute providers, mutate retained cases or access private authority."
+        "This page cannot submit identifiers, call providers, mutate retained cases, or access private "
+        "investigations."
         in normalized
     )
 
