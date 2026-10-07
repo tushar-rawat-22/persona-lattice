@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${PERSONALATTICE_PRODUCTION_ENV_FILE:-$HOME/.config/persona-lattice/production.env}"
+ENV_PERMISSION_HELPER="$ROOT/scripts/live_beta_env_permissions.sh"
 BACKUP_DIR="${PERSONALATTICE_BACKUP_DIR:-$HOME/.local/share/persona-lattice/backups}"
 RUNTIME_DIR="${PERSONALATTICE_LIVE_RUNTIME_DIR:-$HOME/.local/share/persona-lattice/live}"
 RELEASE_MANIFEST="${PERSONALATTICE_RELEASE_MANIFEST:-$RUNTIME_DIR/release.env}"
@@ -15,11 +17,15 @@ file_mode() {
   if stat -f '%Lp' "$1" >/dev/null 2>&1; then stat -f '%Lp' "$1"; else stat -c '%a' "$1"; fi
 }
 
+[[ -f "$ENV_PERMISSION_HELPER" ]] || fail "environment-permission helper is missing: $ENV_PERMISSION_HELPER"
+# shellcheck disable=SC1090
+source "$ENV_PERMISSION_HELPER"
+
 command -v python3 >/dev/null 2>&1 || fail "required command 'python3' is unavailable"
 command -v stat >/dev/null 2>&1 || fail "required command 'stat' is unavailable"
-[[ -f "$ENV_FILE" ]] || fail "production environment file not found: $ENV_FILE"
-MODE="$(file_mode "$ENV_FILE")"
-[[ "$MODE" == "600" || "$MODE" == "400" ]] || fail "production environment file must be owner-only (mode 600 or 400), got $MODE"
+if ! personalattice_validate_env_file "$ENV_FILE"; then
+  fail "$personalattice_env_permissions_error"
+fi
 
 set -a
 # shellcheck disable=SC1090

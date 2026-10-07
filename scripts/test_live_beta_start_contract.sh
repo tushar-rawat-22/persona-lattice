@@ -21,7 +21,9 @@ require_text() {
 }
 
 require_text 'PERSONALATTICE_PRODUCTION_ENV_FILE'
-require_text 'production environment file must be owner-only'
+require_text 'ENV_PERMISSION_HELPER="$ROOT/scripts/live_beta_env_permissions.sh"'
+require_text 'source "$ENV_PERMISSION_HELPER"'
+require_text 'personalattice_validate_env_file "$ENV_FILE"'
 require_text 'PERSONALATTICE_COOKIE_SECURE must be true'
 require_text 'PERSONALATTICE_SESSION_COOKIE must use the __Host- prefix'
 require_text 'export PERSONALATTICE_API_ORIGIN="http://127.0.0.1:$API_PORT"'
