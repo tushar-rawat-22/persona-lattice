@@ -30,7 +30,7 @@ If no truly no-card, hard-free host satisfies the stateful private-beta contract
 
 - an exact-SHA release checkout under `/opt/persona-lattice/releases/`;
 - a dedicated `personalattice` system user;
-- owner-only configuration at `/etc/persona-lattice/production.env`;
+- root-owned configuration at `/etc/persona-lattice/production.env`, readable but not writable by the dedicated service group;
 - persistent SQLite under `/var/lib/persona-lattice/data/`;
 - release-specific prepared runtime state under `/var/lib/persona-lattice/runtime/<sha>/`;
 - a systemd service with restart-on-failure and process hardening;
@@ -40,7 +40,9 @@ If no truly no-card, hard-free host satisfies the stateful private-beta contract
 - a host verifier that checks release identity, service health, same-origin API health and loopback-only listeners;
 - an optional Cloudflare Tunnel configuration that publishes the web port only.
 
-Preparation is release-addressed. `prepare-release.sh <full-sha>` builds a release before switching `/opt/persona-lattice/current`; the same command with a previously accepted SHA is the rollback mechanism. The runtime user does not own the prepared source tree after preparation.
+Preparation is release-addressed. `sudo bash deploy/linux/prepare-release.sh <current-main-full-sha>` clones and builds only the freshly resolved canonical `main`, seals the release tree to root ownership, rejects broken or escaping symlinks, and switches `/opt/persona-lattice/current` only after the service becomes healthy. A failed activation restores the prior release and unit and verifies their health.
+
+Rollback does not fetch, build or execute preparation code from a historical checkout. Select an already prepared retained release with `sudo bash deploy/linux/select-prepared-release.sh <retained-full-sha>`. The selector accepts only an immutable root-owned SHA directory directly below `/opt/persona-lattice/releases`, permits symlinks only when they resolve inside that exact release, verifies that the installed systemd unit still matches the current release, and restores the prior selection if the requested release fails health checks. The runtime user never owns the production environment file or a sealed release tree.
 
 The environment template contains placeholders only. A real password hash, provider key, tunnel token or tunnel credential file must never be committed.
 
