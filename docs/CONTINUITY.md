@@ -8,7 +8,7 @@ Repository: `tushar-rawat-22/persona-lattice`
 
 Default branch: `main`
 
-At this checkpoint, canonical `main` is `ad467d249402fbbf6300a06713b8e29b7739bed0`, merged through PR #327. Verify that SHA before acting because main can advance between runs. Exact-main CI #2907 passed on that release.
+At the 2026-10-09 checkpoint, canonical protected `main` is `1a70651a435e9263a1ed69b3c6125e20d6c11e4c` (#377 recovery hardening shipped; #351 protected-main governance closed). Verify the branch ref and exact-head required checks again before any merge or release. Green CI is not live-host or market-readiness evidence.
 
 Do not trust a remembered local SHA, old assistant message or historical section over the current GitHub branch, current PR state and exact-head CI.
 
@@ -40,7 +40,7 @@ Never place the authenticated private-beta hostname in README, repository profil
 
 ### Private beta
 
-The accepted Mac-hosted private beta is GREEN on exact release `369378a8d2401c6f8a1322929c530909aa5123c8`, with rollback `7a124d73da9bf82979ecc8032464502f123b74f2`, based on the accepted 2026-09-03 changed-surface deployment evidence.
+Issue #340 closed with bounded external-operator acceptance on 2026-09-21: the last accepted Mac-hosted private release is `af10d1c14615f439df46d050bb3850f001fb22d2`, with runtime-manifest rollback `a9a82e17e8a6edb0815374daac9edfccbb182ca5`. That is historical acceptance, not evidence the private runtime is reachable today, and not broad-market authorization.
 
 That release passed the macOS release-verifier regression, retained server search/reopen with safe fallback, persistence, anonymous denial/admin login, API loopback-only boundary, Chrome/Safari quick smoke and exact live release identity. Its HTTPS validation ingress publishes only the loopback web origin; the API remains loopback-only behind the same-origin web proxy.
 
@@ -57,14 +57,14 @@ Current founder spend is zero. Do not recommend, request or activate:
 - paid hosting, database or storage;
 - a purchased domain;
 - a billing-enabled service;
-- a card-required signup;
+- a card-required signup or verification without the founder's explicit approval;
 - a VM, object store, database or API subscription that can incur charges.
 
-OCI Always Free is a future option only if the founder later changes the no-card/no-billing-activation policy. Oracle's current Free Tier signup documentation requires valid credit/debit-card information and can use temporary authorization holds, so OCI signup is not a current action and is not a blocker.
+Issue #324 permits proposing a zero-cash free-tier signup that uses a genuine card solely for identity verification, subject to explicit founder approval and disclosure of any temporary authorization hold. OCI Always Free remains a conditional candidate, not an approved or established host: capacity can be unavailable and there is no free-tier SLA. Do not activate paid services, upgrade billing, or assume an available instance.
 
-The same rule applies to every alternative provider. A nominally free tier does not qualify as a current action if account creation requires a card or billing activation.
+Other providers must meet the same zero-cash, lawful private-service, persistence and security contracts. A card used for identity verification is not authorization for paid billing. Deplexo's 2026-10-05 terms prohibit private/password-protected services, so it is not a candidate for the private operator runtime.
 
-If no truly no-card, hard-free persistent host satisfies the current security and storage contracts, keep the private beta local rather than weakening persistence, authentication, ingress or recovery.
+If no genuinely zero-cash persistent host satisfies the security and storage contracts, keep private beta local rather than weakening persistence, authentication, ingress or recovery.
 
 ## Provider-neutral Linux deployment bundle
 
@@ -85,7 +85,7 @@ Do not add provider-specific deployment logic merely to make a future signup eas
 
 ## Active engineering stream
 
-The private-beta launch gate is green. The primary engineering objective is the authenticated analyst product: remove concrete friction from clue → evidence → source state → provenance → contradiction/uncertainty → operator decision while preserving the public/private and evidence-integrity boundaries.
+The bounded one-admin external-operator gate #340 closed/PASS, but broad public-market launch and paid acquisition remain NO-GO. Separate market gates still require exact evidence for product correctness, real-host reliability/scalability, security/privacy, recovery, UX/accessibility, observability/rollback, closed human validation and commercial readiness, with no known P0/P1 or launch-critical P2. Continue improving clue → evidence → source state → provenance → contradiction/uncertainty → justified conclusion/refusal without weakening evidence integrity.
 
 Issue #252 is the operator-workspace product-quality stream. Major post-LC1 improvements already merged include:
 
@@ -104,7 +104,7 @@ Issue #252 is the operator-workspace product-quality stream. Major post-LC1 impr
 - privacy-bounded retained-case analyst synopsis/handoff;
 - reviewed-document and retained-case workflow simulation in the public observer.
 
-Do not continue UI polishing merely to generate PR count. The next product change should remove a concrete operator bottleneck or correctness ambiguity.
+Do not continue UI polishing merely to generate PR count. Security candidates requiring repository and browser regression include expired-session concealment and failed logout revocation. Recovery candidates include preserving prepared rollback directories and independently restoring service enabled/running state. These are source/synthetic findings, not certified production incidents. #350 remains open; #324 remains open until a durable private host is accepted. Keep affected recovery, security and operator documentation in the same implementation tranche.
 
 ## Source governance
 
@@ -189,8 +189,8 @@ Before changing code:
 
 ## Immediate company-level priority
 
-Keep the public observer independent of founder hardware, keep the accepted one-admin private beta useful, and improve analyst decision efficiency while the private always-on hosting question remains intentionally unresolved under the no-card/no-billing policy.
+Keep the synthetic public observer independent of founder hardware, preserve the accepted one-admin private-beta boundary, and prioritize regression-backed session/recovery corrections. #324 remains open: no genuine always-on private host or real-host scalability proof exists.
 
-Continue provider-neutral Linux preparation and recovery contracts, but do not request any provider signup. Evaluate a truly no-card, hard-free host only if it offers durable persistent storage and can preserve exact release identity, protected SQLite, loopback API isolation, restart persistence, backup/restore and stable HTTPS ingress. Otherwise stay local.
+Continue provider-neutral Linux preparation and recovery contracts. Evaluate only genuinely zero-cash, private-service-permitted hosts with durable storage, exact release identity, protected SQLite, loopback API isolation, restart persistence, backup/restore and stable HTTPS ingress. A card solely for identity verification requires founder approval before signup; no paid activation. Otherwise stay local.
 
 Do not repeat already-passed SQLite, backup/restore, restart, authentication or browser acceptance work unless relevant inputs change or a concrete defect appears. Keep public observer parity through deterministic sanitized fixtures when private concepts change, and never couple the public Pages observer to the private API.
