@@ -29,17 +29,19 @@ LC1 proved the software and real-host shape. It did not create a permanent publi
 
 ## Current product baseline
 
-The product baseline entering the live-documentation block is PR #275 merged as `994cc50fb1f17a5dd6fde104179ed949e168b708` on 2026-08-28.
+PR #275 (`994cc50fb1f17a5dd6fde104179ed949e168b708`) is a historical operator-workspace milestone, not the current release. At the 2026-10-10 checkpoint, protected repository `main` is `1a70651a435e9263a1ed69b3c6125e20d6c11e4c`; verify it again before acting. Issue #340 accepted the bounded one-admin Mac-hosted private beta on release `af10d1c14615f439df46d050bb3850f001fb22d2` with rollback `a9a82e17e8a6edb0815374daac9edfccbb182ca5`. That acceptance is historical: it does not prove the private runtime is online now, that `main` is deployed privately, or that the product is ready for a public market.
 
 Post-LC1 operator work has already delivered the major v2 workflow changes: compact application chrome, explicit decision synthesis, retained-case search/filter/sort, first-class provenance, decisive M5-factor summaries, source-execution truth, guarded deletion, stale-retention handling, explicit session expiry, loading/failure/empty-state distinctions, safe locator copy and narrow keyboard shortcuts for repeated case work.
 
 Issue #252 remains the bounded operator-quality stream. Do not add UI changes simply because it is open. A change should remove a concrete analyst bottleneck, ambiguity or accessibility/interaction defect.
 
-## Live private beta — highest company priority
+## Private beta — durable-host gate
 
-PersonaLattice is already good enough to show and use as a one-admin project. Do not wait for every future provider or interaction refinement before putting a stable private beta online.
+The public observer is a static, synthetic, read-only Cloudflare Pages export. It is not the authenticated private product. The accepted Mac-hosted private beta is a bounded operator-validation milestone, not an always-on service. Issue #324 remains open until a real durable host passes acceptance. Do not claim always-on availability or market readiness based on green CI, the public observer, or a past Mac acceptance.
 
-The next company-level gate is operational:
+Before activating a private host, close regression-backed session-expiry concealment, failed-logout revocation and Linux release/recovery risks, including retained prepared-release preservation and enabled-versus-running service-state restoration. Treat these as source/synthetic risk findings, not established live incidents. Validate the Evidence Decision Desk at 1440/390/320 widths with keyboard/focus/reduced-motion and degraded, no-match, review-gated, auth-expired and destructive-action states. Do not substitute synthetic checks for closed real-user validation.
+
+The durable-host acceptance gate is operational:
 
 1. choose a stable HTTPS operating path;
 2. provide persistent protected storage for SQLite;
@@ -48,7 +50,7 @@ The next company-level gate is operational:
 5. rerun the bounded auth/CSRF/research/persistence/backup/browser smoke on the exact release SHA;
 6. record release and rollback evidence in `docs/CONTINUITY.md`.
 
-`docs/LIVE_BETA.md` is authoritative for the current choices. The lowest-churn stable path is a controlled host behind a named Cloudflare Tunnel on a domain/zone the operator controls. The repository also retains an optional paid Render topology at `deploy/render-paid.yaml`.
+`docs/LIVE_BETA.md` is authoritative for the current choices. A controlled persistent host behind a named Cloudflare Tunnel is a possible future architecture only if a lawful, genuinely zero-cash stable hostname/zone and provider capacity are available. A card solely for identity verification requires explicit founder approval after disclosure of any temporary authorization hold. No paid activation or domain purchase is authorized. The repository retains an optional paid Render reference at `deploy/render-paid.yaml`, not a current spending plan.
 
 Do not call a random Quick Tunnel a permanent beta endpoint, and do not place the current SQLite case store on an ephemeral hosted filesystem.
 
@@ -77,7 +79,9 @@ Synthetic regression cohorts can detect implementation regressions but do not ju
 
 If genuine reviewed/consented M10 evidence becomes available, evaluate it before changing the production correlation/convergence policy.
 
-## After the first stable beta
+## After durable private-host acceptance
+
+Durable private-host acceptance does not authorize commercial or broad-market launch. That separate gate requires evidence for product correctness; reliability and scalability on a real host; security, privacy and authority boundaries; data integrity and recovery; frontend accessibility and UX; observability and rollback; closed real-user validation; and commercial/legal readiness, with no unresolved launch-blocking defects.
 
 Continue in this order unless a real defect changes the priority:
 

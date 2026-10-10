@@ -10,19 +10,19 @@ Private always-on hosting is **not yet established**.
 
 ## Zero-cash rule
 
-Current infrastructure decisions must cost ₹0 and must not require a billing-enabled account or card-backed signup. Do not require:
+Current infrastructure decisions must cost ₹0. Do not activate:
 
 - a purchased domain;
-- paid database or storage;
-- paid or usage-billed hosting;
-- a credit/debit card for provider activation;
-- an account that can incur charges without an explicit founder policy change.
+- paid database, storage or usage-billed hosting;
+- Pay As You Go, billing upgrades or resources that can incur charges without explicit founder approval.
+
+Issue #324 permits *proposing* a genuinely zero-cash free-tier signup that requires a card solely for identity verification. This is not approval to sign up: the founder must personally approve the card/identity step after any temporary authorization hold, billing terms and limits are disclosed. Never collect card details in Git or the operator runtime.
 
 A provider's marketing label of “free tier” or “always free” is not sufficient. Account requirements, billing activation, persistent-storage guarantees and current terms all matter.
 
 Free stateless web hosts are not acceptable for the retained private-beta database when their local filesystem is ephemeral or disappears during spin-down/redeploy. Persistence and recovery are product requirements, not optional hosting details.
 
-If no truly no-card, hard-free host satisfies the stateful private-beta contract, keep the private beta local rather than weakening persistence or security.
+If no genuinely zero-cash host satisfies the stateful private-beta contract, keep the private beta local rather than weakening persistence or security.
 
 ## Provider-neutral Linux bundle
 
@@ -48,24 +48,17 @@ The environment template contains placeholders only. A real password hash, provi
 
 ## Provider status under the current policy
 
-Do not ask the founder to create an OCI account now.
+Oracle documents Always Free compute and persistent block storage. OCI is a **conditional candidate**, not an accepted host: signup requires identity verification with a valid card and may place a temporary authorization hold; free-tier capacity is not guaranteed and there is no free-tier SLA. Issue #324 allows proposing this option, not activating it without founder approval. Do not request signup until a bounded, immediately usable deployment and recovery plan has passed review.
 
-Oracle still documents Always Free compute and persistent block storage, so OCI remains a technically relevant **future** Linux-host candidate. But Oracle's current Free Tier signup documentation requires valid credit/debit-card information and may use temporary authorization holds. That conflicts with the current no-card/no-billing-activation policy.
+Deplexo is **not a private-runtime candidate**: its terms dated 2026-10-05 prohibit private/password-protected services, including on free plans.
 
-Therefore:
+The Linux bundle stays provider-neutral. No provider research authorizes weakening SQLite persistence, loopback API isolation, authentication, recovery or exact release identity. No paid-account upgrade is approved to work around free-capacity limits.
 
-- OCI is not a current blocker;
-- OCI signup is not a current action;
-- the Linux bundle must remain provider-neutral;
-- any alternative provider with card or billing activation requirements is held under the same rule;
-- provider capacity or signup research does not justify weakening SQLite persistence, loopback API isolation, authentication, recovery or release identity.
-
-If the founder later changes the no-card/no-billing policy, re-check Oracle's official account, billing, free-tier and capacity documentation before any provisioning decision.
-
-Reference evidence reviewed on 2026-09-04:
+Primary provider evidence checked on 2026-10-09:
 
 - Oracle Always Free resources: https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm
-- Oracle Free Tier FAQ/account requirements: https://www.oracle.com/cloud/free/faq/
+- Oracle Free Tier FAQ/account requirements, authorization holds, capacity and SLA: https://www.oracle.com/cloud/free/faq/
+- Deplexo terms (2026-10-05): https://deplexo.com/terms
 - Cloudflare Tunnel Linux service: https://developers.cloudflare.com/tunnel/advanced/local-management/as-a-service/linux/
 - Cloudflare Tunnel architecture: https://developers.cloudflare.com/tunnel/
 
@@ -83,13 +76,13 @@ Cloudflare ingress, if used later, is an additional network layer rather than a 
 
 SQLite remains the correct store while the product is one-admin and measured concurrency, tenancy or HA requirements do not justify a database migration. The existing backup process creates an integrity-checked SQLite backup plus SHA-256 and release provenance, then performs a restore check before declaring success.
 
-An off-host S3-compatible adapter may be prepared without activation, but an off-host target must not be enabled unless it has a genuine zero-cash/no-card durable path. Until then, keep verified owner-only local backups and do not treat an ephemeral free filesystem as disaster recovery.
+An off-host S3-compatible adapter may be prepared without activation, but an off-host target must not be enabled unless it has a genuinely zero-cash durable path with any required identity verification separately approved. Until then, keep verified owner-only local backups and do not treat an ephemeral free filesystem as disaster recovery.
 
 ## Future host activation gate
 
 Do not activate a private always-on host under the current policy unless all of these are true:
 
-1. Current official provider terms confirm no payment, card or billing activation is required.
+1. Current official provider terms confirm zero-cash operation without paid billing activation. Any card solely for identity verification requires explicit founder approval and prior disclosure of possible authorization holds.
 2. Persistent storage is genuinely durable across restart/redeploy and does not silently expire under the free plan.
 3. The host supports the existing one-worker architecture and protected SQLite path.
 4. Exact release identity and rollback remain verifiable.
@@ -100,4 +93,4 @@ Do not activate a private always-on host under the current policy unless all of 
 
 If any of those fail, the correct action is to remain on the Mac validation beta. Do not trade away persistence or security merely to obtain an “always-on” label.
 
-A commercial multi-user launch is a different milestone. Team authorization, HA, stronger off-host backup, operational monitoring and a database migration should be justified by measured demand rather than installed pre-emptively.
+A commercial multi-user launch is a separate NO-GO milestone until product correctness, real-host reliability/scalability, security/privacy, data recovery, UX/accessibility, observability/rollback, closed human validation and commercial readiness have been evidenced. Team authorization, HA, stronger off-host backup, operational monitoring and a database migration should be justified by measured demand rather than installed pre-emptively.
