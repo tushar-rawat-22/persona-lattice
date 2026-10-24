@@ -32,12 +32,14 @@ esac
 STUB
 cat > "$TMP/release/scripts/live_beta_restore.sh" <<'STUB'
 #!/usr/bin/env bash
-[[ $# -eq 2 && "$2" == '--confirm-offline' ]] || exit 7
+[[ $# -eq 2 && "$1" == "$TEST_FAKE_BACKUP" && "$2" == '--confirm-offline' ]] || exit 7
 printf 'entered\n' >> "$TEST_RESTORE_SENTINEL"
 STUB
 chmod +x "$TMP/bin/readlink" "$TMP/bin/systemctl" "$TMP/release/scripts/live_beta_restore.sh"
 export PATH="$TMP/bin:$PATH"
 export TEST_RELEASE_ROOT="$TMP/release" TEST_RESTORE_SENTINEL="$TMP/restore.log"
+export TEST_FAKE_BACKUP="$TMP/fake-backup.sqlite3"
+[[ ! -e "$TEST_FAKE_BACKUP" ]] || { echo "mock backup path must not exist" >&2; exit 2; }
 run_case() {
   local name="$1" allow="$2" load="$3" active="$4" isactive="$5" loadexit="$6" activeexit="$7" unavailable="$8"
   export TEST_LOAD_STATE="$load" TEST_ACTIVE_STATE="$active" TEST_IS_ACTIVE_EXIT="$isactive"
@@ -46,7 +48,7 @@ run_case() {
   local rc=0
   bash "$WRAPPER" "$TMP/fake-backup.sqlite3" >"$TMP/stdout" 2>"$TMP/stderr" || rc=$?
   if [[ "$allow" == yes ]]; then
-    [[ "$rc" == 0 && -f "$TEST_RESTORE_SENTINEL" && "$(wc -l < "$TEST_RESTORE_SENTINEL")" == 1 ]] || {
+    [[ "$rc" == 0 && -f "$TEST_RESTORE_SENTINEL" && "$(grep -c '^entered$' "$TEST_RESTORE_SENTINEL")" == 1 ]] || {
       printf 'FAIL %s expected single mocked restore (rc=%s)\n' "$name" "$rc" >&2; exit 1;
     }
   else

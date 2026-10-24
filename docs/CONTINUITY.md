@@ -79,6 +79,8 @@ If no genuinely zero-cash persistent host satisfies the security and storage con
 - API loopback-only isolation;
 - health and release verification;
 - integrity-checked backup/restore;
+- fail-closed offline restore only from an unambiguous loaded/inactive systemd state;
+- deliberate operator-owned backup retention with no automatic pruning;
 - optional web-only Cloudflare Tunnel ingress with unmatched routes failing closed.
 
 Do not add provider-specific deployment logic merely to make a future signup easier. The deployment contract should remain portable.

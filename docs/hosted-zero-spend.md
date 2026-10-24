@@ -76,6 +76,10 @@ Cloudflare ingress, if used later, is an additional network layer rather than a 
 
 SQLite remains the correct store while the product is one-admin and measured concurrency, tenancy or HA requirements do not justify a database migration. The existing backup process creates an integrity-checked SQLite backup plus SHA-256 and release provenance, then performs a restore check before declaring success.
 
+The recovery tooling never prunes backups automatically. Each backup, checksum/provenance sidecar and pre-restore safety copy remains owner-only until an operator deliberately removes it under an accepted retention procedure. A real-host acceptance must set a storage-capacity/retention policy, retain at least one independently verified recovery set and prove any deletion target is not the active database or the only usable backup.
+
+Offline restore is permitted only when systemd reports `persona-lattice.service` as both `loaded` and `inactive`. Active, failed, activating/deactivating, missing, masked, contradictory and unreadable service states abort before the restore implementation is entered. Protected launch CI exercises that gate with synthetic paths and a mocked restore executable; it never opens a retained investigation database.
+
 An off-host S3-compatible adapter may be prepared without activation, but an off-host target must not be enabled unless it has a genuinely zero-cash durable path with any required identity verification separately approved. Until then, keep verified owner-only local backups and do not treat an ephemeral free filesystem as disaster recovery.
 
 ## Future host activation gate
