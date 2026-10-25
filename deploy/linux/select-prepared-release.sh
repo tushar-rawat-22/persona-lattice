@@ -83,11 +83,6 @@ if [[ "$PREVIOUS_RELEASE" == "$TARGET_RELEASE" ]]; then
   exit 0
 fi
 
-install -d -m 0700 -o root -g root "$RUNTIME_ROOT"
-UNIT_BACKUP="$(mktemp "$RUNTIME_ROOT/select-unit.XXXXXX")"
-chmod 0600 "$UNIT_BACKUP"
-cp -- "$UNIT_TARGET" "$UNIT_BACKUP"
-
 # Capture exit statuses rather than treating every nonzero result as a
 # deliberate disabled/stopped state. Require independent, consistent systemd
 # properties before changing either the current release or installed unit.
@@ -117,6 +112,13 @@ case "$IS_ACTIVE_EXIT:$ACTIVE_STATE" in
   3:inactive) WAS_ACTIVE=0 ;;
   *) fail "ambiguous service activity (exit $IS_ACTIVE_EXIT, state $ACTIVE_STATE)" ;;
 esac
+
+
+install -d -m 0700 -o root -g root "$RUNTIME_ROOT"
+UNIT_BACKUP="$(mktemp "$RUNTIME_ROOT/select-unit.XXXXXX")"
+chmod 0600 "$UNIT_BACKUP"
+cp -- "$UNIT_TARGET" "$UNIT_BACKUP"
+
 
 wait_for_release_health() {
   local attempt
