@@ -51,9 +51,12 @@ case "$1" in
       --property=UnitFileState) printf '%s\n' "$MOCK_UNIT_STATE" ;;
       *) exit 99 ;;
     esac ;;
-  daemon-reload|enable|disable|restart|stop)
+  daemon-reload|enable|disable|stop)
     printf '%s\n' "$1" >> "$MOCK_MUTATION_LOG"
     exit 0 ;;
+  restart)
+    printf '%s\n' "$1" >> "$MOCK_MUTATION_LOG"
+    exit "${MOCK_RESTART_EXIT:-0}" ;;
   *) exit 99 ;;
 esac
 STUB
@@ -124,4 +127,36 @@ run_case inactive-state-contradiction no 1 3 disabled active active 0
 run_case masked-unit no 1 3 masked inactive loaded 0
 run_case missing-unit no 1 3 disabled inactive not-found 0
 run_case show-query-error no 0 0 enabled active loaded 127
+
+# Force the selected release and the attempted prior-release recovery to fail
+# restarting. The operator must retain the root-only unit checkpoint for manual
+# recovery when the prior state cannot be fully restored.
+run_failed_restart_checkpoint_case() {
+  export MOCK_ENABLED_EXIT=0 MOCK_ACTIVE_EXIT=0
+  export MOCK_UNIT_STATE=enabled MOCK_ACTIVE_STATE=active MOCK_LOAD_STATE=loaded
+  export MOCK_SHOW_EXIT=0 MOCK_RESTART_EXIT=1
+  rm -f "$TMP/current" "$MOCK_MUTATION_LOG" "$TMP/runtime"/select-unit.*
+  ln -s "$TMP/releases/$A" "$TMP/current"
+  cp "$TMP/releases/$A/deploy/linux/persona-lattice.service" "$TMP/systemd/persona-lattice.service"
+  local rc=0
+  bash "$TMP/selector.sh" "$B" > "$TMP/stdout" 2> "$TMP/stderr" || rc=$?
+  [[ "$rc" != 0 ]] || { echo "FAIL restart-recovery-failure unexpectedly succeeded" >&2; exit 1; }
+  [[ "$(readlink -f "$TMP/current")" == "$TMP/releases/$A" ]] || {
+    echo "FAIL restart-recovery-failure did not restore prior release link" >&2; exit 1;
+  }
+  [[ "$(cat "$TMP/systemd/persona-lattice.service")" == "$A" ]] || {
+    echo "FAIL restart-recovery-failure did not restore prior unit" >&2; exit 1;
+  }
+  if ! compgen -G "$TMP/runtime/select-unit.*" >/dev/null; then
+    echo "FAIL restart-recovery-failure discarded unit checkpoint despite failed recovery" >&2
+    exit 1
+  fi
+  [[ "$(grep -c restart "$MOCK_MUTATION_LOG")" == 2 ]] || {
+    echo "FAIL restart-recovery-failure did not exercise both restart attempts" >&2; exit 1;
+  }
+  unset MOCK_RESTART_EXIT
+  echo "PASS restart-recovery-failure preserves unit checkpoint"
+}
+run_failed_restart_checkpoint_case
+
 echo "PASS prepared-release selector service-state mocks; no rejected state mutated release/unit."
