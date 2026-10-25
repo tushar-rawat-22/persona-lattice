@@ -153,8 +153,13 @@ restore_prior_state() {
     systemctl stop "$SERVICE_NAME" >/dev/null 2>&1 || failed=1
   fi
 
-  rm -f "$UNIT_BACKUP" || failed=1
-  [[ "$failed" -eq 0 ]]
+  # An incomplete recovery requires operator intervention. Keep the
+  # owner-only unit checkpoint instead of destroying the recovery evidence.
+  if [[ "$failed" -ne 0 ]]; then
+    printf 'Prior-release recovery incomplete; unit checkpoint retained at %s\n' "$UNIT_BACKUP" >&2
+    return 1
+  fi
+  rm -f "$UNIT_BACKUP"
 }
 
 # Preserve prior enabled/running authority. Selecting a prepared rollback is
