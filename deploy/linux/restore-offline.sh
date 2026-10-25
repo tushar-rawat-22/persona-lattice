@@ -11,13 +11,15 @@ ROOT="$(readlink -f /opt/persona-lattice/current)"
 export PERSONALATTICE_PRODUCTION_ENV_FILE=/etc/persona-lattice/production.env
 export PERSONALATTICE_BACKUP_DIR=/var/lib/persona-lattice/backups
 
-if systemctl is-active --quiet persona-lattice.service 2>/dev/null; then
-  printf 'restore refused: stop persona-lattice.service before restoring retained state\n' >&2
+# `is-active` returns 3 for an inactive service. Any other status, including
+# active (0) or command/manager errors, must fail closed before restore.
+IS_ACTIVE_EXIT=0
+systemctl is-active --quiet persona-lattice.service 2>/dev/null || IS_ACTIVE_EXIT=$?
+if [[ "$IS_ACTIVE_EXIT" -ne 3 ]]; then
+  printf 'restore refused: service must be inactive (is-active exit %s; expected 3)\n' "$IS_ACTIVE_EXIT" >&2
   exit 1
 fi
 
-# A nonzero is-active exit code alone cannot distinguish inactive from
-# missing, failed, unknown, or an inaccessible systemd manager.
 if ! LOAD_STATE="$(systemctl show --property=LoadState --value persona-lattice.service 2>/dev/null)"; then
   printf 'restore refused: cannot establish service load state\n' >&2
   exit 1
