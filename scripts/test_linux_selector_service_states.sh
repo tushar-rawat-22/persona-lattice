@@ -82,7 +82,7 @@ run_case() {
   export MOCK_ENABLED_EXIT="$enabled_exit" MOCK_ACTIVE_EXIT="$active_exit"
   export MOCK_UNIT_STATE="$unit_state" MOCK_ACTIVE_STATE="$active_state"
   export MOCK_LOAD_STATE="$load_state" MOCK_SHOW_EXIT="$show_exit"
-  rm -f "$TMP/current" "$MOCK_MUTATION_LOG"
+  rm -f "$TMP/current" "$MOCK_MUTATION_LOG" "$TMP/runtime"/select-unit.*
   ln -s "$TMP/releases/$A" "$TMP/current"
   cp "$TMP/releases/$A/deploy/linux/persona-lattice.service" "$TMP/systemd/persona-lattice.service"
   local rc=0
@@ -102,6 +102,10 @@ run_case() {
       echo "FAIL $name changed unit or called mutating systemctl" >&2
       exit 1
     }
+    if compgen -G "$TMP/runtime/select-unit.*" >/dev/null; then
+      echo "FAIL $name created a rollback checkpoint before trusted state" >&2
+      exit 1
+    fi
   fi
   echo "PASS $name"
 }
