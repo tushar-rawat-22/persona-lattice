@@ -73,11 +73,39 @@ exit 0
 STUB
 cat > "$TMP/bin/curl" <<'STUB'
 #!/usr/bin/env bash
+# Simulate health loss only for the newly selected release, or for both releases.
+case "${MOCK_HEALTH_FAIL_MODE:-none}" in
+  all) exit 22 ;;
+  selected)
+    if [[ "$(readlink -f "$MOCK_CURRENT_LINK")" == "$MOCK_TARGET_RELEASE" ]]; then
+      exit 22
+    fi ;;
+esac
 exit 0
+STUB
+cat > "$TMP/bin/sleep" <<'STUB'
+#!/usr/bin/env bash
+# Keep forty health retries fast in disposable tests.
+exit 0
+STUB
+cat > "$TMP/bin/install" <<'STUB'
+#!/usr/bin/env bash
+# Fail the first installed-unit replacement, but allow prior-state recovery.
+if [[ "${MOCK_INSTALL_FAIL_ONCE:-0}" == 1
+      && "${@: -1}" == "$MOCK_UNIT_TARGET"
+      && ! -e "$MOCK_INSTALL_FAIL_MARKER" ]]; then
+  : > "$MOCK_INSTALL_FAIL_MARKER"
+  exit 55
+fi
+exec /usr/bin/install "$@"
 STUB
 chmod +x "$TMP/bin/"*
 export PATH="$TMP/bin:$PATH"
 export MOCK_MUTATION_LOG="$TMP/mutations"
+export MOCK_CURRENT_LINK="$TMP/current"
+export MOCK_TARGET_RELEASE="$TMP/releases/$B"
+export MOCK_UNIT_TARGET="$TMP/systemd/persona-lattice.service"
+export MOCK_INSTALL_FAIL_MARKER="$TMP/install-failed-once"
 
 run_case() {
   local name="$1" allowed="$2" enabled_exit="$3" active_exit="$4"
@@ -159,4 +187,70 @@ run_failed_restart_checkpoint_case() {
 }
 run_failed_restart_checkpoint_case
 
-echo "PASS prepared-release selector service-state mocks; no rejected state mutated release/unit."
+# Health failure must restore the old release, its installed unit and service
+# authority. If the prior release also fails health, retain the unit checkpoint.
+run_health_failure_case() {
+  local mode="$1" rc=0
+  export MOCK_ENABLED_EXIT=0 MOCK_ACTIVE_EXIT=0
+  export MOCK_UNIT_STATE=enabled MOCK_ACTIVE_STATE=active MOCK_LOAD_STATE=loaded
+  export MOCK_SHOW_EXIT=0 MOCK_HEALTH_FAIL_MODE="$mode"
+  rm -f "$TMP/current" "$MOCK_MUTATION_LOG" "$TMP/runtime"/select-unit.*
+  ln -s "$TMP/releases/$A" "$TMP/current"
+  cp "$TMP/releases/$A/deploy/linux/persona-lattice.service" "$TMP/systemd/persona-lattice.service"
+  bash "$TMP/selector.sh" "$B" > "$TMP/stdout" 2> "$TMP/stderr" || rc=$?
+  [[ "$rc" != 0 ]] || { echo "FAIL health-$mode unexpectedly succeeded" >&2; exit 1; }
+  [[ "$(readlink -f "$TMP/current")" == "$TMP/releases/$A" ]] || {
+    echo "FAIL health-$mode did not restore previous release" >&2; exit 1;
+  }
+  [[ "$(cat "$TMP/systemd/persona-lattice.service")" == "$A" ]] || {
+    echo "FAIL health-$mode did not restore previous unit" >&2; exit 1;
+  }
+  [[ "$(grep -c '^restart
+ "$MOCK_MUTATION_LOG")" == 2 ]] || {
+    echo "FAIL health-$mode did not exercise both restarts" >&2; exit 1;
+  }
+  if [[ "$mode" == selected ]]; then
+    if compgen -G "$TMP/runtime/select-unit.*" >/dev/null; then
+      echo "FAIL health-selected left a checkpoint after verified recovery" >&2; exit 1;
+    fi
+  else
+    if ! compgen -G "$TMP/runtime/select-unit.*" >/dev/null; then
+      echo "FAIL health-all discarded checkpoint after unverified recovery" >&2; exit 1;
+    fi
+  fi
+  unset MOCK_HEALTH_FAIL_MODE
+  echo "PASS health-$mode restores prior selection; checkpoint retention matches recovery"
+}
+run_health_failure_case selected
+run_health_failure_case all
+
+# Simulate a partial forward mutation: the symlink changes, then installing the
+# selected systemd unit fails. Recovery must restore both paths and remove the
+# checkpoint only after the previous service passes health.
+run_unit_install_failure_case() {
+  local rc=0
+  export MOCK_ENABLED_EXIT=0 MOCK_ACTIVE_EXIT=0
+  export MOCK_UNIT_STATE=enabled MOCK_ACTIVE_STATE=active MOCK_LOAD_STATE=loaded
+  export MOCK_SHOW_EXIT=0 MOCK_INSTALL_FAIL_ONCE=1
+  rm -f "$TMP/current" "$MOCK_MUTATION_LOG" "$MOCK_INSTALL_FAIL_MARKER" "$TMP/runtime"/select-unit.*
+  ln -s "$TMP/releases/$A" "$TMP/current"
+  cp "$TMP/releases/$A/deploy/linux/persona-lattice.service" "$TMP/systemd/persona-lattice.service"
+  bash "$TMP/selector.sh" "$B" > "$TMP/stdout" 2> "$TMP/stderr" || rc=$?
+  [[ "$rc" != 0 && -e "$MOCK_INSTALL_FAIL_MARKER" ]] || {
+    echo "FAIL unit-install-failure did not exercise failed forward installation" >&2; exit 1;
+  }
+  [[ "$(readlink -f "$TMP/current")" == "$TMP/releases/$A" ]] || {
+    echo "FAIL unit-install-failure did not restore previous release" >&2; exit 1;
+  }
+  [[ "$(cat "$TMP/systemd/persona-lattice.service")" == "$A" ]] || {
+    echo "FAIL unit-install-failure did not restore previous unit" >&2; exit 1;
+  }
+  if compgen -G "$TMP/runtime/select-unit.*" >/dev/null; then
+    echo "FAIL unit-install-failure left checkpoint after verified recovery" >&2; exit 1;
+  fi
+  unset MOCK_INSTALL_FAIL_ONCE
+  echo "PASS unit-install-failure restores prior release/unit after partial mutation"
+}
+run_unit_install_failure_case
+
+echo "PASS prepared-release selector service-state and failure-atomic recovery mocks."
