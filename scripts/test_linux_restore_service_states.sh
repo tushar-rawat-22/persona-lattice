@@ -71,4 +71,9 @@ run_case load-query-error no loaded inactive 3 1 0 0
 run_case activity-query-error no loaded inactive 3 0 1 0
 run_case systemd-unavailable no loaded inactive 3 0 0 1
 run_case active-status-conflict no loaded inactive 0 0 0 0
-echo 'PASS 13/13 mocked service-state scenarios; no rejected restore entered.'
+run_case unexpected-is-active-1 no loaded inactive 1 0 0 0
+run_case unexpected-is-active-2 no loaded inactive 2 0 0 0
+run_case unexpected-is-active-4 no loaded inactive 4 0 0 0
+run_case unexpected-is-active-5 no loaded inactive 5 0 0 0
+run_case unexpected-is-active-127 no loaded inactive 127 0 0 0
+echo 'PASS 18/18 mocked service-state scenarios; no rejected restore entered.'
