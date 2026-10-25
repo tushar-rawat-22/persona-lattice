@@ -28,10 +28,10 @@ validate_retained_release_tree() {
       printf '%s\n' "$label contains a broken retained symlink: $symlink" >&2
       exit 1
     fi
-    if [[ "$resolved" != "$release" && "$resolved" != "$release/"* ]]; then
+    [[ "$resolved" == "$release" || "$resolved" == "$release/"* ]] || {
       printf '%s\n' "$label contains a retained symlink that escapes its release tree: $symlink" >&2
       exit 1
-    fi
+    }
   done; then
     fail "$label retained symlink scan failed"
   fi
