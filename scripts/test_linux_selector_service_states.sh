@@ -151,8 +151,7 @@ run_failed_restart_checkpoint_case() {
     echo "FAIL restart-recovery-failure discarded unit checkpoint despite failed recovery" >&2
     exit 1
   fi
-  [[ "$(grep -c '^restart
- "$MOCK_MUTATION_LOG")" == 2 ]] || {
+  [[ "$(grep -c restart "$MOCK_MUTATION_LOG")" == 2 ]] || {
     echo "FAIL restart-recovery-failure did not exercise both restart attempts" >&2; exit 1;
   }
   unset MOCK_RESTART_EXIT
