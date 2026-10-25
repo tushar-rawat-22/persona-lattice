@@ -67,8 +67,12 @@ printf '0\n'
 STUB
 cat > "$TMP/bin/find" <<'STUB'
 #!/usr/bin/env bash
-# Root ownership/symlink traversal is covered by separate static contracts.
-# This test isolates the service-state preflight only.
+# A failed symlink enumeration must abort before any release mutation.
+# This models a filesystem/find error on the second retained-tree scan.
+if [[ "${MOCK_FIND_SYMLINK_SCAN_EXIT:-0}" != 0 && " $* " == *" -print0 "* ]]; then
+  exit "$MOCK_FIND_SYMLINK_SCAN_EXIT"
+fi
+# Other root ownership and symlink traversal checks have separate contracts.
 exit 0
 STUB
 cat > "$TMP/bin/curl" <<'STUB'
@@ -155,6 +159,12 @@ run_case inactive-state-contradiction no 1 3 disabled active active 0
 run_case masked-unit no 1 3 masked inactive loaded 0
 run_case missing-unit no 1 3 disabled inactive not-found 0
 run_case show-query-error no 0 0 enabled active loaded 127
+
+# The original process-substitution loop discarded find's nonzero exit status.
+# No release, unit, systemd mutation or rollback checkpoint may be created.
+export MOCK_FIND_SYMLINK_SCAN_EXIT=74
+run_case retained-symlink-scan-error no 0 0 enabled active loaded 0
+unset MOCK_FIND_SYMLINK_SCAN_EXIT
 
 # Force the selected release and the attempted prior-release recovery to fail
 # restarting. The operator must retain the root-only unit checkpoint for manual
