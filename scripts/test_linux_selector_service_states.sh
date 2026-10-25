@@ -205,8 +205,7 @@ run_health_failure_case() {
   [[ "$(cat "$TMP/systemd/persona-lattice.service")" == "$A" ]] || {
     echo "FAIL health-$mode did not restore previous unit" >&2; exit 1;
   }
-  [[ "$(grep -c '^restart
- "$MOCK_MUTATION_LOG")" == 2 ]] || {
+  [[ "$(grep -c restart "$MOCK_MUTATION_LOG")" == 2 ]] || {
     echo "FAIL health-$mode did not exercise both restarts" >&2; exit 1;
   }
   if [[ "$mode" == selected ]]; then
