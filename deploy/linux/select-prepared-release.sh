@@ -88,14 +88,35 @@ UNIT_BACKUP="$(mktemp "$RUNTIME_ROOT/select-unit.XXXXXX")"
 chmod 0600 "$UNIT_BACKUP"
 cp -- "$UNIT_TARGET" "$UNIT_BACKUP"
 
-WAS_ENABLED=0
-WAS_ACTIVE=0
-if systemctl is-enabled --quiet "$SERVICE_NAME" >/dev/null 2>&1; then
-  WAS_ENABLED=1
+# Capture exit statuses rather than treating every nonzero result as a
+# deliberate disabled/stopped state. Require independent, consistent systemd
+# properties before changing either the current release or installed unit.
+IS_ENABLED_EXIT=0
+systemctl is-enabled --quiet "$SERVICE_NAME" >/dev/null 2>&1 || IS_ENABLED_EXIT=$?
+IS_ACTIVE_EXIT=0
+systemctl is-active --quiet "$SERVICE_NAME" >/dev/null 2>&1 || IS_ACTIVE_EXIT=$?
+
+if ! LOAD_STATE="$(systemctl show --property=LoadState --value "$SERVICE_NAME" 2>/dev/null)"; then
+  fail "cannot establish systemd load state"
 fi
-if systemctl is-active --quiet "$SERVICE_NAME" >/dev/null 2>&1; then
-  WAS_ACTIVE=1
+if ! ACTIVE_STATE="$(systemctl show --property=ActiveState --value "$SERVICE_NAME" 2>/dev/null)"; then
+  fail "cannot establish systemd activity state"
 fi
+if ! UNIT_FILE_STATE="$(systemctl show --property=UnitFileState --value "$SERVICE_NAME" 2>/dev/null)"; then
+  fail "cannot establish systemd enablement state"
+fi
+[[ "$LOAD_STATE" == loaded ]] || fail "service is not unambiguously loaded"
+
+case "$IS_ENABLED_EXIT:$UNIT_FILE_STATE" in
+  0:enabled) WAS_ENABLED=1 ;;
+  1:disabled) WAS_ENABLED=0 ;;
+  *) fail "ambiguous service enablement (exit $IS_ENABLED_EXIT, state $UNIT_FILE_STATE)" ;;
+esac
+case "$IS_ACTIVE_EXIT:$ACTIVE_STATE" in
+  0:active) WAS_ACTIVE=1 ;;
+  3:inactive) WAS_ACTIVE=0 ;;
+  *) fail "ambiguous service activity (exit $IS_ACTIVE_EXIT, state $ACTIVE_STATE)" ;;
+esac
 
 wait_for_release_health() {
   local attempt
