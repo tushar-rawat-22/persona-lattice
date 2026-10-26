@@ -20,7 +20,9 @@ curl --disable --silent --show-error --fail --max-time 5 http://127.0.0.1:18000/
 curl --disable --silent --show-error --fail --max-time 5 http://127.0.0.1:13000/api/health >/dev/null || fail "same-origin web/API health failed"
 
 for port in 13000 18000; do
-  listeners="$(ss -H -ltn "sport = :$port" || true)"
+  if ! listeners="$(ss -H -ltn "sport = :$port")"; then
+    fail "cannot complete listener inspection for port $port"
+  fi
   [[ -n "$listeners" ]] || fail "port $port has no listener"
   if printf '%s\n' "$listeners" | awk '{print $4}' | grep -Ev '^(127\.0\.0\.1|\[::1\]):' >/dev/null; then
     fail "port $port is listening beyond loopback"
