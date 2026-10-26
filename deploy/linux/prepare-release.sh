@@ -163,12 +163,6 @@ if [[ -n "$PREVIOUS_RELEASE" ]]; then
     || fail "installed systemd unit does not match the current prepared release; repair host state before preparing another release"
 fi
 
-UNIT_BACKUP=""
-if [[ -f "$UNIT_TARGET" ]]; then
-  UNIT_BACKUP="$(mktemp "$RELEASE_RUNTIME_ROOT/unit.XXXXXX")"
-  chmod 0600 "$UNIT_BACKUP"
-  cp -- "$UNIT_TARGET" "$UNIT_BACKUP"
-fi
 # Capture prior service authority before attempting activation. Nonzero does
 # not necessarily mean disabled/inactive: manager and command errors fail closed.
 WAS_ENABLED=0
@@ -208,6 +202,14 @@ else
     3:inactive) WAS_ACTIVE=0 ;;
     *) fail "ambiguous prior service activity (exit $IS_ACTIVE_EXIT, state $ACTIVE_STATE)" ;;
   esac
+fi
+
+# Only checkpoint the installed unit after prior systemd state is unambiguous.
+UNIT_BACKUP=""
+if [[ -f "$UNIT_TARGET" ]]; then
+  UNIT_BACKUP="$(mktemp "$RELEASE_RUNTIME_ROOT/unit.XXXXXX")"
+  chmod 0600 "$UNIT_BACKUP"
+  cp -- "$UNIT_TARGET" "$UNIT_BACKUP"
 fi
 
 wait_for_release_health() {
