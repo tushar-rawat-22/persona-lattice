@@ -211,7 +211,11 @@ rollback_activation() {
     systemctl disable persona-lattice.service >/dev/null 2>&1 || rollback_failed=1
   fi
 
-  [[ -z "$UNIT_BACKUP" ]] || rm -f "$UNIT_BACKUP" || rollback_failed=1
+  # A failed recovery needs its original unit checkpoint for operator repair.
+  # Discard it only after the previous service state is actually recovered.
+  if [[ "$rollback_failed" -eq 0 && -n "$UNIT_BACKUP" ]]; then
+    rm -f "$UNIT_BACKUP" || rollback_failed=1
+  fi
   [[ "$rollback_failed" -eq 0 ]]
 }
 
