@@ -134,6 +134,7 @@ jobs:
           bash -n scripts/test_linux_restore_service_states.sh
           bash -n deploy/linux/select-prepared-release.sh
           bash -n scripts/test_linux_selector_service_states.sh
+          bash -n scripts/test_linux_prepare_symlink_scan.sh
           bash scripts/test_lc1_api_process_contract.sh
           bash scripts/test_lc1_npm_worktree.sh
           bash scripts/test_lc1_python_selection.sh
@@ -150,6 +151,7 @@ jobs:
           bash scripts/test_linux_private_beta_recovery.sh
           bash scripts/test_linux_restore_service_states.sh
           bash scripts/test_linux_selector_service_states.sh
+          bash scripts/test_linux_prepare_symlink_scan.sh
       - name: Build and exercise production processes
         shell: bash
         run: |
