@@ -30,7 +30,7 @@ import sys
 
 source = pathlib.Path(sys.argv[1]).read_text()
 start = source.index("WAS_ENABLED=0\n")
-end = source.index("\nwait_for_release_health() {", start)
+end = source.index("\n# Only checkpoint the installed unit after prior systemd state is unambiguous.", start)
 block = source[start:end]
 harness = (
     '#!/usr/bin/env bash\nset -euo pipefail\n'
