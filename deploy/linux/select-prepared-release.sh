@@ -21,13 +21,20 @@ validate_retained_release_tree() {
   [[ -z "$unsafe_path" ]] \
     || fail "$label contains non-root-owned or writable retained state: $unsafe_path"
 
-  while IFS= read -r -d '' symlink; do
+  # A process-substitution producer can fail without failing its consumer.
+  # Keep pipefail status so a partial/failed symlink scan never authorizes rollback.
+  if ! find "$release" -xdev -type l -print0 | while IFS= read -r -d '' symlink; do
     if ! resolved="$(readlink -f -- "$symlink")"; then
-      fail "$label contains a broken retained symlink: $symlink"
+      printf '%s\n' "$label contains a broken retained symlink: $symlink" >&2
+      exit 1
     fi
-    [[ "$resolved" == "$release" || "$resolved" == "$release/"* ]] \
-      || fail "$label contains a retained symlink that escapes its release tree: $symlink"
-  done < <(find "$release" -xdev -type l -print0)
+    [[ "$resolved" == "$release" || "$resolved" == "$release/"* ]] || {
+      printf '%s\n' "$label contains a retained symlink that escapes its release tree: $symlink" >&2
+      exit 1
+    }
+  done; then
+    fail "$label retained symlink scan failed"
+  fi
 }
 
 [[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"
