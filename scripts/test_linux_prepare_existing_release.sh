@@ -19,6 +19,7 @@ harness = (
     '#!/usr/bin/env bash\nset -euo pipefail\n'
     'RELEASE_ROOT="$1/releases"\nCURRENT_LINK="$1/current"\n'
     'TARGET_SHA="$2"\nMOCK_GIT_LOG="$1/git-actions"\n'
+    'REPOSITORY_URL="https://invalid.example.invalid/repo.git"\n'
     'fail() { printf "DENY: %s\\n" "$1" >&2; exit 1; }\n'
     'git() { printf "%s\\n" "$*" >> "$MOCK_GIT_LOG"; return 75; }\n'
     + block + '\n'
