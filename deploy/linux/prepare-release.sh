@@ -169,9 +169,45 @@ if [[ -f "$UNIT_TARGET" ]]; then
   chmod 0600 "$UNIT_BACKUP"
   cp -- "$UNIT_TARGET" "$UNIT_BACKUP"
 fi
+# Capture prior service authority before attempting activation. Nonzero does
+# not necessarily mean disabled/inactive: manager and command errors fail closed.
 WAS_ENABLED=0
-if systemctl is-enabled --quiet persona-lattice.service >/dev/null 2>&1; then
-  WAS_ENABLED=1
+WAS_ACTIVE=0
+IS_ENABLED_EXIT=0
+systemctl is-enabled --quiet persona-lattice.service >/dev/null 2>&1 || IS_ENABLED_EXIT=$?
+IS_ACTIVE_EXIT=0
+systemctl is-active --quiet persona-lattice.service >/dev/null 2>&1 || IS_ACTIVE_EXIT=$?
+if ! LOAD_STATE="$(systemctl show --property=LoadState --value persona-lattice.service 2>/dev/null)"; then
+  fail "cannot establish prior service load state"
+fi
+if ! ACTIVE_STATE="$(systemctl show --property=ActiveState --value persona-lattice.service 2>/dev/null)"; then
+  fail "cannot establish prior service activity state"
+fi
+if ! UNIT_FILE_STATE="$(systemctl show --property=UnitFileState --value persona-lattice.service 2>/dev/null)"; then
+  fail "cannot establish prior service enablement state"
+fi
+
+if [[ -z "$PREVIOUS_RELEASE" ]]; then
+  # An uninstalled first release has no current symlink or installed unit.
+  # Only an explicitly absent systemd unit permits first-time activation.
+  [[ ! -e "$UNIT_TARGET" && ! -L "$UNIT_TARGET" ]] \
+    || fail "installed service exists without a selected prior release"
+  [[ "$IS_ENABLED_EXIT" -eq 4 && ( "$IS_ACTIVE_EXIT" -eq 3 || "$IS_ACTIVE_EXIT" -eq 4 ) \
+     && "$LOAD_STATE" == not-found && "$ACTIVE_STATE" == inactive \
+     && -z "$UNIT_FILE_STATE" ]] \
+    || fail "ambiguous first-install service state"
+else
+  [[ "$LOAD_STATE" == loaded ]] || fail "prior service is not unambiguously loaded"
+  case "$IS_ENABLED_EXIT:$UNIT_FILE_STATE" in
+    0:enabled) WAS_ENABLED=1 ;;
+    1:disabled) WAS_ENABLED=0 ;;
+    *) fail "ambiguous prior service enablement (exit $IS_ENABLED_EXIT, state $UNIT_FILE_STATE)" ;;
+  esac
+  case "$IS_ACTIVE_EXIT:$ACTIVE_STATE" in
+    0:active) WAS_ACTIVE=1 ;;
+    3:inactive) WAS_ACTIVE=0 ;;
+    *) fail "ambiguous prior service activity (exit $IS_ACTIVE_EXIT, state $ACTIVE_STATE)" ;;
+  esac
 fi
 
 wait_for_release_health() {
@@ -202,13 +238,23 @@ rollback_activation() {
   fi
   systemctl daemon-reload || rollback_failed=1
 
-  if [[ "$rollback_failed" -eq 0 && "$WAS_ENABLED" -eq 1 && -n "$PREVIOUS_RELEASE" ]]; then
-    if ! systemctl restart persona-lattice.service || ! wait_for_release_health; then
-      rollback_failed=1
+  # Restore enablement and running state independently: enabled is not
+  # synonymous with active, and disabled is not synonymous with stopped.
+  if [[ "$rollback_failed" -eq 0 ]]; then
+    if [[ "$WAS_ENABLED" -eq 1 ]]; then
+      systemctl enable persona-lattice.service >/dev/null || rollback_failed=1
+    else
+      systemctl disable persona-lattice.service >/dev/null 2>&1 || rollback_failed=1
     fi
-  else
-    systemctl stop persona-lattice.service >/dev/null 2>&1 || rollback_failed=1
-    systemctl disable persona-lattice.service >/dev/null 2>&1 || rollback_failed=1
+  fi
+  if [[ "$rollback_failed" -eq 0 ]]; then
+    if [[ "$WAS_ACTIVE" -eq 1 ]]; then
+      if ! systemctl restart persona-lattice.service || ! wait_for_release_health; then
+        rollback_failed=1
+      fi
+    else
+      systemctl stop persona-lattice.service >/dev/null 2>&1 || rollback_failed=1
+    fi
   fi
 
   # A failed recovery needs its original unit checkpoint for operator repair.
