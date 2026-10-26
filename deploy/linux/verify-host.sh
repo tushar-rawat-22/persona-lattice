@@ -6,7 +6,7 @@ fail() {
   exit 1
 }
 
-for command in curl git readlink ss systemctl; do
+for command in awk curl git readlink ss systemctl; do
   command -v "$command" >/dev/null 2>&1 || fail "required command '$command' is unavailable"
 done
 
@@ -24,8 +24,13 @@ for port in 13000 18000; do
     fail "cannot complete listener inspection for port $port"
   fi
   [[ -n "$listeners" ]] || fail "port $port has no listener"
-  if printf '%s\n' "$listeners" | awk '{print $4}' | grep -Ev '^(127\.0\.0\.1|\[::1\]):' >/dev/null; then
-    fail "port $port is listening beyond loopback"
+  # Check every returned listener and the parser's exit status. A failed awk
+  # must not be mistaken for "no unsafe listener matched".
+  if ! printf '%s\n' "$listeners" | awk '
+    NF < 4 { exit 1 }
+    $4 !~ /^(127[.]0[.]0[.]1|\[::1\]):/ { exit 1 }
+  '; then
+    fail "port $port is listening beyond loopback or listener inspection failed"
   fi
 done
 
