@@ -47,11 +47,27 @@ case "${MOCK_SS_MODE:-loopback}" in
 esac
 STUB
 chmod +x "$TMP/bin/ss"
+
+# A successful socket enumeration is insufficient if its parser fails.
+# Simulate a parser that prints plausible loopback output and then errors.
+cat > "$TMP/bin/awk" <<'STUB'
+#!/usr/bin/env bash
+if [[ "${MOCK_AWK_MODE:-normal}" == parser-failure ]]; then
+  printf '127.0.0.1:13000\n'
+  exit 74
+fi
+exec /usr/bin/awk "$@"
+STUB
+chmod +x "$TMP/bin/awk"
 export PATH="$TMP/bin:$PATH"
 
 run_case() {
   local name="$1" expected="$2" rc=0
-  export MOCK_SS_MODE="$name"
+  if [[ "$name" == parser-failure ]]; then
+    export MOCK_SS_MODE=loopback MOCK_AWK_MODE=parser-failure
+  else
+    export MOCK_SS_MODE="$name" MOCK_AWK_MODE=normal
+  fi
   bash "$TMP/verify-loopback.sh" >"$TMP/stdout" 2>"$TMP/stderr" || rc=$?
   if [[ "$expected" == allow ]]; then
     [[ "$rc" -eq 0 ]] || {
@@ -72,4 +88,5 @@ run_case loopback allow
 run_case wildcard deny
 run_case missing deny
 run_case partial-failure deny
+run_case parser-failure deny
 echo "PASS Linux host loopback verification mocks."
