@@ -30,7 +30,7 @@ for port in 13000 18000; do
     NF < 4 { exit 1 }
     $4 !~ /^(127[.]0[.]0[.]1|\[::1\]):/ { exit 1 }
   '; then
-    fail "port $port listener inspection failed or is beyond loopback"
+    fail "port $port is listening beyond loopback or listener inspection failed"
   fi
 done
 
