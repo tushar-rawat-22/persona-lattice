@@ -27,7 +27,7 @@ harness = (
     '#!/usr/bin/env bash\nset -euo pipefail\n'
     'CURRENT_LINK="$1/current"\nPREVIOUS_RELEASE="$1/prior"\n'
     'UNIT_TARGET="$1/installed-unit"\nUNIT_BACKUP="$1/unit-checkpoint"\n'
-    'WAS_ENABLED=1\n'
+    'WAS_ENABLED=1\nWAS_ACTIVE=1\n'
     'wait_for_release_health() { [[ "$SCENARIO" == healthy ]]; }\n'
     + source[start:end] + '\n'
     'rc=0\nrollback_activation || rc=$?\n'
