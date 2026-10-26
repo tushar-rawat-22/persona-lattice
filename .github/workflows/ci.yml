@@ -137,6 +137,7 @@ jobs:
           bash -n scripts/test_linux_prepare_symlink_scan.sh
           bash -n scripts/test_linux_prepare_rollback_checkpoint.sh
           bash -n scripts/test_linux_prepare_service_states.sh
+          bash -n scripts/test_linux_prepare_existing_release.sh
           bash scripts/test_lc1_api_process_contract.sh
           bash scripts/test_lc1_npm_worktree.sh
           bash scripts/test_lc1_python_selection.sh
@@ -156,6 +157,7 @@ jobs:
           bash scripts/test_linux_prepare_symlink_scan.sh
           bash scripts/test_linux_prepare_rollback_checkpoint.sh
           bash scripts/test_linux_prepare_service_states.sh
+          bash scripts/test_linux_prepare_existing_release.sh
       - name: Build and exercise production processes
         shell: bash
         run: |

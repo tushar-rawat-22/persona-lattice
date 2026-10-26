@@ -69,7 +69,9 @@ if [[ -e "$RELEASE_DIR" || -L "$RELEASE_DIR" ]]; then
   if [[ -L "$CURRENT_LINK" && "$(readlink -f "$CURRENT_LINK")" == "$RELEASE_DIR" ]]; then
     fail "target release is currently active; refusing in-place re-preparation"
   fi
-  rm -rf "$RELEASE_DIR"
+  # A pre-existing SHA directory may be an accepted rollback candidate.
+  # Never destroy it before (or after) a failed canonical-main check.
+  fail "target release path already exists; inspect it before any manual cleanup"
 fi
 git clone --filter=blob:none --no-checkout "$REPOSITORY_URL" "$RELEASE_DIR"
 
