@@ -121,10 +121,37 @@ case "$IS_ACTIVE_EXIT:$ACTIVE_STATE" in
 esac
 
 
+if [[ -L "$RUNTIME_ROOT" || ( -e "$RUNTIME_ROOT" && ! -d "$RUNTIME_ROOT" ) ]]; then
+  fail "release checkpoint root exists but is not a regular directory"
+fi
 install -d -m 0700 -o root -g root "$RUNTIME_ROOT"
-UNIT_BACKUP="$(mktemp "$RUNTIME_ROOT/select-unit.XXXXXX")"
-chmod 0600 "$UNIT_BACKUP"
-cp -- "$UNIT_TARGET" "$UNIT_BACKUP"
+
+# Persist the prior selection and service authority before /current changes.
+# A killed/interrupted selector must leave enough owner-only evidence for a
+# bounded manual recovery; the installed-unit copy alone cannot identify the
+# exact prior prepared release.
+if ! UNIT_BACKUP="$(mktemp "$RUNTIME_ROOT/select-unit.XXXXXX")"; then
+  fail "could not allocate the prior systemd unit checkpoint"
+fi
+if ! SELECTION_CHECKPOINT="$(mktemp "$RUNTIME_ROOT/select-state.XXXXXX")"; then
+  rm -f "$UNIT_BACKUP"
+  fail "could not allocate the prior release selection checkpoint"
+fi
+if ! chmod 0600 "$UNIT_BACKUP" "$SELECTION_CHECKPOINT" \
+  || ! cp -- "$UNIT_TARGET" "$UNIT_BACKUP" \
+  || ! printf 'previous_release=%s\nprevious_sha=%s\ntarget_release=%s\ntarget_sha=%s\nservice_enabled=%s\nservice_active=%s\nunit_checkpoint=%s\n' \
+    "$PREVIOUS_RELEASE" "$PREVIOUS_NAME" "$TARGET_RELEASE" "$TARGET_SHA" \
+    "$WAS_ENABLED" "$WAS_ACTIVE" "$UNIT_BACKUP" > "$SELECTION_CHECKPOINT"; then
+  rm -f "$UNIT_BACKUP" "$SELECTION_CHECKPOINT"
+  fail "could not checkpoint the prior release selection"
+fi
+
+cleanup_selection_checkpoint() {
+  local cleanup_failed=0
+  rm -f "$UNIT_BACKUP" || cleanup_failed=1
+  rm -f "$SELECTION_CHECKPOINT" || cleanup_failed=1
+  [[ "$cleanup_failed" -eq 0 ]]
+}
 
 
 wait_for_release_health() {
@@ -160,13 +187,17 @@ restore_prior_state() {
     systemctl stop "$SERVICE_NAME" >/dev/null 2>&1 || failed=1
   fi
 
-  # An incomplete recovery requires operator intervention. Keep the
-  # owner-only unit checkpoint instead of destroying the recovery evidence.
+  # An incomplete recovery requires operator intervention. Keep both
+  # owner-only checkpoints instead of destroying the recovery evidence.
   if [[ "$failed" -ne 0 ]]; then
-    printf 'Prior-release recovery incomplete; unit checkpoint retained at %s\n' "$UNIT_BACKUP" >&2
+    printf 'Prior-release recovery incomplete; selection checkpoint retained at %s and unit checkpoint at %s\n' \
+      "$SELECTION_CHECKPOINT" "$UNIT_BACKUP" >&2
     return 1
   fi
-  rm -f "$UNIT_BACKUP"
+  if ! cleanup_selection_checkpoint; then
+    printf 'Prior release restored, but owner-only selection checkpoints could not be removed\n' >&2
+    return 1
+  fi
 }
 
 # Preserve prior enabled/running authority. Selecting a prepared rollback is
@@ -212,7 +243,8 @@ else
   fi
 fi
 
-rm -f "$UNIT_BACKUP"
+cleanup_selection_checkpoint \
+  || fail "selected release is healthy but owner-only selection checkpoints could not be removed"
 printf '%s\n' \
   "PersonaLattice prepared release selected." \
   "Release: $TARGET_SHA" \
