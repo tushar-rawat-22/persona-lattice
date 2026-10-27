@@ -10,6 +10,8 @@ Default branch: `main`
 
 At the 2026-10-27 pre-change checkpoint, canonical protected `main` is `7f487b49a4a0088216567f2551c6482450046ba9` (#392 host listener verification shipped; #351 protected-main governance remains enforced). Verify the branch ref and exact-head required checks again before any merge or release. Green CI is not live-host or market-readiness evidence.
 
+**Current recovery-engineering checkpoint, 28 October 2026:** canonical protected `main` is `2bdb2a222e83b96bc875fda278d66514c63287c0`. PR #393 (`18b73807187250d3b0043368b12e7dbc06c98be1`) shipped owner-only rollback selection checkpoints and closed #350. PR #394 (`2bdb2a2`) then moved the recovery checkpoint root from boot-volatile `/run` to root-owned persistent `/var/lib/persona-lattice-release`, preserving evidence across reboot where that volume persists. Exact-main CI for #394 passed API 3.11/3.13, Web, deployment-image, launch-process, and public Pages checks. **These are source/CI milestones, not evidence of power-loss durability or a deployed private Linux server.** Issue #324 remains open and requires real-host persistent SQLite/backup/restore/rollback/ingress/auth acceptance on an authorized zero-cash host. Do not mark commercial/private always-on readiness complete or change retained cases based on this checkpoint.
+
 Do not trust a remembered local SHA, old assistant message or historical section over the current GitHub branch, current PR state and exact-head CI.
 
 ## Product state
