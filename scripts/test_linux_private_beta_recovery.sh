@@ -114,4 +114,17 @@ require_literal 'restore_prior_state() {' "$SELECTOR"
 require_literal 'ln -sfn "$PREVIOUS_RELEASE" "$CURRENT_LINK" || failed=1' "$SELECTOR"
 require_literal 'install -m 0644 "$UNIT_BACKUP" "$UNIT_TARGET" || failed=1' "$SELECTOR"
 
+# Before changing /current, the selector leaves an owner-only recovery record
+# containing the exact prior release and independently observed service state.
+# It keeps both records if recovery cannot be verified and removes them only
+# after a healthy selection or a verified restoration.
+require_literal 'if [[ -L "$RUNTIME_ROOT" || ( -e "$RUNTIME_ROOT" && ! -d "$RUNTIME_ROOT" ) ]]; then' "$SELECTOR"
+require_literal 'SELECTION_CHECKPOINT="$(mktemp "$RUNTIME_ROOT/select-state.XXXXXX")"' "$SELECTOR"
+require_literal 'chmod 0600 "$UNIT_BACKUP" "$SELECTION_CHECKPOINT"' "$SELECTOR"
+for field in previous_release previous_sha target_release target_sha service_enabled service_active unit_checkpoint; do
+  require_literal "${field}=%s" "$SELECTOR"
+done
+require_literal 'cleanup_selection_checkpoint() {' "$SELECTOR"
+require_literal 'selection checkpoint retained at %s and unit checkpoint at %s' "$SELECTOR"
+
 printf 'Linux private-beta recovery contract passed.\n'

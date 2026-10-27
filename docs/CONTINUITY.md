@@ -8,7 +8,7 @@ Repository: `tushar-rawat-22/persona-lattice`
 
 Default branch: `main`
 
-At the 2026-10-09 checkpoint, canonical protected `main` is `1a70651a435e9263a1ed69b3c6125e20d6c11e4c` (#377 recovery hardening shipped; #351 protected-main governance closed). Verify the branch ref and exact-head required checks again before any merge or release. Green CI is not live-host or market-readiness evidence.
+At the 2026-10-27 pre-change checkpoint, canonical protected `main` is `7f487b49a4a0088216567f2551c6482450046ba9` (#392 host listener verification shipped; #351 protected-main governance remains enforced). Verify the branch ref and exact-head required checks again before any merge or release. Green CI is not live-host or market-readiness evidence.
 
 Do not trust a remembered local SHA, old assistant message or historical section over the current GitHub branch, current PR state and exact-head CI.
 
@@ -106,7 +106,7 @@ Issue #252 is the operator-workspace product-quality stream. Major post-LC1 impr
 - privacy-bounded retained-case analyst synopsis/handoff;
 - reviewed-document and retained-case workflow simulation in the public observer.
 
-Do not continue UI polishing merely to generate PR count. Security candidates requiring repository and browser regression include expired-session concealment and failed logout revocation. Recovery candidates include preserving prepared rollback directories and independently restoring service enabled/running state. These are source/synthetic findings, not certified production incidents. #350 remains open; #324 remains open until a durable private host is accepted. Keep affected recovery, security and operator documentation in the same implementation tranche.
+Do not continue UI polishing merely to generate PR count. Security candidates requiring repository and browser regression include expired-session concealment and failed logout revocation. The prepared-release selector has regression-backed contracts for retained immutable releases, prior-selection checkpoints and independent restoration of service enabled/running state. These are source/synthetic findings, not certified production incidents. #324 remains open until a durable private host passes the real-host acceptance gate. Keep affected recovery, security and operator documentation in the same implementation tranche.
 
 ## Source governance
 
