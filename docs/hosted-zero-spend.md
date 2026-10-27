@@ -34,6 +34,7 @@ If no genuinely zero-cash host satisfies the stateful private-beta contract, kee
 - persistent SQLite under `/var/lib/persona-lattice/data/`;
 - release-specific prepared runtime state under `/var/lib/persona-lattice/runtime/<sha>/`;
 - a systemd service with restart-on-failure and process hardening;
+- root-owned, mode-0700 release-selection/unit recovery checkpoints under `/var/lib/persona-lattice-release/`, outside the service-writable data tree and boot-volatile `/run`; incomplete recovery evidence survives an ordinary host reboot on persistent storage, while abrupt-power-loss guarantees still require real-host testing;
 - web bound only to `127.0.0.1:13000`;
 - API bound only to `127.0.0.1:18000` and reachable externally only through the web `/api` proxy;
 - SQLite integrity-checked backup/restore contracts through Linux wrappers;
