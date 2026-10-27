@@ -7,7 +7,7 @@ RELEASE_ROOT="/opt/persona-lattice/releases"
 CURRENT_LINK="/opt/persona-lattice/current"
 UNIT_SOURCE="deploy/linux/persona-lattice.service"
 UNIT_TARGET="/etc/systemd/system/persona-lattice.service"
-RUNTIME_ROOT="/run/persona-lattice-release"
+RUNTIME_ROOT="/var/lib/persona-lattice-release"
 
 fail() {
   printf 'PersonaLattice prepared-release selection failed: %s\n' "$1" >&2
