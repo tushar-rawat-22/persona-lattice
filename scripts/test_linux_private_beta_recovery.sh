@@ -127,4 +127,15 @@ done
 require_literal 'cleanup_selection_checkpoint() {' "$SELECTOR"
 require_literal 'selection checkpoint retained at %s and unit checkpoint at %s' "$SELECTOR"
 
+# An interrupted activation can require manual recovery after a host reboot.
+# /run is boot-volatile on systemd Linux; incomplete rollback checkpoints must
+# remain on the host's durable, root-controlled filesystem.
+require_literal 'RELEASE_RUNTIME_ROOT="/var/lib/persona-lattice-release"' "$PREPARE"
+require_literal 'RUNTIME_ROOT="/var/lib/persona-lattice-release"' "$SELECTOR"
+require_literal 'install -d -m 0700 -o root -g root "$RELEASE_RUNTIME_ROOT"' "$PREPARE"
+require_literal 'install -d -m 0700 -o root -g root "$RUNTIME_ROOT"' "$SELECTOR"
+for script in "$PREPARE" "$SELECTOR"; do
+  forbid_literal '="/run/persona-lattice-release"' "$script"
+done
+
 printf 'Linux private-beta recovery contract passed.\n'

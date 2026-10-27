@@ -27,7 +27,7 @@ replacements = {
     'RELEASE_ROOT="/opt/persona-lattice/releases"': f'RELEASE_ROOT="{base}/releases"',
     'CURRENT_LINK="/opt/persona-lattice/current"': f'CURRENT_LINK="{base}/current"',
     'UNIT_TARGET="/etc/systemd/system/persona-lattice.service"': f'UNIT_TARGET="{base}/systemd/persona-lattice.service"',
-    'RUNTIME_ROOT="/run/persona-lattice-release"': f'RUNTIME_ROOT="{base}/runtime"',
+    'RUNTIME_ROOT="/var/lib/persona-lattice-release"': f'RUNTIME_ROOT="{base}/runtime"',
     'install -d -m 0700 -o root -g root "$RUNTIME_ROOT"': 'mkdir -p "$RUNTIME_ROOT"',
     '[[ "${EUID:-$(id -u)}" -eq 0 ]] || fail "run as root"': ': # root guard replaced ONLY in disposable test copy',
 }

@@ -11,7 +11,7 @@ STATE_ROOT="/var/lib/persona-lattice"
 ENV_FILE="/etc/persona-lattice/production.env"
 UNIT_SOURCE="deploy/linux/persona-lattice.service"
 UNIT_TARGET="/etc/systemd/system/persona-lattice.service"
-RELEASE_RUNTIME_ROOT="/run/persona-lattice-release"
+RELEASE_RUNTIME_ROOT="/var/lib/persona-lattice-release"
 
 fail() {
   printf 'PersonaLattice Linux release preparation failed: %s\n' "$1" >&2
